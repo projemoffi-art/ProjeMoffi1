@@ -2653,14 +2653,14 @@ export default function LegendaryLightDashboard() {
 
 
                                             {/* Bildirim İzni Yönetimi */}
-                                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl my-2">
+                                            <div className="flex items-center justify-between p-4 bg-secondary border border-card-border rounded-2xl my-2">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
                                                         <Bell className="w-4.5 h-4.5 text-emerald-600" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs font-black text-gray-800 dark:text-gray-100">Aşı & Randevu Bildirimleri</p>
-                                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
+                                                        <p className="text-xs font-black text-foreground">Aşı & Randevu Bildirimleri</p>
+                                                        <p className="text-[10px] text-secondary font-semibold">
                                                             {permission === 'denied'
                                                                 ? 'Bildirimler tarayıcı ayarlarından engellenmiş'
                                                                 : isSubscribed
@@ -2675,7 +2675,7 @@ export default function LegendaryLightDashboard() {
                                                         disabled={pushLoading}
                                                         className={`text-[10px] font-black px-3 py-1.5 rounded-lg transition-colors shrink-0 ${
                                                             isSubscribed
-                                                                ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                                                ? 'bg-secondary text-secondary hover:brightness-95'
                                                                 : 'bg-emerald-500 text-white hover:bg-emerald-600'
                                                         } disabled:opacity-50`}
                                                     >
@@ -2690,8 +2690,8 @@ export default function LegendaryLightDashboard() {
                                                     <div className="w-16 h-16 rounded-[1.8rem] bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white text-3xl">
                                                         🐾
                                                     </div>
-                                                    <h4 className="text-base font-black text-gray-800 tracking-tight leading-tight">Henüz Evcil Hayvanınız Yok</h4>
-                                                    <p className="text-xs font-semibold text-gray-500 leading-relaxed max-w-[280px]">
+                                                    <h4 className="text-base font-black text-foreground tracking-tight leading-tight">Henüz Evcil Hayvanınız Yok</h4>
+                                                    <p className="text-xs font-semibold text-secondary leading-relaxed max-w-[280px]">
                                                         Moffi'nin akıllı tasma, pasaport, dijital kimlik ve cüzdan özelliklerini kullanabilmek için ilk dostunuzu kaydetmeniz gerekir.
                                                     </p>
                                                     <button 
@@ -2699,7 +2699,7 @@ export default function LegendaryLightDashboard() {
                                                             setExpandedPanel(null);
                                                             setIsAddPetOpen(true);
                                                         }}
-                                                        className="w-full py-4.5 bg-[#527958] hover:bg-[#436448] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-green-900/10 cursor-pointer"
+                                                        className="w-full py-4.5 bg-accent-secondary hover:brightness-95 text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-green-900/10 cursor-pointer"
                                                     >
                                                         Evcil Hayvan Ekle
                                                     </button>
