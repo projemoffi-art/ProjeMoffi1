@@ -222,24 +222,24 @@ export function AddPetModal({
                                     </div>
 
                                     {/* CORE INFO CARD */}
-                                    <div className="bg-white/60 rounded-[28px] p-5 border border-gray-200/80 shadow-sm space-y-4">
+                                    <div className="bg-card/60 rounded-[28px] p-5 border border-card-border shadow-sm space-y-4">
                                         
                                         {/* İsim Girişi */}
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">İsim</label>
+                                            <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">İsim</label>
                                             <input 
                                                 type="text" 
                                                 value={newPetName} 
                                                 onChange={e => setNewPetName(e.target.value)} 
                                                 placeholder="Örn: Pamuk" 
-                                                className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl px-4 py-3.5 text-foreground text-sm outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-semibold placeholder-gray-400" 
+                                                className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-4 py-3.5 text-foreground text-sm outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold placeholder-gray-400" 
                                             />
                                         </div>
 
                                         {/* Tür Seçimi - Grid Control */}
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Tür</label>
-                                            <div className="grid grid-cols-3 gap-1.5 bg-[#F1F3F2] p-1.5 rounded-2xl border border-gray-250/30">
+                                            <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Tür</label>
+                                            <div className="grid grid-cols-3 gap-1.5 bg-secondary p-1.5 rounded-2xl border border-card-border">
                                                 {PET_TYPES.map(t => (
                                                     <button
                                                         key={t.key}
@@ -248,8 +248,8 @@ export function AddPetModal({
                                                         className={cn(
                                                             "py-2 rounded-xl text-base transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer",
                                                             newPetType === t.key 
-                                                                ? "bg-white shadow-sm scale-[1.02] text-gray-900" 
-                                                                : "opacity-60 hover:opacity-90 text-gray-500"
+                                                                ? "bg-card shadow-sm scale-[1.02] text-foreground" 
+                                                                : "opacity-60 hover:opacity-90 text-secondary"
                                                         )}
                                                     >
                                                         <span>{t.emoji}</span>
@@ -261,33 +261,33 @@ export function AddPetModal({
 
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="space-y-1.5 col-span-1">
-                                                <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Irkı</label>
+                                                <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Irkı</label>
                                                 <input 
                                                     type="text" 
                                                     value={newPetBreed} 
                                                     onChange={e => setNewPetBreed(e.target.value)} 
                                                     placeholder="Golden" 
-                                                    className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl px-4 py-3 text-foreground text-sm outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-semibold placeholder-gray-400" 
+                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-4 py-3 text-foreground text-sm outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold placeholder-gray-400" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5 col-span-1">
-                                                <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Yaş</label>
+                                                <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Yaş</label>
                                                 <input 
                                                     type="text" 
                                                     value={newPetAge} 
                                                     onChange={e => setNewPetAge(e.target.value)} 
                                                     placeholder="2 Yaş" 
-                                                    className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl px-4 py-3 text-foreground text-sm text-center outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-semibold placeholder-gray-400" 
+                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-4 py-3 text-foreground text-sm text-center outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold placeholder-gray-400" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5 col-span-1">
-                                                <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Kilo (KG)</label>
+                                                <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Kilo (KG)</label>
                                                 <input 
                                                     type="text" 
                                                     value={newPetWeight} 
                                                     onChange={e => setNewPetWeight(e.target.value)} 
                                                     placeholder="Örn: 24.5" 
-                                                    className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl px-4 py-3 text-foreground text-sm text-center outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-semibold placeholder-gray-400" 
+                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-4 py-3 text-foreground text-sm text-center outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold placeholder-gray-400" 
                                                 />
                                             </div>
                                         </div>
@@ -297,8 +297,8 @@ export function AddPetModal({
                                             
                                             {/* Cinsiyet */}
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-450 font-black uppercase tracking-wider block ml-1">Cinsiyet</label>
-                                                <div className="flex bg-[#F1F3F2] p-1 rounded-2xl border border-gray-250/30">
+                                                <label className="text-[9px] text-secondary font-black uppercase tracking-wider block ml-1">Cinsiyet</label>
+                                                <div className="flex bg-secondary p-1 rounded-2xl border border-card-border">
                                                     {['Erkek', 'Dişi'].map(g => (
                                                         <button
                                                             key={g}
@@ -307,8 +307,8 @@ export function AddPetModal({
                                                             className={cn(
                                                                 "flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
                                                                 newPetGender === g 
-                                                                    ? "bg-white text-gray-800 shadow-sm" 
-                                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
+                                                                    ? "bg-card text-foreground shadow-sm" 
+                                                                    : "text-secondary hover:text-gray-600"
                                                             )}
                                                         >
                                                             {g}
@@ -319,8 +319,8 @@ export function AddPetModal({
 
                                             {/* Kısır Mı? */}
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-450 font-black uppercase tracking-wider block ml-1">Kısırlaştırılmış mı?</label>
-                                                <div className="flex bg-[#F1F3F2] p-1 rounded-2xl border border-gray-250/30">
+                                                <label className="text-[9px] text-secondary font-black uppercase tracking-wider block ml-1">Kısırlaştırılmış mı?</label>
+                                                <div className="flex bg-secondary p-1 rounded-2xl border border-card-border">
                                                     {['Evet', 'Hayır'].map(val => (
                                                         <button
                                                             key={val}
@@ -329,8 +329,8 @@ export function AddPetModal({
                                                             className={cn(
                                                                 "flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
                                                                 newPetNeutered === val 
-                                                                    ? "bg-white text-gray-800 shadow-sm" 
-                                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
+                                                                    ? "bg-card text-foreground shadow-sm" 
+                                                                    : "text-secondary hover:text-gray-600"
                                                             )}
                                                         >
                                                             {val}
@@ -341,8 +341,8 @@ export function AddPetModal({
 
                                             {/* Boyut */}
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-450 font-black uppercase tracking-wider block ml-1">Boyut</label>
-                                                <div className="flex bg-[#F1F3F2] p-1 rounded-2xl border border-gray-250/30">
+                                                <label className="text-[9px] text-secondary font-black uppercase tracking-wider block ml-1">Boyut</label>
+                                                <div className="flex bg-secondary p-1 rounded-2xl border border-card-border">
                                                     {['Küçük', 'Orta', 'Büyük'].map(sz => (
                                                         <button
                                                             key={sz}
@@ -351,8 +351,8 @@ export function AddPetModal({
                                                             className={cn(
                                                                 "flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
                                                                 newPetSize === sz 
-                                                                    ? "bg-white text-gray-800 shadow-sm" 
-                                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
+                                                                    ? "bg-card text-foreground shadow-sm" 
+                                                                    : "text-secondary hover:text-gray-600"
                                                             )}
                                                         >
                                                             {sz}
@@ -369,7 +369,7 @@ export function AddPetModal({
                                         whileTap={{ scale: 0.99 }}
                                         onClick={() => setStep(2)} 
                                         disabled={!newPetName || !newPetBreed || !newPetWeight} 
-                                        className="w-full py-4.5 bg-gradient-to-r from-[#527958] to-emerald-600 hover:opacity-95 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all disabled:opacity-50 shadow-lg shadow-green-950/10 cursor-pointer text-center"
+                                        className="w-full py-4.5 bg-gradient-to-r from-accent-secondary to-emerald-600 hover:opacity-95 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all disabled:opacity-50 shadow-lg shadow-green-950/10 cursor-pointer text-center"
                                     >
                                         Sonraki Adım
                                     </motion.button>
@@ -390,12 +390,12 @@ export function AddPetModal({
                                         </div>
                                     </div>
 
-                                    <div className="bg-white/60 rounded-[28px] p-5 border border-gray-200/80 shadow-sm space-y-4">
+                                    <div className="bg-card/60 rounded-[28px] p-5 border border-card-border shadow-sm space-y-4">
                                         
                                         {/* Sağlık Durumu - Segmented Buttons */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider block ml-1">Sağlık Durumu</label>
-                                            <div className="grid grid-cols-2 gap-2 bg-[#F1F3F2] p-1 rounded-2xl border border-gray-250/30">
+                                            <label className="text-[10px] text-secondary font-black uppercase tracking-wider block ml-1">Sağlık Durumu</label>
+                                            <div className="grid grid-cols-2 gap-2 bg-secondary p-1 rounded-2xl border border-card-border">
                                                 {[
                                                     { value: 'Mükemmel', label: 'Mükemmel 🌟' },
                                                     { value: 'İyi', label: 'İyi 👍' },
@@ -409,8 +409,8 @@ export function AddPetModal({
                                                         className={cn(
                                                             "py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
                                                             newPetHealthStatus === h.value 
-                                                                ? "bg-white text-gray-800 shadow-sm scale-[1.01]" 
-                                                                : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
+                                                                ? "bg-card text-foreground shadow-sm scale-[1.01]" 
+                                                                : "text-secondary hover:text-gray-600"
                                                         )}
                                                     >
                                                         {h.label}
@@ -420,32 +420,32 @@ export function AddPetModal({
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Alerjiler & Kronik Hastalıklar</label>
+                                            <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Alerjiler & Kronik Hastalıklar</label>
                                             <textarea 
                                                 value={newPetHealth} 
                                                 onChange={e => setNewPetHealth(e.target.value)} 
                                                 placeholder="Örn: Tavuk alerjisi var, günlük ilaç kullanımı vb..." 
-                                                className="w-full bg-[#FDF5F5]/60 focus:bg-white border border-red-100 focus:border-red-400 rounded-2xl px-4.5 py-3 text-foreground placeholder-gray-400 outline-none focus:ring-4 focus:ring-red-500/5 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
+                                                className="w-full bg-[#FDF5F5]/60 focus:bg-card border border-red-100 focus:border-red-400 rounded-2xl px-4.5 py-3 text-foreground placeholder-gray-400 outline-none focus:ring-4 focus:ring-red-500/5 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
                                             />
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Ayırt Edici Özellikleri</label>
+                                            <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Ayırt Edici Özellikleri</label>
                                             <textarea 
                                                 value={newPetFeatures} 
                                                 onChange={e => setNewPetFeatures(e.target.value)} 
                                                 placeholder="Örn: Sol gözünün üstünde küçük beyaz bir leke var..." 
-                                                className="w-full bg-white/60 focus:bg-white border border-gray-200/80 focus:border-[#527958] rounded-2xl px-4.5 py-3 text-foreground placeholder-gray-400 outline-none focus:ring-4 focus:ring-[#527958]/10 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
+                                                className="w-full bg-card/60 focus:bg-card border border-card-border focus:border-accent-secondary rounded-2xl px-4.5 py-3 text-foreground placeholder-gray-400 outline-none focus:ring-4 focus:ring-accent-secondary/10 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
                                             />
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Karakter Özellikleri</label>
+                                            <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Karakter Özellikleri</label>
                                             <textarea 
                                                 value={newPetCharacter} 
                                                 onChange={e => setNewPetCharacter(e.target.value)} 
                                                 placeholder="Örn: İnsanlara karşı çok sevecendir fakat gürültüden korkar..." 
-                                                className="w-full bg-white/60 focus:bg-white border border-gray-200/80 focus:border-[#527958] rounded-2xl px-4.5 py-3 text-foreground placeholder-gray-400 outline-none focus:ring-4 focus:ring-[#527958]/10 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
+                                                className="w-full bg-card/60 focus:bg-card border border-card-border focus:border-accent-secondary rounded-2xl px-4.5 py-3 text-foreground placeholder-gray-400 outline-none focus:ring-4 focus:ring-accent-secondary/10 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
                                             />
                                         </div>
                                     </div>
@@ -454,7 +454,7 @@ export function AddPetModal({
                                         whileHover={{ scale: 1.01 }}
                                         whileTap={{ scale: 0.99 }}
                                         onClick={() => setStep(3)} 
-                                        className="w-full py-4.5 bg-gradient-to-r from-[#527958] to-emerald-600 hover:opacity-95 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-green-950/10 cursor-pointer text-center"
+                                        className="w-full py-4.5 bg-gradient-to-r from-accent-secondary to-emerald-600 hover:opacity-95 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-green-950/10 cursor-pointer text-center"
                                     >
                                         Sonraki Adım
                                     </motion.button>
@@ -464,28 +464,28 @@ export function AddPetModal({
                             {step === 3 && (
                                 <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-6">
                                     
-                                    <div className="bg-white/60 rounded-[28px] p-5 border border-gray-200/80 shadow-sm space-y-4">
+                                    <div className="bg-card/60 rounded-[28px] p-5 border border-card-border shadow-sm space-y-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Mikroçip Numarası</label>
+                                            <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Mikroçip Numarası</label>
                                             <div className="relative">
                                                 <input 
                                                     type="text" 
                                                     value={newPetMicrochip} 
                                                     onChange={e => setNewPetMicrochip(e.target.value)} 
                                                     placeholder="TR-000000000" 
-                                                    className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl pl-12 pr-5 py-4 text-foreground outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-mono tracking-widest text-sm" 
+                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl pl-12 pr-5 py-4 text-foreground outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-mono tracking-widest text-sm" 
                                                 />
-                                                <ShieldAlert className="absolute left-4.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400/80" />
+                                                <ShieldAlert className="absolute left-4.5 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary/80" />
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Gezi, Su, Beslenme Hedefleri */}
-                                    <div className="bg-white/60 rounded-[28px] p-5 border border-gray-200/80 shadow-sm space-y-4">
+                                    <div className="bg-card/60 rounded-[28px] p-5 border border-card-border shadow-sm space-y-4">
                                         <span className="text-[10px] text-foreground font-black uppercase tracking-wider block ml-1">Günlük Hedefler</span>
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider ml-1">Aktivite (%)</label>
+                                                <label className="text-[9px] text-secondary font-bold uppercase tracking-wider ml-1">Aktivite (%)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" 
@@ -493,48 +493,48 @@ export function AddPetModal({
                                                     value={newPetActivityTarget} 
                                                     onChange={e => setNewPetActivityTarget(e.target.value)} 
                                                     placeholder="Örn: 70" 
-                                                    className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-semibold" 
+                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider ml-1">Su (ML)</label>
+                                                <label className="text-[9px] text-secondary font-bold uppercase tracking-wider ml-1">Su (ML)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" 
                                                     value={newPetWaterTarget} 
                                                     onChange={e => setNewPetWaterTarget(e.target.value)} 
                                                     placeholder="Örn: 1200" 
-                                                    className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-semibold" 
+                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider ml-1">Beslenme (KCAL)</label>
+                                                <label className="text-[9px] text-secondary font-bold uppercase tracking-wider ml-1">Beslenme (KCAL)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" 
                                                     value={newPetFoodTarget} 
                                                     onChange={e => setNewPetFoodTarget(e.target.value)} 
                                                     placeholder="Örn: 1600" 
-                                                    className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-semibold" 
+                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold" 
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Telefon Göster - Premium Card Slide Toggle */}
-                                    <div className="bg-white/60 border border-gray-200/80 rounded-[28px] p-5 shadow-sm relative overflow-hidden group">
+                                    <div className="bg-card/60 border border-card-border rounded-[28px] p-5 shadow-sm relative overflow-hidden group">
                                         <div className="flex justify-between items-center mb-3 relative z-10">
                                             <div className="flex items-center gap-3">
-                                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", newPetShowPhone ? "bg-green-50 text-[#527958] border border-green-100" : "bg-gray-100 text-gray-500 dark:text-gray-400 border border-gray-200/50")}>
+                                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", newPetShowPhone ? "bg-accent-secondary/10 text-accent-secondary border border-accent-secondary/20" : "bg-secondary text-secondary border border-card-border")}>
                                                     <PhoneCall className="w-5 h-5" />
                                                 </div>
                                                 <div>
                                                     <span className="font-black text-foreground text-sm tracking-tight block leading-none">Telefonu Göster</span>
-                                                    <p className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-1.5 leading-none">SOS Arama Yetkisi</p>
+                                                    <p className="text-[9px] text-secondary font-bold uppercase tracking-wider mt-1.5 leading-none">SOS Arama Yetkisi</p>
                                                 </div>
                                             </div>
                                             <div
-                                                className={cn("w-12 h-6.5 rounded-full p-1 cursor-pointer transition-all relative border border-gray-100 shadow-inner", newPetShowPhone ? "bg-[#527958]" : "bg-gray-200")}
+                                                className={cn("w-12 h-6.5 rounded-full p-1 cursor-pointer transition-all relative border border-card-border shadow-inner", newPetShowPhone ? "bg-accent-secondary" : "bg-secondary")}
                                                 onClick={() => setNewPetShowPhone(!newPetShowPhone)}
                                             >
                                                 <motion.div
@@ -543,7 +543,7 @@ export function AddPetModal({
                                                 />
                                             </div>
                                         </div>
-                                        <p className="text-[10px] text-gray-450 leading-relaxed font-semibold mt-3 relative z-10">
+                                        <p className="text-[10px] text-secondary leading-relaxed font-semibold mt-3 relative z-10">
                                             Kayıp Modu aktif olduğunda patinizin künyesini okutan kişiler sizinle anında telefon veya WhatsApp üzerinden iletişim kurabilir.
                                         </p>
                                     </div>
@@ -553,7 +553,7 @@ export function AddPetModal({
                                         onClick={onSave}
                                         whileHover={{ scale: 1.01 }}
                                         whileTap={{ scale: 0.99 }}
-                                        className="w-full py-5 bg-gradient-to-r from-[#527958] to-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-95 transition-all disabled:opacity-50 shadow-lg shadow-green-950/15 cursor-pointer"
+                                        className="w-full py-5 bg-gradient-to-r from-accent-secondary to-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-95 transition-all disabled:opacity-50 shadow-lg shadow-green-950/15 cursor-pointer"
                                     >
                                         {isSaving ? (
                                             <div className="w-5 h-5 border-2 border-black/20 dark:border-white/20 border-t-white rounded-full animate-spin" />
