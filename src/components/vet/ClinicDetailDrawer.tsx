@@ -125,11 +125,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
         }
     }, [reviewableAppointments, defaultOpenReviewForm]);
 
-    useEffect(() => {
-        if (drawerRef.current) {
-            drawerRef.current.scrollTop = 0;
-        }
-    }, [activeTab]);
+
 
     const fetchDetails = async () => {
         setLoading(true);
@@ -450,7 +446,10 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                     ].map((tab) => (
                                         <button
                                             key={tab.id}
-                                            onClick={() => setActiveTab(tab.id as any)}
+                                            onClick={() => {
+                                                setActiveTab(tab.id as any);
+                                                drawerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+                                            }}
                                             className={cn(
                                                 "flex-1 flex items-center justify-center gap-2 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative cursor-pointer",
                                                 activeTab === tab.id ? "text-foreground" : "text-secondary hover:text-foreground"
@@ -467,16 +466,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
 
                                 {/* CONTENT AREA */}
                                 <div className="bg-card/50 dark:bg-card">
-                                    <AnimatePresence mode="wait">
-                                        <motion.div
-                                            key={activeTab}
-                                            initial={{ opacity: 0, y: 8 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -8 }}
-                                            transition={{ duration: 0.2, ease: "easeInOut" }}
-                                        >
-                                    {activeTab === 'info' && (
-                                        <div className="p-8 space-y-8">
+                                    <div className={cn("p-8 space-y-8", activeTab !== 'info' && "hidden")}>
                                             <div className="space-y-4">
                                                 <div className="flex items-start gap-4 p-5 bg-card border border-card-border rounded-3xl">
                                                     <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 shrink-0">
@@ -518,10 +508,8 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                 </div>
                                             </div>
                                         </div>
-                                    )}
 
-                                    {activeTab === 'doctors' && (
-                                        <div className="p-8 space-y-6">
+                                    <div className={cn("p-8 space-y-6", activeTab !== 'doctors' && "hidden")}>
                                             {clinic.doctors?.map((doctor: any) => (
                                                 <div key={doctor.id} className="bg-card border border-card-border rounded-[2.5rem] p-6 group hover:bg-card-border transition-all relative overflow-hidden text-left">
                                                     <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-accent/10 blur-3xl rounded-full pointer-events-none" />
@@ -562,10 +550,8 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                 </div>
                                             )}
                                         </div>
-                                    )}
 
-                                    {activeTab === 'reviews' && (
-                                        <div className="p-8 space-y-6">
+                                    <div className={cn("p-8 space-y-6", activeTab !== 'reviews' && "hidden")}>
                                             {/* Review Form / Button */}
                                             {reviewableAppointments.length > 0 && (
                                                 <div className="mb-8 space-y-4">
@@ -687,9 +673,6 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                 </div>
                                             )}
                                         </div>
-                                    )}
-                                        </motion.div>
-                                    </AnimatePresence>
                                 </div>
                                 {/* STICKY FOOTER ACTION */}
                                 <div className="sticky bottom-0 z-30 p-8 bg-card/95 backdrop-blur-3xl border-t border-card-border shadow-[0_-10px_40px_rgba(0,0,0,0.03)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
