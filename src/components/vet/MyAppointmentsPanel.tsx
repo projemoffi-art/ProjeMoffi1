@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, AlertCircle, X, CheckCircle2, Filter, ArrowDownUp } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, X, CheckCircle2, Filter, ArrowDownUp, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiService } from '@/services/apiService';
 import { usePet } from '@/context/PetContext';
 import { useAuth } from '@/context/AuthContext';
-import { useEffect } from 'react';
 
 interface MyAppointmentsPanelProps {
     appointments: any[];
@@ -39,6 +38,18 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
     const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
     const [showAllPets, setShowAllPets] = useState(true);
     const [sortMode, setSortMode] = useState<'date' | 'created'>('date');
+    const [isSortOpen, setIsSortOpen] = useState(false);
+    const sortRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+                setIsSortOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
     const { refreshAppointments } = usePet();
     const { user } = useAuth();
     const [cancelModalId, setCancelModalId] = useState<string | null>(null);
@@ -112,13 +123,42 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                 </div>
                 
                 <div className="flex items-center gap-2">
-                    <button 
-                        onClick={() => setSortMode(m => m === 'date' ? 'created' : 'date')}
-                        className="p-2 sm:px-4 sm:py-3 bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/60 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-foreground transition-all flex items-center gap-2"
-                    >
-                        <ArrowDownUp className="w-3 h-3" />
-                        <span className="hidden sm:inline">{sortMode === 'date' ? 'Tarihe Göre' : 'Eklenme Sırası'}</span>
-                    </button>
+                    <div className="relative" ref={sortRef}>
+                        <button 
+                            onClick={() => setIsSortOpen(!isSortOpen)}
+                            className="p-2 sm:px-4 sm:py-3 bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/60 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-foreground transition-all flex items-center gap-2"
+                        >
+                            <ArrowDownUp className="w-3 h-3" />
+                            <span className="hidden sm:inline">Sırala</span>
+                        </button>
+
+                        <AnimatePresence>
+                            {isSortOpen && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute right-0 top-full mt-2 w-64 bg-card border border-card-border rounded-xl shadow-xl z-50 overflow-hidden flex flex-col p-1"
+                                >
+                                    <button 
+                                        onClick={() => { setSortMode('date'); setIsSortOpen(false); }}
+                                        className={cn("flex items-center justify-between w-full px-3 py-3 text-left text-[11px] font-bold rounded-lg transition-colors", sortMode === 'date' ? "bg-accent/10 text-accent" : "text-foreground hover:bg-zinc-50 dark:hover:bg-zinc-800/50")}
+                                    >
+                                        Tarihe Göre (Yakın→Uzak)
+                                        {sortMode === 'date' && <Check className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <button 
+                                        onClick={() => { setSortMode('created'); setIsSortOpen(false); }}
+                                        className={cn("flex items-center justify-between w-full px-3 py-3 text-left text-[11px] font-bold rounded-lg transition-colors", sortMode === 'created' ? "bg-accent/10 text-accent" : "text-foreground hover:bg-zinc-50 dark:hover:bg-zinc-800/50")}
+                                    >
+                                        Eklenme Sırasına Göre (Son Alınan Üstte)
+                                        {sortMode === 'created' && <Check className="w-3.5 h-3.5" />}
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                     <button 
                         onClick={() => setShowAllPets(!showAllPets)}
                         className={cn(
