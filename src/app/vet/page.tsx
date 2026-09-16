@@ -55,7 +55,7 @@ function validateLuhn(cardNumber: string): boolean {
 function VetPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { activePet, appointments } = usePet();
+    const { activePet, appointments, pets } = usePet();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const { user } = useAuth();
@@ -938,7 +938,7 @@ function VetPageContent() {
                     </div>
                 )}
                 {viewMode === 'appointments' ? (
-                    <MyAppointmentsPanel appointments={mappedAppointments} />
+                    <MyAppointmentsPanel appointments={mappedAppointments} activePetId={activePet?.id} />
                 ) : (
                     <>
                 {/* Status Bar showing pet health state */}
