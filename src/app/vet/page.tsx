@@ -709,34 +709,46 @@ function VetPageContent() {
     };
 
     const mappedAppointments = useMemo(() => {
-        if (!activePet?.id || !appointments?.[activePet.id]) return [];
-        return appointments[activePet.id].map((apt: any) => {
-            let dateStr = 'Tarih Yok';
-            let timeStr = 'Saat Yok';
-            if (apt.appointment_date) {
-                dateStr = apt.appointment_date.split('T')[0];
-                if (apt.appointment_date.includes('T')) {
-                    timeStr = apt.appointment_date.split('T')[1].substring(0, 5);
+        if (!appointments) return [];
+        
+        let allApts: any[] = [];
+        Object.keys(appointments).forEach(petId => {
+            const petInfo = pets?.find((p: any) => p.id === petId);
+            const petName = petInfo ? petInfo.name : 'Evcil Hayvan';
+            
+            const mapped = appointments[petId].map((apt: any) => {
+                let dateStr = 'Tarih Yok';
+                let timeStr = 'Saat Yok';
+                if (apt.appointment_date) {
+                    dateStr = apt.appointment_date.split('T')[0];
+                    if (apt.appointment_date.includes('T')) {
+                        timeStr = apt.appointment_date.split('T')[1].substring(0, 5);
+                    }
                 }
-            }
-            let type = 'Genel Muayene';
-            if (apt.reason && apt.reason.includes('Randevu tipi:')) {
-                type = apt.reason.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
-            } else if (apt.reason) {
-                type = apt.reason;
-            }
-            return {
-                id: apt.id,
-                icon: '🏥',
-                type: type,
-                doctor: apt.clinic?.business_name || 'Klinik',
-                realDoctorName: apt.doctor?.name || apt.doctor_name || null,
-                date: dateStr,
-                time: timeStr,
-                status: apt.status || 'pending'
-            };
+                let type = 'Genel Muayene';
+                if (apt.reason && apt.reason.includes('Randevu tipi:')) {
+                    type = apt.reason.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
+                } else if (apt.reason) {
+                    type = apt.reason;
+                }
+                return {
+                    id: apt.id,
+                    petId: petId,
+                    petName: petName,
+                    icon: '🏥',
+                    type: type,
+                    clinicName: apt.clinic?.business_name || 'Klinik',
+                    realDoctorName: apt.doctor?.name || apt.doctor_name || null,
+                    date: dateStr,
+                    time: timeStr,
+                    status: apt.status || 'pending',
+                    _rawDate: apt.appointment_date ? new Date(apt.appointment_date).getTime() : 0
+                };
+            });
+            allApts = [...allApts, ...mapped];
         });
-    }, [activePet?.id, appointments]);
+        return allApts;
+    }, [appointments, pets]);
 
     return (
         <div className="theme-vet min-h-screen bg-background text-foreground pb-32 font-sans relative selection:bg-accent/30 transition-colors duration-300">
