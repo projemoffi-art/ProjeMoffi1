@@ -753,7 +753,8 @@ function VetPageContent() {
                     date: dateStr,
                     time: timeStr,
                     status: apt.status || 'pending',
-                    _rawDate: apt.appointment_date ? new Date(apt.appointment_date).getTime() : 0
+                    _rawDate: apt.appointment_date ? new Date(apt.appointment_date).getTime() : 0,
+                    _rawCreatedAt: apt.created_at ? new Date(apt.created_at).getTime() : 0
                 };
             });
             allApts = [...allApts, ...mapped];

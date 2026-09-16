@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, AlertCircle, X, CheckCircle2, Filter } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, X, CheckCircle2, Filter, ArrowDownUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiService } from '@/services/apiService';
 import { usePet } from '@/context/PetContext';
@@ -16,9 +16,29 @@ interface MyAppointmentsPanelProps {
     onReviewClick?: (clinicId: string, appointmentId: string) => void;
 }
 
+
+const getStatusBadge = (status: string) => {
+    switch(status.toLowerCase()) {
+        case 'pending':
+            return { label: 'Onay Bekliyor', bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', icon: <Clock className="w-3 h-3" /> };
+        case 'confirmed':
+            return { label: 'Onaylandı', bg: 'bg-indigo-50 dark:bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400', icon: <CheckCircle2 className="w-3 h-3" /> };
+        case 'completed':
+            return { label: 'Tamamlandı', bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', icon: <CheckCircle2 className="w-3 h-3" /> };
+        case 'cancelled':
+        case 'i̇ptal edildi':
+            return { label: 'İptal Edildi', bg: 'bg-zinc-100 dark:bg-zinc-500/10', text: 'text-zinc-500 dark:text-zinc-400', icon: <X className="w-3 h-3" /> };
+        case 'rejected':
+            return { label: 'Reddedildi', bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', icon: <X className="w-3 h-3" /> };
+        default:
+            return { label: status, bg: 'bg-zinc-50 dark:bg-zinc-800', text: 'text-zinc-500', icon: <Clock className="w-3 h-3" /> };
+    }
+};
+
 export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppointmentIds, onReviewClick }: MyAppointmentsPanelProps) {
     const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
     const [showAllPets, setShowAllPets] = useState(true);
+    const [sortMode, setSortMode] = useState<'date' | 'created'>('date');
     const { refreshAppointments } = usePet();
     const { user } = useAuth();
     const [cancelModalId, setCancelModalId] = useState<string | null>(null);
@@ -52,11 +72,16 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
         ? appointments 
         : appointments.filter(a => a.petId === activePetId);
 
-    const activeAppointments = filteredByPet.filter(a => ['pending', 'confirmed'].includes(a.status));
-    const pastAppointments = filteredByPet.filter(a => ['completed', 'cancelled', 'rejected'].includes(a.status));
+    const now = Date.now();
+    const activeAppointments = filteredByPet.filter(a => 
+        ['pending', 'confirmed'].includes(a.status) && a._rawDate > now
+    );
+    const pastAppointments = filteredByPet.filter(a => 
+        !( ['pending', 'confirmed'].includes(a.status) && a._rawDate > now )
+    );
 
-    activeAppointments.sort((a, b) => a._rawDate - b._rawDate);
-    pastAppointments.sort((a, b) => b._rawDate - a._rawDate);
+    activeAppointments.sort((a, b) => sortMode === 'date' ? a._rawDate - b._rawDate : b._rawCreatedAt - a._rawCreatedAt);
+    pastAppointments.sort((a, b) => sortMode === 'date' ? b._rawDate - a._rawDate : b._rawCreatedAt - a._rawCreatedAt);
 
     const displayedAppointments = activeTab === 'active' ? activeAppointments : pastAppointments;
 
@@ -86,9 +111,17 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                     </button>
                 </div>
                 
-                <button 
-                    onClick={() => setShowAllPets(!showAllPets)}
-                    className={cn(
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={() => setSortMode(m => m === 'date' ? 'created' : 'date')}
+                        className="p-2 sm:px-4 sm:py-3 bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/60 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-foreground transition-all flex items-center gap-2"
+                    >
+                        <ArrowDownUp className="w-3 h-3" />
+                        <span className="hidden sm:inline">{sortMode === 'date' ? 'Tarihe Göre' : 'Eklenme Sırası'}</span>
+                    </button>
+                    <button 
+                        onClick={() => setShowAllPets(!showAllPets)}
+                        className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all border mb-2",
                         showAllPets 
                             ? "bg-accent/10 border-accent/20 text-accent" 
@@ -98,6 +131,7 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                     <Filter className="w-3.5 h-3.5" />
                     {showAllPets ? "Tümü" : "Sadece Aktif Pati"}
                 </button>
+                </div>
             </div>
 
             {displayedAppointments.length === 0 ? (
@@ -155,14 +189,11 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                             {/* Status Badge */}
                             <div className={cn(
                                 "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5",
-                                appt.status === 'İptal Edildi' || appt.status === 'cancelled' ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400" :
-                                appt.status === 'confirmed' || appt.status === 'Tamamlandı' ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" :
-                                "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
+                                getStatusBadge(appt.status).bg,
+                                getStatusBadge(appt.status).text
                             )}>
-                                {appt.status === 'cancelled' || appt.status === 'İptal Edildi' ? <X className="w-3 h-3" /> : 
-                                 appt.status === 'confirmed' || appt.status === 'Tamamlandı' ? <CheckCircle2 className="w-3 h-3" /> : 
-                                 <Clock className="w-3 h-3" />}
-                                {appt.status === 'cancelled' ? 'İptal Edildi' : appt.status}
+                                {getStatusBadge(appt.status).icon}
+                                {getStatusBadge(appt.status).label}
                             </div>
                             
                             {reviewableAppointmentIds?.has(appt.id) && onReviewClick && appt.clinicId && (
@@ -174,7 +205,7 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                                 </button>
                             )}
                             {/* Cancel Button */}
-                            {appt.status !== 'İptal Edildi' && appt.status !== 'cancelled' && appt.status !== 'Tamamlandı' && appt.status !== 'completed' && (
+                            {activeTab === 'active' && ['pending', 'confirmed'].includes(appt.status) && (
                                 <button 
                                     onClick={() => setCancelModalId(appt.id)}
                                     className="text-[9px] font-black text-red-500/70 hover:text-red-600 dark:hover:text-red-400 uppercase tracking-widest transition-colors px-2 py-1"
