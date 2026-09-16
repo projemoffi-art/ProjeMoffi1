@@ -19,12 +19,13 @@ interface ClinicDetailDrawerProps {
     onClose: () => void;
     onBookAppointment: (clinic: VetClinic) => void;
     defaultOpenReviewForm?: boolean;
+    defaultReviewAppointmentId?: string | null;
 }
 
 import { useChat } from "@/context/ChatContext";
 import { usePet } from "@/context/PetContext";
 
-export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppointment, defaultOpenReviewForm }: ClinicDetailDrawerProps) {
+export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppointment, defaultOpenReviewForm, defaultReviewAppointmentId }: ClinicDetailDrawerProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const { openChat, toggleChat } = useChat();
@@ -121,9 +122,12 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     // Handle auto-opening the review form once data is loaded
     useEffect(() => {
         if (defaultOpenReviewForm && reviewableAppointments.length > 0 && !activeReviewAppointmentId) {
-            setActiveReviewAppointmentId(reviewableAppointments[0].id);
+            const targetId = (defaultReviewAppointmentId && reviewableAppointments.some(a => a.id === defaultReviewAppointmentId))
+                ? defaultReviewAppointmentId
+                : reviewableAppointments[0]?.id;
+            setActiveReviewAppointmentId(targetId);
         }
-    }, [reviewableAppointments, defaultOpenReviewForm]);
+    }, [reviewableAppointments, defaultOpenReviewForm, defaultReviewAppointmentId]);
 
 
 

@@ -12,9 +12,11 @@ import { useEffect } from 'react';
 interface MyAppointmentsPanelProps {
     appointments: any[];
     activePetId?: string;
+    reviewableAppointmentIds?: Set<string>;
+    onReviewClick?: (clinicId: string, appointmentId: string) => void;
 }
 
-export function MyAppointmentsPanel({ appointments, activePetId }: MyAppointmentsPanelProps) {
+export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppointmentIds, onReviewClick }: MyAppointmentsPanelProps) {
     const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
     const [showAllPets, setShowAllPets] = useState(true);
     const { refreshAppointments } = usePet();
@@ -163,6 +165,14 @@ export function MyAppointmentsPanel({ appointments, activePetId }: MyAppointment
                                 {appt.status === 'cancelled' ? 'İptal Edildi' : appt.status}
                             </div>
                             
+                            {reviewableAppointmentIds?.has(appt.id) && onReviewClick && appt.clinicId && (
+                                <button 
+                                    onClick={() => onReviewClick(appt.clinicId, appt.id)}
+                                    className="text-[9px] font-black text-accent hover:text-white hover:bg-accent border border-accent/20 bg-accent/5 uppercase tracking-widest transition-colors px-3 py-1.5 rounded-lg mt-2"
+                                >
+                                    DEĞERLENDİR
+                                </button>
+                            )}
                             {/* Cancel Button */}
                             {appt.status !== 'İptal Edildi' && appt.status !== 'cancelled' && appt.status !== 'Tamamlandı' && appt.status !== 'completed' && (
                                 <button 

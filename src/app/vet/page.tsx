@@ -60,6 +60,14 @@ function VetPageContent() {
     const isDark = theme === 'dark';
     const { user } = useAuth();
 
+    useEffect(() => {
+        if (user?.id) {
+            apiService.getReviewableAppointments(user.id).then(appts => {
+                setReviewableAppointmentIds(new Set(appts.map((a: any) => a.id)));
+            }).catch(console.error);
+        }
+    }, [user?.id]);
+
     // Drag scroll hooks
     const categoryScroll = useDragScroll();
     const dateScroll = useDragScroll();
@@ -92,6 +100,8 @@ function VetPageContent() {
     const [detailClinicId, setDetailClinicId] = useState<string | null>(null);
     const [detailClinicData, setDetailClinicData] = useState<any>(null);
     const [drawerDefaultReview, setDrawerDefaultReview] = useState(false);
+    const [drawerDefaultReviewAppointmentId, setDrawerDefaultReviewAppointmentId] = useState<string | null>(null);
+    const [reviewableAppointmentIds, setReviewableAppointmentIds] = useState<Set<string>>(new Set());
     const [pendingReviewPrompt, setPendingReviewPrompt] = useState<any>(null);
 
     const [successMessage, setSuccessMessage] = useState("Randevu Oluşturuldu ✨");
@@ -738,6 +748,7 @@ function VetPageContent() {
                     icon: '🏥',
                     type: type,
                     clinicName: apt.clinic?.business_name || 'Klinik',
+                    clinicId: apt.clinic_id,
                     realDoctorName: apt.doctor?.name || apt.doctor_name || null,
                     date: dateStr,
                     time: timeStr,
@@ -950,7 +961,18 @@ function VetPageContent() {
                     </div>
                 )}
                 {viewMode === 'appointments' ? (
-                    <MyAppointmentsPanel appointments={mappedAppointments} activePetId={activePet?.id} />
+                    <MyAppointmentsPanel 
+                        appointments={mappedAppointments} 
+                        activePetId={activePet?.id} 
+                        reviewableAppointmentIds={reviewableAppointmentIds}
+                        onReviewClick={(clinicId, appointmentId) => {
+                            const clinicData = allClinics.find(c => c.id === clinicId);
+                            setDetailClinicId(clinicId);
+                            if (clinicData) setDetailClinicData(clinicData);
+                            setDrawerDefaultReviewAppointmentId(appointmentId);
+                            setDrawerDefaultReview(true);
+                        }}
+                    />
                 ) : (
                     <>
                 {/* Status Bar showing pet health state */}
@@ -1549,10 +1571,12 @@ function VetPageContent() {
                     clinicId={detailClinicId}
                     clinicData={detailClinicData}
                     defaultOpenReviewForm={drawerDefaultReview}
+                    defaultReviewAppointmentId={drawerDefaultReviewAppointmentId}
                     onClose={() => { 
                         setDetailClinicId(null); 
                         setDetailClinicData(null); 
                         setDrawerDefaultReview(false);
+                        setDrawerDefaultReviewAppointmentId(null);
                     }}
                     onBookAppointment={(clinic) => {
                         openAppointment(clinic);

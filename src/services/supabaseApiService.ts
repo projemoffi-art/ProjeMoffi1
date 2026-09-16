@@ -2517,7 +2517,7 @@ export class SupabaseApiService implements IApiService {
             .from('appointments')
             .select('*')
             .eq('user_id', userId)
-            .eq('status', 'confirmed')
+            .in('status', ['confirmed', 'completed'])
             .lt('appointment_date', new Date().toISOString())
             .order('appointment_date', { ascending: false });
 
