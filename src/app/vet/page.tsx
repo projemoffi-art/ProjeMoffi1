@@ -80,12 +80,46 @@ function VetPageContent() {
 
     // UI States
     const [searchQuery, setSearchQuery] = useState("");
+    const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+    const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+    const [filterSortBy, setFilterSortBy] = useState<'distance_asc' | 'distance_desc' | 'rating_desc' | null>(null);
+    const [filterOpenNow, setFilterOpenNow] = useState(false);
     const [viewMode, setViewMode] = useState<'clinics' | 'appointments'>('clinics');
     const [activeModal, setActiveModal] = useState<'appointment' | 'payment' | 'vaccine' | 'dental' | 'pharma' | 'sos' | 'success' | 'rating' | 'clinicList' | null>(null);
     const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
     const [selectedProv, setSelectedProv] = useState("");
     
     // Payment Simulation States
+    const activeClinics = useMemo(() => {
+        let result = [...allClinics];
+        
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(c => {
+                const matchName = c.name?.toLowerCase().includes(q);
+                const matchFeatures = c.features?.some((f: string) => f.toLowerCase().includes(q));
+                return matchName || matchFeatures;
+            });
+        }
+        
+        if (filterOpenNow) {
+            result = result.filter(c => c.isOpenNow);
+        }
+        
+        if (filterSortBy === 'distance_asc') {
+            result.sort((a, b) => (a.calculated_distance || 0) - (b.calculated_distance || 0));
+        } else if (filterSortBy === 'distance_desc') {
+            result.sort((a, b) => (b.calculated_distance || 0) - (a.calculated_distance || 0));
+        } else if (filterSortBy === 'rating_desc') {
+            result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        }
+        
+        return result;
+    }, [allClinics, searchQuery, filterOpenNow, filterSortBy]);
+    
+    const hasActiveFilters = filterSortBy !== null || filterOpenNow;
+
     const [tempAppointmentData, setTempAppointmentData] = useState<any>(null);
     const [cardholderName, setCardholderName] = useState("");
     const [cardNumber, setCardNumber] = useState("");
@@ -796,15 +830,57 @@ function VetPageContent() {
                     </div>
 
                     {/* Minimalist Medical Search Input */}
-                    <div className="relative group">
+                    <div className="relative group z-[160]" ref={searchContainerRef}>
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
                         <input
                             type="text"
                             placeholder="Klinik, veteriner veya uzmanlık alanı ara..."
                             className="w-full h-12 pl-11 pr-4 bg-card rounded-xl border border-card-border outline-none font-bold text-xs text-foreground placeholder:text-zinc-400 dark:placeholder:text-secondary/20 focus:border-accent transition-all text-left shadow-sm dark:shadow-none"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setIsSearchPanelOpen(true);
+                            }}
+                            onFocus={() => setIsSearchPanelOpen(true)}
                         />
+                        <AnimatePresence>
+                            {isSearchPanelOpen && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -5 }}
+                                    className="absolute top-[110%] left-0 right-0 bg-card border border-card-border rounded-xl shadow-2xl overflow-hidden"
+                                >
+                                    <div className="max-h-60 overflow-y-auto no-scrollbar py-2">
+                                        {activeClinics.length > 0 ? (
+                                            activeClinics.slice(0, 6).map((c) => (
+                                                <button 
+                                                    key={c.id}
+                                                    onClick={() => {
+                                                        setDetailClinicId(c.id);
+                                                        setDetailClinicData(c);
+                                                        setIsSearchPanelOpen(false);
+                                                        setSearchQuery("");
+                                                    }}
+                                                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors border-b border-card-border/50 last:border-0"
+                                                >
+                                                    <div className="flex flex-col text-left truncate pr-2">
+                                                        <span className="text-xs font-black text-foreground truncate">{c.name}</span>
+                                                        <span className="text-[9px] font-bold text-secondary">{c.distance || 'Konum Bilinmiyor'}</span>
+                                                    </div>
+                                                    <ChevronRight className="w-3 h-3 text-secondary shrink-0" />
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-8 text-center flex flex-col items-center justify-center">
+                                                <Search className="w-6 h-6 text-secondary/30 mb-2" />
+                                                <p className="text-xs font-bold text-secondary">Sonuç bulunamadı</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     {/* Location Selector Banner */}
@@ -1033,13 +1109,19 @@ function VetPageContent() {
                             <h2 className="text-sm font-black text-foreground tracking-wider uppercase italic leading-none">Çevredeki Klinikler</h2>
                             <p className="text-[8px] text-secondary font-bold uppercase tracking-wider mt-1">Öne Çıkan Sağlık Merkezleri</p>
                         </div>
-                        <button className="bg-card border border-card-border px-3.5 py-1.5 rounded-lg text-[8px] font-black text-secondary flex items-center gap-1 hover:text-foreground transition-all">
+                        <button 
+                            onClick={() => setIsFilterPanelOpen(true)}
+                            className="relative bg-card border border-card-border px-3.5 py-1.5 rounded-lg text-[8px] font-black text-secondary flex items-center gap-1 hover:text-foreground transition-all"
+                        >
                             <Filter className="w-3 h-3" /> FİLTRELE
+                            {hasActiveFilters && (
+                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />
+                            )}
                         </button>
                     </div>
 
                     <div className="space-y-4">
-                        {allClinics.map((clinic, index) => (
+                        {activeClinics.map((clinic, index) => (
                             <motion.div
                                 initial={{ opacity: 0, y: 15 }}
                                 whileInView={{ opacity: 1, y: 0 }}
@@ -1125,7 +1207,96 @@ function VetPageContent() {
                 </section>
                     </>
                 )}
-            </main>
+            
+            {/* FILTER PANEL */}
+            <AnimatePresence>
+                {isFilterPanelOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsFilterPanelOpen(false)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]"
+                        />
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed bottom-0 left-0 right-0 z-[201] bg-card rounded-t-3xl border-t border-card-border overflow-hidden pb-safe"
+                        >
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-lg font-black text-foreground tracking-tighter uppercase italic">Sıralama & Filtre</h3>
+                                    <button onClick={() => setIsFilterPanelOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                                        <X className="w-4 h-4 text-foreground" />
+                                    </button>
+                                </div>
+                                
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="text-[10px] font-black text-secondary tracking-widest uppercase mb-3 block">Sıralama Ölçütü</label>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            <button 
+                                                onClick={() => setFilterSortBy('distance_asc')}
+                                                className={cn("flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all", filterSortBy === 'distance_asc' ? "bg-accent/10 border-accent text-accent" : "bg-card border-card-border text-foreground")}
+                                            >
+                                                Mesafeye Göre (Yakından Uzağa)
+                                                {filterSortBy === 'distance_asc' && <CheckCircle2 className="w-4 h-4" />}
+                                            </button>
+                                            <button 
+                                                onClick={() => setFilterSortBy('distance_desc')}
+                                                className={cn("flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all", filterSortBy === 'distance_desc' ? "bg-accent/10 border-accent text-accent" : "bg-card border-card-border text-foreground")}
+                                            >
+                                                Mesafeye Göre (Uzaktan Yakına)
+                                                {filterSortBy === 'distance_desc' && <CheckCircle2 className="w-4 h-4" />}
+                                            </button>
+                                            <button 
+                                                onClick={() => setFilterSortBy('rating_desc')}
+                                                className={cn("flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all", filterSortBy === 'rating_desc' ? "bg-accent/10 border-accent text-accent" : "bg-card border-card-border text-foreground")}
+                                            >
+                                                Puana Göre (En Yüksek)
+                                                {filterSortBy === 'rating_desc' && <CheckCircle2 className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] font-black text-secondary tracking-widest uppercase mb-3 block">Filtreler</label>
+                                        <button 
+                                            onClick={() => setFilterOpenNow(!filterOpenNow)}
+                                            className={cn("w-full flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all", filterOpenNow ? "bg-accent/10 border-accent text-accent" : "bg-card border-card-border text-foreground")}
+                                        >
+                                            Sadece Şu An Açık Olanlar
+                                            <div className={cn("w-10 h-6 rounded-full flex items-center px-1 transition-all", filterOpenNow ? "bg-accent justify-end" : "bg-black/10 dark:bg-white/10 justify-start")}>
+                                                <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div className="pt-2 space-y-2">
+                                        <button 
+                                            onClick={() => setIsFilterPanelOpen(false)}
+                                            className="w-full h-12 bg-foreground text-background font-black uppercase tracking-wider text-xs rounded-xl hover:bg-foreground/90 transition-all active:scale-95"
+                                        >
+                                            Sonuçları Göster
+                                        </button>
+                                        <button 
+                                            onClick={() => { setFilterSortBy(null); setFilterOpenNow(false); setIsFilterPanelOpen(false); }}
+                                            className="w-full h-12 bg-transparent text-secondary font-black uppercase tracking-wider text-xs rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                                        >
+                                            Filtreleri Temizle
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+        </main>
 
             {/* --- MODALS & DRAWERS --- */}
             <AnimatePresence>
