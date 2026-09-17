@@ -333,6 +333,9 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                             <span className="text-6xl font-black text-secondary uppercase">{(clinic?.name || 'C')[0]}</span>
                                         </div>
                                     )}
+                                    {/* Gradient Scrim for text readability */}
+                                    <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+
                                     <button 
                                         onClick={onClose}
                                         className="absolute top-6 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full border border-black/10 dark:border-white/10 flex items-center justify-center text-white hover:bg-black/10 dark:bg-white/10 transition-all active:scale-90"
@@ -348,14 +351,14 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                 </span>
                                             )}
                                         </div>
-                                        <h2 className="text-3xl font-black text-foreground tracking-tighter uppercase italic leading-none truncate">{clinic.name}</h2>
+                                        <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic leading-none truncate">{clinic.name}</h2>
                                         <div className="flex items-center gap-3 mt-3">
-                                            <div className="flex items-center gap-1.5 bg-zinc-150/80 dark:bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-card-border">
+                                            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
                                                 <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                                <span className="text-xs font-black text-zinc-850 dark:text-white">{(averageRating === 0 && reviews.length === 0) ? '--' : averageRating.toFixed(1)}</span>
-                                                <span className="text-[10px] text-zinc-500 dark:text-white/40 font-bold">({reviews.length})</span>
+                                                <span className="text-xs font-black text-white">{(averageRating === 0 && reviews.length === 0) ? '--' : averageRating.toFixed(1)}</span>
+                                                <span className="text-[10px] text-white/70 font-bold">({reviews.length})</span>
                                             </div>
-                                            <span className="text-[10px] font-black text-secondary uppercase tracking-widest">{clinic.distance} Uzaklıkta</span>
+                                            <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">{clinic.distance} Uzaklıkta</span>
                                         </div>
                                     </div>
                                 </div>
