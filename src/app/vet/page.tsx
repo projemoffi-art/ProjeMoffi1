@@ -120,6 +120,20 @@ function VetPageContent() {
     
     const hasActiveFilters = filterSortBy !== null || filterOpenNow;
 
+    useEffect(() => {
+        function handleSearchClickOutside(event: MouseEvent | TouchEvent) {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+                setIsSearchPanelOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleSearchClickOutside);
+        document.addEventListener("touchstart", handleSearchClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleSearchClickOutside);
+            document.removeEventListener("touchstart", handleSearchClickOutside);
+        };
+    }, []);
+
     const [tempAppointmentData, setTempAppointmentData] = useState<any>(null);
     const [cardholderName, setCardholderName] = useState("");
     const [cardNumber, setCardNumber] = useState("");

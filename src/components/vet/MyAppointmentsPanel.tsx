@@ -44,13 +44,17 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
     const sortRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
             if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
                 setIsSortOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
     }, []);
     const { refreshAppointments } = usePet();
     const { user } = useAuth();
