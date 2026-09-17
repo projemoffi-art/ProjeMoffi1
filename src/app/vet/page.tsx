@@ -1133,9 +1133,9 @@ function VetPageContent() {
             <AnimatePresence>
                 {/* 1. APPOINTMENT SLOTS MODAL */}
                 {activeModal === 'appointment' && selectedClinic && (
-                    <motion.div key="appointment-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[140] bg-black/50 dark:bg-black/85 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-background rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[85vh] flex flex-col border border-card-border text-foreground relative border-t border-t-accent/20">
-                            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-card-border rounded-full sm:hidden" />
+                    <motion.div key="appointment-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[140] bg-black/50 dark:bg-black/85 backdrop-blur-sm">
+                        <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed top-0 right-0 z-[145] h-full w-full sm:w-[480px] bg-background shadow-[-20px_0_50px_rgba(0,0,0,0.05)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-card-border flex flex-col overflow-hidden text-foreground p-6 pt-12 sm:pt-6">
+
                             
                             <div className="flex justify-between items-center mb-6 mt-2 sm:mt-0">
                                 <h2 className="text-lg font-black tracking-tight uppercase">Randevu Oluştur</h2>
