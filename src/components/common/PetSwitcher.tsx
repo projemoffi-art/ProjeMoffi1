@@ -15,8 +15,8 @@ export function PetSwitcher({ className, onAddPet }: PetSwitcherProps) {
     const { pets, activePet, switchPet } = usePet();
 
     return (
-        <div className={cn("flex items-center gap-3 p-1 bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-card-border rounded-full w-fit", className)}>
-            <div className="flex -space-x-1 px-1">
+        <div className={cn("flex items-center gap-3 p-1 bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-card-border rounded-full w-fit max-w-full", className)}>
+            <div className="flex -space-x-1 px-1 overflow-x-auto no-scrollbar">
                 {pets.map((pet) => {
                     const isActive = activePet?.id === pet.id;
                     return (
