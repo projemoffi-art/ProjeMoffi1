@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-    X, Phone, Navigation, Star, MapPin, 
+    X, Phone, Navigation, Star, MapPin, Maximize, 
     Calendar, Clock, ShieldCheck, ChevronRight,
     Users, MessageSquare, Info, Send, ChevronLeft, Megaphone, Tag
 } from "lucide-react";
@@ -45,6 +45,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [campaigns, setCampaigns] = useState<any[]>([]);
     const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
+    const [isPhotoLightboxOpen, setIsPhotoLightboxOpen] = useState(false);
 
     // Chat States
     const [isChatOpen, setIsChatOpen] = useState(false);
@@ -230,6 +231,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const clinicAvatarUrl = clinic?.avatar_url || clinic?.logo || clinic?.imageUrl || clinicData?.avatar_url || clinicData?.logo || clinicData?.imageUrl || null;
 
     return (
+        <>
         <AnimatePresence>
             {clinicId && (
                 <div key="drawer-wrapper">
@@ -342,6 +344,14 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
+                                    {clinicAvatarUrl && (
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setIsPhotoLightboxOpen(true); }}
+                                            className="absolute top-6 right-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full border border-black/10 dark:border-white/10 flex items-center justify-center text-white hover:bg-black/10 dark:bg-white/10 transition-all active:scale-90"
+                                        >
+                                            <Maximize className="w-5 h-5" />
+                                        </button>
+                                    )}
 
                                     <div className="absolute bottom-6 left-8 right-8">
                                         <div className="flex items-center gap-2 mb-2">
@@ -698,5 +708,30 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                 </div>
             )}
         </AnimatePresence>
+            <AnimatePresence>
+                {isPhotoLightboxOpen && clinicAvatarUrl && (
+                    <motion.div
+                        key="photo-lightbox"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsPhotoLightboxOpen(false)}
+                        className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
+                    >
+                        <img 
+                            src={clinicAvatarUrl} 
+                            className="max-w-full max-h-full object-contain"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <button 
+                            onClick={() => setIsPhotoLightboxOpen(false)}
+                            className="absolute top-6 right-6 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-90"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
     );
 }
