@@ -1993,7 +1993,8 @@ export class SupabaseApiService implements IApiService {
                 features: cServices.length > 0 ? cServices : [],
                 phone: profile.phone || '',
                 distance: pLat !== null && pLng !== null && lat && lng ? `${distKm.toFixed(1)} km` : 'Konum Belirtilmemiş',
-                calculated_distance: distKm
+                calculated_distance: distKm,
+                type: profile.business_type || "vet"
             };
         })
         .sort((a, b) => a.calculated_distance - b.calculated_distance);
@@ -2039,6 +2040,7 @@ export class SupabaseApiService implements IApiService {
             phone: data.phone || '',
             email: 'iletisim@moffi.com', // Profiles table doesn't have email natively
             website: 'www.moffi.com',
+            type: data.business_type || "vet",
             isOpenNow: true,
             workingHours: {
                 weekdays: '09:00 - 18:00',

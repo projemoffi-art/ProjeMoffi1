@@ -783,14 +783,14 @@ function VetPageContent() {
                             >
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
-                            <div className="min-w-0 truncate">
-                                <span className="text-[9px] font-black text-accent dark:text-accent uppercase tracking-[0.2em] block mb-0.5 truncate">Moffi Health</span>
-                                <h1 className="text-2xl font-black text-foreground tracking-tighter leading-none uppercase italic truncate">
+                            <div className="min-w-0 shrink">
+                                <span className="text-[7px] min-[375px]:text-[8px] sm:text-[9px] font-black text-accent dark:text-accent uppercase tracking-[0.2em] block mb-0.5 transition-all">Moffi Health</span>
+                                <h1 className="text-sm min-[375px]:text-base sm:text-xl md:text-2xl font-black text-foreground tracking-tighter leading-none uppercase italic transition-all">
                                     Veterinerlik Portalı
                                 </h1>
                             </div>
                         </div>
-                        <div className="scale-90 origin-right shrink-0 max-w-[45vw] overflow-hidden">
+                        <div className="scale-90 origin-right shrink-0 max-w-[35vw] overflow-hidden">
                             <PetSwitcher />
                         </div>
                     </div>
@@ -888,11 +888,9 @@ function VetPageContent() {
                         onMouseMove={categoryScroll.onMouseMove}
                         className="flex gap-2 overflow-x-auto no-scrollbar pb-1 momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
                     >
-                        {[
-                            { id: 'all', label: 'Tüm Klinikler', icon: '🏥' },
-                            { id: 'clinic', label: 'Hastaneler', icon: '🛡️' },
-                            { id: 'food', label: 'Medikal Diyet', icon: '🍖' },
-                            { id: 'care', label: 'Sağlık & Eczane', icon: '💊' }
+                                                {[
+                            { id: 'all', label: 'Tüm Klinikler', icon: '🌍' },
+                            { id: 'clinic', label: 'Hastaneler', icon: '🏥' }
                         ].map(cat => (
                             <button
                                 key={cat.id}

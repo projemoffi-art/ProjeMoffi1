@@ -102,7 +102,7 @@ export function useVet() {
             let filtered = allCombined;
             if (category !== 'all') {
                 filtered = allCombined.filter(loc => {
-                    if (category === 'clinic') return !loc.id.startsWith('sh-');
+                    if (category === 'clinic') return loc.type === 'vet';
                     return loc.type === category;
                 });
             }
