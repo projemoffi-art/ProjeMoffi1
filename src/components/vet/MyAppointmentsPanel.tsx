@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, AlertCircle, X, CheckCircle2, Filter, ArrowDownUp, Check } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, X, CheckCircle2, Filter, ArrowDownUp, Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiService } from '@/services/apiService';
 import { usePet } from '@/context/PetContext';
@@ -38,6 +38,8 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
     const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
     const [showAllPets, setShowAllPets] = useState(true);
     const [sortMode, setSortMode] = useState<'date' | 'created'>('date');
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const hasAutoExpandedRef = useRef(false);
     const [isSortOpen, setIsSortOpen] = useState(false);
     const sortRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +97,28 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
     pastAppointments.sort((a, b) => sortMode === 'date' ? b._rawDate - a._rawDate : b._rawCreatedAt - a._rawCreatedAt);
 
     const displayedAppointments = activeTab === 'active' ? activeAppointments : pastAppointments;
+
+    useEffect(() => {
+        if (filteredByPet.length > 0 && !hasAutoExpandedRef.current) {
+            const closestActive = filteredByPet
+                .filter(a => ['pending', 'confirmed'].includes(a.status) && a._rawDate > Date.now())
+                .reduce((prev, curr) => (prev && prev._rawDate < curr._rawDate ? prev : curr), null as any);
+            
+            if (closestActive) {
+                setExpandedIds(new Set([closestActive.id]));
+            }
+            hasAutoExpandedRef.current = true;
+        }
+    }, [filteredByPet]);
+
+    const toggleExpand = (id: string) => {
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
 
     return (
         <div className="space-y-4">
@@ -195,67 +219,101 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
             ) : (
                 <div className="grid gap-4">
 
-                {displayedAppointments.map((appt) => (
-                    <div 
-                        key={appt.id} 
-                        className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-zinc-300 dark:hover:border-zinc-700"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-xl shrink-0">
-                                {appt.icon || '🏥'}
-                            </div>
-                            <div>
-                                <h4 className="text-zinc-800 dark:text-[#fafafa] font-black text-base uppercase leading-tight mb-1">{appt.type}</h4>
-                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-secondary uppercase tracking-wider mt-1">
-                                    <span className="text-accent bg-accent/10 border border-accent/20 px-1.5 py-0.5 rounded-md">
-                                        {appt.petName}
-                                    </span>
-                                    <span className="text-foreground/80">{appt.clinicName}</span>
-                                    {appt.realDoctorName && (
-                                        <>
+                {displayedAppointments.map((appt) => {
+                    const isExpanded = expandedIds.has(appt.id);
+                    const badge = getStatusBadge(appt.status);
+
+                    return (
+                        <div 
+                            key={appt.id} 
+                            className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-2xl flex flex-col transition-all hover:border-zinc-300 dark:hover:border-zinc-700 overflow-hidden"
+                        >
+                            {/* SUMMARY (Always visible, Clickable) */}
+                            <div 
+                                className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none"
+                                onClick={() => toggleExpand(appt.id)}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-lg shrink-0">
+                                        {appt.icon || '🏥'}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-accent bg-accent/10 border border-accent/20 px-1.5 py-0.5 rounded-md text-[10px] font-bold">
+                                                {appt.petName}
+                                            </span>
+                                            <span className="font-bold text-zinc-800 dark:text-zinc-200 text-xs truncate max-w-[120px] sm:max-w-[200px]">
+                                                {appt.clinicName}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-secondary uppercase tracking-wider">
+                                            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {appt.date}</span>
                                             <span className="opacity-50">•</span>
-                                            <span>Dr. {appt.realDoctorName}</span>
-                                        </>
-                                    )}
-                                    <span className="opacity-50">•</span>
-                                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {appt.date}</span>
-                                    <span className="opacity-50">•</span>
-                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {appt.time}</span>
+                                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {appt.time}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-2">
+                                    {/* Status Badge */}
+                                    <div className={cn(
+                                        "px-2 sm:px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5",
+                                        badge.bg,
+                                        badge.text
+                                    )}>
+                                        {badge.icon}
+                                        <span className="hidden sm:inline">{badge.label}</span>
+                                    </div>
+
+                                    <ChevronDown className={cn("w-4 h-4 text-zinc-400 transition-transform duration-300", isExpanded && "rotate-180")} />
+                                </div>
+                            </div>
+
+                            {/* DETAILS (Collapsible via Grid/CSS) */}
+                            <div 
+                                className={cn(
+                                    "grid transition-all duration-300 ease-in-out",
+                                    isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                                )}
+                            >
+                                <div className="overflow-hidden">
+                                    <div className="p-4 sm:p-5 pt-0 border-t border-zinc-100 dark:border-zinc-800/60 mt-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                        
+                                        {/* Detail Info */}
+                                        <div>
+                                            <h4 className="text-zinc-800 dark:text-[#fafafa] font-black text-sm uppercase leading-tight">{appt.type}</h4>
+                                            {appt.realDoctorName && (
+                                                <p className="text-[10px] font-bold text-secondary mt-1 flex items-center gap-1">
+                                                    Dr. {appt.realDoctorName}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+                                            {reviewableAppointmentIds?.has(appt.id) && onReviewClick && appt.clinicId && (
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); onReviewClick(appt.clinicId, appt.id); }}
+                                                    className="text-[9px] font-black text-accent hover:text-white hover:bg-accent border border-accent/20 bg-accent/5 uppercase tracking-widest transition-colors px-3 py-1.5 rounded-lg"
+                                                >
+                                                    DEĞERLENDİR
+                                                </button>
+                                            )}
+                                            {activeTab === 'active' && ['pending', 'confirmed'].includes(appt.status) && (
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); setCancelModalId(appt.id); }}
+                                                    className="text-[9px] font-black text-red-500/70 hover:text-red-600 dark:hover:text-red-400 uppercase tracking-widest transition-colors px-3 py-1.5 rounded-lg border border-red-500/10 hover:border-red-500/30 bg-red-500/5 hover:bg-red-500/10"
+                                                >
+                                                    İPTAL ET
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2 border-t border-zinc-100 dark:border-zinc-800 sm:border-0 pt-3 sm:pt-0">
-                            {/* Status Badge */}
-                            <div className={cn(
-                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5",
-                                getStatusBadge(appt.status).bg,
-                                getStatusBadge(appt.status).text
-                            )}>
-                                {getStatusBadge(appt.status).icon}
-                                {getStatusBadge(appt.status).label}
-                            </div>
-                            
-                            {reviewableAppointmentIds?.has(appt.id) && onReviewClick && appt.clinicId && (
-                                <button 
-                                    onClick={() => onReviewClick(appt.clinicId, appt.id)}
-                                    className="text-[9px] font-black text-accent hover:text-white hover:bg-accent border border-accent/20 bg-accent/5 uppercase tracking-widest transition-colors px-3 py-1.5 rounded-lg mt-2"
-                                >
-                                    DEĞERLENDİR
-                                </button>
-                            )}
-                            {/* Cancel Button */}
-                            {activeTab === 'active' && ['pending', 'confirmed'].includes(appt.status) && (
-                                <button 
-                                    onClick={() => setCancelModalId(appt.id)}
-                                    className="text-[9px] font-black text-red-500/70 hover:text-red-600 dark:hover:text-red-400 uppercase tracking-widest transition-colors px-2 py-1"
-                                >
-                                    İPTAL ET
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
             )}
 
