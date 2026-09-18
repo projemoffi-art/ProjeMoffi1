@@ -16,9 +16,7 @@ interface ChatContextType {
     inboxMessages: any[];
     sosAlerts: any[];
     activeMessages: any[];
-    replyMessage: string;
-    setReplyMessage: (val: string) => void;
-    onSendReply: () => void;
+    onSendReply: (text: string, attachmentUrl?: string) => Promise<void>;
     isReplying: boolean;
     openChat: (userId: string) => void;
     openSosAlerts: () => void;
@@ -38,7 +36,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [inboxMessages, setInboxMessages] = useState<any[]>([]);
     const [sosAlerts, setSosAlerts] = useState<any[]>([]);
     const [activeMessages, setActiveMessages] = useState<any[]>([]);
-    const [replyMessage, setReplyMessage] = useState('');
     const [isReplying, setIsReplying] = useState(false);
     
     // Use refs to avoid stale closures and prevent infinite loops
@@ -57,7 +54,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setActiveMessages([]);
         setInboxMessages([]);
         setUnreadCount(0);
-        setReplyMessage('');
     }, [user?.id]);
 
     // STABLE fetch functions that use refs - never change identity
@@ -186,32 +182,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsInboxOpen(true);
     }, []);
 
-    const onSendReply = useCallback(async () => {
-        if (!replyMessage.trim() || !activeChatUserId) return;
+    const onSendReply = useCallback(async (text: string, attachmentUrl?: string) => {
+        const trimmed = text.trim();
+        if ((!trimmed && !attachmentUrl) || !activeChatUserId) return;
         setIsReplying(true);
 
         const optimisticMsg = {
             id: `temp-${Date.now()}`,
-            text: replyMessage.trim(),
+            text: trimmed,
+            attachmentUrl,
             sentByMe: true,
             time: 'Şimdi',
             read: false
         };
         setActiveMessages(prev => [...prev, optimisticMsg]);
-        const sentContent = replyMessage.trim();
-        setReplyMessage('');
 
         try {
-            await apiService.sendChatMessage(activeChatUserId, sentContent);
+            await apiService.sendChatMessage(activeChatUserId, trimmed, 'inbox', undefined, attachmentUrl);
             fetchInbox();
         } catch (err) {
             console.error('Send message error:', err);
             setActiveMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-            setReplyMessage(sentContent);
+            throw err;
         } finally {
             setIsReplying(false);
         }
-    }, [replyMessage, activeChatUserId, fetchInbox]);
+    }, [activeChatUserId, fetchInbox]);
 
     const deleteMessage = useCallback(async (messageId: string) => {
         // Optimistic UI update
@@ -234,7 +230,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             activeChatUserId, setActiveChatUserId,
             unreadCount, inboxMessages, sosAlerts,
             activeMessages,
-            replyMessage, setReplyMessage,
             onSendReply, isReplying,
             openChat, openSosAlerts,
             refreshInbox: fetchInbox,

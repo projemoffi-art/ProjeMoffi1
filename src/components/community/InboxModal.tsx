@@ -2,22 +2,23 @@
 
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    X, Search, MessageCircle, ShieldAlert, ChevronRight, 
-    Send, CheckCheck, Plus, Smile, Trash2
+import {
+    X, Search, MessageCircle, ShieldAlert, ChevronRight,
+    CheckCheck, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/services/apiService';
+import { ChatComposer } from '@/components/chat/MessageThread';
 
 export function InboxModal() {
-    const { 
-        isInboxOpen, setIsInboxOpen, 
+    const {
+        isInboxOpen, setIsInboxOpen,
         inboxTab, setInboxTab,
         inboxMessages, sosAlerts,
         activeChatUserId, setActiveChatUserId,
         activeMessages,
-        replyMessage, setReplyMessage,
         onSendReply, isReplying,
         deleteMessage
     } = useChat();
@@ -45,7 +46,7 @@ export function InboxModal() {
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 50 }}
-                    className="fixed inset-0 z-[5000] flex flex-col pt-safe-top bg-white dark:bg-black text-white"
+                    className="fixed inset-0 z-[6100] flex flex-col pt-safe-top bg-white dark:bg-black text-white"
                 >
                     {/* HEADER */}
                     <div className="px-6 py-4 flex items-center justify-between border-b border-card-border backdrop-blur-3xl sticky top-0 z-10 bg-black/80">
@@ -110,7 +111,16 @@ export function InboxModal() {
                                                 </button>
                                             )}
                                             <div className={cn("px-4 py-3 rounded-[1.5rem] relative active:scale-[0.98] transition-all shadow-sm", m.sentByMe ? "bg-cyan-500 text-black font-medium rounded-tr-none" : "bg-black/10 dark:bg-white/10 text-white border border-card-border rounded-tl-none")}>
-                                                <p className="text-sm leading-relaxed">{m.text}</p>
+                                                {m.attachmentUrl && (
+                                                    <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                                                        <img
+                                                            src={m.attachmentUrl}
+                                                            alt="Gönderilen fotoğraf"
+                                                            className={cn("rounded-xl max-w-full max-h-64 object-cover", m.text && "mb-2")}
+                                                        />
+                                                    </a>
+                                                )}
+                                                {m.text && <p className="text-sm leading-relaxed">{m.text}</p>}
                                                 <div className={cn("flex items-center gap-1 mt-1.5", m.sentByMe ? "justify-end" : "justify-start")}>
                                                     <span className={cn("text-[9px] font-bold uppercase tracking-tighter opacity-60", m.sentByMe ? "text-black" : "text-black/50 dark:text-white/40")}>{m.time}</span>
                                                     {m.sentByMe && <CheckCheck className="w-3 h-3 text-black/60" />}
@@ -190,32 +200,12 @@ export function InboxModal() {
                     </div>
 
                     {activeChatUserId && (
-                        <div className="absolute bottom-0 inset-x-0 bg-black/80 backdrop-blur-3xl px-6 py-4 border-t border-card-border flex items-center gap-3">
-                            <button className="p-3 rounded-full bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 hover:text-white transition-all">
-                                <Plus className="w-6 h-6" />
-                            </button>
-                            <div className="flex-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl px-5 py-3 flex items-center gap-2 focus-within:border-cyan-400/50 transition-all">
-                                <input
-                                    type="text"
-                                    value={replyMessage}
-                                    onChange={(e) => setReplyMessage(e.target.value)}
-                                    placeholder="Mesajınızı yazın..."
-                                    className="bg-transparent border-none outline-none flex-1 text-sm text-white placeholder:text-black/30 dark:text-white/20"
-                                    onKeyPress={(e) => e.key === 'Enter' && onSendReply()}
-                                />
-                                <button className="text-black/30 dark:text-white/20 hover:text-cyan-400 transition-colors">
-                                    <Smile className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <button
-                                disabled={!replyMessage.trim() || isReplying}
-                                onClick={onSendReply}
-                                className={cn("p-4 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg",
-                                    replyMessage.trim() ? "bg-card text-black shadow-lg" : "bg-black/5 dark:bg-white/5 text-black/30 dark:text-white/20"
-                                )}
-                            >
-                                {isReplying ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <Send className="w-5 h-5" />}
-                            </button>
+                        <div className="absolute bottom-0 inset-x-0 bg-black/80 backdrop-blur-3xl px-4 py-3 border-t border-card-border">
+                            <ChatComposer
+                                onSend={onSendReply}
+                                uploadImage={(file) => apiService.uploadMedia(file)}
+                                sending={isReplying}
+                            />
                         </div>
                     )}
                 </motion.div>
