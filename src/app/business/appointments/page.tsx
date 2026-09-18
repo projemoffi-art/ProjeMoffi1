@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import {
     CalendarCheck, CheckCircle2,
     User, Bell, X, Syringe, ClipboardList, Pill, AlertTriangle,
-    Clock, Coffee, Save, Calendar, Heart, Send, Star, MessageSquare
+    Clock, Coffee, Save, Calendar, Heart, Send, Star, MessageSquare, ChevronLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePet } from "@/context/PetContext";
@@ -1937,8 +1937,11 @@ export default function BusinessAppointmentsPage() {
                 )}
                 {activeTab === 'messages' && (
                     <div className="flex flex-col lg:flex-row gap-6 h-[75vh] w-full">
-                        {/* Conversation List */}
-                        <div className="w-full lg:w-[350px] shrink-0 border border-zinc-200 dark:border-card-border rounded-3xl bg-white dark:bg-[#12121A] overflow-hidden flex flex-col shadow-moffi-card">
+                        {/* Conversation List — mobilde bir konuşma seçilince tamamen gizlenir, sohbet ekranına yer açar */}
+                        <div className={cn(
+                            "w-full lg:w-[350px] shrink-0 border border-zinc-200 dark:border-card-border rounded-3xl bg-white dark:bg-[#12121A] overflow-hidden lg:flex flex-col shadow-moffi-card",
+                            selectedConv ? "hidden" : "flex"
+                        )}>
                             <div className="p-4 border-b border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-[#18181b]">
                                 <h3 className="font-black text-sm uppercase tracking-wider text-zinc-500">Müşteri Mesajları</h3>
                             </div>
@@ -1976,11 +1979,22 @@ export default function BusinessAppointmentsPage() {
                             </div>
                         </div>
 
-                        {/* Chat Area */}
-                        <div className="flex-1 border border-zinc-200 dark:border-card-border rounded-3xl bg-white dark:bg-[#12121A] overflow-hidden flex flex-col shadow-moffi-card">
+                        {/* Chat Area — mobilde sadece bir konuşma seçiliyken görünür, tüm genişliği/yüksekliği kullanır */}
+                        <div className={cn(
+                            "flex-1 border border-zinc-200 dark:border-card-border rounded-3xl bg-white dark:bg-[#12121A] overflow-hidden lg:flex flex-col shadow-moffi-card",
+                            selectedConv ? "flex" : "hidden"
+                        )}>
                             {selectedConv ? (
                                 <>
                                     <div className="p-4 border-b border-zinc-200 dark:border-card-border flex items-center gap-3 bg-zinc-50 dark:bg-[#18181b]">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedConv(null)}
+                                            className="lg:hidden p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-zinc-500 shrink-0"
+                                            aria-label="Konuşma listesine dön"
+                                        >
+                                            <ChevronLeft className="w-5 h-5" />
+                                        </button>
                                         <img src={selectedConv.avatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
                                         <h3 className="font-black text-sm uppercase dark:text-white text-zinc-800">{selectedConv.partnerName}</h3>
                                     </div>

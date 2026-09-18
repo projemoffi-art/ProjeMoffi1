@@ -205,10 +205,12 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
         }
     };
 
+    const canSend = (text.trim() || pendingFile) && !sending && !uploading;
+
     return (
         <div>
             {pendingPreview && (
-                <div className="relative inline-block mb-2 ml-1">
+                <div className="relative inline-block mb-2 ml-2">
                     <img
                         src={pendingPreview}
                         alt="Seçilen fotoğraf"
@@ -217,14 +219,15 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
                     <button
                         type="button"
                         onClick={clearPendingImage}
-                        className="absolute -top-1.5 -right-1.5 bg-zinc-900 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                        className="absolute -top-1.5 -right-1.5 bg-zinc-900 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md"
                         aria-label="Fotoğrafı kaldır"
                     >
                         <X className="w-3 h-3" />
                     </button>
                 </div>
             )}
-            <div className="flex items-center gap-1.5">
+            {/* Tek parça, bütün gibi davranan kapsül: ikonlar, yazı alanı ve gönder butonu aynı zemin içinde */}
+            <div className="flex items-end gap-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.75rem] p-1.5 focus-within:border-accent/50 transition-colors">
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -235,7 +238,7 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-2.5 rounded-full text-zinc-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 shrink-0"
+                    className="p-2.5 rounded-full text-zinc-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
                     aria-label="Fotoğraf ekle"
                 >
                     <ImageIcon className="w-5 h-5" />
@@ -244,7 +247,10 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
                     <button
                         type="button"
                         onClick={() => setEmojiOpen((v) => !v)}
-                        className="p-2.5 rounded-full text-zinc-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
+                        className={cn(
+                            "p-2.5 rounded-full transition-colors",
+                            emojiOpen ? "text-accent bg-accent/10" : "text-zinc-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
+                        )}
                         aria-label="Emoji ekle"
                     >
                         <Smile className="w-5 h-5" />
@@ -252,7 +258,7 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
                     {emojiOpen && (
                         <>
                             <div className="fixed inset-0 z-10" onClick={() => setEmojiOpen(false)} />
-                            <div className="absolute bottom-full left-0 mb-2 bg-card border border-card-border rounded-2xl shadow-lg p-2 grid grid-cols-6 gap-1 z-20 w-56">
+                            <div className="absolute bottom-full left-0 mb-3 bg-card border border-card-border rounded-2xl shadow-xl p-2 grid grid-cols-6 gap-1 z-20 w-56">
                                 {QUICK_EMOJIS.map((emoji) => (
                                     <button
                                         key={emoji}
@@ -270,24 +276,34 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
                         </>
                     )}
                 </div>
-                <input
-                    type="text"
+                <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSend();
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                        }
                     }}
                     placeholder={placeholder}
-                    className="flex-1 min-w-0 bg-transparent border border-card-border rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors text-foreground"
+                    rows={1}
+                    className="flex-1 min-w-0 bg-transparent border-none resize-none py-2.5 px-1 text-sm leading-tight max-h-24 focus:outline-none focus:ring-0 text-foreground placeholder:text-secondary"
                 />
                 <button
                     type="button"
                     onClick={handleSend}
-                    disabled={(!text.trim() && !pendingFile) || sending || uploading}
-                    className="bg-accent text-white w-10 h-10 rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center shrink-0"
+                    disabled={!canSend}
+                    className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all",
+                        canSend ? "bg-accent text-white hover:opacity-90 active:scale-95" : "bg-black/10 dark:bg-white/10 text-zinc-400 cursor-not-allowed"
+                    )}
                     aria-label="Gönder"
                 >
-                    <Send className="w-4 h-4" />
+                    {uploading ? (
+                        <span className="w-4 h-4 rounded-full border-2 border-current/30 border-t-current animate-spin" />
+                    ) : (
+                        <Send className="w-4 h-4" />
+                    )}
                 </button>
             </div>
         </div>

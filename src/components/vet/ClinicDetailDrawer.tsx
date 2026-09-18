@@ -240,7 +240,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 z-[110] bg-black/20 dark:bg-black/40 backdrop-blur-sm sm:backdrop-blur-none"
+                        className="fixed inset-0 z-[6100] bg-black/20 dark:bg-black/40 backdrop-blur-sm sm:backdrop-blur-none"
                     />
 
                     {/* DRAWER PANEL (Apple Maps Style) */}
@@ -251,7 +251,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed top-0 right-0 z-[120] w-full sm:w-[480px] h-full bg-card shadow-[-20px_0_50px_rgba(0,0,0,0.05)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-card-border flex flex-col overflow-y-auto no-scrollbar pb-24"
+                        className="fixed top-0 right-0 z-[6200] w-full sm:w-[480px] h-full bg-card shadow-[-20px_0_50px_rgba(0,0,0,0.05)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-card-border flex flex-col overflow-y-auto no-scrollbar pb-24"
                     >
                         {isChatOpen ? (
                             <div className="flex flex-col h-full bg-card">
@@ -688,7 +688,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setIsPhotoLightboxOpen(false)}
-                        className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
+                        className="fixed inset-0 z-[6300] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
                     >
                         <img 
                             src={clinicAvatarUrl} 
