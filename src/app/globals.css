@@ -203,6 +203,7 @@ html, body {
   
   .touch-none { touch-action: none; }
   .touch-pan-y { touch-action: pan-y; }
+  .touch-pan-x { touch-action: pan-x; }
   
   /* Mobile Specific Full Height (Fixes 100vh issue on mobile browsers) */
   .h-mobile-screen { height: 100dvh; }

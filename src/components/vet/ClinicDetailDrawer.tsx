@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    X, Phone, Navigation, Star, MapPin, Maximize, 
+import {
+    X, Phone, Navigation, Star, MapPin, Maximize,
     Calendar, Clock, ShieldCheck, ChevronRight,
-    Users, MessageSquare, Info, Send, ChevronLeft, Megaphone, Tag
+    Users, MessageSquare, Info, ChevronLeft, Megaphone, Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
+import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { VetClinic } from "@/types/domain";
 import { useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
@@ -50,17 +51,16 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     // Chat States
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [chatMessages, setChatMessages] = useState<any[]>([]);
-    const [chatInput, setChatInput] = useState("");
     const [isSendingMessage, setIsSendingMessage] = useState(false);
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
     const loadConversation = async () => {
         if (!clinicId || !currentUser?.id) return;
-        const messages = await apiService.getConversation(clinicId, currentUser.id);
+        const messages = await apiService.getChatMessages(clinicId, 'clinic');
         setChatMessages(messages);
         
         // Okunmamışları okundu yap (Klinikten gelenler)
-        await apiService.markMessagesRead(clinicId, currentUser.id, 'user');
+        await apiService.markChatAsRead(clinicId, 'clinic');
     };
 
     useEffect(() => {
@@ -78,29 +78,27 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
         };
     }, [isChatOpen, clinicId, currentUser]);
 
-    const handleSendMessage = async () => {
-        if (!chatInput.trim() || !clinicId || !currentUser?.id || isSendingMessage) return;
+    const handleSendMessage = async (text: string, attachmentUrl?: string) => {
+        if ((!text.trim() && !attachmentUrl) || !clinicId || !currentUser?.id || isSendingMessage) return;
         setIsSendingMessage(true);
-        
-        const messageToSend = chatInput.trim();
-        
-        // HEMEN temizle (Optimistic UI)
-        setChatInput("");
-        
         try {
-            const success = await apiService.sendMessage(clinicId, currentUser.id, 'user', messageToSend);
-            if (success) {
-                // await ile bekletmiyoruz, arkaplanda yenilensin
-                loadConversation();
-            } else {
-                console.error("sendMessage returned false");
-                setChatInput(messageToSend); // Hata olursa geri al
-            }
+            await apiService.sendChatMessage(clinicId, text.trim(), 'clinic', undefined, attachmentUrl);
+            await loadConversation();
         } catch (err) {
             console.error("Error in handleSendMessage:", err);
-            setChatInput(messageToSend); // Hata olursa geri al
+            throw err;
         } finally {
             setIsSendingMessage(false);
+        }
+    };
+
+    const handleRecallMessage = async (messageId: string) => {
+        if (!window.confirm("Bu mesajı geri almak istediğine emin misin?")) return;
+        try {
+            await apiService.recallChatMessage(messageId);
+            loadConversation();
+        } catch (err) {
+            console.error("Error in handleRecallMessage:", err);
         }
     };
 
@@ -277,46 +275,20 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                 </div>
                                 
                                 <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col no-scrollbar">
-                                    {chatMessages.length === 0 && (
-                                        <div className="flex-1 flex flex-col items-center justify-center opacity-30 text-center px-8">
-                                            <MessageSquare className="w-12 h-12 mb-4 mx-auto" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest">Henüz mesaj yok</p>
-                                        </div>
-                                    )}
-                                    {chatMessages.map((msg: any, index: number) => {
-                                        const isMine = msg.sender_role === 'user';
-                                        return (
-                                            <div key={msg.id || `msg-${index}`} className={cn("flex w-full", isMine ? "justify-end" : "justify-start")}>
-                                                <div className={cn("max-w-[75%] rounded-2xl p-4 text-sm relative", isMine ? "bg-accent text-white rounded-tr-sm" : "bg-card text-foreground border border-card-border rounded-tl-sm")}>
-                                                    {msg.message}
-                                                    <span className={cn("block text-[9px] mt-2 opacity-50 uppercase tracking-widest font-black", isMine ? "text-right" : "text-left")}>
-                                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    <ChatMessageList
+                                        messages={chatMessages}
+                                        onRecall={handleRecallMessage}
+                                        emptyLabel="Henüz mesaj yok"
+                                        emptyIcon={<MessageSquare className="w-12 h-12 mb-4 mx-auto" />}
+                                    />
                                 </div>
                                 
                                 <div className="p-4 border-t border-card-border bg-card sticky bottom-0">
-                                    <div className="flex items-center gap-2 relative">
-                                        <input 
-                                            type="text" 
-                                            value={chatInput} 
-                                            onChange={(e) => setChatInput(e.target.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
-                                            placeholder="Mesajınızı yazın..." 
-                                            className="flex-1 bg-card border border-card-border rounded-full px-5 py-4 text-sm focus:outline-none focus:border-accent transition-colors text-foreground"
-                                            disabled={isSendingMessage}
-                                        />
-                                        <button 
-                                            onClick={handleSendMessage}
-                                            disabled={!chatInput.trim() || isSendingMessage}
-                                            className="bg-accent text-white w-12 h-12 rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center flex-shrink-0 absolute right-1 top-1"
-                                        >
-                                            <Send className="w-5 h-5 -ml-1" />
-                                        </button>
-                                    </div>
+                                    <ChatComposer
+                                        onSend={handleSendMessage}
+                                        uploadImage={(file) => apiService.uploadMedia(file)}
+                                        sending={isSendingMessage}
+                                    />
                                 </div>
                             </div>
                         ) : loading ? (

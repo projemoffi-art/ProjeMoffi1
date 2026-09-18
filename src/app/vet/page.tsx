@@ -976,7 +976,7 @@ function VetPageContent() {
                         onMouseLeave={categoryScroll.onMouseLeave}
                         onMouseUp={categoryScroll.onMouseUp}
                         onMouseMove={categoryScroll.onMouseMove}
-                        className="flex gap-2 overflow-x-auto no-scrollbar pb-1 momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
+                        className="flex gap-2 overflow-x-auto no-scrollbar touch-pan-x pb-1 momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
                     >
                                                 {[
                             { id: 'all', label: 'Tüm Klinikler', icon: '🌍' },
@@ -1438,7 +1438,7 @@ function VetPageContent() {
                                         onMouseLeave={dateScroll.onMouseLeave}
                                         onMouseUp={dateScroll.onMouseUp}
                                         onMouseMove={dateScroll.onMouseMove}
-                                        className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1 snap-x momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
+                                        className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar touch-pan-x -mx-1 px-1 snap-x momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
                                     >
                                         {dateOptions.map((day, dIndex) => {
                                             if (!day.key) console.warn("🚨 BOŞ DAY.KEY DEĞERİ!", { day, index: dIndex });

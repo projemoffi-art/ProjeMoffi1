@@ -345,11 +345,12 @@ export interface IApiService {
     getFollowing(userId: string): Promise<UserProfile[]>;
     
     // Direct Messaging (Chat)
-    getChatConversations(): Promise<any[]>;
-    getChatMessages(conversationId: string): Promise<any[]>;
-    sendChatMessage(receiverId: string, content: string, associatedAdId?: string): Promise<any>;
-    markChatAsRead(conversationId: string): Promise<void>;
+    getChatConversations(scope?: 'inbox' | 'clinic'): Promise<any[]>;
+    getChatMessages(otherUserId: string, scope?: 'inbox' | 'clinic'): Promise<any[]>;
+    sendChatMessage(receiverId: string, content: string, scope?: 'inbox' | 'clinic', associatedAdId?: string, attachmentUrl?: string): Promise<any>;
+    markChatAsRead(otherUserId: string, scope?: 'inbox' | 'clinic'): Promise<void>;
     deleteChatMessage(messageId: string): Promise<void>;
+    recallChatMessage(messageId: string): Promise<void>;
     
     // Media & Storage
     uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds', onProgress?: (percent: number) => void): Promise<string>;

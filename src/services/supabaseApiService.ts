@@ -3216,12 +3216,12 @@ export class SupabaseApiService implements IApiService {
         })) as any[];
     }
     // --- CHAT & MESSAGING (Real-time Supabase) ---
-    async getChatConversations(): Promise<any[]> {
+    async getChatConversations(scope: 'inbox' | 'clinic' = 'inbox'): Promise<any[]> {
         const user = await this.getSessionUser();
         if (!user) return [];
 
         // Fetch conversations where the user is either participant_1 or participant_2
-        const { data, error } = await supabase
+        let query = supabase
             .from('conversations')
             .select(`
                 id,
@@ -3232,6 +3232,14 @@ export class SupabaseApiService implements IApiService {
             `)
             .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
             .order('last_message_at', { ascending: false });
+
+        if (scope === 'clinic') {
+            query = query.eq('context_type', 'clinic');
+        } else {
+            query = query.neq('context_type', 'clinic');
+        }
+
+        const { data, error } = await query;
 
         if (error) { console.error("getStories error:", error); return []; } if (!data) return [];
 
@@ -3269,18 +3277,25 @@ export class SupabaseApiService implements IApiService {
         return results;
     }
 
-    async getChatMessages(otherUserId: string): Promise<any[]> {
+    async getChatMessages(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<any[]> {
         const user = await this.getSessionUser();
         if (!user) return [];
 
         // Find the conversation
-        const { data: conv } = await supabase
+        let convQuery = supabase
             .from('conversations')
             .select('id')
             .or(
                 `and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`
-            )
-            .single();
+            );
+
+        if (scope === 'clinic') {
+            convQuery = convQuery.eq('context_type', 'clinic');
+        } else {
+            convQuery = convQuery.neq('context_type', 'clinic');
+        }
+
+        const { data: conv } = await convQuery.single();
 
         if (!conv) return [];
 
@@ -3294,27 +3309,37 @@ export class SupabaseApiService implements IApiService {
 
         return data.map(msg => ({
             id: msg.id,
-            text: msg.content,
+            text: msg.is_deleted ? '' : msg.content,
+            attachmentUrl: msg.is_deleted ? null : msg.attachment_url,
             sentByMe: msg.sender_id === user.id,
             time: this.formatTimeAgo(msg.created_at),
-            read: msg.is_read
+            createdAt: msg.created_at,
+            read: msg.is_read,
+            deleted: !!msg.is_deleted
         }));
     }
 
-    async sendChatMessage(otherUserId: string, content: string, associatedAdId?: string): Promise<void> {
+    async sendChatMessage(otherUserId: string, content: string, scope: 'inbox' | 'clinic' = 'inbox', associatedAdId?: string, attachmentUrl?: string): Promise<void> {
         const user = await this.getSessionUser();
         if (!user) throw new Error("Giriş gerekli");
 
         // Find or create conversation
         let conversationId: string;
 
-        const { data: existing } = await supabase
+        let convQuery = supabase
             .from('conversations')
             .select('id, associated_ad_id')
             .or(
                 `and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`
-            )
-            .maybeSingle();
+            );
+
+        if (scope === 'clinic') {
+            convQuery = convQuery.eq('context_type', 'clinic');
+        } else {
+            convQuery = convQuery.neq('context_type', 'clinic');
+        }
+
+        const { data: existing } = await convQuery.maybeSingle();
 
         if (existing) {
             conversationId = existing.id;
@@ -3327,12 +3352,20 @@ export class SupabaseApiService implements IApiService {
             }
         } else {
             // Create new conversation
+            let newContextType = 'general';
+            if (scope === 'clinic') {
+                newContextType = 'clinic';
+            } else if (scope === 'inbox' && associatedAdId) {
+                newContextType = 'lost_pet';
+            }
+
             const { data: newConv, error: convErr } = await supabase
                 .from('conversations')
                 .insert({
                     participant_1: user.id,
                     participant_2: otherUserId,
-                    associated_ad_id: associatedAdId || null
+                    associated_ad_id: associatedAdId || null,
+                    context_type: newContextType
                 })
                 .select('id')
                 .single();
@@ -3347,7 +3380,8 @@ export class SupabaseApiService implements IApiService {
             .insert({
                 conversation_id: conversationId,
                 sender_id: user.id,
-                content: content
+                content: content,
+                attachment_url: attachmentUrl || null
             });
 
         if (msgErr) throw msgErr;
@@ -3356,24 +3390,28 @@ export class SupabaseApiService implements IApiService {
         await supabase
             .from('conversations')
             .update({
-                last_message: content,
+                last_message: content || (attachmentUrl ? '📷 Fotoğraf' : ''),
                 last_message_at: new Date().toISOString()
             })
             .eq('id', conversationId);
     }
 
-    async markChatAsRead(otherUserId: string): Promise<void> {
+    async markChatAsRead(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<void> {
         const user = await this.getSessionUser();
         if (!user) return;
 
-        const { data: conv } = await supabase
+        let convQuery = supabase
             .from('conversations')
             .select('id')
-            .or(
-                `and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`
-            )
-            .single();
+            .or(`and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`);
 
+        if (scope === 'clinic') {
+            convQuery = convQuery.eq('context_type', 'clinic');
+        } else {
+            convQuery = convQuery.neq('context_type', 'clinic');
+        }
+
+        const { data: conv } = await convQuery.single();
         if (!conv) return;
 
         await supabase
@@ -3395,6 +3433,24 @@ export class SupabaseApiService implements IApiService {
 
         if (error) {
             console.error('Delete message error:', error);
+            throw error;
+        }
+    }
+
+    // Mesajı tamamen silmez, "geri alındı" olarak işaretler (WhatsApp tarzı).
+    // Karşı taraf da geri alındığını görür, ama kayıt veritabanında kalır.
+    async recallChatMessage(messageId: string): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error("Giriş gerekli");
+
+        const { error } = await supabase
+            .from('messages')
+            .update({ is_deleted: true })
+            .eq('id', messageId)
+            .eq('sender_id', user.id);
+
+        if (error) {
+            console.error('Recall message error:', error);
             throw error;
         }
     }

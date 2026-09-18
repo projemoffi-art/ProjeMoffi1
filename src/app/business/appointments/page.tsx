@@ -11,6 +11,7 @@ import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
 import { showToast, cn } from "@/lib/utils";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { supabase } from "@/lib/supabase";
 import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail";
 import { useDragScroll } from "@/hooks/useDragScroll";
@@ -124,7 +125,6 @@ export default function BusinessAppointmentsPage() {
     const [totalUnread, setTotalUnread] = useState(0);
     const [selectedConv, setSelectedConv] = useState<any>(null);
     const [chatMessages, setChatMessages] = useState<any[]>([]);
-    const [chatInput, setChatInput] = useState("");
     const [isSendingMessage, setIsSendingMessage] = useState(false);
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -450,25 +450,21 @@ export default function BusinessAppointmentsPage() {
     const loadConversations = async () => {
         if (!user?.id || !isSupabaseEnabled) return;
         try {
-            const convs = await apiService.getClinicConversations(user.id);
+            const convs = await apiService.getChatConversations('clinic');
             setConversations(convs);
-            const unread = await apiService.getTotalClinicUnreadCount(user.id);
+            const unread = convs.filter((c: any) => c.unread).length;
             setTotalUnread(unread);
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     };
 
     const loadChatHistory = async (userId: string) => {
         if (!user?.id || !isSupabaseEnabled) return;
         try {
-            const history = await apiService.getConversation(user.id, userId);
+            const history = await apiService.getChatMessages(userId, 'clinic');
             setChatMessages(history);
-            await apiService.markMessagesRead(user.id, userId, 'clinic');
+            await apiService.markChatAsRead(userId, 'clinic');
             loadConversations();
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     };
 
     useEffect(() => {
@@ -493,24 +489,27 @@ export default function BusinessAppointmentsPage() {
         }
     }, [activeTab, selectedConv]);
 
-    const handleSendMessage = async () => {
-        if (!chatInput.trim() || !selectedConv || !user?.id || isSendingMessage) return;
+    const handleSendMessage = async (text: string, attachmentUrl?: string) => {
+        if ((!text.trim() && !attachmentUrl) || !selectedConv || !user?.id || isSendingMessage) return;
         setIsSendingMessage(true);
-        const text = chatInput.trim();
-        setChatInput("");
         try {
-            const success = await apiService.sendMessage(user.id, selectedConv.userId, 'clinic', text);
-            if (success) {
-                await loadChatHistory(selectedConv.userId);
-            } else {
-                setChatInput(text);
-                alert("Mesaj gönderilemedi");
-            }
+            await apiService.sendChatMessage(selectedConv.userId, text.trim(), 'clinic', undefined, attachmentUrl);
+            await loadChatHistory(selectedConv.userId);
         } catch (e) {
-            console.error(e);
-            setChatInput(text);
+            console.error("Error in handleSendMessage:", e);
+            throw e;
         } finally {
             setIsSendingMessage(false);
+        }
+    };
+
+    const handleRecallMessage = async (messageId: string) => {
+        if (!window.confirm("Bu mesajı geri almak istediğine emin misin?")) return;
+        try {
+            await apiService.recallChatMessage(messageId);
+            if (selectedConv) await loadChatHistory(selectedConv.userId);
+        } catch (e) {
+            console.error("Error in handleRecallMessage:", e);
         }
     };
 
@@ -1959,17 +1958,17 @@ export default function BusinessAppointmentsPage() {
                                         )}
                                     >
                                         <div className="flex items-center gap-3 overflow-hidden">
-                                            <img src={conv.userAvatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
+                                            <img src={conv.avatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
                                             <div className="overflow-hidden">
-                                                <div className="font-bold text-sm truncate dark:text-white text-zinc-800">{conv.userName}</div>
-                                                <div className={cn("text-xs truncate", conv.unreadCount > 0 ? "font-bold text-indigo-500" : "text-zinc-500")}>
-                                                    {conv.lastMessage}
+                                                <div className="font-bold text-sm truncate dark:text-white text-zinc-800">{conv.partnerName}</div>
+                                                <div className={cn("text-xs truncate", conv.unread ? "font-bold text-indigo-500" : "text-zinc-500")}>
+                                                    {conv.latestMessage}
                                                 </div>
                                             </div>
                                         </div>
-                                        {conv.unreadCount > 0 && (
+                                        {conv.unread && (
                                             <div className="bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0">
-                                                {conv.unreadCount}
+                                                •
                                             </div>
                                         )}
                                     </button>
@@ -1982,44 +1981,23 @@ export default function BusinessAppointmentsPage() {
                             {selectedConv ? (
                                 <>
                                     <div className="p-4 border-b border-zinc-200 dark:border-card-border flex items-center gap-3 bg-zinc-50 dark:bg-[#18181b]">
-                                        <img src={selectedConv.userAvatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
-                                        <h3 className="font-black text-sm uppercase dark:text-white text-zinc-800">{selectedConv.userName}</h3>
+                                        <img src={selectedConv.avatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
+                                        <h3 className="font-black text-sm uppercase dark:text-white text-zinc-800">{selectedConv.partnerName}</h3>
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                                        {chatMessages.map(msg => (
-                                            <div key={msg.id} className={cn("flex flex-col max-w-[80%]", msg.sender_role === 'clinic' ? "ml-auto items-end" : "mr-auto items-start")}>
-                                                <div className={cn(
-                                                    "px-4 py-2.5 rounded-2xl text-sm font-medium",
-                                                    msg.sender_role === 'clinic' 
-                                                        ? "bg-indigo-500 text-white rounded-tr-sm" 
-                                                        : "bg-zinc-100 dark:bg-[#1A1A24] text-zinc-800 dark:text-zinc-200 rounded-tl-sm border border-zinc-200 dark:border-card-border"
-                                                )}>
-                                                    {msg.message}
-                                                </div>
-                                                <span className="text-[9px] font-bold text-zinc-400 mt-1 uppercase">
-                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                        ))}
+                                        <ChatMessageList
+                                            messages={chatMessages}
+                                            onRecall={handleRecallMessage}
+                                            emptyLabel="Henüz mesaj yok"
+                                            emptyIcon={<MessageSquare className="w-12 h-12 mb-4 mx-auto" />}
+                                        />
                                     </div>
                                     <div className="p-4 border-t border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-[#18181b]">
-                                        <div className="flex items-center gap-2">
-                                            <input 
-                                                type="text" 
-                                                value={chatInput}
-                                                onChange={e => setChatInput(e.target.value)}
-                                                onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                                                placeholder="Mesajınızı yazın..."
-                                                className="flex-1 bg-white dark:bg-[#12121A] border border-zinc-200 dark:border-card-border rounded-xl px-4 py-2.5 text-sm font-bold text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                                            />
-                                            <button 
-                                                onClick={handleSendMessage}
-                                                disabled={isSendingMessage || !chatInput.trim()}
-                                                className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-600 transition-colors shrink-0 active:scale-95"
-                                            >
-                                                <Send className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        <ChatComposer
+                                            onSend={handleSendMessage}
+                                            uploadImage={(file) => apiService.uploadMedia(file)}
+                                            sending={isSendingMessage}
+                                        />
                                     </div>
                                 </>
                             ) : (
