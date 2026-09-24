@@ -623,10 +623,20 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                     calcSpeedKmH = (distDelta / (timeDeltaMs / 1000)) * 3.6;
                                 }
 
-                                // Gelişmiş GPS Drift Kalkanı (Desktop Sapmalarını Önleme):
-                                // 1. En az 15 metre hareket etmiş olmalı.
-                                // 2. İmkansız hızlarda (ör. 25 km/h üstü) sıçrama olmamalı (GPS zıplamasıdır).
-                                const isRealMovement = distDelta > 15 && calcSpeedKmH < 25;
+                                // Baran'ın gerçek telefonda bulduğu kritik hata: bu eşik SABİT 15 metreydi.
+                                // Normal yürüyüş hızında (~1.4 m/s) ve `watchPosition`'ın sık geldiği
+                                // (genelde saniyede bir) gerçek koşullarda, ART ARDA gelen iki GPS
+                                // noktası arası mesafe neredeyse HİÇBİR ZAMAN 15 metreyi geçmiyor —
+                                // yani gerçek, sürekli yürüyüş neredeyse HER GÜNCELLEMEDE "sahte hareket
+                                // değil" diye reddediliyordu, mesafe (ve ondan türeyen adım sayısı)
+                                // pratikte hiç birikmiyordu. Profesyonel GPS takip uygulamalarının
+                                // (Strava vb.) kullandığı gerçek yöntem: sabit bir evrensel sayı değil,
+                                // GPS'in KENDİ bildirdiği anlık doğruluk yarıçapını (`accuracy`) gürültü
+                                // tabanı olarak kullanmak — iyi sinyalde (ör. 5m) küçük gerçek hareketler
+                                // hemen kabul edilirken, kötü sinyalde (ör. 30m, iç mekan/şehir kanyonu)
+                                // eşik kendiliğinden yükselip gerçek GPS sıçramalarını hâlâ filtreliyor.
+                                const noiseFloorMeters = Math.max(pos.coords.accuracy || 15, 8);
+                                const isRealMovement = distDelta > noiseFloorMeters && calcSpeedKmH < 25;
 
                                 if (prev.isAutoPaused) {
                                     // Otomatik duraklatılmışken gerçek hareket algılandı → kendiliğinden devam et

@@ -1281,6 +1281,49 @@ doğrulandı; sıralama ekranı gerçek hesapla hatasız yüklendiği, tek-kulla
 (çünkü kıyaslanacak gerçek bir üst sıra yok) doğrulandı — kod incelemesiyle
 guard mantığının doğru olduğu teyit edildi.
 
+### 8.18 KRİTİK: Vercel deploy zinciri kırıktı + GPS "drift kalkanı" gerçek yürüyüşte mesafe/adımı neredeyse hiç biriktirmiyordu (2026-09-24)
+
+Baran canlıda (Vercel) hâlâ çok eski bir sürüm gördüğünü bildirdi. Araştırma:
+**son 3 deploy de (bu oturumun TÜM walk-module commit'leri) `ERROR` durumunda
+kalmıştı** — `business-register/page.tsx`'in kullandığı `@vis.gl/react-google-
+maps` paketi `package.json`'a HİÇ eklenmemiş, sadece yerel `node_modules`'te
+(önceki bir oturumdan kalma) duruyormuş. Yerel `npm run build` bu yüzden hep
+yanıltıcı şekilde başarılı görünüyordu (stale/local node_modules kullanıyordu).
+Gerçek bir temiz `git clone` + `npm install` + `npm run build` ile hem hata
+üretilip hem de düzeltme doğrulandı. **Ders: yerel build başarısı, temiz bir
+ortamda (Vercel gibi) da başaracağının garantisi değil — `package.json`'da
+deklare edilmemiş ama yerel `node_modules`'te "tesadüfen" duran bir paket
+varsa bu fark asla yerel olarak yakalanamaz.**
+
+🔴🔴 Sonra Baran gerçek telefonunda gerçek bir yürüyüş başlattı: **adımlar
+hiçbir şekilde sayılmıyordu.** Kök neden: `ActivityContext.tsx`'teki GPS
+"drift kalkanı" ART ARDA gelen iki GPS noktası arası mesafenin SABİT 15
+metreyi geçmesini şart koşuyordu. Normal yürüyüş hızında (~1.4 m/s) ve
+`watchPosition`'ın gerçekte sık geldiği (genelde saniyede bir) koşullarda,
+peş peşe gelen noktalar arası mesafe neredeyse HİÇBİR ZAMAN 15 metreyi
+geçmiyor — yani gerçek, sürekli bir yürüyüş bile pratikte "sahte hareket"
+gibi reddediliyor, mesafe (ve ondan türeyen adım sayısı) ya çok yavaş ya da
+hiç birikmiyordu. **Düzeltme (yama değil, kök neden):** sabit 15m yerine,
+profesyonel GPS takip uygulamalarının (Strava vb.) kullandığı gerçek yöntem
+— GPS'in KENDİ bildirdiği anlık doğruluk yarıçapını (`pos.coords.accuracy`)
+gürültü tabanı olarak kullanmak (`Math.max(accuracy, 8)`). İyi sinyalde
+küçük gerçek hareketler hemen kabul ediliyor, kötü sinyalde (iç mekan/şehir
+kanyonu) eşik kendiliğinden yükselip gerçek GPS sıçramalarını hâlâ
+filtreliyor — sabit bir sayı yerine kendi kendine kalibre olan bir sistem.
+
+**Doğrulama:** Playwright ile GERÇEKÇİ bir yürüyüş simüle edildi — bu oturum
+boyunca yapılan TÜM önceki testler GPS'i SABİT/hareketsiz tek bir nokta
+olarak mock'luyordu (bu yüzden bu kritik hata daha önce hiç yakalanamamıştı).
+Yeni test `context.setGeolocation()`'ı saniyede bir, ~1.4m/s hızla ilerleyen
+gerçekçi koordinatlarla (accuracy: 12m) güncelledi — düzeltme sonrası 25
+saniyelik simülasyonda mesafe/adım gerçekten arttı (gerçek Supabase
+`walk_sessions` satırına da `distance_meters` olarak yansıdı, sonra
+temizlendi). **Ders: GPS-bağımlı özellikleri SADECE sabit/statik mock
+konumla test etmek, ART ARDA gelen küçük hareketleri işleyen kodu (bu
+projedeki EN kritik hatalardan biri) tamamen görünmez bırakabiliyor —
+bundan sonra GPS testleri mutlaka hareketli bir trajectory simülasyonu da
+içermeli.**
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
