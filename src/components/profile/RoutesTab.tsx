@@ -1,103 +1,143 @@
 'use client';
 
-import React from 'react';
-import { Map, ChevronRight, Activity, Clock, Navigation, Heart, Calendar } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { ChevronRight, MapPin, Footprints, Clock, TrendingUp, Crown } from 'lucide-react';
 import { useActivity } from '@/context/ActivityContext';
+import { haptics } from '@/lib/haptics';
 
-export function RoutesTab({ routes = [], activePet }: { routes?: any[], activePet?: any }) {
-    const { walkData } = useActivity();
+// Faz 9/13 düzeltmesi (bkz. design-reference/walk-final/, "8. Profil – Yürüyüş
+// İstatistikleri"): bu bileşen tamamen sahteydi — hardcoded "12.4 km"/"8.2 saat"
+// + 3 uydurma rota (`mockHistory`) + hiç işlevi olmayan "Buluta Yedekle" butonu.
+// Ayrıca `routes` prop'u besleyen `PetContext.walkRoutes` state'i HİÇBİR YERDEN
+// hiç doldurulmuyordu (`setWalkRoutes` tüm kod tabanında sıfır kez çağrılıyor) -
+// yani bu ekran gerçek veriyle asla çalışamazdı, sadece mock fallback'e düşüyordu.
+// Artık gerçek `ActivityContext.walkHistory`'den (Faz 10'da düzeltilen gerçek
+// walk_sessions sorgusu) bu ayın verisini hesaplıyor. `routes` prop'u kaldırıldı.
+export function RoutesTab({ activePet }: { activePet?: any }) {
+    const router = useRouter();
+    const { walkHistory } = useActivity();
 
-    // Mock history data for demonstration
-    const mockHistory = [
-        { id: '1', distance: '1.2 km', duration: '15 dk', date: 'Bugün', path: 'Sahil Yolu Yürüyüşü' },
-        { id: '2', distance: '0.8 km', duration: '10 dk', date: 'Dün', path: 'Mahalle Turu' },
-        { id: '3', distance: '2.4 km', duration: '25 dk', date: '24 Nisan', path: 'Park Gezisi' },
-    ];
+    const now = new Date();
 
-    const displayRoutes = routes.length > 0 ? routes : mockHistory;
+    const monthlyWalks = useMemo(() => {
+        return walkHistory.filter(w => {
+            const raw = w.started_at || w.ended_at;
+            if (!raw) return false;
+            const d = new Date(raw);
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        });
+    }, [walkHistory]);
+
+    const kmOf = (w: typeof walkHistory[number]) => w.distanceKm ?? (w.distance_meters ? w.distance_meters / 1000 : 0);
+
+    const totalKm = monthlyWalks.reduce((sum, w) => sum + kmOf(w), 0);
+    const totalDurationMin = monthlyWalks.reduce((sum, w) => sum + (w.duration_minutes || 0), 0);
+    const totalSteps = monthlyWalks.reduce((sum, w) => sum + (w.steps || 0), 0);
+    const avgSteps = monthlyWalks.length > 0 ? Math.round(totalSteps / monthlyWalks.length) : 0;
+    const hours = Math.floor(totalDurationMin / 60);
+    const mins = Math.round(totalDurationMin % 60);
+
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const weekCount = Math.ceil(daysInMonth / 7);
+
+    const weeklyTotals = useMemo(() => {
+        const weeks = new Array(weekCount).fill(0);
+        monthlyWalks.forEach(w => {
+            const raw = w.started_at || w.ended_at;
+            if (!raw) return;
+            const d = new Date(raw);
+            const weekIdx = Math.min(weekCount - 1, Math.floor((d.getDate() - 1) / 7));
+            weeks[weekIdx] += kmOf(w);
+        });
+        return weeks;
+    }, [monthlyWalks, weekCount]);
+
+    const maxWeek = Math.max(1, ...weeklyTotals);
+
+    const mostActiveDay = useMemo(() => {
+        const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+        const totals = new Array(7).fill(0);
+        monthlyWalks.forEach(w => {
+            const raw = w.started_at || w.ended_at;
+            if (!raw) return;
+            totals[new Date(raw).getDay()] += kmOf(w);
+        });
+        let bestIdx = -1, bestVal = 0;
+        totals.forEach((v, i) => { if (v > bestVal) { bestVal = v; bestIdx = i; } });
+        return bestIdx >= 0 ? { name: dayNames[bestIdx], km: bestVal } : null;
+    }, [monthlyWalks]);
+
+    if (monthlyWalks.length === 0) {
+        return (
+            <div className="text-center py-16 opacity-70 px-6">
+                <MapPin className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+                <p className="text-sm font-bold text-slate-400 leading-relaxed">
+                    {activePet?.name || 'Dostun'} bu ay henüz bir yürüyüşe çıkmadı.<br />Bugün küçük bir tur atmaya ne dersin? 🐾
+                </p>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6 pb-20">
-            <div className="px-2 flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-[1.5rem] bg-rose-500/10 border-2 border-rose-500/30 p-1 relative">
-                        <Heart className="w-full h-full p-2 text-rose-500" />
-                    </div>
-                    <div>
-                        <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none">Aktivite <span className="text-rose-500">Günlüğü</span></h3>
-                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">{activePet?.name || 'Milo'} Egzersiz Raporu</p>
-                    </div>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-4 pb-10">
+            <div className="flex items-center justify-between px-1">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bu Ay</h3>
+                <button
+                    onClick={() => { haptics.tap(); router.push('/walk/history'); }}
+                    className="flex items-center gap-1 text-[10px] font-black text-orange-500 uppercase tracking-widest cursor-pointer border-0 bg-transparent active:scale-95 transition-transform"
+                >
+                    Tümünü Gör <ChevronRight className="w-3 h-3" />
+                </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div className="bg-card rounded-2xl p-4 flex flex-col gap-1.5 border border-card-border shadow-moffi-card">
+                    <MapPin className="w-4 h-4 text-orange-500" />
+                    <span className="text-lg font-black text-foreground leading-none">{totalKm.toFixed(1)} km</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Toplam Mesafe</span>
+                </div>
+                <div className="bg-card rounded-2xl p-4 flex flex-col gap-1.5 border border-card-border shadow-moffi-card">
+                    <Footprints className="w-4 h-4 text-orange-500" />
+                    <span className="text-lg font-black text-foreground leading-none">{monthlyWalks.length}</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Yürüyüş</span>
+                </div>
+                <div className="bg-card rounded-2xl p-4 flex flex-col gap-1.5 border border-card-border shadow-moffi-card">
+                    <Clock className="w-4 h-4 text-emerald-500" />
+                    <span className="text-lg font-black text-foreground leading-none">{hours}s {mins}dk</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Süre</span>
+                </div>
+                <div className="bg-card rounded-2xl p-4 flex flex-col gap-1.5 border border-card-border shadow-moffi-card">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    <span className="text-lg font-black text-foreground leading-none">{avgSteps.toLocaleString('tr-TR')}</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Ortalama Adım</span>
                 </div>
             </div>
 
-            {/* SUMMARY CARDS - SYNCED WITH REAL DATA */}
-            <div className="grid grid-cols-2 gap-4 mb-2">
-                <div className="bg-[#12121A] border border-card-border p-6 rounded-[2.5rem] flex flex-col gap-2 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="flex items-center gap-3 text-rose-500">
-                        <Activity className="w-4 h-4" />
-                        <span className="text-[9px] font-black uppercase tracking-widest leading-none">Haftalık Mesafe</span>
-                    </div>
-                    <p className="text-2xl font-black text-white leading-none">
-                        {walkData.isActive ? (12.4 + (walkData.distance/1000)).toFixed(1) : "12.4"} 
-                        <span className="text-[10px] opacity-50 uppercase tracking-widest ml-1">KM</span>
-                    </p>
-                </div>
-                <div className="bg-[#12121A] border border-card-border p-6 rounded-[2.5rem] flex flex-col gap-2 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="flex items-center gap-3 text-orange-500">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-[9px] font-black uppercase tracking-widest leading-none">Haftalık Süre</span>
-                    </div>
-                    <p className="text-2xl font-black text-white leading-none">
-                        {walkData.isActive ? (8.2 + (walkData.time/3600)).toFixed(1) : "8.2"}
-                        <span className="text-[10px] opacity-50 uppercase tracking-widest ml-1">SAAT</span>
-                    </p>
-                </div>
-            </div>
-
-            {/* HISTORY LIST */}
-            <div className="space-y-4 pt-6">
-                <div className="flex items-center gap-2 px-2 mb-2">
-                    <Calendar className="w-3 h-3 text-black/50 dark:text-white/40" />
-                    <span className="text-[9px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Son Hareketler</span>
-                </div>
-                {displayRoutes.map(route => (
-                    <div key={route.id} className="bg-[#12121A]/50 border border-card-border rounded-[2.5rem] p-6 flex items-center justify-between group hover:border-rose-500/20 transition-all cursor-pointer">
-                        <div className="flex items-center gap-5">
-                            <div className="bg-rose-500/20 text-rose-500 w-14 h-14 rounded-2xl flex flex-col items-center justify-center border border-rose-500/30 group-hover:scale-105 transition-transform">
-                                <span className="text-[8px] font-black leading-none italic pb-0.5 opacity-60">KM</span>
-                                <span className="text-xl font-black leading-none">{route.distance.split(' ')[0]}</span>
+            <div className="bg-card rounded-2xl p-4 border border-card-border shadow-moffi-card">
+                <div className="flex items-end justify-between h-20 gap-2">
+                    {weeklyTotals.map((v, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                            <div className="w-full bg-slate-100 dark:bg-white/5 rounded-full flex-1 flex items-end overflow-hidden">
+                                <div
+                                    className="w-full bg-emerald-500 rounded-full transition-all"
+                                    style={{ height: `${Math.max(4, (v / maxWeek) * 100)}%` }}
+                                />
                             </div>
-                            <div className="text-left">
-                                <h4 className="text-white font-black text-lg tracking-tight uppercase leading-none mb-1">{route.path}</h4>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{route.date}</span>
-                                    <span className="w-1 h-1 bg-gray-700 rounded-full" />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{route.duration}</span>
-                                </div>
-                            </div>
+                            <span className="text-[7.5px] font-black text-slate-400 uppercase whitespace-nowrap">{i + 1}. Hafta</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-rose-500/10 transition-colors">
-                                <Navigation className="w-3.5 h-3.5 text-gray-600 group-hover:text-rose-500 rotate-45 transition-colors" />
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-foreground group-hover:text-white transition-all transform group-hover:translate-x-1" />
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* CLOUD PROMO */}
-            <div className="bg-gradient-to-br from-[#12121A] via-[#0A0A0E] to-[#12121A] border border-card-border p-10 rounded-[4rem] text-center shadow-2xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative z-10">
-                    <h4 className="text-white font-black text-2xl italic tracking-tighter uppercase mb-4 leading-tight">Verilerini <span className="text-rose-500">Buluta</span> Yedekle</h4>
-                    <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-10 max-w-[240px] mx-auto opacity-70">Tüm aktivite geçmişini asla kaybetmemek için Moffi Cloud'u aktifleştir.</p>
-                    <button className="w-full py-5 bg-card text-black font-black text-xs uppercase tracking-widest rounded-3xl active:scale-95 transition-all shadow-xl shadow-white/5">Hemen Yükselt</button>
+                    ))}
                 </div>
             </div>
-        </div>
+
+            {mostActiveDay && (
+                <div className="flex items-center gap-2.5 bg-card rounded-2xl p-3.5 border border-card-border shadow-moffi-card">
+                    <Crown className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-500">En Aktif Gün</span>
+                    <span className="ml-auto text-[11px] font-black text-foreground">{mostActiveDay.name} · {mostActiveDay.km.toFixed(1)} km</span>
+                </div>
+            )}
+        </motion.div>
     );
 }

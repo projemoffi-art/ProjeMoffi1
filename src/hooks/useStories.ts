@@ -165,7 +165,13 @@ export function useStories() {
                 {
                     user_id: 'system_featured_pets',
                     author_name: '👑 Yıldız Patiler',
-                    author_avatar: dailyStars[0]?.pet?.image || dailyStars[0]?.pet?.avatar || '/images/moffi_pet_trio.png',
+                    // Not: getDailyStarCandidates() fotoğrafsız hayvanlar için zaten '/images/moffi_pet_trio.png'e
+                    // düşüyor (bkz. supabaseApiService.ts) — o jenerik görseli burada da eleyip gerçek bir
+                    // temsil fotoğrafına (header-hero.jpg) çeviriyoruz.
+                    author_avatar: (() => {
+                        const img = dailyStars[0]?.pet?.image || dailyStars[0]?.pet?.avatar;
+                        return (img && img !== '/images/moffi_pet_trio.png') ? img : '/images/header-hero.jpg';
+                    })(),
                     hasUnseen: true,
                     stories: featuredStories
                 },

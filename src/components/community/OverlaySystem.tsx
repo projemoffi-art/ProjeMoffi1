@@ -61,8 +61,6 @@ interface OverlaySystemProps {
     // Quick Sheet Props
     isVetQuickSheetOpen?: boolean;
     setIsVetQuickSheetOpen?: (open: boolean) => void;
-    isWalkQuickSheetOpen?: boolean;
-    setIsWalkQuickSheetOpen?: (open: boolean) => void;
     isMarketQuickSheetOpen?: boolean;
     setIsMarketQuickSheetOpen?: (open: boolean) => void;
     isStudioQuickSheetOpen?: boolean;
@@ -104,8 +102,6 @@ export function OverlaySystem({
     
     isVetQuickSheetOpen,
     setIsVetQuickSheetOpen,
-    isWalkQuickSheetOpen,
-    setIsWalkQuickSheetOpen,
     isMarketQuickSheetOpen,
     setIsMarketQuickSheetOpen,
     isStudioQuickSheetOpen,

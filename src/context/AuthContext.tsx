@@ -782,6 +782,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 tax_id: data.taxId,
                 iban: data.iban,
                 address: data.address,
+                province: data.province,
+                district: data.district,
+                business_lat: data.business_lat,
+                business_lng: data.business_lng,
                 owner_name: data.ownerName,
                 phone: data.phone
             });

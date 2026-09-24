@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Save, MapPin } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { showToast } from "@/lib/utils";
+import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
 import turkeyData from "@/data/turkey_cities.json";
 
 export default function LocationSettings() {
@@ -14,12 +15,7 @@ export default function LocationSettings() {
     const [lng, setLng] = useState<number | null>(null);
     const [province, setProvince] = useState("");
     const [district, setDistrict] = useState("");
-    const [addressWarning, setAddressWarning] = useState(false);
     const [saving, setSaving] = useState(false);
-
-    // Get districts for selected province
-    const selectedProvinceData = turkeyData.find(p => p.name === province);
-    const availableDistricts = selectedProvinceData ? selectedProvinceData.districts : [];
 
     // Fetch existing location
     useEffect(() => {
@@ -44,12 +40,10 @@ export default function LocationSettings() {
         fetchProfile();
     }, [user]);
 
-
-
     const saveLocation = async () => {
         if (!user) return;
         if (!province || !district) {
-            showToast("Lütfen İl ve İlçe seçiniz.", "AlertTriangle", "text-amber-500 font-bold");
+            showToast("Lütfen çıkan adres önerilerinden birini seçiniz (İl/İlçe tespiti için gerekli).", "AlertTriangle", "text-amber-500 font-bold");
             return;
         }
 
@@ -71,7 +65,7 @@ export default function LocationSettings() {
             if (!data || data.length === 0) {
                 throw new Error('Güncelleme 0 satır etkiledi — muhtemelen RLS engelliyor.');
             }
-            showToast("Konum başarıyla kaydedildi! 📍✨", "Save", "text-emerald-500 font-bold");
+            showToast("Konum başarıyla kaydedildi! 📍", "Save", "text-emerald-500 font-bold");
         } catch (error: any) {
             console.error(error);
             showToast(error.message || "Kaydedilirken hata oluştu.", "XCircle", "text-red-500 font-bold");
@@ -90,59 +84,21 @@ export default function LocationSettings() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-4">
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">İl <span className="text-red-500">*</span></label>
-                    <select
-                        value={province}
-                        onChange={(e) => {
-                            setProvince(e.target.value);
-                            setDistrict(""); // Reset district when province changes
-                            setAddressWarning(true);
-                        }}
-                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-4 py-3 text-sm focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
-                    >
-                        <option value="">İl Seçiniz</option>
-                        {turkeyData.map(p => (
-                            <option key={p.id} value={p.name}>{p.name}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="space-y-4">
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">İlçe <span className="text-red-500">*</span></label>
-                    <select
-                        value={district}
-                        onChange={(e) => {
-                            setDistrict(e.target.value);
-                            setAddressWarning(true);
-                        }}
-                        disabled={!province}
-                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-4 py-3 text-sm focus:border-[#5B4D9D] outline-none text-foreground dark:text-white disabled:opacity-50"
-                    >
-                        <option value="">İlçe Seçiniz</option>
-                        {availableDistricts.map(d => (
-                            <option key={d.id} value={d.name}>{d.name}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
             <div className="space-y-4">
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Açık Adres (Opsiyonel)</label>
-                {addressWarning && (
-                    <div className="text-amber-500 text-xs font-semibold flex items-center gap-1 mb-2">
-                        <span className="text-[10px]">⚠️</span> İl/ilçe değişti, lütfen adresinizin güncel olduğunu kontrol edin.
-                    </div>
-                )}
-                    <textarea 
-                        value={address}
-                        onChange={(e) => {
-                            setAddress(e.target.value);
-                            setAddressWarning(false);
-                        }}
-                        placeholder="Moda Cd. No:1, Kadıköy..."
-                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-4 py-3 text-sm focus:border-[#5B4D9D] outline-none text-foreground dark:text-white min-h-[80px]"
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">İşletme Adresi (Google Haritalar)</label>
+                <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
+                    <LocationAutocomplete 
+                        address={address} 
+                        setAddress={setAddress} 
+                        setLat={setLat} 
+                        setLng={setLng} 
+                        setProvince={setProvince}
+                        setDistrict={setDistrict}
                     />
+                </APIProvider>
+                {(!lat || !lng || !province || !district) && address.length > 0 && (
+                    <p className="text-red-500 text-[10px] mt-1 flex items-center gap-1">Lütfen çıkan önerilerden bir adres seçin. (Harita pini ve İl/İlçe tespiti için gerekli)</p>
+                )}
             </div>
 
             <div className="flex justify-end pt-4">
@@ -155,5 +111,88 @@ export default function LocationSettings() {
                 </button>
             </div>
         </div>
+    );
+}
+
+function LocationAutocomplete({ address, setAddress, setLat, setLng, setProvince, setDistrict }: { address: string, setAddress: (a: string) => void, setLat: (lat: number|null) => void, setLng: (lng: number|null) => void, setProvince: (p: string) => void, setDistrict: (d: string) => void }) {
+    const [placeAutocomplete, setPlaceAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+    const places = useMapsLibrary('places');
+
+    useEffect(() => {
+        if (!places || !inputRef.current) return;
+        const options = {
+            fields: ['geometry', 'name', 'formatted_address', 'address_components']
+        };
+        const autocomplete = new places.Autocomplete(inputRef.current, options);
+        setPlaceAutocomplete(autocomplete);
+    }, [places]);
+
+    useEffect(() => {
+        if (!placeAutocomplete) return;
+        
+        placeAutocomplete.addListener('place_changed', () => {
+            const place = placeAutocomplete.getPlace();
+            if (place.geometry && place.geometry.location) {
+                const lat = place.geometry.location.lat();
+                const lng = place.geometry.location.lng();
+                const formattedAddress = place.formatted_address || place.name || "";
+                
+                let prov = "";
+                let dist = "";
+                if (place.address_components) {
+                    for (const comp of place.address_components) {
+                        if (comp.types.includes('administrative_area_level_1')) prov = comp.long_name;
+                        if (comp.types.includes('administrative_area_level_2') || comp.types.includes('sublocality_level_1') || comp.types.includes('sublocality')) dist = comp.long_name;
+                    }
+                }
+                
+                // --- Normalization / Fuzzy Match with turkey_cities.json ---
+                const normalize = (str: string) => str.toLocaleLowerCase('tr-TR').trim();
+                let exactProv = prov;
+                let exactDist = dist;
+                
+                if (prov) {
+                    const matchedProvObj = turkeyData.find(p => normalize(p.name) === normalize(prov));
+                    if (matchedProvObj) {
+                        exactProv = matchedProvObj.name; // Use exact casing from JSON (e.g. "İstanbul")
+                        if (dist) {
+                            const matchedDistObj = matchedProvObj.districts.find(d => normalize(d.name) === normalize(dist));
+                            if (matchedDistObj) {
+                                exactDist = matchedDistObj.name; // Use exact casing from JSON (e.g. "Kadıköy")
+                            }
+                        }
+                    }
+                }
+                
+                setLat(lat);
+                setLng(lng);
+                setProvince(exactProv);
+                setDistrict(exactDist);
+                setAddress(formattedAddress);
+            } else {
+                setLat(null);
+                setLng(null);
+                setProvince("");
+                setDistrict("");
+                setAddress(place.name || "");
+            }
+        });
+    }, [placeAutocomplete, setAddress, setLat, setLng, setProvince, setDistrict]);
+
+    return (
+        <textarea
+            ref={inputRef}
+            value={address}
+            onChange={(e) => {
+                setAddress(e.target.value);
+                setLat(null);
+                setLng(null);
+                setProvince("");
+                setDistrict("");
+            }}
+            placeholder="Google Haritalar'dan Adres Arayın (örn: Kadıköy, İstanbul)"
+            className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-4 py-3 text-sm focus:border-[#5B4D9D] outline-none text-foreground dark:text-white min-h-[80px]"
+        />
     );
 }

@@ -2,18 +2,18 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    Sparkles, Bell, Zap, Heart, PawPrint, X, 
-    CheckCircle2, XCircle, AlertCircle, PhoneCall, 
-    MapPin, Send, Upload, Download, Save, Globe, 
-    Share2, Wand2, ShieldAlert
+import {
+    Sparkles, Bell, Zap, Heart, PawPrint, X,
+    CheckCircle2, XCircle, AlertCircle, PhoneCall,
+    MapPin, Send, Upload, Download, Save, Globe,
+    Share2, Wand2, ShieldAlert, Award, Gift
 } from "lucide-react";
 
 const IconMap: Record<string, any> = {
-    Sparkles, Bell, Zap, Heart, PawPrint, X, 
-    CheckCircle2, XCircle, AlertCircle, PhoneCall, 
-    MapPin, Send, Upload, Download, Save, Globe, 
-    Share2, Wand2, ShieldAlert
+    Sparkles, Bell, Zap, Heart, PawPrint, X,
+    CheckCircle2, XCircle, AlertCircle, PhoneCall,
+    MapPin, Send, Upload, Download, Save, Globe,
+    Share2, Wand2, ShieldAlert, Award, Gift
 };
 
 interface ToastItem {

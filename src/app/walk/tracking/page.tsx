@@ -4,96 +4,203 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-    Pause, Play, StopCircle, Camera, Music,
-    Zap, Timer, Flame, CheckCircle2, ChevronLeft, X,
-    SkipForward, SkipBack, Share2, Search, Mic, Home, LayoutGrid,
-    AlertTriangle, Droplets, Bone, Plus, Heart, Activity,
-    Skull, AlertOctagon, Footprints, MessageSquarePlus,
-    Car, Syringe, Square
+    Pause, Play, ChevronLeft, Settings, MapPin, Clock,
+    AlertTriangle, Zap, Camera, Share2, Footprints
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { Bluetooth, BluetoothConnected, BluetoothSearching, Smartphone } from "lucide-react";
-import { parseHeartRate, HR_SERVICE_UUID, HR_CHARACTERISTIC_UUID } from "@/lib/bluetoothManager";
-import { PLACES, Place } from "@/data/mockPlaces";
+import { motion, AnimatePresence, useMotionValue, animate as animateMotionValue } from "framer-motion";
+import { cn, showToast } from "@/lib/utils";
 import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
+import { useWeather } from "@/context/WeatherContext";
+import { useQuestEngine } from "@/context/QuestEngineContext";
+import { WALK_ISSUE_LABELS } from "@/lib/walkIssueLabels";
+import { haptics } from "@/lib/haptics";
+import { audioCues } from "@/lib/audioCues";
+import { apiService } from "@/services/apiService";
 
-// Helper for dist
-function getDistKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+// Piyasa araştırması #11: pati güvenliği uyarısı — WeatherContext'in zaten
+// bildiği gerçek sıcaklıktan türetilen, dürüst bir uyarı (uydurma bir "pati
+// sıcaklığı sensörü" değil, gerçek hava sıcaklığından mantıklı bir çıkarım).
+function pawSafetyWarning(temp: number | undefined): string | null {
+    if (temp === undefined) return null;
+    if (temp >= 28) return 'Asfalt patiler için sıcak olabilir — gölgeli veya çimenli rotaları tercih et 🐾';
+    if (temp <= 0) return 'Tuzlu/karlı zemin pati tahrişi yapabilir — yürüyüş sonrası patilerini kontrol et 🐾';
+    return null;
 }
 
-import { MOCK_MARKS } from "@/data/mockMarks";
-
 const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="bg-card dark:bg-[#1A1A1A] w-full h-full flex items-center justify-center text-white font-bold">Harita Yükleniyor...</div> });
+
+// Faz 2/4: GPS durumunu referans tasarımdaki "GPS İyi" tarzı kısa bir rozete çevirir
+function gpsStatusFromIssue(issue: string) {
+    switch (issue) {
+        case 'none': return { label: 'GPS İyi', tone: 'emerald' as const };
+        case 'gps_searching': return { label: 'GPS Aranıyor', tone: 'amber' as const };
+        case 'gps_weak': return { label: 'GPS Zayıf', tone: 'amber' as const };
+        case 'location_lost': return { label: 'GPS Kayıp', tone: 'red' as const };
+        case 'location_permission_required': return { label: 'Konum İzni Gerekli', tone: 'red' as const };
+        case 'network_unavailable': return { label: 'Bağlantı Yok', tone: 'amber' as const };
+        case 'background_permission_required': return { label: 'Arka Planda', tone: 'amber' as const };
+        default: return { label: 'GPS Hatası', tone: 'red' as const };
+    }
+}
+
+const TONE_CLASS: Record<string, string> = {
+    emerald: 'text-emerald-600 bg-emerald-50',
+    amber: 'text-amber-600 bg-amber-50',
+    red: 'text-red-600 bg-red-50',
+};
 
 function TrackingContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const mode = searchParams?.get('mode');
-    const { walkData, startWalk, pauseWalk, resumeWalk, stopWalk, setWalkData } = useActivity();
+    const { walkData, startWalk, pauseWalk, resumeWalk, walkIssue, autoPauseEnabled, setAutoPauseEnabled } = useActivity();
     const { activePet } = usePet();
-    
+    const { weather } = useWeather();
+    const { dailyGoal } = useQuestEngine();
+
     const [userPos, setUserPos] = useState<[number, number]>([40.9850, 29.0300]);
     const [path, setPath] = useState<[number, number][]>([]);
     const [showStopConfirm, setShowStopConfirm] = useState(false);
-    const [visitedPlaceIds, setVisitedPlaceIds] = useState<string[]>([]);
-    const [reward, setReward] = useState<Place | null>(null);
-    const [customTargetPos, setCustomTargetPos] = useState<[number, number] | null>(null);
-    const [customTargetClaimed, setCustomTargetClaimed] = useState<boolean>(false);
+    const [screenAwake, setScreenAwake] = useState(false);
+    const [audioEnabled, setAudioEnabled] = useState(true);
+    // Baran'ın gerçek bulgusu: dişli ikonu sadece Wake Lock'u açıp kapatıyordu ama
+    // "Ayarlar" gibi görünüyordu — gerçek bir ayarlar sistemi yoktu. Artık gerçek bir
+    // panel: Ekranı Açık Tut + Sesli Geri Bildirim + Otomatik Duraklatma (üçü de
+    // gerçek, çalışan state'lere bağlı — hiçbiri sahte/işlevsiz değil).
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const prevWasAutoPausedRef = useRef(false);
+    const announcedStartRef = useRef(false);
+    const lastAnnouncedSplitRef = useRef(0);
+    // Piyasa araştırması #6: bu yürüyüşte çekilen fotoğraflar (gerçek Storage
+    // upload'ı — bkz. apiService.uploadWalkPhoto)
+    const [walkPhotos, setWalkPhotos] = useState<string[]>([]);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const photoInputRef = useRef<HTMLInputElement>(null);
 
-    // Simulated Stats
-    const [pulse, setPulse] = useState(72);
+    // Piyasa araştırması #4: Strava Beacon tarzı canlı konum paylaşımı
+    const [beaconId, setBeaconId] = useState<string | null>(null);
+    const [beaconLoading, setBeaconLoading] = useState(false);
 
-    // Heart Rate Simulation
+    // Baran'ın gerçek bulgusu: gösterge paneli sabitti, kullanıcı haritayı ya da
+    // paneli tam ekran yapamıyordu. Gerçek bir sürüklenebilir bottom-sheet:
+    // 3 durak (Kısaltılmış/Varsayılan/Tam Ekran). Yanlış dokunmalara karşı
+    // hassasiyet: SADECE üstteki tutamaç sürüklemeyi başlatabiliyor — panel
+    // içeriği (istatistikler/Duraklat/Bitir) kendi alanında sürüklemeyi
+    // `stopPropagation` ile durduruyor (bkz. JSX'teki asıl uygulama ve
+    // gerekçe notu; ilk denenen `dragControls.start` deseni canlı testte
+    // ikinci jestte tamamen tepkisiz kaldığı için terk edildi).
+    type SheetState = 'collapsed' | 'default' | 'full';
+    const [sheetState, setSheetState] = useState<SheetState>('default');
+    const [viewportHeight, setViewportHeight] = useState(700);
     useEffect(() => {
-        if (walkData.isActive && !walkData.isPaused) {
-            const interval = setInterval(() => {
-                setPulse(prev => {
-                    const target = 110 + Math.random() * 20;
-                    return prev + (target - prev) * 0.1;
-                });
-            }, 2000);
-            return () => clearInterval(interval);
+        const update = () => setViewportHeight(window.innerHeight);
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, []);
+    const SHEET_HEIGHT = Math.round(viewportHeight * 0.9);
+    const COLLAPSED_VISIBLE = 128;
+    const DEFAULT_VISIBLE = Math.min(430, Math.round(viewportHeight * 0.52));
+    const snapY: Record<SheetState, number> = {
+        collapsed: SHEET_HEIGHT - COLLAPSED_VISIBLE,
+        default: SHEET_HEIGHT - DEFAULT_VISIBLE,
+        full: 0,
+    };
+    // Framer Motion gerçek tuzağı: JSX `animate` prop'u ile aynı eksende aktif
+    // `drag` birleştirilince, ikinci sürükleme jesti "layout" ölçümünü mevcut
+    // (transform uygulanmış) konuma göre yanlış referans alıp neredeyse hiç
+    // hareket etmiyordu (canlı testte doğrulandı: ilk sürükleme tam çalışıyor,
+    // ikincisi 400px hareketi ~4px'e sıkıştırıyordu). Resmi/önerilen çözüm:
+    // konumu bir `useMotionValue` ile tutup `style`e vermek, `animate` prop'u
+    // yerine imperatif `animate()` çağırmak — `drag` ve programatik animasyon
+    // AYNI motion value'yu paylaşıyor, çakışma ortadan kalkıyor.
+    const sheetY = useMotionValue(snapY.default);
+    const targetY = snapY[sheetState];
+    useEffect(() => {
+        const controls = animateMotionValue(sheetY, targetY, { type: "spring", damping: 32, stiffness: 320 });
+        return () => controls.stop();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [targetY]);
+    const handleSheetDragEnd = (_e: any, info: { offset: { y: number }; velocity: { y: number } }) => {
+        const projectedY = sheetY.get();
+        let next: SheetState;
+        if (info.velocity.y > 600) {
+            next = sheetState === 'full' ? 'default' : 'collapsed';
+        } else if (info.velocity.y < -600) {
+            next = sheetState === 'collapsed' ? 'default' : 'full';
         } else {
-            const interval = setInterval(() => {
-                setPulse(prev => {
-                    const target = 72 + Math.random() * 5;
-                    return prev + (target - prev) * 0.05;
-                });
-            }, 3000);
-            return () => clearInterval(interval);
+            next = (Object.entries(snapY) as [SheetState, number][])
+                .sort((a, b) => Math.abs(a[1] - projectedY) - Math.abs(b[1] - projectedY))[0][0];
         }
-    }, [walkData.isActive, walkData.isPaused]);
+        if (next !== sheetState) haptics.tap();
+        setSheetState(next);
+    };
 
-    // Marks State (Lifted Up)
-    const [marks, setMarks] = useState(MOCK_MARKS);
+    const toggleBeacon = async () => {
+        if (beaconLoading) return;
+        haptics.tap();
+        if (beaconId) {
+            setBeaconLoading(true);
+            try { await apiService.stopBeacon(beaconId); } catch {}
+            setBeaconId(null);
+            setBeaconLoading(false);
+            showToast('Canlı konum paylaşımı durduruldu.', 'ShieldAlert');
+            return;
+        }
+        if (!walkData.sessionId) {
+            showToast('Konumunu paylaşmak için önce yürüyüşün sunucuya kaydedilmesini bekle.', 'AlertCircle');
+            return;
+        }
+        setBeaconLoading(true);
+        try {
+            const id = await apiService.startBeacon(walkData.sessionId, activePet?.name || 'Dostum', userPos[0], userPos[1]);
+            setBeaconId(id);
+            const url = `${window.location.origin}/beacon/${id}`;
+            if (navigator.share) {
+                await navigator.share({ title: 'Canlı Konumum', text: `${activePet?.name || 'Dostum'} ile yürüyorum, canlı konumumu takip edebilirsin:`, url }).catch(() => {});
+            } else if (navigator.clipboard) {
+                await navigator.clipboard.writeText(url);
+                showToast('Canlı konum bağlantısı kopyalandı! Güvendiğin biriyle paylaşabilirsin.', 'Share2');
+            }
+        } catch (err) {
+            console.error('Beacon başlatılamadı:', err);
+            showToast('Canlı konum paylaşımı başlatılamadı.', 'AlertCircle');
+        } finally {
+            setBeaconLoading(false);
+        }
+    };
 
-    // STATE
-    const [activeModal, setActiveModal] = useState<'camera' | 'music' | null>(null);
-    const [activeSidebar, setActiveSidebar] = useState<'danger' | null>(null);
-    const [musicService, setMusicService] = useState<'spotify' | 'yt' | null>(null);
-    const [musicQuery, setMusicQuery] = useState("");
-    const [currentEmbedUrl, setCurrentEmbedUrl] = useState<string | null>(null);
-    const [toastMessage, setToastMessage] = useState<string | null>(null);
-    const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+    // Beacon açıkken her gerçek konum güncellemesinde (drift kalkanını zaten
+    // geçmiş noktalar) sunucudaki tek-nokta konumu tazele.
+    useEffect(() => {
+        if (beaconId) apiService.updateBeaconLocation(beaconId, userPos[0], userPos[1]).catch(() => {});
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userPos, beaconId]);
 
-    // Bluetooth States
-    const [bleConnectionStatus, setBleConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
+    // Yürüyüş bitince veya sayfadan ayrılınca beacon'ı otomatik kapat
+    useEffect(() => {
+        return () => { if (beaconId) apiService.stopBeacon(beaconId).catch(() => {}); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [beaconId]);
 
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-    const [selectedTemplate, setSelectedTemplate] = useState<number>(0);
-    const [coins, setCoins] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
-
-    const watchIdRef = useRef<number | null>(null);
+    const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file || !walkData.sessionId) return;
+        setUploadingPhoto(true);
+        haptics.tap();
+        try {
+            const url = await apiService.uploadWalkPhoto(walkData.sessionId, file);
+            setWalkPhotos(prev => [...prev, url]);
+            showToast('Fotoğraf yürüyüşüne eklendi! 📸', 'Upload');
+        } catch (err) {
+            console.error('Yürüyüş fotoğrafı yüklenemedi:', err);
+            showToast('Fotoğraf yüklenemedi, tekrar deneyebilirsin.', 'AlertCircle');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
 
     const formatTime = (sec: number) => {
         const m = Math.floor(sec / 60).toString().padStart(2, '0');
@@ -101,661 +208,520 @@ function TrackingContent() {
         return `${m}:${s}`;
     };
 
+    // Kilodan hesaplanan kalori — ana sayfa kartı ve WalkQuickSheet ile aynı gerçek formül
+    const distKm = walkData.distance / 1000;
+    const parsedWeight = parseFloat(String(activePet?.weight ?? ''));
+    const weightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 15;
+    const calories = Math.max(0, Math.round(distKm * weightKg));
+    // Piyasa araştırması bulgusu: km her zaman öncelikliydi, gerçek zamanlı adım
+    // sayısı hiç gösterilmiyordu. Gerçek bir pedometre/ivmeölçer API'si
+    // kullanmıyoruz (tarayıcıda güvenilir değil) — bu yüzden km/km*adım
+    // formülü zaten uygulamanın HER yerinde (özet, geçmiş) kullanılan aynı
+    // dürüst tahmin — burada SADECE canlı, gerçek mesafeden sürekli güncelleniyor.
+    const steps = Math.round(walkData.distance * 1.3);
+    const remainingKm = Math.max(0, dailyGoal.distance - distKm);
+    const goalPercent = Math.round(Math.min(100, (distKm / Math.max(0.1, dailyGoal.distance)) * 100));
+    const gpsStatus = gpsStatusFromIssue(walkIssue);
+
     // --- SYNC MAP WITH GLOBAL GPS ---
     useEffect(() => {
         if (walkData && Array.isArray(walkData.path) && walkData.path.length > 0) {
             const lastPos = walkData.path[walkData.path.length - 1];
             setUserPos(lastPos);
-            
-            // Sync local path state for the drawing
             setPath(walkData.path);
         }
     }, [walkData?.path]);
 
-    // Auto-claim POIs when user gets close (within 60 meters)
+    // Faz 4 (referans revizyonu): Ekranı Açık Tut — gerçek Wake Lock API, GPS takibi
+    // sırasında ekranın kararıp kilitlenmesi çok yaygın bir şikayet olduğu için eklendi.
     useEffect(() => {
-        if (!walkData.isActive || walkData.isPaused) return;
-        
-        const isEligible = walkData.distance >= 300 || walkData.time >= 300;
-        
-        // Auto-claim custom target if eligible
-        if (customTargetPos && !customTargetClaimed && isEligible) {
-            const distToCustom = getDistKm(userPos[0], userPos[1], customTargetPos[0], customTargetPos[1]) * 1000;
-            if (distToCustom < 60) {
-                setCustomTargetClaimed(true);
-                setReward({
-                    id: 'custom-target',
-                    name: 'Özel Hedef Konum',
-                    lat: customTargetPos[0],
-                    lng: customTargetPos[1],
-                    type: 'park',
-                    coinReward: 50,
-                    isPremium: false
-                } as any);
-                
-                // Trigger coin flying animation
-                const newCoins = Array.from({ length: 15 }).map((_, i) => ({
-                    id: Date.now() + i,
-                    x: window.innerWidth / 2 + (Math.random() - 0.5) * 120,
-                    y: window.innerHeight / 2 + (Math.random() - 0.5) * 120,
-                    delay: Math.random() * 0.4
-                }));
-                setCoins(newCoins);
-                setTimeout(() => setCoins([]), 2500);
-            }
+        let wakeLock: any = null;
+        if (screenAwake && typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+            (navigator as any).wakeLock.request('screen').then((lock: any) => { wakeLock = lock; }).catch(() => {});
         }
-        
-        if (!isEligible) return;
+        return () => { if (wakeLock) wakeLock.release().catch(() => {}); };
+    }, [screenAwake]);
 
-        PLACES.forEach(place => {
-            if (visitedPlaceIds.includes(place.id)) return;
-            
-            // Calculate distance in meters
-            const dist = getDistKm(userPos[0], userPos[1], place.lat, place.lng) * 1000;
-            if (dist < 60) {
-                // Visit place
-                setVisitedPlaceIds(prev => [...prev, place.id]);
-                setReward(place);
-                
-                // Trigger coin flying animation
-                const newCoins = Array.from({ length: 15 }).map((_, i) => ({
-                    id: Date.now() + i,
-                    x: window.innerWidth / 2 + (Math.random() - 0.5) * 120,
-                    y: window.innerHeight / 2 + (Math.random() - 0.5) * 120,
-                    delay: Math.random() * 0.4
-                }));
-                setCoins(newCoins);
-                setTimeout(() => setCoins([]), 2500);
-            }
+    // Piyasa araştırması #3: sesli geri bildirim tetikleyicileri — sadece
+    // gerçek durum değişikliklerinde konuşuyor (yürüyüş başlangıcı bir kez,
+    // her yeni split bir kez, otomatik duraklatma/devam geçişleri).
+    useEffect(() => {
+        if (walkData.isActive && !announcedStartRef.current && walkData.time <= 2) {
+            announcedStartRef.current = true;
+            audioCues.walkStarted();
+        }
+    }, [walkData.isActive, walkData.time]);
+
+    useEffect(() => {
+        const splits = walkData.splits || [];
+        if (splits.length > lastAnnouncedSplitRef.current) {
+            const latest = splits[splits.length - 1];
+            audioCues.split(latest.km, latest.splitSeconds);
+            lastAnnouncedSplitRef.current = splits.length;
+        }
+    }, [walkData.splits]);
+
+    useEffect(() => {
+        if (walkData.isAutoPaused && !prevWasAutoPausedRef.current) {
+            audioCues.autoPaused();
+            haptics.warn();
+        } else if (!walkData.isAutoPaused && prevWasAutoPausedRef.current) {
+            audioCues.autoResumed();
+            haptics.tap();
+        }
+        prevWasAutoPausedRef.current = walkData.isAutoPaused;
+    }, [walkData.isAutoPaused]);
+
+    // Handle Finish — Faz 6: stopWalk walkData'yı sıfırlamadan önce anlık görüntüyü al,
+    // sonra Ekran 6'daki (design-reference/walk-final/) gerçek "İşleme Ekranı"na
+    // yönlendir — stopWalk() ÇAĞRISI ARTIK ORADA yapılıyor, burada değil.
+    const handleFinish = async () => {
+        haptics.success();
+        audioCues.walkFinished(distKm);
+        if (beaconId) { apiService.stopBeacon(beaconId).catch(() => {}); setBeaconId(null); }
+        const summaryDistanceKm = distKm;
+        const summaryDurationSec = walkData.time;
+        const summaryCalories = calories;
+        const summarySteps = steps;
+        // Piyasa araştırması #5/#13: bu yürüyüşün en hızlı kilometresi ve kısa
+        // duraklama sayısı özet ekranına taşınıyor (kişisel rekor karşılaştırması
+        // ve eğlenceli "durma sayacı" için).
+        const bestSplitSeconds = (walkData.splits && walkData.splits.length > 0)
+            ? Math.min(...walkData.splits.map(s => s.splitSeconds))
+            : undefined;
+        const params = new URLSearchParams({
+            distanceKm: String(summaryDistanceKm),
+            durationSec: String(summaryDurationSec),
+            calories: String(summaryCalories),
+            steps: String(summarySteps),
+            sniffStops: String(walkData.sniffStops || 0),
         });
-    }, [userPos, walkData.isActive, walkData.isPaused, visitedPlaceIds, customTargetPos, customTargetClaimed, walkData.distance, walkData.time]);
-
-    // Handle Finish
-    const handleFinish = () => {
-        stopWalk();
-        router.push('/walk');
+        if (bestSplitSeconds !== undefined) params.set('bestSplitSeconds', String(bestSplitSeconds));
+        router.replace(`/walk/processing?${params.toString()}`);
     };
 
     return (
         <div className="h-screen w-full bg-white dark:bg-black relative overflow-hidden flex flex-col font-sans">
 
-            {/* BACK BUTTON */}
-            <button
-                onClick={() => router.back()}
-                className="absolute top-4 left-4 z-[60] w-10 h-10 bg-black/10 dark:bg-white/10 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center text-white hover:bg-black/20 dark:bg-white/20 transition-colors shadow-lg active:scale-95"
-            >
-                <ChevronLeft className="w-6 h-6" />
-            </button>
-
-            {/* Segmented Tab Switcher */}
-            <div className="absolute top-4 left-16 right-4 z-[60]">
-                <div className="bg-black/40 backdrop-blur-md p-1 rounded-2xl flex gap-1 border border-black/10 dark:border-white/10 overflow-hidden">
-                    {(['controls', 'stats', 'map'] as const).map((tab) => {
-                        const label = {
-                            controls: 'Yürüyüş',
-                            stats: 'İstatistikler',
-                            map: 'Harita'
-                        }[tab];
-                        const isActive = tab === 'map';
-                        return (
-                            <button
-                                key={tab}
-                                onClick={() => {
-                                    if (tab === 'controls') {
-                                        router.push('/home?openWalk=true');
-                                    } else if (tab === 'stats') {
-                                        router.push('/walk');
-                                    }
-                                }}
-                                className={cn(
-                                    "flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all relative cursor-pointer border-0 z-10",
-                                    isActive ? "text-slate-800 bg-white shadow-sm" : "text-black/60 dark:text-white/60 hover:text-white bg-transparent"
-                                )}
-                            >
-                                {label}
-                            </button>
-                        );
-                    })}
+            {/* HEADER — gösterge paneli tam ekran ('full') olduğunda haritanın üzerindeki
+                bu yüzen katman, panelin tutamacının TAM ÜSTÜNE binip tıklama/sürükleme
+                olaylarını yutuyordu (canlı Playwright testiyle kanıtlanan gerçek bir hata:
+                paneli tam ekrana çektikten sonra kullanıcı BİR DAHA ASLA geri
+                çekemiyordu, çünkü tutamaç bu z-[60] katmanın altında kalıyordu). Panel tam
+                ekranken zaten gösterecek bir harita yok, bu yüzden bu katman görünmez VE
+                tıklanamaz hale getiriliyor — kök neden çözümü, geçici bir z-index yaması
+                değil. */}
+            <div className={cn(
+                "absolute top-0 left-0 right-0 z-[60] px-4 pt-4 flex items-center justify-between transition-opacity duration-200",
+                sheetState === 'full' ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}>
+                <button
+                    onClick={() => { haptics.tap(); router.back(); }}
+                    className="w-10 h-10 bg-white/90 dark:bg-black/60 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all"
+                >
+                    <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-white" />
+                </button>
+                <span className="font-black text-[13px] text-slate-800 dark:text-white bg-white/90 dark:bg-black/60 backdrop-blur-md px-4 py-2 rounded-full shadow-lg">
+                    {activePet?.name || 'Moffi'} ile Yürüyüş
+                </span>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => { haptics.tap(); setAudioEnabled(v => { const next = !v; audioCues.setEnabled(next); return next; }); }}
+                        className={cn(
+                            "w-10 h-10 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all",
+                            audioEnabled ? "bg-white/90 dark:bg-black/60 text-slate-700 dark:text-white" : "bg-slate-800 text-white"
+                        )}
+                        title="Sesli Geri Bildirim"
+                    >
+                        {audioEnabled ? <span className="text-base leading-none">🔊</span> : <span className="text-base leading-none">🔇</span>}
+                    </button>
+                    <button
+                        onClick={() => { haptics.tap(); setIsSettingsOpen(true); }}
+                        className="w-10 h-10 bg-white/90 dark:bg-black/60 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all text-slate-700 dark:text-white"
+                        title="Ayarlar"
+                    >
+                        <Settings className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
 
-            {/* TOP STATS (Premium Glass Overlay) */}
-            <div className="absolute top-0 left-0 right-0 z-[50] p-5 pt-12 bg-gradient-to-b from-black/90 via-black/40 to-transparent pointer-events-none">
-                <div className="flex justify-between items-start text-white pointer-events-auto">
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-start gap-3">
-                            <div className="text-3xl font-black tracking-tighter tabular-nums leading-none min-w-[100px]">
-                                {formatTime(walkData.time)}
-                            </div>
-                            
-                            <div className="flex flex-col gap-1 pt-0.5">
-                                <span className={cn(
-                                    "px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1 border transition-colors w-fit",
-                                    (walkData.isPaused || !walkData.isActive) ? "bg-gray-500/20 border-gray-500/30 text-gray-500 dark:text-gray-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                                )}>
-                                    <Heart className={cn("w-2.5 h-2.5 fill-current", walkData.isActive && !walkData.isPaused && "animate-pulse")} /> 
-                                    {(walkData.isPaused || !walkData.isActive) ? "PAUSE" : "CANLI"}
-                                </span>
-                                <div className="flex items-center gap-1 text-xs font-black tabular-nums tracking-tight text-black/90 dark:text-white/90">
-                                    <div className="flex items-center justify-center w-4 h-4 bg-red-500/20 rounded-full">
-                                        <Activity className="w-2.5 h-2.5 text-red-500" />
-                                    </div>
-                                    <div className="flex items-baseline gap-0.5">
-                                        <span className="text-sm">
-                                            {Math.floor(pulse)}
-                                        </span>
-                                        <span className="opacity-40 text-[8px] uppercase">BPM</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="text-right flex flex-col gap-0.5 items-end">
-                        <div className="flex items-baseline gap-0.5">
-                            <span className="text-2xl font-black tabular-nums tracking-tighter">
-                                {walkData.distance >= 1000 ? (walkData.distance/1000).toFixed(2) : walkData.distance.toFixed(0)}
-                            </span>
-                            <span className="text-[10px] font-black opacity-40 uppercase tracking-widest">
-                                {walkData.distance >= 1000 ? 'km' : 'm'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1 text-[10px] font-black tabular-nums text-black/60 dark:text-white/60">
-                                <Zap className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" /> {walkData.speed.toFixed(1)} <span className="text-[8px] opacity-40 uppercase">km/h</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-[10px] font-black tabular-nums text-orange-400">
-                                <Flame className="w-2.5 h-2.5 fill-orange-400" /> {Math.floor(walkData.distance / 12)} <span className="text-[8px] opacity-40 uppercase">kcal</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            {/* STATUS PILLS — aynı sebeple ('full' durumunda tutamacı engelliyordu) */}
+            <div className={cn(
+                "absolute top-16 left-4 right-4 z-[55] flex flex-wrap gap-2 transition-opacity duration-200",
+                sheetState === 'full' ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}>
+                <span className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg backdrop-blur-md", TONE_CLASS[gpsStatus.tone])}>
+                    <MapPin className="w-3 h-3" /> {gpsStatus.label}
+                </span>
+                {weather && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg bg-white/90 dark:bg-black/60 backdrop-blur-md text-slate-700 dark:text-white">
+                        <span>{weather.icon}</span> Hava {weather.temp}°C
+                    </span>
+                )}
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg bg-white/90 dark:bg-black/60 backdrop-blur-md text-slate-700 dark:text-white">
+                    <Clock className="w-3 h-3" /> {Math.floor(walkData.time / 60)} dk
+                </span>
+                {/* Ekran 4 (Duraklatılmış) yeniden inşası — referansta harita KARARMIYOR,
+                    sadece küçük bir rozet duraklatıldığını gösteriyor (bkz. design-reference/walk-final/). */}
+                {walkData.isActive && walkData.isPaused && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg bg-black/70 backdrop-blur-md text-white">
+                        <Pause className="w-3 h-3 fill-current" /> {walkData.isAutoPaused ? 'Otomatik Duraklatıldı' : 'Duraklatıldı'}
+                    </span>
+                )}
+                {walkData.splits && walkData.splits.length > 0 && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg bg-white/90 dark:bg-black/60 backdrop-blur-md text-slate-700 dark:text-white">
+                        <Zap className="w-3 h-3 text-amber-500" /> En hızlı km: {formatTime(Math.min(...walkData.splits.map(s => s.splitSeconds)))}
+                    </span>
+                )}
+                {/* Piyasa araştırması #4: Strava Beacon tarzı canlı konum paylaşımı — tek
+                    dokunuşla bir bağlantı üretip güvenilen birine gönderme */}
+                <button
+                    onClick={toggleBeacon}
+                    disabled={beaconLoading}
+                    className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg backdrop-blur-md border-0 cursor-pointer disabled:opacity-60",
+                        beaconId ? "bg-emerald-500 text-white" : "bg-white/90 dark:bg-black/60 text-slate-700 dark:text-white"
+                    )}
+                >
+                    <Share2 className="w-3 h-3" /> {beaconId ? 'Konum Paylaşılıyor' : 'Konumu Paylaş'}
+                </button>
             </div>
 
-            {/* LIVE MAP */}
-            <div className="flex-1 relative z-[0]">
+            {/* Uyarı bandı yığını: GPS/izin/bağlantı sorunu VE pati güvenliği uyarısı
+                aynı anda görünebileceği için tek bir dikey yığın olarak konumlandırıldı
+                (ikisi de "top-28"e bağımsız oturursa üst üste biner). */}
+            <div className={cn(
+                "absolute top-28 left-4 right-4 z-[55] space-y-2 transition-opacity duration-200",
+                sheetState === 'full' ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}>
+                {walkIssue !== 'none' && (
+                    <div className="bg-amber-500 text-white rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-lg">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span className="text-[10.5px] font-bold leading-snug">{WALK_ISSUE_LABELS[walkIssue] || WALK_ISSUE_LABELS.error}</span>
+                    </div>
+                )}
+                {/* Piyasa araştırması #11: pati güvenliği uyarısı — gerçek hava sıcaklığından */}
+                {pawSafetyWarning(weather?.temp) && (
+                    <div className="bg-orange-500 text-white rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-lg">
+                        <span className="text-base shrink-0">🐾</span>
+                        <span className="text-[10.5px] font-bold leading-snug">{pawSafetyWarning(weather?.temp)}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* LIVE MAP — artık tam ekran arka plan; alttaki gösterge paneli üzerine
+                sürüklenebilir bir katman olarak biniyor (bkz. aşağısı) */}
+            <div className="absolute inset-0 z-[0]">
                 <LiveMap
                     userPos={userPos}
                     path={path}
                     isTracking={walkData.isActive}
-                    visitedPlaceIds={visitedPlaceIds}
+                    visitedPlaceIds={[]}
                     guardianMode={mode === 'guardian'}
-                    places={PLACES}
-                    marks={marks}
-                    customTargetPos={customTargetPos}
-                    customTargetClaimed={customTargetClaimed}
-                    onMapLongPress={(pos) => {
-                        if (customTargetClaimed) {
-                            setToastMessage("Bu yürüyüşte zaten özel hedef ödülünü aldınız! 🏆");
-                            setTimeout(() => setToastMessage(null), 3000);
-                            return;
-                        }
-                        setCustomTargetPos(pos);
-                        setCustomTargetClaimed(false);
-                        setToastMessage("🎯 Özel Hedef Belirlendi! Buraya ulaşarak ödül kazanabilirsiniz.");
-                        setTimeout(() => setToastMessage(null), 3000);
-                    }}
-                    onPlaceClick={(place) => {
-                        if (!visitedPlaceIds.includes(place.id)) {
-                            const isEligible = walkData.distance >= 300 || walkData.time >= 300;
-                            if (!isEligible) {
-                                setToastMessage("Ödül kazanmak için en az 300 metre yürümeli veya 5 dakika hareket etmelisiniz! 🐾");
-                                setTimeout(() => setToastMessage(null), 3000);
-                                return;
-                            }
-                            const dist = getDistKm(userPos[0], userPos[1], place.lat, place.lng) * 1000;
-                            if (dist < 120) {
-                                setVisitedPlaceIds(prev => [...prev, place.id]);
-                                setReward(place);
-                                const newCoins = Array.from({ length: 15 }).map((_, i) => ({
-                                    id: Date.now() + i,
-                                    x: window.innerWidth / 2 + (Math.random() - 0.5) * 120,
-                                    y: window.innerHeight / 2 + (Math.random() - 0.5) * 120,
-                                    delay: Math.random() * 0.4
-                                }));
-                                setCoins(newCoins);
-                                setTimeout(() => setCoins([]), 2500);
-                            } else {
-                                setToastMessage("Mekana ödülü almak için biraz daha yaklaşmalısın! 🚶");
-                                setTimeout(() => setToastMessage(null), 3000);
-                            }
-                        }
-                    }}
+                    hideInternalUI
                 />
-            </div>
 
-            {/* TOAST MESSAGE */}
-            <AnimatePresence>
-                {toastMessage && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-28 left-6 right-6 z-[60] bg-black/85 backdrop-blur border border-card-border px-4 py-3 rounded-2xl text-white font-bold text-center text-xs shadow-2xl pointer-events-none font-sans"
-                    >
-                        {toastMessage}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* ACTION MENU & CONTROLS */}
-            <div className="absolute left-6 bottom-32 z-[55] flex flex-col items-center gap-2">
-                 <AnimatePresence>
-                    {isActionMenuOpen && (
-                        <motion.div 
-                            initial={{ opacity: 0, y: 15, scale: 0.85 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 15, scale: 0.85 }}
-                            className="flex flex-col gap-2.5 mb-1"
+                {/* Piyasa araştırması #6: yürüyüş sırasında fotoğraf çekme — gerçek
+                    Supabase Storage upload'ı, dummy görsel değil (bkz. apiService.uploadWalkPhoto).
+                    Panel tam ekranken (sheetState 'full') haritanın üzerinde anlamsız
+                    kaldığı için gizleniyor. */}
+                {sheetState !== 'full' && (
+                    <>
+                        <input
+                            ref={photoInputRef}
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={handlePhotoSelected}
+                        />
+                        <button
+                            onClick={() => { if (!uploadingPhoto) photoInputRef.current?.click(); }}
+                            disabled={uploadingPhoto || !walkData.sessionId}
+                            className="absolute z-[40] w-14 h-14 rounded-full bg-white/95 dark:bg-black/70 backdrop-blur-md shadow-lg border border-card-border flex items-center justify-center active:scale-95 transition-all disabled:opacity-50"
+                            style={{ bottom: (SHEET_HEIGHT - snapY[sheetState]) + 16, right: 16 }}
+                            title="Fotoğraf Çek"
                         >
-                            {/* Widget 1: Health */}
-                            <button className="w-9 h-9 rounded-xl bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
-                                <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-md">
-                                    <Heart className="w-3.5 h-3.5 text-white fill-white/20" />
-                                </div>
-                            </button>
-
-                            {/* Widget 2: Environment */}
-                            <button className="w-9 h-9 rounded-xl bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
-                                <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md">
-                                    <Droplets className="w-3.5 h-3.5 text-white" />
-                                </div>
-                            </button>
-
-                            {/* Widget 3: Social/Community */}
-                            <button className="w-9 h-9 rounded-xl bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
-                                <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md">
-                                    <MessageSquarePlus className="w-3.5 h-3.5 text-white" />
-                                </div>
-                            </button>
-
-                            {/* Widget 4: Danger/SOS */}
-                            <button 
-                                onClick={() => setActiveSidebar('danger')}
-                                className="w-9 h-9 rounded-xl bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform"
+                            {uploadingPhoto ? (
+                                <span className="w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                            ) : (
+                                <Camera className="w-6 h-6 text-slate-700 dark:text-white" />
+                            )}
+                        </button>
+                        {walkPhotos.length > 0 && (
+                            <span
+                                className="absolute z-[40] bg-white/95 dark:bg-black/70 backdrop-blur-md shadow-lg rounded-full px-2.5 py-1 text-[10px] font-black text-slate-700 dark:text-white"
+                                style={{ bottom: (SHEET_HEIGHT - snapY[sheetState]) + 28, right: 80 }}
                             >
-                                <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-md">
-                                    <AlertOctagon className="w-3.5 h-3.5 text-white animate-pulse" />
-                                </div>
-                            </button>
-                        </motion.div>
-                    )}
-                 </AnimatePresence>
-
-                 <button
-                    onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                    className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-xl border backdrop-blur-2xl",
-                        isActionMenuOpen 
-                            ? "bg-card text-black border-white" 
-                            : "bg-black/40 text-white border-card-border hover:bg-black/60"
-                    )}
-                >
-                    {isActionMenuOpen ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                </button>
-            </div>
-
-            {/* PET COMPANION LIVE INDICATORS (NEW EXTENSION!) */}
-            <div className="absolute right-6 bottom-32 z-[55] flex flex-col gap-2">
-                <div className="bg-black/40 backdrop-blur-xl border border-card-border rounded-2xl p-3 flex flex-col gap-1.5 shadow-2xl min-w-[90px]">
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-[10px]">🐕</span>
-                        <span className="text-[8px] font-black text-black/80 dark:text-white/80 uppercase tracking-wider">{activePet?.name || 'Moffi'}</span>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="flex justify-between items-center gap-3">
-                            <span className="text-[7px] font-bold text-black/50 dark:text-white/50 uppercase">Keyif</span>
-                            <span className="text-[8px] font-black text-emerald-400 font-mono">%98</span>
-                        </div>
-                        <div className="flex justify-between items-center gap-3">
-                            <span className="text-[7px] font-bold text-black/50 dark:text-white/50 uppercase">Su</span>
-                            <span className="text-[8px] font-black text-blue-400 font-mono">%85</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* BOTTOM CONTROLS */}
-            <div className="absolute bottom-0 left-0 right-0 z-[50] p-6 pb-10 bg-gradient-to-t from-black via-black/80 to-transparent">
-                <div className="flex items-center justify-between gap-6 max-w-xs mx-auto">
-                    <button onClick={() => setActiveModal('camera')} className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur border border-card-border flex items-center justify-center text-white active:scale-90 transition-transform">
-                        <Camera className="w-4.5 h-4.5" />
-                    </button>
-                    <div className="relative">
-                        {!showStopConfirm ? (
-                            <button onClick={() => {
-                                if (!walkData.isActive) {
-                                    startWalk();
-                                } else {
-                                    if (walkData.isPaused) resumeWalk();
-                                    else pauseWalk();
-                                }
-                            }} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all ${(!walkData.isActive || walkData.isPaused) ? 'bg-green-500 text-white' : 'bg-card text-black'}`}>
-                                {(!walkData.isActive || walkData.isPaused) ? <Play className="w-6 h-6 fill-current translate-x-0.5" /> : <Pause className="w-6 h-6 fill-current" />}
-                            </button>
-                        ) : (
-                            <div className="flex gap-3">
-                                <button onClick={() => setShowStopConfirm(false)} className="w-12 h-12 rounded-full bg-black/20 dark:bg-white/20 text-white flex items-center justify-center active:scale-90 transition-transform"><ChevronLeft className="w-5 h-5" /></button>
-                                <button onClick={handleFinish} className="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center animate-pulse active:scale-90 transition-transform"><Square className="w-5 h-5 fill-current" /></button>
-                            </div>
+                                📸 {walkPhotos.length}
+                            </span>
                         )}
-                        {walkData.isActive && !showStopConfirm && (
-                            <button onClick={() => setShowStopConfirm(true)} className="absolute -right-14 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-red-500/20 text-red-500 border border-red-500/50 flex items-center justify-center active:scale-90 transition-transform">
-                                <StopCircle className="w-4.5 h-4.5" />
-                            </button>
-                        )}
-                    </div>
-                    <button onClick={() => setActiveModal('music')} className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur border border-card-border flex items-center justify-center text-white active:scale-90 transition-transform">
-                        <Music className="w-4.5 h-4.5" />
-                    </button>
-                </div>
-            </div>
-
-            {/* OVERLAYS & MODALS */}
-            <AnimatePresence>
-                {/* Spotify-Style Music Player Overlay (NEW!) */}
-                {activeModal === 'music' && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 50, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 50, scale: 0.95 }}
-                        className="fixed inset-x-6 bottom-28 z-[70] bg-[#121212]/80 backdrop-blur-xl border border-card-border p-5 rounded-[2.5rem] shadow-2xl flex flex-col gap-4 max-w-sm mx-auto"
-                    >
-                        <div className="flex justify-between items-center">
-                            <span className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em]">Çalan Şarkı</span>
-                            <button onClick={() => setActiveModal(null)} className="w-6 h-6 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-black/10 dark:bg-white/10 transition-colors">
-                                <X className="w-3.5 h-3.5 text-black/50 dark:text-white/50" />
-                            </button>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg relative overflow-hidden shrink-0">
-                                <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-                                    <Music className="w-6 h-6 text-black/50 dark:text-white/40 animate-pulse" />
-                                </div>
-                            </div>
-                            <div className="min-w-0">
-                                <h4 className="text-white font-black text-sm truncate">Walking in the Park 🐾</h4>
-                                <p className="text-black/50 dark:text-white/40 text-[9px] font-bold mt-0.5 uppercase tracking-wider">Moffi Playlists</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1.5 mt-1">
-                            <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden relative">
-                                <div className="h-full bg-purple-500 rounded-full w-[45%]" />
-                            </div>
-                            <div className="flex justify-between text-[8px] font-mono text-black/40 dark:text-white/30">
-                                <span>1:24</span>
-                                <span>3:12</span>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-center items-center gap-8 py-1">
-                            <button className="text-black/50 dark:text-white/50 hover:text-white transition-colors active:scale-95"><SkipBack className="w-4.5 h-4.5" /></button>
-                            <button className="w-10 h-10 bg-card text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all"><Play className="w-4.5 h-4.5 fill-current translate-x-0.5" /></button>
-                            <button className="text-black/50 dark:text-white/50 hover:text-white transition-colors active:scale-95"><SkipForward className="w-4.5 h-4.5" /></button>
-                        </div>
-                    </motion.div>
+                    </>
                 )}
+            </div>
 
-                {/* Camera Viewfinder Overlay (NEW!) */}
-                {activeModal === 'camera' && (
-                    <motion.div 
+            {/* GERÇEK SÜRÜKLENEBİLİR GÖSTERGE PANELİ (bkz. yukarıdaki snapY açıklaması) —
+                Baran'ın bulduğu gerçek eksiklik: panel sabitti, kullanıcı haritayı ya da
+                paneli tam ekran yapamıyordu.
+                NOT: `useDragControls()` + `dragListener={false}` + handle'ın
+                `onPointerDown`'ında `dragControls.start(e)` — Framer'ın KENDİ önerdiği
+                "sadece tutamaçtan sürükle" deseni — canlı testte gerçek bir Framer Motion
+                hatası çıkardı: İLK sürükleme jesti çalışıyor, ama ikinci ve sonraki HER
+                jest tamamen tepkisiz kalıyordu (yön farketmeksizin, 20+ adımlı yavaş/
+                gerçekçi sürükleme dahil, playwright ile kanıtlandı) — framer/motion
+                GitHub'ında da (#712, #525) bilinen, versiyondan bağımsız bir dragControls
+                tekrar-jest sorunu. Bunun yerine sürükleme DOĞRUDAN bu panelin kendi
+                üzerinde dinleniyor (varsayılan dragListener), ve içerik alanı (istatistik/
+                buton bölümü) kendi `onPointerDown`'ında `stopPropagation()` çağırarak
+                sürüklemeyi bu paneldeki dokunuşlardan İZOLE ediyor — SADECE üstteki
+                tutamaç bu izolasyonun DIŞINDA olduğu için sürüklemeyi başlatabiliyor. Aynı
+                güvenlik hedefine (yanlış dokunmalara karşı hassasiyet) ulaşan, ama
+                gerçekte çalışan bir yöntem. */}
+            <motion.div
+                className="absolute left-0 right-0 bottom-0 z-[50] bg-card rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] flex flex-col touch-none"
+                style={{ height: SHEET_HEIGHT, y: sheetY }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: SHEET_HEIGHT - COLLAPSED_VISIBLE }}
+                dragElastic={0.04}
+                dragMomentum={false}
+                onDragEnd={handleSheetDragEnd}
+            >
+                {/* Tutamaç — bu SADECE görsel bir ipucu değil, panelin geri kalanı
+                    sürüklemeyi kendi içinde durdurduğu için (aşağıya bkz.) sürüklemeyi
+                    başlatabilen TEK alan burası. */}
+                <div className="pt-3 pb-2 flex flex-col items-center cursor-grab active:cursor-grabbing shrink-0">
+                    <div className="w-10 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full" />
+                </div>
+
+                <div
+                    className="flex-1 overflow-y-auto px-6 pb-8 no-scrollbar"
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    {/* Ekran 4 (Duraklatılmış): referansa göre büyük sayı/ilerleme yerine tek
+                        satırlık kompakt bir özet gösteriliyor — bkz. design-reference/walk-final/. */}
+                    {walkData.isActive && walkData.isPaused ? (
+                        <div className="flex items-center gap-2.5 mb-5 bg-slate-50 dark:bg-white/5 rounded-2xl px-4 py-3.5">
+                            <Pause className="w-4 h-4 text-slate-500 dark:text-slate-300 fill-current shrink-0" />
+                            <span className="text-[12px] font-black text-slate-700 dark:text-slate-200 leading-snug">
+                                Yürüyüş Duraklatıldı · {steps.toLocaleString('tr-TR')} adım · {distKm.toFixed(2).replace('.', ',')} km · {formatTime(walkData.time)}
+                            </span>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Piyasa araştırması bulgusu: ADIM artık birincil, büyük gösterge —
+                                km ikincil/küçük bir satıra indi (önceden tam tersiydi, adım hiç
+                                yoktu). Aynı dürüst tahmin formülü (mesafe*1.3), sadece görünürlüğü
+                                değişti. */}
+                            <div className="flex items-baseline gap-2 mb-0.5">
+                                <span className="text-4xl font-black tracking-tighter text-slate-800 dark:text-white font-mono">{steps.toLocaleString('tr-TR')}</span>
+                                <span className="text-sm font-black text-slate-400 uppercase">adım</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-500 dark:text-slate-300 mb-4">
+                                <Footprints className="w-3.5 h-3.5 text-slate-400" /> {distKm.toFixed(2).replace('.', ',')} km
+                            </div>
+
+                            <div className="flex items-center gap-5 mb-4">
+                                <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-500 dark:text-slate-300">
+                                    <Clock className="w-3.5 h-3.5 text-slate-400" /> {formatTime(walkData.time)}
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-500 dark:text-slate-300">
+                                    🔥 {calories} kcal
+                                </div>
+                            </div>
+
+                            <div className="mb-5">
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <span className="text-[10px] font-bold text-slate-400">Hedefe kalan: {remainingKm.toFixed(1)} km</span>
+                                    <span className="text-[11px] font-black text-orange-500">%{goalPercent}</span>
+                                </div>
+                                <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full bg-orange-500 transition-all" style={{ width: `${Math.max(3, goalPercent)}%` }} />
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Ekran 5 (Bitirme Onayı) artık burada inline bir buton takası değil, aşağıdaki
+                        gerçek dimmed-backdrop modal'a (showStopConfirm) devrediliyor. */}
+                    <div className="space-y-2.5">
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => {
+                                haptics.tap();
+                                if (!walkData.isActive) startWalk();
+                                else if (walkData.isPaused) resumeWalk();
+                                else pauseWalk();
+                            }}
+                            className={cn(
+                                "w-full h-14 text-white rounded-full flex items-center justify-center gap-2 font-black text-[13px] uppercase tracking-widest border-0",
+                                (!walkData.isActive || walkData.isPaused)
+                                    ? "bg-orange-500 shadow-[0_8px_20px_rgba(249,115,22,0.3)]"
+                                    : "bg-slate-900 shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
+                            )}
+                        >
+                            {(!walkData.isActive || walkData.isPaused) ? (
+                                <><Play className="w-4 h-4 fill-current" /> Devam Et</>
+                            ) : (
+                                <><Pause className="w-4 h-4 fill-current" /> Duraklat</>
+                            )}
+                        </motion.button>
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => { haptics.tap(); setShowStopConfirm(true); }}
+                            className="w-full h-12 bg-red-50 text-red-500 rounded-full font-black text-[12px] uppercase tracking-widest border-0"
+                        >
+                            Yürüyüşü Bitir
+                        </motion.button>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Ekran 5 (Bitirme Onayı) — design-reference/walk-final/'e göre gerçek bir
+                dimmed-backdrop modal: harita arka planda kararıyor, X ile kapanıyor. */}
+            <AnimatePresence>
+                {showStopConfirm && (
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-white dark:bg-black flex flex-col justify-between p-6"
+                        className="fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-center justify-center px-6"
+                        onClick={() => { haptics.tap(); setShowStopConfirm(false); }}
                     >
-                        {/* Camera Top Info */}
-                        <div className="flex justify-between items-center relative z-10 pt-8">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                <span className="text-[9px] font-black text-white uppercase tracking-widest font-mono">REC 4K 60FPS</span>
-                            </div>
-                            <button 
-                                onClick={() => { 
-                                    setCapturedPhoto(null); 
-                                    setActiveModal(null); 
-                                }} 
-                                className="w-8 h-8 bg-black/10 dark:bg-white/10 rounded-full flex items-center justify-center border border-card-border text-white"
+                        <motion.div
+                            initial={{ scale: 0.92, opacity: 0, y: 10 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 6 }}
+                            transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-xs bg-card rounded-3xl p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10"
+                        >
+                            <button
+                                onClick={() => { haptics.tap(); setShowStopConfirm(false); }}
+                                className="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center border-0 cursor-pointer"
                             >
-                                <X className="w-4 h-4" />
+                                <span className="sr-only">Kapat</span>
+                                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                             </button>
-                        </div>
-
-                        {/* Camera Viewfinder Borders & Background Pet Image */}
-                        <div className="flex-1 border border-card-border rounded-[2.5rem] my-4 relative overflow-hidden flex items-center justify-center bg-zinc-950">
-                            {activePet?.avatar || activePet?.image ? (
-                                <img
-                                    src={activePet?.avatar || activePet?.image}
-                                    className={cn(
-                                        "absolute inset-0 w-full h-full object-cover transition-all duration-300", 
-                                        capturedPhoto ? "filter brightness-100 scale-100" : "filter brightness-90 scale-[1.02]"
-                                    )}
-                                    alt="Camera view"
-                                />
-                            ) : (
-                                <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-gray-850 to-gray-950 flex flex-col items-center justify-center gap-2">
-                                    <span className="text-gray-500 text-5xl select-none">🐾</span>
-                                    <span className="text-gray-500 dark:text-gray-400 text-xs font-black uppercase tracking-widest font-sans">{activePet?.name || 'Moffi'}</span>
+                            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                                <Pause className="w-6 h-6 text-red-500 fill-current" />
+                            </div>
+                            <h3 className="text-base font-black text-slate-800 dark:text-slate-100 mb-4 leading-snug pr-6">Yürüyüşü bitirmek istediğinize emin misiniz?</h3>
+                            <div className="grid grid-cols-3 gap-2 mb-5">
+                                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl py-3 flex flex-col items-center">
+                                    <span className="text-sm font-black text-slate-800 dark:text-white">{steps.toLocaleString('tr-TR')}</span>
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Adım</span>
                                 </div>
-                            )}
-
-                            {!capturedPhoto && (
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-white/60" />
-                                    <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-white/60" />
-                                    <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-white/60" />
-                                    <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-white/60" />
+                                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl py-3 flex flex-col items-center">
+                                    <span className="text-sm font-black text-slate-800 dark:text-white">{distKm.toFixed(2).replace('.', ',')} km</span>
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Mesafe</span>
                                 </div>
-                            )}
+                                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl py-3 flex flex-col items-center">
+                                    <span className="text-sm font-black text-slate-800 dark:text-white">{formatTime(walkData.time)}</span>
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Süre</span>
+                                </div>
+                            </div>
+                            <div className="space-y-2.5">
+                                <motion.button whileTap={{ scale: 0.96 }} onClick={handleFinish} className="w-full h-13 py-3.5 bg-red-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest border-0">
+                                    Yürüyüşü Bitir
+                                </motion.button>
+                                <motion.button whileTap={{ scale: 0.96 }} onClick={() => { haptics.tap(); setShowStopConfirm(false); }} className="w-full py-3 text-slate-500 dark:text-slate-400 rounded-2xl font-black text-[11px] uppercase tracking-widest border-0 bg-transparent">
+                                    Devam Et
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
 
-                            {/* DYNAMIC SPORTY OVERLAYS */}
-                            <div className="absolute inset-0 p-5 flex flex-col justify-between pointer-events-none z-10">
-                                {selectedTemplate === 0 && (
-                                    <>
-                                        <div className="flex justify-between items-start">
-                                            <div className="bg-white/15 backdrop-blur-md border border-white/25 px-2.5 py-1 rounded-lg text-[8px] font-black text-white uppercase tracking-widest font-sans">
-                                                🐾 MOFFI YÜRÜYÜŞ KULÜBÜ
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-end bg-gradient-to-t from-black/50 via-black/20 to-transparent p-3 -mx-5 -mb-5 rounded-b-[2.5rem] font-sans">
-                                            <div>
-                                                <div className="text-white text-xs font-black uppercase tracking-wider">{activePet?.name || 'Moffi'}</div>
-                                                <div className="text-black/60 dark:text-white/60 text-[8px] font-bold mt-0.5">{new Date().toLocaleDateString('tr-TR')}</div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-white text-lg font-black italic">{(walkData.distance / 1000).toFixed(2)} KM</div>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                {/* GERÇEK AYARLAR PANELİ — dişli ikonu önceden sadece Wake Lock'u açıp
+                    kapatıyordu (görünüşte "Ayarlar" ama arkasında tek, gizli bir işlev).
+                    Artık üç gerçek, çalışan tercih burada: Ekranı Açık Tut, Sesli Geri
+                    Bildirim, Otomatik Duraklatma (üçü de gerçek state'lere bağlı). */}
+                {isSettingsOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[80] bg-black/55 backdrop-blur-sm flex items-end justify-center"
+                        onClick={() => { haptics.tap(); setIsSettingsOpen(false); }}
+                    >
+                        <motion.div
+                            initial={{ y: 40, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 20, opacity: 0 }}
+                            transition={{ type: "spring", damping: 30, stiffness: 320 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-md bg-card rounded-t-[2rem] p-6 pb-8 shadow-2xl border-t border-card-border"
+                        >
+                            <div className="w-10 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-5" />
+                            <h3 className="text-base font-black text-slate-800 dark:text-slate-100 mb-5">Yürüyüş Ayarları</h3>
 
-                                {selectedTemplate === 1 && (
-                                    <>
-                                        <div className="flex justify-end">
-                                            <div className="bg-orange-500 text-white text-[7.5px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans">
-                                                ⚡ LIVE ATHLETE
-                                            </div>
-                                        </div>
-                                        <div className="bg-gradient-to-t from-black/80 via-black/30 to-transparent -mx-5 -mb-5 p-5 rounded-b-[2.5rem] flex flex-col gap-1 font-sans">
-                                            <div className="text-white text-4xl font-black italic tracking-tighter leading-none font-mono">
-                                                {(walkData.distance / 1000).toFixed(2)} <span className="text-xs uppercase font-normal tracking-wide not-italic text-black/70 dark:text-white/70">KM</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-black/80 dark:text-white/80 text-[10px] font-bold tracking-tight mt-1 font-mono">
-                                                <span>⏱️ {formatTime(walkData.time)}</span>
-                                                <span className="text-orange-400 font-black not-italic font-sans">MOFFI RUN PRO</span>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                            <div className="space-y-1">
+                                <div className="flex items-center justify-between py-3">
+                                    <div className="pr-4">
+                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Ekranı Açık Tut</div>
+                                        <div className="text-[11px] text-slate-400 mt-0.5">Yürüyüş sırasında ekran kararmaz</div>
+                                    </div>
+                                    <button
+                                        onClick={() => { haptics.tap(); setScreenAwake(v => !v); }}
+                                        className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", screenAwake ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
+                                    >
+                                        <span className={cn("absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", screenAwake ? "translate-x-5" : "translate-x-0.5")} />
+                                    </button>
+                                </div>
 
-                                {selectedTemplate === 2 && (
-                                    <>
-                                        <div className="flex justify-between items-start">
-                                            <div className="w-10 h-10 rounded-full border border-card-border bg-black/30 backdrop-blur-sm flex items-center justify-center text-lg shadow-lg">
-                                                🏆
-                                            </div>
-                                        </div>
-                                        <div className="bg-black/45 backdrop-blur-md border border-card-border rounded-2xl p-3.5 flex justify-between items-center w-full shadow-2xl font-sans">
-                                            <div>
-                                                <div className="text-white font-black text-xs uppercase tracking-tight">{activePet?.name || 'Moffi'}</div>
-                                                <div className="text-black/60 dark:text-white/60 text-[8px] font-bold uppercase mt-0.5">{activePet?.breed || 'Dostun'}</div>
-                                            </div>
-                                            <div className="flex gap-4 text-right font-mono">
-                                                <div>
-                                                    <div className="text-white text-[9px] font-black">{Math.floor(walkData.distance / 12)}</div>
-                                                    <div className="text-black/50 dark:text-white/40 text-[7px] font-bold uppercase font-sans">KCAL</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-white text-[9px] font-black">{walkData.speed.toFixed(1)}</div>
-                                                    <div className="text-black/50 dark:text-white/40 text-[7px] font-bold uppercase font-sans">KM/H</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                                <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
+                                    <div className="pr-4">
+                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Sesli Geri Bildirim</div>
+                                        <div className="text-[11px] text-slate-400 mt-0.5">Kilometre ve durum anonsları</div>
+                                    </div>
+                                    <button
+                                        onClick={() => { haptics.tap(); setAudioEnabled(v => { const next = !v; audioCues.setEnabled(next); return next; }); }}
+                                        className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", audioEnabled ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
+                                    >
+                                        <span className={cn("absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", audioEnabled ? "translate-x-5" : "translate-x-0.5")} />
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
+                                    <div className="pr-4">
+                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Otomatik Duraklatma</div>
+                                        <div className="text-[11px] text-slate-400 mt-0.5">Durunca yürüyüş kendiliğinden duraklar</div>
+                                    </div>
+                                    <button
+                                        onClick={() => { haptics.tap(); setAutoPauseEnabled(!autoPauseEnabled); }}
+                                        className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", autoPauseEnabled ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
+                                    >
+                                        <span className={cn("absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", autoPauseEnabled ? "translate-x-5" : "translate-x-0.5")} />
+                                    </button>
+                                </div>
+
+                                {/* Piyasa araştırması: yürüyüş sırasında müzik. Gerçek bir uygulama-içi
+                                    çalar (Spotify/Apple Music parçalarını gerçekten çalmak) telif
+                                    anlaşması + resmi API entegrasyonu gerektirir — bilinçli olarak
+                                    kapsam dışı bırakıldı. Bunun yerine dürüst, sıfır maliyetli bir
+                                    kısayol: kullanıcının kendi Spotify'ını açıyor, uygulama içinde
+                                    "çalıyormuş gibi" sahte bir oynatıcı GÖSTERMİYORUZ. */}
+                                <button
+                                    onClick={() => { haptics.tap(); window.open('https://open.spotify.com', '_blank'); }}
+                                    className="w-full flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5"
+                                >
+                                    <div className="pr-4 text-left">
+                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Müzik</div>
+                                        <div className="text-[11px] text-slate-400 mt-0.5">Spotify'ı aç, yürürken dinle</div>
+                                    </div>
+                                    <span className="text-[11px] font-black text-orange-500 shrink-0">Aç →</span>
+                                </button>
                             </div>
 
-                            {capturedPhoto === "saved" && (
-                                <motion.div 
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-30 font-sans"
-                                >
-                                    <motion.div 
-                                        animate={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }}
-                                        transition={{ duration: 0.5 }}
-                                        className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-white text-3xl shadow-lg shadow-emerald-500/30 mb-3"
-                                    >
-                                        ✓
-                                    </motion.div>
-                                    <div className="text-white font-black text-sm uppercase tracking-widest">
-                                        Fotoğraf Galeriye Kaydedildi! 📸
-                                    </div>
-                                    <div className="text-black/50 dark:text-white/40 text-[8px] font-bold uppercase tracking-widest mt-1">
-                                        +5 PP ÖDÜL KAZANILDI!
-                                    </div>
-                                </motion.div>
-                            )}
-                        </div>
-
-                        {/* Camera Controls & Template Selector */}
-                        <div className="flex flex-col items-center w-full pb-4">
-                            {!capturedPhoto && (
-                                <div className="flex justify-center gap-2.5 mb-5 relative z-10 w-full overflow-x-auto no-scrollbar font-sans">
-                                    {[
-                                        { id: 0, label: "Minimalist", emoji: "🍃" },
-                                        { id: 1, label: "Pro Atlet", emoji: "⚡" },
-                                        { id: 2, label: "Moffi Kartı", emoji: "🏆" }
-                                    ].map(t => (
-                                        <button
-                                            key={t.id}
-                                            onClick={() => setSelectedTemplate(t.id)}
-                                            className={cn(
-                                                "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border whitespace-nowrap cursor-pointer",
-                                                selectedTemplate === t.id 
-                                                    ? "bg-card text-black border-white shadow-lg scale-105" 
-                                                    : "bg-black/10 dark:bg-white/10 text-black/80 dark:text-white/80 border-card-border hover:bg-black/20 dark:bg-white/20"
-                                            )}
-                                        >
-                                            {t.emoji} {t.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {capturedPhoto === "captured" ? (
-                                <div className="flex justify-center gap-6 w-full max-w-xs px-6 font-sans">
-                                    <button 
-                                        onClick={() => setCapturedPhoto(null)}
-                                        className="flex-1 py-3.5 bg-black/10 dark:bg-white/10 border border-white/15 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all cursor-pointer"
-                                    >
-                                        Tekrar Çek
-                                    </button>
-                                    <button 
-                                        onClick={() => {
-                                            setCapturedPhoto("saved");
-                                            
-                                            // Trigger coin explosion
-                                            const newCoins = Array.from({ length: 10 }).map((_, i) => ({
-                                                id: Date.now() + i,
-                                                x: window.innerWidth / 2 + (Math.random() - 0.5) * 80,
-                                                y: window.innerHeight / 2 + (Math.random() - 0.5) * 80,
-                                                delay: Math.random() * 0.3
-                                            }));
-                                            setCoins(newCoins);
-                                            
-                                            setTimeout(() => {
-                                                setCapturedPhoto(null);
-                                                setActiveModal(null);
-                                                setCoins([]);
-                                            }, 2000);
-                                        }}
-                                        className="flex-1 py-3.5 bg-emerald-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all cursor-pointer shadow-lg shadow-emerald-500/20"
-                                    >
-                                        Galeriye Kaydet
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="flex justify-center items-center gap-12 w-full">
-                                    <div className="w-10" />
-                                    <button 
-                                        onClick={() => {
-                                            setCapturedPhoto("captured");
-                                        }}
-                                        className="w-16 h-16 rounded-full border-4 border-white p-1 flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
-                                    >
-                                        <div className="w-full h-full bg-card rounded-full" />
-                                    </button>
-                                    <div className="w-10" />
-                                </div>
-                            )}
-                        </div>
+                            <button
+                                onClick={() => { haptics.tap(); setIsSettingsOpen(false); }}
+                                className="w-full h-12 mt-5 bg-slate-900 dark:bg-white/10 text-white rounded-full font-black text-[12px] uppercase tracking-widest border-0"
+                            >
+                                Tamam
+                            </button>
+                        </motion.div>
                     </motion.div>
                 )}
-
-                {/* Reward Modal */}
-                {reward && (
-                    <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[70] flex items-center justify-center">
-                        <div className="bg-[#121212]/90 border border-card-border backdrop-blur-md text-white p-8 rounded-[2.5rem] text-center shadow-2xl">
-                            <h3 className="text-xl font-black mb-1">{reward.name}</h3>
-                            <div className="text-yellow-400 font-black text-3xl mb-4">+{reward.coinReward} PC</div>
-                            <button onClick={() => setReward(null)} className="w-full bg-purple-600 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider active:scale-95 transition-all">Devam Et</button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Floating Coin Splash Effect */}
-            <AnimatePresence>
-                {coins.map((coin) => (
-                    <motion.div
-                        key={coin.id}
-                        initial={{ 
-                            x: coin.x, 
-                            y: coin.y, 
-                            scale: 0, 
-                            opacity: 1,
-                            rotate: 0
-                        }}
-                        animate={{ 
-                            x: [coin.x, coin.x + (Math.random() - 0.5) * 80, window.innerWidth - 60],
-                            y: [coin.y, coin.y - 140, 48],
-                            scale: [0, 1.2, 1, 0.4],
-                            opacity: [1, 1, 1, 0],
-                            rotate: 720
-                        }}
-                        transition={{ 
-                            duration: 1.5, 
-                            delay: coin.delay,
-                            ease: "easeInOut" 
-                        }}
-                        className="fixed z-[9999] pointer-events-none w-8 h-8 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 shadow-xl border border-yellow-100 flex items-center justify-center text-xs font-black text-amber-900 shadow-yellow-500/20"
-                    >
-                        🪙
-                    </motion.div>
-                ))}
             </AnimatePresence>
         </div>
     );
@@ -763,7 +729,7 @@ function TrackingContent() {
 
 export default function TrackingPage() {
     return (
-        <Suspense fallback={<div className="h-screen w-full bg-white dark:bg-black flex items-center justify-center text-white">Yükleniyor...</div>}>
+        <Suspense fallback={<div className="h-screen w-full bg-white dark:bg-black flex items-center justify-center text-white text-sm font-bold">Hazırlanıyor... 🐾</div>}>
             <TrackingContent />
         </Suspense>
     );

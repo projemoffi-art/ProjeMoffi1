@@ -1,352 +1,251 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-    Play,
-    Zap,
-    Timer,
-    Footprints,
-    Award,
-    Instagram,
-    MessageCircle,
-    Share2,
-    Sun,
-    Smile,
-    Compass
-} from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { useSocial } from "@/context/SocialContext";
-import { cn } from "@/lib/utils";
+import confetti from "canvas-confetti";
+import { X, Share2, Clock, Flame, Footprints, Check } from "lucide-react";
+import { usePet } from "@/context/PetContext";
+import { useQuestEngine } from "@/context/QuestEngineContext";
+import { useActivity } from "@/context/ActivityContext";
+import { haptics } from "@/lib/haptics";
 
-import { useSearchParams } from "next/navigation";
-
-import { Suspense } from "react";
-
+// Faz 6 (referans revizyonu): Yürüyüş Sonucu ekranı — WalkQuickSheet ve /walk/tracking'in
+// ikisi de buraya, gerçek anlık görüntü değerleriyle (query param) yönlendiriyor. Layout
+// artık referans mockup'a göre: 2x2 istatistik grid'i (km/süre/kalori/adım), günlük hedef
+// çubuğu ve gerçek verilerle ("Kazandıklarınız": PP/seri/rozet — sadece gerçekten varsa
+// gösterilir, hiçbiri uydurma değil) doldurulmuş bir "Kazanımlar" bölümü içeriyor.
 function WalkSummaryContent() {
     const router = useRouter();
-    const { currentUser } = useSocial();
     const searchParams = useSearchParams();
-    const sessionId = searchParams?.get('id');
+    const { activePet } = usePet();
+    const { walkPpEarned, dailyGoal, closestBadgeProgress, weeklyStamps, maxWeeklyStamps } = useQuestEngine();
+    const { walkStats } = useActivity();
+    const [particles, setParticles] = useState<{ x: number; y: number; color: string }[]>([]);
 
-    // ... logic ...
-    // Find the session (convert both to string or number to be safe)
-    const session = currentUser.walks?.find(w => w.id.toString() === sessionId) || currentUser.walks?.[0]; // Fallback to latest
+    const distanceKm = parseFloat(searchParams?.get('distanceKm') || '0') || 0;
+    const durationSec = parseInt(searchParams?.get('durationSec') || '0', 10) || 0;
+    const calories = parseInt(searchParams?.get('calories') || '0', 10) || 0;
+    const steps = parseInt(searchParams?.get('steps') || '0', 10) || 0;
+    const badgeName = searchParams?.get('badgeName');
+    const badgeIcon = searchParams?.get('badgeIcon');
+    const sniffStops = parseInt(searchParams?.get('sniffStops') || '0', 10) || 0;
+    const bestSplitSecondsRaw = searchParams?.get('bestSplitSeconds');
+    const bestSplitSeconds = bestSplitSecondsRaw ? parseInt(bestSplitSecondsRaw, 10) : undefined;
 
-    // Derived Stats or Defaults
-    const stats = session ? {
-        steps: session.steps,
-        km: session.distance,
-        time: Math.floor(session.duration / 60), // duration is in seconds
-        calories: Math.floor(session.steps * 0.04), // simple calc
-        mood: session.steps > 5000 ? "Harika! 🚀" : "Mutlu 😊"
-    } : {
-        steps: 0,
-        km: 0,
-        time: 0,
-        calories: 0,
-        mood: "Nötr 😐"
-    };
+    const durationLabel = `${Math.floor(durationSec / 60).toString().padStart(2, '0')}:${(durationSec % 60).toString().padStart(2, '0')}`;
 
-    // Calculate Aura Intensity based on steps
-    // Low: < 2000 | Mid: 2000-5000 | High: > 5000
-    const intensity = stats.steps > 5000 ? "high" : stats.steps > 2000 ? "mid" : "low";
+    // Piyasa araştırması #5: kişisel rekorlar. `walkStats` bu ekrana gelindiğinde
+    // ZATEN bu yürüyüşü içerecek şekilde tazelenmiş oluyor (İşleme Ekranı'nda
+    // stopWalk()->refreshWalkData() çalıştı) — yani "bu yürüyüşün mesafesi ==
+    // yeni longestWalkKm" ise bu yürüyüş gerçekten yeni rekor demektir.
+    const isNewLongestWalk = (walkStats?.totalWalks || 0) > 1
+        && !!walkStats?.longestWalkKm
+        && distanceKm > 0
+        && Math.abs(distanceKm - walkStats.longestWalkKm) < 0.05;
+    const lifetimeAvgPaceMinPerKm = (walkStats && walkStats.totalDistanceKm > 0)
+        ? walkStats.totalDurationMinutes / walkStats.totalDistanceKm
+        : 0;
+    const thisWalkPaceMinPerKm = distanceKm > 0 ? (durationSec / 60) / distanceKm : 0;
+    const isFasterThanAverage = (walkStats?.totalWalks || 0) > 2
+        && lifetimeAvgPaceMinPerKm > 0
+        && thisWalkPaceMinPerKm > 0
+        && thisWalkPaceMinPerKm < lifetimeAvgPaceMinPerKm * 0.95;
+    const personalRecordLabel = isNewLongestWalk
+        ? 'Yeni Rekor! En Uzun Yürüyüşün 🎉'
+        : isFasterThanAverage
+        ? 'Bugün ortalamandan daha hızlıydın! ⚡'
+        : null;
 
-    const auraColors = {
-        low: "from-blue-400/80 via-cyan-300/60 to-transparent dark:from-blue-600/50 dark:via-cyan-900/40",
-        mid: "from-emerald-400/80 via-teal-300/60 to-transparent dark:from-emerald-600/50 dark:via-teal-900/40",
-        high: "from-purple-500/80 via-pink-400/60 to-transparent dark:from-purple-600/50 dark:via-pink-900/40"
-    };
+    const goalPercent = Math.round(Math.min(100, (distanceKm / Math.max(0.1, dailyGoal.distance)) * 100));
+    const streak = walkStats?.currentStreak || 0;
+    const petPhoto = activePet?.avatar || activePet?.image || '/images/moffi_pet_trio.png';
+    const shareText = `${activePet?.name || 'Dostum'} ile ${distanceKm.toFixed(2)} km yürüdük! 🐾 (${Math.round(durationSec / 60)} dk, ${calories} kcal) — Moffi`;
 
-    const activeColor = auraColors[intensity];
-
-    // MOOD CONFIGURATION - PREMIUM NEON
-    const moodConfig = {
-        energetic: { label: "Enerjik", color: "shadow-teal-500/30", text: "text-teal-700 dark:text-teal-300", icon: Zap, gradient: "from-teal-400 to-emerald-400" },
-        calm: { label: "Sakin", color: "shadow-blue-500/30", text: "text-blue-700 dark:text-blue-300", icon: Sun, gradient: "from-blue-400 to-indigo-400" },
-        happy: { label: "Mutlu", color: "shadow-yellow-500/30", text: "text-yellow-700 dark:text-yellow-300", icon: Smile, gradient: "from-yellow-400 to-orange-400" },
-        adventure: { label: "Macera", color: "shadow-orange-500/30", text: "text-orange-700 dark:text-orange-300", icon: Compass, gradient: "from-orange-400 to-red-400" }
-    };
-
-    // Determine Mood Logic (Enhanced)
-    let currentMood: keyof typeof moodConfig = "happy";
-    if (stats.steps > 8000) currentMood = "adventure";
-    else if (stats.steps > 5000) currentMood = "energetic";
-    else if (stats.time > 45) currentMood = "calm";
-
-    const moodStyle = moodConfig[currentMood];
-
-    // Particle State for Hydration Safe Rendering
-    const [particles, setParticles] = useState<{ x: number, y: number, scale: number, color: string }[]>([]);
+    // Ekran 7 (Yürüyüş Sonucu) — design-reference/walk-final/'e göre "Kazandıklarınız"
+    // artık 3'lü tek satır değil, 4 öğelik 2x2 grid. Her öğe SADECE gerçekten
+    // anlamlıysa listeye giriyor (uydurma bir "0 PP" veya "0 gün seri" kartı
+    // göstermiyoruz) — bu yüzden grid 2 ile 4 hücre arasında değişebilir.
+    const weeklyGoalPercent = Math.round(Math.min(100, (weeklyStamps / Math.max(1, maxWeeklyStamps)) * 100));
+    const earningsItems: { key: string; icon: string; value: string; label: string; tone: 'orange' | 'emerald' }[] = [];
+    if (walkPpEarned > 0) earningsItems.push({ key: 'pp', icon: '🐾', value: `+${walkPpEarned}`, label: 'Moffi Puanı', tone: 'orange' });
+    if (streak > 0) earningsItems.push({ key: 'streak', icon: '🔥', value: String(streak), label: 'Gün Seri', tone: 'orange' });
+    if (badgeName) {
+        earningsItems.push({ key: 'badge', icon: badgeIcon || '🏅', value: badgeName, label: 'Yeni Rozet', tone: 'emerald' });
+    } else if (closestBadgeProgress) {
+        earningsItems.push({ key: 'badge_progress', icon: closestBadgeProgress.badge.icon, value: `%${closestBadgeProgress.percent}`, label: 'Rozet İlerlemesi', tone: 'emerald' });
+    }
+    earningsItems.push({ key: 'weekly_goal', icon: '🎯', value: `%${weeklyGoalPercent}`, label: 'Haftalık Hedef', tone: 'orange' });
 
     useEffect(() => {
-        const colors = ['#FCD34D', '#F59E0B', '#EF4444'];
-        const newParticles = Array.from({ length: 12 }).map(() => ({
-            x: (Math.random() - 0.5) * 200,
-            y: (Math.random() - 0.5) * 200 - 50,
-            scale: Math.random() * 1.5,
-            color: colors[Math.floor(Math.random() * 3)]
-        }));
-        setParticles(newParticles);
+        const colors = ['#FB923C', '#FBBF24', '#34D399', '#F97316'];
+        setParticles(Array.from({ length: 16 }).map(() => ({
+            x: (Math.random() - 0.5) * 260,
+            y: (Math.random() - 0.5) * 260 - 40,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        })));
+
+        // Gerçek bir kutlama anı: rozet kazanıldıysa büyük, sadece PP/seri
+        // kazanıldıysa küçük bir canvas-confetti patlaması. Zaten kurulu ama
+        // hiç kullanılmayan bir kütüphaneyi (package.json) devreye sokuyor -
+        // önceki hâli sadece framer-motion ile elle çizilen, çok daha sönük
+        // bir parçacık efektiydi.
+        if (badgeName || isNewLongestWalk) {
+            haptics.celebrate();
+            confetti({ particleCount: 120, spread: 80, startVelocity: 45, origin: { y: 0.35 }, colors: ['#F97316', '#FBBF24', '#10B981', '#FFFFFF'] });
+        } else if (walkPpEarned > 0 || streak > 0 || isFasterThanAverage) {
+            haptics.success();
+            confetti({ particleCount: 50, spread: 60, startVelocity: 30, origin: { y: 0.4 }, colors: ['#F97316', '#FBBF24', '#10B981'] });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const handleShare = async () => {
+        if (typeof navigator !== 'undefined' && navigator.share) {
+            try { await navigator.share({ text: shareText }); } catch {}
+        } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            await navigator.clipboard.writeText(shareText);
+        }
+    };
+
     return (
-        <main className="min-h-screen relative overflow-hidden font-sans flex flex-col items-center justify-center">
-
-            {/* 1. DYNAMIC AURA BACKGROUND (3 LAYERS) */}
-            <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-
-                {/* Layer 1: The "Atmosphere" (Wide, Slow) */}
-                <motion.div
-                    animate={{
-                        scale: [1, 1.3, 1],
-                        opacity: [0.3, 0.1, 0.3],
-                    }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                    className={cn(
-                        "absolute w-[800px] h-[800px] rounded-full bg-gradient-radial blur-[100px]",
-                        activeColor
-                    )}
-                />
-
-                {/* Layer 2: The "Pulse" (Mid, Rhythmic) */}
-                <motion.div
-                    animate={{
-                        scale: [1, 1.15, 1],
-                        opacity: [0.6, 0.3, 0.6]
-                    }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className={cn(
-                        "absolute w-[550px] h-[550px] rounded-full bg-gradient-to-tr blur-[80px] mix-blend-screen opacity-50",
-                        activeColor
-                    )}
-                />
-
-                {/* Layer 3: The "Core Energy" (Tight, Vibrating) */}
-                <motion.div
-                    animate={{
-                        scale: [0.95, 1.05, 0.95],
-                        rotate: [0, 5, -5, 0], // Subtle vibration
-                    }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className={cn(
-                        "absolute w-[350px] h-[350px] rounded-full bg-gradient-to-br blur-[40px] opacity-80",
-                        activeColor
-                    )}
-                />
+        <main className="min-h-screen bg-background flex flex-col px-5 py-5">
+            <div className="flex items-center justify-between mb-2">
+                <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => { haptics.tap(); router.push('/home'); }}
+                    className="w-10 h-10 bg-card rounded-full flex items-center justify-center shadow-moffi-card border-0"
+                >
+                    <X className="w-4.5 h-4.5 text-slate-500" />
+                </motion.button>
+                {(typeof navigator !== 'undefined' && (navigator.share || navigator.clipboard)) && (
+                    <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => { haptics.tap(); handleShare(); }}
+                        className="w-10 h-10 bg-card rounded-full flex items-center justify-center shadow-moffi-card border-0"
+                    >
+                        <Share2 className="w-4 h-4 text-slate-500" />
+                    </motion.button>
+                )}
             </div>
 
-            {/* 2. PET SPOTLIGHT (The Star) */}
-            <div className="relative z-10 flex flex-col items-center mb-10 w-full animate-in fade-in zoom-in duration-700">
-
-                {/* Floating XP Badge */}
-                {/* Floating XP Badge - PREMIUM REDESIGN */}
-                <div className="relative mb-8 z-20">
-                    {/* Glow Effect */}
-                    <div className="absolute inset-0 bg-yellow-400 blur-xl opacity-40 animate-pulse" />
-
-                    <motion.div
-                        initial={{ scale: 0, rotate: -10 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
-                        whileHover={{ scale: 1.1 }}
-                        className="relative bg-gradient-to-r from-yellow-300 via-orange-400 to-red-500 p-[2px] rounded-full shadow-[0_0_30px_rgba(251,191,36,0.6)] cursor-pointer"
-                    >
-                        <div className="bg-black/10 backdrop-blur-sm rounded-full px-6 py-2 flex items-center gap-2">
+            <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full">
+                <div className="relative mb-6">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        {particles.map((p, i) => (
                             <motion.div
-                                animate={{ rotate: [0, 20, -20, 0] }}
-                                transition={{ repeat: Infinity, duration: 2, repeatDelay: 3 }}
-                            >
-                                <Award className="w-5 h-5 text-white fill-yellow-200" />
-                            </motion.div>
-                            <span className="text-sm font-black text-white tracking-wide drop-shadow-sm">
-                                +{Math.floor(stats.steps / 100)} MoffiPuan
-                            </span>
-                        </div>
-
-                        {/* Shine Animation */}
-                        <div className="absolute inset-0 rounded-full overflow-hidden">
-                            <motion.div
-                                animate={{ x: ["-100%", "200%"] }}
-                                transition={{ repeat: Infinity, duration: 3, ease: "linear", repeatDelay: 1 }}
-                                className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/50 to-transparent -skew-x-12"
+                                key={i}
+                                initial={{ opacity: 1, x: 0, y: 0, scale: 0 }}
+                                animate={{ opacity: 0, x: p.x, y: p.y, scale: 1 }}
+                                transition={{ duration: 1.4, delay: i * 0.03, ease: "easeOut" }}
+                                className="absolute w-2 h-2 rounded-full"
+                                style={{ backgroundColor: p.color }}
                             />
-                        </div>
-                    </motion.div>
+                        ))}
+                    </div>
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-white/10 shadow-xl relative z-10">
+                        <img src={petPhoto} alt={activePet?.name || 'Moffi'} className="w-full h-full object-cover" />
+                    </div>
+                </div>
 
-                    {/* Particle Explosion (Hydration Safe) */}
-                    {particles.map((p, i) => (
+                <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-1 text-center">Harika bir yürüyüş! 🎉</h1>
+                <p className="text-[12px] font-bold text-slate-400 mb-4 text-center">{activePet?.name || 'Dostun'} ile bugün gerçekten müthiş bir iş çıkardınız.</p>
+
+                {/* Ekran 7 (Yürüyüş Sonucu) — design-reference/walk-final/'e göre büyük km
+                    sayısı artık başlığın hemen altında, öne çıkan tek bir eleman */}
+                <div className="flex items-baseline gap-1.5 mb-5">
+                    <span className="text-5xl font-black tracking-tighter text-slate-800 dark:text-white font-mono">{distanceKm.toFixed(2)}</span>
+                    <span className="text-base font-black text-slate-400 uppercase">km</span>
+                </div>
+
+                {/* Piyasa araştırması #5: kişisel rekor kutlaması */}
+                {personalRecordLabel && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 18 }}
+                        className="w-full mb-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-2xl px-4 py-3 text-center shadow-[0_8px_20px_rgba(249,115,22,0.3)]"
+                    >
+                        <span className="text-[12px] font-black">{personalRecordLabel}</span>
+                    </motion.div>
+                )}
+
+                <div className="grid grid-cols-3 gap-3 w-full mb-5">
+                    {[
+                        { icon: Clock, value: durationLabel, label: 'Süre' },
+                        { icon: Flame, value: calories, label: 'Kalori' },
+                        { icon: Footprints, value: steps.toLocaleString('tr-TR'), label: 'Adım' },
+                    ].map((stat, i) => (
                         <motion.div
-                            key={i}
-                            initial={{ opacity: 1, x: 0, y: 0, scale: 0 }}
-                            animate={{
-                                opacity: 0,
-                                x: p.x,
-                                y: p.y,
-                                scale: p.scale
-                            }}
-                            transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
-                            className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full pointer-events-none"
-                            style={{ backgroundColor: p.color }}
-                        />
+                            key={stat.label}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: 0.15 + i * 0.06 }}
+                            className="bg-card rounded-2xl p-4 flex flex-col gap-1.5 shadow-moffi-card border border-slate-200/50 dark:border-white/5"
+                        >
+                            <stat.icon className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                            <span className="text-xl font-black text-slate-800 dark:text-white">{stat.value}</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</span>
+                        </motion.div>
                     ))}
                 </div>
 
-                {/* Giant Avatar with Inner Glow */}
-                <div className="relative group cursor-pointer">
-                    {/* Spinning Border Ring */}
-                    <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-white/0 via-white/50 to-white/0 dark:via-white/20 animate-spin-slow opacity-70" />
-
-                    <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="relative w-48 h-48 rounded-full border-4 border-white dark:border-card-border shadow-[0_20px_60px_rgba(0,0,0,0.1)] dark:shadow-[0_0_60px_rgba(255,255,255,0.05)] overflow-hidden bg-gray-100"
-                    >
-                        <img
-                            src={currentUser.avatar || "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&auto=format&fit=crop"}
-                            className="w-full h-full object-cover scale-105"
-                            alt="Pet"
-                        />
-                        {/* Glossy Overlay & Depth */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10 pointer-events-none" />
-                        <div className="absolute inset-0 border-[6px] border-card-border rounded-full pointer-events-none" />
-                    </motion.div>
-
-                    {/* MOOD CARD - MINI & MODERN (Apple Glare Style) */}
-                    <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30">
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0, y: 10 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            transition={{ delay: 0.5, type: "spring" }}
-                            className={cn(
-                                "bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl px-2 py-2 pr-5 rounded-full shadow-2xl flex items-center gap-2.5 border border-white/40 dark:border-card-border",
-                                moodStyle.color // specific shadow
-                            )}
-                        >
-                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shadow-lg text-white ring-2 ring-white/20", `bg-gradient-to-tr ${moodStyle.gradient}`)}>
-                                <moodStyle.icon className="w-4 h-4 fill-white" />
-                            </div>
-                            <div className="flex flex-col leading-none">
-                                <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">Ruh Hali</span>
-                                <span className={cn("text-xs font-black tracking-wide", moodStyle.text)}>{moodStyle.label}</span>
-                            </div>
-                        </motion.div>
+                <div className="w-full mb-6">
+                    <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[10px] font-bold text-slate-400">🏆 Günlük Hedef</span>
+                        <span className="text-[11px] font-black text-orange-500">%{goalPercent}</span>
+                    </div>
+                    <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-orange-500" style={{ width: `${Math.max(3, goalPercent)}%` }} />
                     </div>
                 </div>
 
+                {/* Piyasa araştırması #2/#13: bu yürüyüşe özgü eğlenceli gerçek istatistikler */}
+                {(bestSplitSeconds !== undefined || sniffStops > 0) && (
+                    <div className="w-full mb-6 flex gap-2 text-[10px] font-bold text-slate-400">
+                        {bestSplitSeconds !== undefined && (
+                            <span className="flex-1 bg-slate-50 dark:bg-white/5 rounded-xl px-3 py-2 text-center">
+                                ⚡ En hızlı km: {Math.floor(bestSplitSeconds / 60)}:{(bestSplitSeconds % 60).toString().padStart(2, '0')}
+                            </span>
+                        )}
+                        {sniffStops > 0 && (
+                            <span className="flex-1 bg-slate-50 dark:bg-white/5 rounded-xl px-3 py-2 text-center">
+                                👃 {sniffStops} kez durup çevreni kokladın
+                            </span>
+                        )}
+                    </div>
+                )}
 
-
-
-
-                {/* 3. GLASS METRICS CARD (Premium Redesign) */}
-                <div className="w-full max-w-[90%] mb-10 z-10">
-                    <motion.div
-                        transition={{ delay: 0.5 }}
-                        className="bg-white/60 dark:bg-[#1E293B]/60 backdrop-blur-3xl rounded-[3rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/50 dark:border-card-border relative overflow-hidden group"
-                    >
-                        {/* Shimmer Effect */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-
-                        <div className="grid grid-cols-3 divide-x divide-gray-200/60 dark:divide-white/10 relative z-10">
-                            {/* Steps */}
-                            <div className="flex flex-col items-center gap-1.5 p-2">
-                                <div className="p-3 bg-emerald-100/50 dark:bg-emerald-900/30 rounded-full mb-1 shadow-sm">
-                                    <Footprints className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-full mb-8">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Bugünkü kazanımlarınız</span>
+                    <div className="grid grid-cols-2 gap-3">
+                        {earningsItems.map((item, i) => (
+                            <motion.div
+                                key={item.key}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.4 + i * 0.06, type: "spring", stiffness: 300, damping: 20 }}
+                                className="bg-card rounded-2xl p-3.5 flex items-center gap-3 shadow-moffi-card border border-slate-200/50 dark:border-white/5"
+                            >
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md shrink-0 ${item.tone === 'emerald' ? 'bg-emerald-500' : 'bg-orange-500'}`}>
+                                    <span className="text-base leading-none">{item.icon}</span>
                                 </div>
-                                <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter drop-shadow-sm">{stats.steps}</span>
-                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400/80 uppercase tracking-widest">Adım</span>
-                            </div>
-
-                            {/* Time */}
-                            <div className="flex flex-col items-center gap-1.5 p-2">
-                                <div className="p-3 bg-blue-100/50 dark:bg-blue-900/30 rounded-full mb-1 shadow-sm">
-                                    <Timer className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                <div className="min-w-0">
+                                    <span className="text-[13px] font-black text-slate-800 dark:text-white block leading-tight truncate">{item.value}</span>
+                                    <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-wide leading-tight block truncate">{item.label}</span>
                                 </div>
-                                <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter leading-none flex items-baseline drop-shadow-sm">
-                                    {stats.time}<span className="text-sm font-bold text-gray-500 dark:text-gray-400/80 ml-0.5">dk</span>
-                                </span>
-                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400/80 uppercase tracking-widest">Süre</span>
-                            </div>
-
-                            {/* KM */}
-                            <div className="flex flex-col items-center gap-1.5 p-2">
-                                <div className="p-3 bg-orange-100/50 dark:bg-orange-900/30 rounded-full mb-1 shadow-sm">
-                                    <Zap className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                                </div>
-                                <div className="flex flex-col items-center leading-none">
-                                    <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter drop-shadow-sm">{stats.km}</span>
-                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400/80 uppercase tracking-widest mt-1">KM</span>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
 
-                {/* 4. ACTION ZONE */}
-                <motion.div
-                    initial={{ y: 40, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    className="w-[85%] max-w-sm flex flex-col gap-3 z-10"
+                <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => { haptics.tap(); router.push('/home'); }}
+                    className="w-full h-14 bg-orange-500 text-white rounded-full flex items-center justify-center gap-2 font-black text-[13px] uppercase tracking-widest border-0 shadow-[0_8px_20px_rgba(249,115,22,0.3)]"
                 >
-                    {/* Cinematic Walk Replay Button */}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98, y: 4 }}
-                        className="group relative w-full h-16 bg-gradient-to-br from-[#2D3342] to-[#0F1218] rounded-[2rem] border border-card-border shadow-[0_8px_0_#0B0D11,0_20px_40px_rgba(0,0,0,0.4)] active:shadow-none active:translate-y-2 transition-all flex items-center justify-center gap-3 overflow-hidden"
-                    >
-                        {/* Shimmer / Ripple Hint */}
-                        <div className="absolute inset-0 bg-black/5 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                        {/* Glowing Icon Frame */}
-                        <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-card-border flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.15)] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-shadow duration-500">
-                            <div className="absolute inset-0 rounded-full bg-black/20 dark:bg-white/20 blur-md opacity-50 group-hover:opacity-100 transition-opacity" />
-                            <Play className="relative z-10 w-5 h-5 text-white fill-white ml-0.5" />
-                        </div>
-
-                        {/* Text */}
-                        <span className="text-lg font-black text-black/90 dark:text-white/90 tracking-wide uppercase drop-shadow-md">
-                            Walk Replay
-                        </span>
-                    </motion.button>
-
-                    <div className="flex gap-4 w-full">
-                        {/* Instagram Story Button - Premium Gradient */}
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="flex-1 h-12 rounded-full relative group overflow-hidden shadow-[0_8px_20px_rgba(225,48,108,0.2)] hover:shadow-[0_12px_25px_rgba(225,48,108,0.3)] transition-all"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-tr from-[#FFBE0B] via-[#FF006E] to-[#8338EC] group-hover:scale-110 transition-transform duration-500" />
-                            <div className="absolute inset-0 bg-black/20 dark:bg-white/20 opacity-0 group-hover:opacity-20 transition-opacity" />
-                            <div className="relative flex items-center justify-center gap-2 text-white">
-                                <Instagram className="w-5 h-5 drop-shadow-md" />
-                                <span className="text-sm font-bold tracking-wide text-shadow-sm">Story</span>
-                            </div>
-                        </motion.button>
-
-                        {/* WhatsApp Button - Modern & Clean */}
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="flex-1 h-12 bg-card dark:bg-[#1E2B3A] rounded-full border border-card-border dark:border-card-border shadow-[0_8px_20px_rgba(37,211,102,0.15)] hover:shadow-[0_12px_25px_rgba(37,211,102,0.25)] flex items-center justify-center gap-2 transition-all group"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center group-hover:bg-[#25D366] transition-colors duration-300">
-                                <MessageCircle className="w-4 h-4 text-[#25D366] group-hover:text-white transition-colors duration-300 fill-current" />
-                            </div>
-                            <span className="text-sm font-bold text-foreground dark:text-white group-hover:text-[#25D366] dark:group-hover:text-[#25D366] transition-colors">WhatsApp</span>
-                        </motion.button>
-                    </div>
-
-                    <button
-                        onClick={() => router.push('/walk')}
-                        className="mt-2 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-bold transition-colors"
-                    >
-                        Kapat ve Ana Ekrana Dön
-                    </button>
-                </motion.div>
-
-
+                    <Check className="w-4 h-4" /> Tamam
+                </motion.button>
             </div>
         </main>
     );
@@ -354,7 +253,7 @@ function WalkSummaryContent() {
 
 export default function WalkSummaryPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Yükleniyor...</div>}>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background text-sm font-bold text-slate-400">Sonuçlar hazırlanıyor... 🐾</div>}>
             <WalkSummaryContent />
         </Suspense>
     );

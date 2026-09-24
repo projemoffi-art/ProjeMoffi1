@@ -17,7 +17,12 @@ export function useWalk() {
         distanceKm: walkData.distance / 1000,
         startTime: new Date(Date.now() - walkData.time * 1000).toISOString(),
         isPaused: walkData.isPaused,
-        route: walkData.path
+        route: walkData.path,
+        // Baran'ın gerçek bulgusu: ana sayfa kartı hangi pet'in yürüyüşte olduğunu
+        // bilmiyordu, PetSwitcher'da o an seçili pet'i varsayıyordu. Artık yürüyüşün
+        // KENDİSİ taşıdığı için tüketiciler (home/page.tsx) doğru pet'i gösterebilir.
+        petId: walkData.petId,
+        petName: walkData.petName,
     } : null;
 
     return {

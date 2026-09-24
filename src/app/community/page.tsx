@@ -53,7 +53,6 @@ import { NotificationsDrawer } from '../../components/community/NotificationsDra
 
 import { ImmersivePostCard } from '../../components/community/ImmersivePostCard';
 import { VetQuickSheet } from '@/components/vet/VetQuickSheet';
-import { WalkQuickSheet } from '@/components/walk/WalkQuickSheet';
 import { MarketQuickSheet } from '@/components/shop/MarketQuickSheet';
 import { StudioQuickSheet } from '@/components/studio/StudioQuickSheet';
 import { GameQuickSheet } from '@/components/game/GameQuickSheet';
@@ -69,7 +68,6 @@ import { supabase } from '../../lib/supabase';
 import { PET_TYPES } from '@/constants/petTypes';
 
 // Optional components
-import { HubOverlay } from '../../components/community/HubOverlay';
 import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
 import { OverlaySystem } from '@/components/community/OverlaySystem';
 import { FeedTab } from '@/components/community/FeedTab';
@@ -298,7 +296,6 @@ export default function MoffiSocialMasterpiece() {
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
     const [isVetQuickSheetOpen, setIsVetQuickSheetOpen] = useState(false);
-    const [isWalkQuickSheetOpen, setIsWalkQuickSheetOpen] = useState(false);
     const [isMarketQuickSheetOpen, setIsMarketQuickSheetOpen] = useState(false);
     const [isStudioQuickSheetOpen, setIsStudioQuickSheetOpen] = useState(false);
     const [isGameQuickSheetOpen, setIsGameQuickSheetOpen] = useState(false);
@@ -365,13 +362,9 @@ export default function MoffiSocialMasterpiece() {
     }, [showFilterName, activeFilterIndex]);
 
     useEffect(() => {
-        const openWalk = searchParams.get('openWalk');
         const tabParam = searchParams.get('tab');
         if (tabParam) {
             setActiveTab(tabParam);
-        }
-        if (openWalk === 'true') {
-            setIsWalkQuickSheetOpen(true);
         }
     }, [searchParams]);
 
@@ -834,7 +827,6 @@ export default function MoffiSocialMasterpiece() {
         const handleOpenAuraStudio = () => setIsStudioQuickSheetOpen(true);
         const handleOpenMarket = () => setIsMarketQuickSheetOpen(true);
         const handleOpenVet = () => setIsVetQuickSheetOpen(true);
-        const handleOpenWalk = () => setIsWalkQuickSheetOpen(true);
         const handleOpenNotif = () => setIsNotificationsOpen(true);
         const handleOpenAddLostPet = () => setIsLostAdModalOpen(true);
         const handleOpenAddAdoptionPet = () => setIsAddAdoptionModalOpen(true);
@@ -847,7 +839,6 @@ export default function MoffiSocialMasterpiece() {
         window.addEventListener('open-aura-studio', handleOpenAuraStudio);
         window.addEventListener('open-market-sheet', handleOpenMarket);
         window.addEventListener('open-vet-sheet', handleOpenVet);
-        window.addEventListener('open-walk-sheet', handleOpenWalk);
         window.addEventListener('open-notification-drawer', handleOpenNotif);
         window.addEventListener('open-add-lost-pet', handleOpenAddLostPet);
         window.addEventListener('open-add-adoption-pet', handleOpenAddAdoptionPet);
@@ -866,7 +857,6 @@ export default function MoffiSocialMasterpiece() {
             window.removeEventListener('open-aura-studio', handleOpenAuraStudio);
             window.removeEventListener('open-market-sheet', handleOpenMarket);
             window.removeEventListener('open-vet-sheet', handleOpenVet);
-            window.removeEventListener('open-walk-sheet', handleOpenWalk);
             window.removeEventListener('open-notification-drawer', handleOpenNotif);
             window.removeEventListener('moffi-change-tab', handleChangeTab);
             window.removeEventListener('open-add-lost-pet', handleOpenAddLostPet);
@@ -4666,8 +4656,6 @@ export default function MoffiSocialMasterpiece() {
                 settingsPet={settingsPet}
                 isVetQuickSheetOpen={isVetQuickSheetOpen}
                 setIsVetQuickSheetOpen={setIsVetQuickSheetOpen}
-                isWalkQuickSheetOpen={isWalkQuickSheetOpen}
-                setIsWalkQuickSheetOpen={setIsWalkQuickSheetOpen}
                 isMarketQuickSheetOpen={isMarketQuickSheetOpen}
                 setIsMarketQuickSheetOpen={setIsMarketQuickSheetOpen}
                 isStudioQuickSheetOpen={isStudioQuickSheetOpen}
@@ -4768,12 +4756,6 @@ export default function MoffiSocialMasterpiece() {
                     isOpen={isVetQuickSheetOpen} 
                     onClose={() => setIsVetQuickSheetOpen(false)} 
                     petId={activePet?.id} 
-                />
-            )}
-            {isWalkQuickSheetOpen && (
-                <WalkQuickSheet 
-                    isOpen={isWalkQuickSheetOpen} 
-                    onClose={() => setIsWalkQuickSheetOpen(false)} 
                 />
             )}
             {isMarketQuickSheetOpen && (

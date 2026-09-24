@@ -86,8 +86,8 @@ export const TodayForYouEngine = () => {
         generatedCards.push({
             id: 'nutrition_card',
             icon: Bone,
-            iconColor: 'text-amber-600 dark:text-amber-400',
-            iconBg: 'bg-amber-50 dark:bg-amber-950/30',
+            iconColor: 'text-[#EE5B3D] dark:text-orange-400',
+            iconBg: 'bg-orange-50 dark:bg-orange-950/30',
             badgeText: 'BESLENME',
             title: isCat ? 'Tüy Yumağı Önleyici' : (isOverweight ? 'Diyet Mamaya Geçiş' : 'Eklem Sağlığı (Glukozamin)'),
             subtitle: isOverweight ? 'Porsiyonları azaltalım' : 'Petshop\'ta İndirimde',
@@ -99,21 +99,21 @@ export const TodayForYouEngine = () => {
         let weatherIcon = Sun;
         let weatherTitle = 'Güneşli Hava';
         let weatherSub = 'Patilere Dikkat, Asfalt Sıcak!';
-        let weatherColor = 'text-yellow-500';
-        let weatherBg = 'bg-yellow-50 dark:bg-yellow-950/30';
+        let weatherColor = 'text-[#EE5B3D]';
+        let weatherBg = 'bg-orange-50 dark:bg-orange-950/30';
 
         if (hour < 11) {
             weatherIcon = CloudSun;
             weatherTitle = 'Sabah Serinliği';
             weatherSub = 'Uzun yürüyüş için harika';
-            weatherColor = 'text-sky-500';
-            weatherBg = 'bg-sky-50 dark:bg-sky-950/30';
+            weatherColor = 'text-[#5C9B2E] dark:text-emerald-400';
+            weatherBg = 'bg-emerald-50 dark:bg-emerald-950/30';
         } else if (hour > 18) {
             weatherIcon = Moon;
             weatherTitle = 'Akşam Yürüyüşü';
             weatherSub = 'Günün yorgunluğunu atın';
-            weatherColor = 'text-indigo-500';
-            weatherBg = 'bg-indigo-50 dark:bg-indigo-950/30';
+            weatherColor = 'text-[#EE5B3D] dark:text-orange-400';
+            weatherBg = 'bg-orange-50 dark:bg-orange-950/30';
         }
 
         generatedCards.push({

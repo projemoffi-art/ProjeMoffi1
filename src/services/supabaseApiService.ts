@@ -14,26 +14,45 @@ export class SupabaseApiService implements IApiService {
     
     private pendingActionLocks = new Set<string>();
     private mockApi = new MockApiService();
+    // Bir sayfa aynı anda 10-60 arası fonksiyon çağırıp her biri getSessionUser() istediğinde
+    // (dashboard/home gibi çok-veri-çeken ekranlarda normal), hepsi paralel, gereksiz
+    // /auth/v1/user isteği atıyordu — bu da Supabase auth rate limit'ine takılıp giriş
+    // akışını aralıklı olarak bozabiliyordu (2026-09-23 kontrol turunda tespit edildi).
+    // Kısa ömürlü bir promise cache/dedup ile aynı pencuredeki tüm çağrılar TEK ağ
+    // isteğini paylaşır; TTL çok kısa olduğu için hesap değiştirme senaryosunda (bu
+    // deduplication'ın önceden var olma sebebi) bayat veri riski yok.
+    private sessionUserCache: { promise: Promise<any> | null; timestamp: number } = { promise: null, timestamp: 0 };
+    private static readonly SESSION_USER_CACHE_MS = 2000;
 
     invalidateCache() {
         // No-op for backwards compatibility
     }
 
     private async getSessionUser() {
-        try {
-            // Use getUser() NOT getSession() — getSession() reads from local cache
-            // and can return a stale/wrong user when switching accounts.
-            // getUser() validates the token with the Supabase server every time.
-            const { data: { user }, error } = await supabase.auth.getUser();
-            if (error) {
-                console.error("Supabase auth getUser error:", error);
+        const now = Date.now();
+        if (this.sessionUserCache.promise && (now - this.sessionUserCache.timestamp) < SupabaseApiService.SESSION_USER_CACHE_MS) {
+            return this.sessionUserCache.promise;
+        }
+
+        const promise = (async () => {
+            try {
+                // Use getUser() NOT getSession() — getSession() reads from local cache
+                // and can return a stale/wrong user when switching accounts.
+                // getUser() validates the token with the Supabase server every time.
+                const { data: { user }, error } = await supabase.auth.getUser();
+                if (error) {
+                    console.error("Supabase auth getUser error:", error);
+                    return null;
+                }
+                return user || null;
+            } catch (err) {
+                console.error("Critical Auth Error in getSessionUser:", err);
                 return null;
             }
-            return user || null;
-        } catch (err) {
-            console.error("Critical Auth Error in getSessionUser:", err);
-            return null;
-        }
+        })();
+
+        this.sessionUserCache = { promise, timestamp: now };
+        return promise;
     }
 
 
@@ -1738,6 +1757,41 @@ export class SupabaseApiService implements IApiService {
         if (error) throw error;
     }
 
+    // --- FAZ 7: MOFFİ PUANI (PP) — transaction-tabanlı, coin_balance/PawCoin'den TAMAMEN AYRI ---
+    // Yazma işlemleri her zaman SECURITY DEFINER RPC üzerinden gider (award_pati_puan) —
+    // istemci doğrudan point_transactions'a veya profiles.pati_puan_balance'a yazamaz.
+    async awardPatiPuan(amount: number, reason: string, source: string, referenceId?: string): Promise<number> {
+        const { data, error } = await supabase.rpc('award_pati_puan', {
+            p_amount: amount,
+            p_reason: reason,
+            p_source: source,
+            p_reference_id: referenceId ?? null
+        });
+        if (error) throw error;
+        return data as number;
+    }
+
+    async getPatiPuanBalance(): Promise<number> {
+        const user = await this.getSessionUser();
+        if (!user) return 0;
+        const { data, error } = await supabase.from('profiles').select('pati_puan_balance').eq('id', user.id).single();
+        if (error || !data) return 0;
+        return data.pati_puan_balance || 0;
+    }
+
+    async getPatiPuanHistory(limit: number = 30) {
+        const user = await this.getSessionUser();
+        if (!user) return [];
+        const { data, error } = await supabase
+            .from('point_transactions')
+            .select('id, amount, reason, source, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        if (error || !data) return [];
+        return data;
+    }
+
     // --- DIGITAL PASSPORT (Health & Vaccines) ---
     async getVaccineDefinitions(): Promise<any[]> {
         const { RULES_TR } = await import('./mock/VaccineMockService').then(m => {
@@ -2628,6 +2682,13 @@ export class SupabaseApiService implements IApiService {
     }
 
     // --- YÜRÜYÜŞ TAKİBİ ---
+    // NOT: walk_sessions tablosunun gerçek kolonları — id, user_id, pet_id, start_time, end_time,
+    // path_coordinates (jsonb), distance_meters, status. Kod önceden var olmayan kolon adları
+    // (route, ended_at, started_at, duration_seconds, calories_burned, steps) kullanıyordu,
+    // bu yüzden her yürüyüş kaydı sessizce (try/catch içinde yutularak) başarısız oluyordu —
+    // hiçbir yürüyüş gerçekten veritabanına kaydedilmiyordu. Süre/kalori/adım gibi türetilmiş
+    // değerler artık ayrı kolonlarda TUTULMUYOR, gerçek verilerden (mesafe, başlangıç/bitiş
+    // zamanı) okuma anında hesaplanıyor — şema değişikliği gerekmiyor.
     async startWalk(userId: string, petId: string): Promise<any> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
@@ -2635,7 +2696,7 @@ export class SupabaseApiService implements IApiService {
         // End any active walks first
         await supabase
             .from('walk_sessions')
-            .update({ status: 'completed', ended_at: new Date().toISOString() })
+            .update({ status: 'completed', end_time: new Date().toISOString() })
             .eq('user_id', user.id)
             .eq('status', 'active');
 
@@ -2645,7 +2706,7 @@ export class SupabaseApiService implements IApiService {
                 user_id: user.id,
                 pet_id: petId || null,
                 status: 'active',
-                route: []
+                path_coordinates: []
             })
             .select()
             .single();
@@ -2661,13 +2722,13 @@ export class SupabaseApiService implements IApiService {
         // Fetch current route and append
         const { data: session } = await supabase
             .from('walk_sessions')
-            .select('route, distance_meters')
+            .select('path_coordinates, distance_meters')
             .eq('id', sessionId)
             .single();
 
-        const route: any[] = session?.route || [];
+        const route: any[] = session?.path_coordinates || [];
         const lastPoint = route[route.length - 1];
-        
+
         let additionalDistance = 0;
         if (lastPoint) {
             const dLat = (lat - lastPoint.lat) * (Math.PI / 180);
@@ -2681,10 +2742,82 @@ export class SupabaseApiService implements IApiService {
         await supabase
             .from('walk_sessions')
             .update({
-                route,
+                path_coordinates: route,
                 distance_meters: (session?.distance_meters || 0) + additionalDistance
             })
             .eq('id', sessionId);
+    }
+
+    // Piyasa araştırması #6: yürüyüş sırasında/sonrasında gerçek fotoğraf ekleme
+    // (Walkies/MyDoggy gibi köpek-yürüyüşü uygulamalarının ana özelliği).
+    // `walk-photos` bucket'ına kullanıcının KENDİ klasörüne (RLS policy'si bunu
+    // zorunlu kılıyor) yükleyip, dönen public URL'i walk_sessions.photo_urls
+    // dizisine ekliyor — anında commit ediliyor (yürüyüş bitmeden uygulama
+    // kapansa bile fotoğraf kaybolmaz, updateWalkLocation ile aynı dayanıklılık
+    // deseni).
+    async uploadWalkPhoto(sessionId: string, file: File): Promise<string> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error('Giriş gerekli');
+
+        const ext = file.name.split('.').pop() || 'jpg';
+        const path = `${user.id}/${sessionId}/${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('walk-photos')
+            .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false });
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from('walk-photos').getPublicUrl(path);
+        const url = publicUrlData.publicUrl;
+
+        const { data: session } = await supabase
+            .from('walk_sessions')
+            .select('photo_urls')
+            .eq('id', sessionId)
+            .single();
+        const existing: string[] = session?.photo_urls || [];
+
+        const { error: updateError } = await supabase
+            .from('walk_sessions')
+            .update({ photo_urls: [...existing, url] })
+            .eq('id', sessionId);
+        if (updateError) throw updateError;
+
+        return url;
+    }
+
+    // Piyasa araştırması #4: Strava Beacon tarzı canlı konum paylaşımı. `walk_beacons`
+    // BİLEREK `walk_sessions`'tan ayrı, minimal bir tablo (bkz. migration notu) —
+    // genele SADECE tek nokta anlık konum açılıyor, GPS geçmişi/rotası değil.
+    async startBeacon(sessionId: string, petName: string, lat: number, lng: number): Promise<string> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error('Giriş gerekli');
+        const { data, error } = await supabase
+            .from('walk_beacons')
+            .insert({ session_id: sessionId, user_id: user.id, pet_name: petName, lat, lng })
+            .select('id')
+            .single();
+        if (error) throw error;
+        return data.id;
+    }
+
+    async updateBeaconLocation(beaconId: string, lat: number, lng: number): Promise<void> {
+        await supabase.from('walk_beacons').update({ lat, lng, updated_at: new Date().toISOString() }).eq('id', beaconId);
+    }
+
+    async stopBeacon(beaconId: string): Promise<void> {
+        await supabase.from('walk_beacons').delete().eq('id', beaconId);
+    }
+
+    // Herkese açık — anon anahtarla, oturum gerektirmeden çağrılır (bkz. /beacon/[id]).
+    async getBeacon(beaconId: string): Promise<{ lat: number; lng: number; petName: string | null; updatedAt: string; expiresAt: string } | null> {
+        const { data, error } = await supabase
+            .from('walk_beacons')
+            .select('lat, lng, pet_name, updated_at, expires_at')
+            .eq('id', beaconId)
+            .single();
+        if (error || !data) return null;
+        return { lat: data.lat, lng: data.lng, petName: data.pet_name, updatedAt: data.updated_at, expiresAt: data.expires_at };
     }
 
     async endWalk(sessionId: string, data: any): Promise<any> {
@@ -2695,11 +2828,11 @@ export class SupabaseApiService implements IApiService {
 
         const { data: session } = await supabase
             .from('walk_sessions')
-            .select('started_at, distance_meters')
+            .select('start_time, distance_meters')
             .eq('id', sessionId)
             .single();
 
-        const startedAt = session?.started_at ? new Date(session.started_at) : new Date();
+        const startedAt = session?.start_time ? new Date(session.start_time) : new Date();
         const durationSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
         const distanceMeters = session?.distance_meters || 0;
         const caloriesBurned = Math.round(distanceMeters * 0.06); // ~60 cal/km
@@ -2709,10 +2842,7 @@ export class SupabaseApiService implements IApiService {
             .from('walk_sessions')
             .update({
                 status: 'completed',
-                ended_at: endedAt,
-                duration_seconds: durationSeconds,
-                calories_burned: caloriesBurned,
-                steps
+                end_time: endedAt
             })
             .eq('id', sessionId)
             .eq('user_id', user.id)
@@ -2720,26 +2850,44 @@ export class SupabaseApiService implements IApiService {
             .single();
 
         if (error) throw error;
-        return updated;
+        // duration/kalori/adım DB'de saklanmıyor — burada hesaplanıp döndürülüyor (ör. bitiş özeti için)
+        return { ...updated, ended_at: updated.end_time, started_at: updated.start_time, duration_seconds: durationSeconds, calories_burned: caloriesBurned, steps };
     }
 
     async getWalkHistory(userId: string, limit: number = 10): Promise<any[]> {
         const user = await this.getSessionUser();
         if (!user) return [];
 
+        // Faz 10 kontrolü: `pet:pets(...)` embed'i kaldırıldı — walk_sessions.pet_id
+        // text tipinde, pets tablosuna FK constraint'i hiç yok. Bu embed olduğu sürece
+        // PostgREST TÜM sorguyu PGRST200 ile reddediyordu, yani bu fonksiyon her zaman
+        // boş dizi döndürüyordu — yürüyüş geçmişi hiçbir zaman gerçek veri göstermemişti.
         const { data, error } = await supabase
             .from('walk_sessions')
-            .select(`
-                *,
-                pet:pets(name, species, photo_url)
-            `)
+            .select('*')
             .eq('user_id', user.id)
             .eq('status', 'completed')
-            .order('ended_at', { ascending: false })
+            .order('end_time', { ascending: false })
             .limit(limit);
 
-        if (error) return [];
-        return data;
+        if (error) {
+            console.error("getWalkHistory error:", error);
+            return [];
+        }
+        return (data || []).map((w: any) => {
+            const distanceMeters = w.distance_meters || 0;
+            const durationSeconds = (w.start_time && w.end_time)
+                ? Math.max(0, Math.floor((new Date(w.end_time).getTime() - new Date(w.start_time).getTime()) / 1000))
+                : 0;
+            return {
+                ...w,
+                ended_at: w.end_time,
+                started_at: w.start_time,
+                duration_minutes: Math.round(durationSeconds / 60),
+                calories_burned: Math.round(distanceMeters * 0.06),
+                steps: Math.round(distanceMeters * 1.3),
+            };
+        });
     }
 
     async getWalkStats(userId: string): Promise<any> {
@@ -2748,61 +2896,133 @@ export class SupabaseApiService implements IApiService {
 
         const { data, error } = await supabase
             .from('walk_sessions')
-            .select('distance_meters, duration_seconds, calories_burned, steps, ended_at')
+            .select('distance_meters, start_time, end_time')
             .eq('user_id', user.id)
             .eq('status', 'completed');
 
         if (error || !data) return {};
 
-        const totalDistance = data.reduce((s, w) => s + (w.distance_meters || 0), 0);
-        const totalDuration = data.reduce((s, w) => s + (w.duration_seconds || 0), 0);
-        const totalCalories = data.reduce((s, w) => s + (w.calories_burned || 0), 0);
-        const totalSteps = data.reduce((s, w) => s + (w.steps || 0), 0);
+        // Faz 8: seri kalkanıyla "affedilmiş" günler de yürüyüş yapılmış gibi sayılır
+        const { data: shieldRows } = await supabase
+            .from('streak_shield_uses')
+            .select('covered_date')
+            .eq('user_id', user.id);
+        const shieldedDates = new Set((shieldRows || []).map(r => r.covered_date));
 
-        // Calculate streak (consecutive days) from completed walk sessions
+        const totalDistance = data.reduce((s, w) => s + (w.distance_meters || 0), 0);
+        const totalDuration = data.reduce((s, w) => {
+            if (!w.start_time || !w.end_time) return s;
+            return s + Math.max(0, Math.floor((new Date(w.end_time).getTime() - new Date(w.start_time).getTime()) / 1000));
+        }, 0);
+        const totalCalories = Math.round(totalDistance * 0.06);
+        const totalSteps = Math.round(totalDistance * 1.3);
+
+        // Faz 8 düzeltmesi: tarih karşılaştırması artık kullanıcının YEREL takvim
+        // gününe göre yapılıyor (öncesinde end_time'ın UTC ISO string'i doğrudan
+        // startsWith ile karşılaştırılıyordu — gece yarısına yakın yürüyüşlerde
+        // UTC/yerel gün kayması yüzünden seri hatalı kırılabiliyordu).
+        const toLocalDateStr = (d: Date) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+        const walkedDates = new Set(
+            data.filter(w => w.end_time).map(w => toLocalDateStr(new Date(w.end_time)))
+        );
+        for (const sd of shieldedDates) walkedDates.add(sd);
+
+        // Faz 8 düzeltmesi: en iyi seri artık ilk boşlukta durup bırakmıyor,
+        // son 365 günün tamamını tarayıp gerçek en uzun aralığı buluyor.
         let currentStreak = 0;
         let bestStreak = 0;
+        let runningStreak = 0;
+        let streakBroken = false;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         for (let d = 0; d < 365; d++) {
             const checkDate = new Date(today.getTime() - d * 86400000);
-            const year = checkDate.getFullYear();
-            const month = String(checkDate.getMonth() + 1).padStart(2, '0');
-            const day = String(checkDate.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`;
-
-            const hasWalk = data.some(w => w.ended_at && w.ended_at.startsWith(dateStr));
+            const hasWalk = walkedDates.has(toLocalDateStr(checkDate));
 
             if (hasWalk) {
-                currentStreak++;
-                bestStreak = Math.max(bestStreak, currentStreak);
-            } else if (d > 0) {
-                break; // Streak broken
+                runningStreak++;
+                bestStreak = Math.max(bestStreak, runningStreak);
+                if (!streakBroken) currentStreak = runningStreak;
+            } else {
+                runningStreak = 0;
+                if (d === 0) {
+                    // Bugün henüz yürünmemiş olabilir, bu seriyi kırmaz — sadece bugünü sayma
+                    continue;
+                }
+                streakBroken = true;
             }
         }
+
+        // Faz 9: /walk sayfası bunu okuyordu ama hiç hesaplanmıyordu (her zaman
+        // 0.0 km gösteriyordu, ?? 0 fallback'i sessizce yanlış değeri gizliyordu)
+        const longestWalkKm = data.length ? Math.max(...data.map(w => w.distance_meters || 0)) / 1000 : 0;
 
         return {
             totalWalks: data.length,
             totalDistanceKm: Math.round(totalDistance / 100) / 10,
             totalDurationMinutes: Math.round(totalDuration / 60),
-            totalCalories: Math.round(totalCalories),
+            totalCalories,
             totalSteps,
             avgDistanceKm: data.length ? Math.round(totalDistance / data.length / 100) / 10 : 0,
+            longestWalkKm: Math.round(longestWalkKm * 10) / 10,
             currentStreak,
             bestStreak
         };
     }
 
+    // Faz 8: gerçek seri kalkanı durumu (haftalık otomatik yenileme dahil, salt-okunur)
+    async getStreakShieldStatus(): Promise<{ available: boolean }> {
+        const user = await this.getSessionUser();
+        if (!user) return { available: false };
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('streak_shield_available, streak_shield_week_start')
+            .eq('id', user.id)
+            .single();
+        if (error || !data) return { available: false };
+
+        const now = new Date();
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(now.setDate(diff));
+        const y = monday.getFullYear(), m = String(monday.getMonth() + 1).padStart(2, '0'), d = String(monday.getDate()).padStart(2, '0');
+        const currentWeekStart = `${y}-${m}-${d}`;
+
+        if (data.streak_shield_week_start !== currentWeekStart) return { available: true };
+        return { available: !!data.streak_shield_available };
+    }
+
+    // Faz 8: seri kalkanını gerçekten kullan — sunucu tarafında doğrulanıyor
+    // (o gün gerçekten yürüyüş yoksa VE kalkan gerçekten müsaitse kaydediliyor)
+    async useStreakShield(coveredDate: string): Promise<boolean> {
+        const { data, error } = await supabase.rpc('use_streak_shield', { p_covered_date: coveredDate });
+        if (error) throw error;
+        return !!data;
+    }
+
     async getWalkById(id: string): Promise<any> {
+        // Faz 10 kontrolü: `pet:pets(...)` embed'i kaldırıldı — walk_sessions.pet_id
+        // text tipinde ve pets tablosuna gerçek bir FK constraint'i hiç yok (aynı kök
+        // neden getVetAdvices()'teki PGRST200 hatasıyla — bkz. CLAUDE.md Bölüm 9).
+        // Bu sorgu embed olmadan tek başına çalışır; pet bilgisi çağıran taraf
+        // (usePet() context'i) üzerinden zaten elde ediliyor.
+        const user = await this.getSessionUser();
+        if (!user) return {};
         const { data, error } = await supabase
             .from('walk_sessions')
-            .select(`*, pet:pets(name, species, photo_url)`)
+            .select('*')
             .eq('id', id)
+            .eq('user_id', user.id)
             .single();
 
         if (error || !data) return {};
-        return data;
+        return { ...data, ended_at: data.end_time, started_at: data.start_time };
     }
 
     async getVetAdvices(): Promise<any[]> {
@@ -3380,6 +3600,7 @@ export class SupabaseApiService implements IApiService {
             .insert({
                 conversation_id: conversationId,
                 sender_id: user.id,
+                receiver_id: otherUserId,
                 content: content,
                 attachment_url: attachmentUrl || null
             });
@@ -3888,10 +4109,10 @@ export class SupabaseApiService implements IApiService {
             const allPets = await this.getAllPetsAdmin();
             if (allPets.length === 0) return [];
 
-            // 2. Fetch completed walk sessions
+            // 2. Fetch completed walk sessions (steps kolonu yok, mesafeden hesaplanıyor)
             const { data: sessions, error } = await supabase
                 .from('walk_sessions')
-                .select('pet_id, steps, distance_meters')
+                .select('pet_id, distance_meters')
                 .eq('status', 'completed');
 
             // 3. Aggregate activity counts per pet_id
@@ -3902,7 +4123,7 @@ export class SupabaseApiService implements IApiService {
                     if (!activityMap[s.pet_id]) {
                         activityMap[s.pet_id] = { steps: 0, distance: 0 };
                     }
-                    activityMap[s.pet_id].steps += s.steps || 0;
+                    activityMap[s.pet_id].steps += Math.round((s.distance_meters || 0) * 1.3);
                     activityMap[s.pet_id].distance += s.distance_meters || 0;
                 });
             }
@@ -4215,6 +4436,10 @@ export class SupabaseApiService implements IApiService {
     }
 
     // --- LEADERBOARD ---
+    // Faz 13: 'business' sekmesi hâlâ basit (lig'siz) PawCoin sıralaması kullanıyor -
+    // işletmelerin yürüyüş modülüyle bağlantılı bir aktivite metriği yok. 'user' rolü
+    // için artık bu fonksiyon KULLANILMIYOR - referans UI'ye göre gerçek "Sıralamalar"
+    // ekranı mesafe (km) bazlı, bkz. getDistanceLeaderboard() ve CLAUDE.md 8.8.
     async getLeaderboard(role: 'user' | 'business', limit: number = 50): Promise<any[]> {
         try {
             const { data, error } = await supabase
@@ -4266,6 +4491,108 @@ export class SupabaseApiService implements IApiService {
         } catch (err) {
             console.error("Supabase getUserRank failed:", err);
             return 0;
+        }
+    }
+
+    // Faz 13 (referans UI'ye göre düzeltme, bkz. CLAUDE.md 8.8): gerçek mesafe (km)
+    // bazlı sıralama, zaman aralığı filtreli. walk_sessions RLS'i sadece kendi
+    // satırlarını okumaya izin veriyor (Faz 10'da bilinçli sıkılaştırıldı), bu yüzden
+    // kullanıcılar-arası toplam mesafe SECURITY DEFINER bir RPC (get_distance_leaderboard)
+    // üzerinden alınıyor - sadece toplam mesafe/yürüyüş sayısı döner, hiçbir GPS
+    // rotası dışarı sızmıyor. userIds verilirse (Arkadaşlarım/Aynı Şehir filtreleri
+    // için) sadece o kullanıcılar arasında sıralanır, null ise herkes dahil edilir.
+    async getDistanceLeaderboard(period: 'week' | 'month' | 'all', userIds: string[] | null = null, limit: number = 100): Promise<{ userId: string; totalMeters: number; walkCount: number }[]> {
+        try {
+            const { data, error } = await supabase.rpc('get_distance_leaderboard', {
+                p_period: period,
+                p_user_ids: userIds,
+                p_limit: limit,
+            });
+            if (error) throw error;
+            return (data || []).map((row: any) => ({
+                userId: row.user_id,
+                totalMeters: Number(row.total_meters) || 0,
+                walkCount: row.walk_count || 0,
+            }));
+        } catch (err) {
+            console.error("Supabase getDistanceLeaderboard failed:", err);
+            return [];
+        }
+    }
+
+    async getProfilesByIds(ids: string[]): Promise<{ id: string; name: string; avatar?: string; pet: string }[]> {
+        if (ids.length === 0) return [];
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url, pet_name')
+                .in('id', ids);
+            if (error) throw error;
+            return (data || []).map(p => ({
+                id: p.id,
+                name: p.full_name || 'Gizli Kullanıcı',
+                avatar: p.avatar_url,
+                pet: p.pet_name || 'Moffi',
+            }));
+        } catch (err) {
+            console.error("Supabase getProfilesByIds failed:", err);
+            return [];
+        }
+    }
+
+    // Faz 14: Ödül Marketi kataloğu (gerçek reward_products tablosu).
+    async getRewardProducts(): Promise<{ id: string; name: string; description: string | null; category: 'product' | 'experience' | 'coupon'; pricePp: number; icon: string }[]> {
+        try {
+            const { data, error } = await supabase
+                .from('reward_products')
+                .select('id, name, description, category, price_pp, icon')
+                .eq('is_active', true)
+                .order('price_pp', { ascending: true });
+            if (error) throw error;
+            return (data || []).map(p => ({
+                id: p.id,
+                name: p.name,
+                description: p.description,
+                category: p.category,
+                pricePp: p.price_pp,
+                icon: p.icon,
+            }));
+        } catch (err) {
+            console.error("Supabase getRewardProducts failed:", err);
+            return [];
+        }
+    }
+
+    // Ödül satın alma - mevcut award_pati_puan() RPC'si negatif miktarla çağrılıyor,
+    // yeni bir para birimi/RPC icat edilmedi. Sunucu tarafında bakiye kontrolü zaten
+    // award_pati_puan içinde var (yetersiz bakiye varsa exception fırlatır).
+    async redeemReward(productId: string, name: string, pricePp: number): Promise<number> {
+        return this.awardPatiPuan(-pricePp, `Ödül: ${name}`, 'redemption', productId);
+    }
+
+    // "Aynı Şehir" filtresi: profiles.address alanı (serbest metin) tam eşleşen
+    // diğer kullanıcılar. Gerçek bir yapılandırılmış "şehir" kolonu yok - şu an
+    // hiçbir gerçek kullanıcı address girmediği için bu genelde boş dönecek,
+    // sahte veri üretmek yerine dürüstçe boş liste dönüyor.
+    async getSameCityUserIds(userId: string): Promise<string[]> {
+        try {
+            const { data: me, error: meError } = await supabase
+                .from('profiles')
+                .select('address')
+                .eq('id', userId)
+                .single();
+            if (meError || !me?.address) return [];
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('role', 'user')
+                .eq('address', me.address);
+            if (error) throw error;
+            return (data || []).map(p => p.id);
+        } catch (err) {
+            console.error("Supabase getSameCityUserIds failed:", err);
+            return [];
         }
     }
 

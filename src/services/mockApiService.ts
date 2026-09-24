@@ -657,6 +657,33 @@ export class MockApiService implements IApiService {
         }
     }
 
+    // Faz 7: Moffi Puanı (PP) — offline/mock fallback, coin_balance/PawCoin'den ayrı
+    async awardPatiPuan(amount: number, reason: string, source: string, referenceId?: string): Promise<number> {
+        const balanceKey = `${STORAGE_PREFIX}pati_puan_balance`;
+        const historyKey = `${STORAGE_PREFIX}pati_puan_history`;
+        const current = parseInt(localStorage.getItem(balanceKey) || '0', 10) || 0;
+        if (amount < 0 && current + amount < 0) {
+            throw new Error('Yetersiz Moffi Puanı bakiyesi');
+        }
+        const next = current + amount;
+        localStorage.setItem(balanceKey, String(next));
+        if (amount !== 0) {
+            const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+            history.unshift({ id: String(Date.now()), amount, reason, source, created_at: new Date().toISOString() });
+            localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 100)));
+        }
+        return next;
+    }
+
+    async getPatiPuanBalance(): Promise<number> {
+        return parseInt(localStorage.getItem(`${STORAGE_PREFIX}pati_puan_balance`) || '0', 10) || 0;
+    }
+
+    async getPatiPuanHistory(limit: number = 30) {
+        const history = JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}pati_puan_history`) || '[]');
+        return history.slice(0, limit);
+    }
+
     // Market & Vet Placeholders
     async fetchMarketPlaces(): Promise<any[]> { return []; }
     async fetchVets(): Promise<any[]> { return []; }
@@ -782,6 +809,11 @@ export class MockApiService implements IApiService {
     // Walk & Tracking
     async startWalk(userId: string, petId: string): Promise<any> { return {}; }
     async updateWalkLocation(sessionId: string, lat: number, lng: number): Promise<void> { }
+    async uploadWalkPhoto(sessionId: string, file: File): Promise<string> { return URL.createObjectURL(file); }
+    async startBeacon(sessionId: string, petName: string, lat: number, lng: number): Promise<string> { return 'mock-beacon'; }
+    async updateBeaconLocation(beaconId: string, lat: number, lng: number): Promise<void> { }
+    async stopBeacon(beaconId: string): Promise<void> { }
+    async getBeacon(beaconId: string): Promise<{ lat: number; lng: number; petName: string | null; updatedAt: string; expiresAt: string } | null> { return null; }
     async endWalk(sessionId: string, data: any): Promise<any> { return {}; }
     async getWalkHistory(userId: string, limit?: number): Promise<any[]> { return []; }
     async getWalkStats(userId: string): Promise<any> {
@@ -798,6 +830,23 @@ export class MockApiService implements IApiService {
         };
     }
     async getWalkById(id: string): Promise<any> { return {}; }
+
+    // Faz 8: gerçek seri kalkanı — offline/mock fallback
+    async getStreakShieldStatus(): Promise<{ available: boolean }> {
+        const stored = localStorage.getItem(`${STORAGE_PREFIX}streak_shield`);
+        if (!stored) return { available: true };
+        try {
+            const parsed = JSON.parse(stored);
+            return { available: !!parsed.available };
+        } catch {
+            return { available: true };
+        }
+    }
+
+    async useStreakShield(coveredDate: string): Promise<boolean> {
+        localStorage.setItem(`${STORAGE_PREFIX}streak_shield`, JSON.stringify({ available: false, coveredDate }));
+        return true;
+    }
 
     // Social Media
     
@@ -1610,6 +1659,39 @@ export class MockApiService implements IApiService {
 
     async getUserRank(userId: string): Promise<number> {
         return 6;
+    }
+
+    async getDistanceLeaderboard(period: 'week' | 'month' | 'all', userIds: string[] | null = null, limit: number = 100): Promise<{ userId: string; totalMeters: number; walkCount: number }[]> {
+        const MOCK = [
+            { userId: '1', totalMeters: 52300, walkCount: 14 },
+            { userId: '2', totalMeters: 46100, walkCount: 11 },
+            { userId: '3', totalMeters: 41700, walkCount: 9 },
+        ];
+        return userIds ? MOCK.filter(m => userIds.includes(m.userId)) : MOCK;
+    }
+
+    async getSameCityUserIds(userId: string): Promise<string[]> {
+        return [];
+    }
+
+    async getRewardProducts(): Promise<{ id: string; name: string; description: string | null; category: 'product' | 'experience' | 'coupon'; pricePp: number; icon: string }[]> {
+        return [
+            { id: 'r1', name: 'Moffi Bandana', description: 'Şık ve rahat pati bandanası', category: 'product', pricePp: 150, icon: '🧣' },
+            { id: 'r2', name: 'Mama Kabı', description: 'Moffi logolu paslanmaz çelik mama kabı', category: 'product', pricePp: 300, icon: '🥣' },
+        ];
+    }
+
+    async redeemReward(productId: string, name: string, pricePp: number): Promise<number> {
+        return 0;
+    }
+
+    async getProfilesByIds(ids: string[]): Promise<{ id: string; name: string; avatar?: string; pet: string }[]> {
+        const NAMES: Record<string, { name: string; avatar: string; pet: string }> = {
+            '1': { name: 'Luna', avatar: '', pet: 'Golden Retriever' },
+            '2': { name: 'Paşa', avatar: '', pet: 'Border Collie' },
+            '3': { name: 'Maya', avatar: '', pet: 'Poodle' },
+        };
+        return ids.map(id => ({ id, ...(NAMES[id] || { name: 'Kullanıcı', avatar: '', pet: 'Moffi' }) }));
     }
 
     async getFeedbacks(): Promise<SystemFeedback[]> {

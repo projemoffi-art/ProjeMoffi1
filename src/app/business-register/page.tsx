@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, BusinessType } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +11,8 @@ import {
     Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
+import turkeyData from "@/data/turkey_cities.json";
 
 const BUSINESS_TYPES: { key: BusinessType; label: string; desc: string; icon: typeof Store; color: string }[] = [
     { key: 'petshop', label: 'Pet Shop', desc: 'Evcil hayvan ürünleri satışı', icon: Store, color: 'from-blue-500 to-cyan-500' },
@@ -45,6 +47,10 @@ export default function BusinessRegisterPage() {
     const [password, setPassword] = useState('');
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
+    const [businessLat, setBusinessLat] = useState<number | null>(null);
+    const [businessLng, setBusinessLng] = useState<number | null>(null);
+    const [province, setProvince] = useState('');
+    const [district, setDistrict] = useState('');
     const [taxId, setTaxId] = useState('');
     const [iban, setIban] = useState('');
     const [agreeTerms, setAgreeTerms] = useState(false);
@@ -53,7 +59,7 @@ export default function BusinessRegisterPage() {
         switch (step) {
             case 0: return !!businessType;
             case 1: return businessName.trim().length >= 2 && ownerName.trim().length >= 2 && email.includes('@') && password.length >= 6 && phone.length >= 10;
-            case 2: return taxId.length >= 10 && iban.length >= 10 && address.trim().length >= 5;
+            case 2: return taxId.length >= 10 && iban.length >= 10 && address.trim().length >= 5 && !!businessLat && !!businessLng && !!province && !!district;
             case 3: return agreeTerms;
             default: return false;
         }
@@ -66,7 +72,7 @@ export default function BusinessRegisterPage() {
 
         const result = await registerBusiness({
             email, password, businessName, businessType,
-            ownerName, phone, address, taxId, iban,
+            ownerName, phone, address, taxId, iban, business_lat: businessLat, business_lng: businessLng, province, district,
         });
 
         setLoading(false);
@@ -226,7 +232,25 @@ export default function BusinessRegisterPage() {
                                 <div className="space-y-4">
                                     <InputField icon={FileText} label="Vergi Numarası" value={taxId} onChange={setTaxId} placeholder="10 haneli vergi no" />
                                     <InputField icon={CreditCard} label="IBAN" value={iban} onChange={setIban} placeholder="TR00 0000 0000 0000 0000 0000 00" />
-                                    <InputField icon={MapPin} label="İşletme Adresi" value={address} onChange={setAddress} placeholder="İl, İlçe, Mahalle, Sokak, No" multiline />
+                                    <div>
+        <label className="text-xs font-bold text-gray-600 mb-1.5 block">İşletme Adresi <span className="text-red-500">*</span></label>
+        <div className="relative">
+            <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
+                <AddressAutocomplete 
+                    address={address} 
+                    setAddress={setAddress} 
+                    setBusinessLat={setBusinessLat} 
+                    setBusinessLng={setBusinessLng} 
+                    setProvince={setProvince}
+                    setDistrict={setDistrict} 
+                />
+            </APIProvider>
+        </div>
+        {(!businessLat || !businessLng || !province || !district) && address.length > 0 && (
+            <p className="text-red-500 text-[10px] mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> Lütfen çıkan Google önerilerinden bir adres seçin.</p>
+        )}
+    </div>
                                 </div>
                             </>
                         )}
@@ -363,5 +387,88 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
             <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
             <span className="text-sm font-medium text-foreground text-right max-w-[60%]">{value}</span>
         </div>
+    );
+}
+
+function AddressAutocomplete({ address, setAddress, setBusinessLat, setBusinessLng, setProvince, setDistrict }: { address: string, setAddress: (a: string) => void, setBusinessLat: (lat: number|null) => void, setBusinessLng: (lng: number|null) => void, setProvince: (p: string) => void, setDistrict: (d: string) => void }) {
+    const [placeAutocomplete, setPlaceAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+    const places = useMapsLibrary('places');
+
+    useEffect(() => {
+        if (!places || !inputRef.current) return;
+        const options = {
+            fields: ['geometry', 'name', 'formatted_address', 'address_components']
+        };
+        const autocomplete = new places.Autocomplete(inputRef.current, options);
+        setPlaceAutocomplete(autocomplete);
+    }, [places]);
+
+    useEffect(() => {
+        if (!placeAutocomplete) return;
+        
+        placeAutocomplete.addListener('place_changed', () => {
+            const place = placeAutocomplete.getPlace();
+            if (place.geometry && place.geometry.location) {
+                const lat = place.geometry.location.lat();
+                const lng = place.geometry.location.lng();
+                const formattedAddress = place.formatted_address || place.name || "";
+                
+                let prov = "";
+                let dist = "";
+                if (place.address_components) {
+                    for (const comp of place.address_components) {
+                        if (comp.types.includes('administrative_area_level_1')) prov = comp.long_name;
+                        if (comp.types.includes('administrative_area_level_2') || comp.types.includes('sublocality_level_1') || comp.types.includes('sublocality')) dist = comp.long_name;
+                    }
+                }
+                
+                // --- Normalization / Fuzzy Match with turkey_cities.json ---
+                const normalize = (str: string) => str.toLocaleLowerCase('tr-TR').trim();
+                let exactProv = prov;
+                let exactDist = dist;
+                
+                if (prov) {
+                    const matchedProvObj = turkeyData.find(p => normalize(p.name) === normalize(prov));
+                    if (matchedProvObj) {
+                        exactProv = matchedProvObj.name;
+                        if (dist) {
+                            const matchedDistObj = matchedProvObj.districts.find(d => normalize(d.name) === normalize(dist));
+                            if (matchedDistObj) {
+                                exactDist = matchedDistObj.name;
+                            }
+                        }
+                    }
+                }
+                
+                setBusinessLat(lat);
+                setBusinessLng(lng);
+                setProvince(exactProv);
+                setDistrict(exactDist);
+                setAddress(formattedAddress);
+            } else {
+                setBusinessLat(null);
+                setBusinessLng(null);
+                setProvince("");
+                setDistrict("");
+                setAddress(place.name || "");
+            }
+        });
+    }, [placeAutocomplete, setAddress, setBusinessLat, setBusinessLng, setProvince, setDistrict]);
+
+    return (
+        <textarea
+            ref={inputRef}
+            value={address}
+            onChange={(e) => {
+                setAddress(e.target.value);
+                setBusinessLat(null);
+                setBusinessLng(null);
+                setProvince("");
+                setDistrict("");
+            }}
+            placeholder="İşletmenizin adresini arayın (örn: Kadıköy, İstanbul)"
+            className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 pl-11 text-sm text-foreground placeholder:text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition min-h-[80px]"
+        />
     );
 }

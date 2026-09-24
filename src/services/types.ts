@@ -277,6 +277,16 @@ export interface IApiService {
     addBalance(amount: number, type: 'fiat' | 'coin'): Promise<void>;
     updateAuraSettings(settings: any): Promise<void>;
 
+    // Faz 7: Moffi Puanı (PP) — transaction-tabanlı, coin_balance/PawCoin'den TAMAMEN AYRI
+    awardPatiPuan(amount: number, reason: string, source: string, referenceId?: string): Promise<number>;
+    getPatiPuanBalance(): Promise<number>;
+    getPatiPuanHistory(limit?: number): Promise<Array<{ id: string; amount: number; reason: string | null; source: string; created_at: string }>>;
+
+    // Faz 8: gerçek seri kalkanı (streak shield) — localStorage'daki eski, gerçek seriye
+    // hiç etkisi olmayan sahte versiyonun yerine geçti
+    getStreakShieldStatus(): Promise<{ available: boolean }>;
+    useStreakShield(coveredDate: string): Promise<boolean>;
+
     // Health & Veterinary
     getVaccineDefinitions(): Promise<any[]>;
     getPetVaccines(petId: string): Promise<any[]>;
@@ -312,6 +322,11 @@ export interface IApiService {
     // Walk & Tracking
     startWalk(userId: string, petId: string): Promise<any>;
     updateWalkLocation(sessionId: string, lat: number, lng: number): Promise<void>;
+    uploadWalkPhoto(sessionId: string, file: File): Promise<string>;
+    startBeacon(sessionId: string, petName: string, lat: number, lng: number): Promise<string>;
+    updateBeaconLocation(beaconId: string, lat: number, lng: number): Promise<void>;
+    stopBeacon(beaconId: string): Promise<void>;
+    getBeacon(beaconId: string): Promise<{ lat: number; lng: number; petName: string | null; updatedAt: string; expiresAt: string } | null>;
     endWalk(sessionId: string, data: any): Promise<any>;
     getWalkHistory(userId: string, limit?: number): Promise<any[]>;
     getWalkStats(userId: string): Promise<any>;
@@ -394,6 +409,15 @@ export interface IApiService {
     // Global Arena (Leaderboard) & Games
     getLeaderboard(role: 'user' | 'business', limit?: number): Promise<any[]>;
     getUserRank(userId: string): Promise<number>;
+    // Faz 13 (referans UI'ye göre düzeltildi): mesafe (km) bazlı sıralama, zaman
+    // aralığı filtreli - bkz. CLAUDE.md 8.8 / design-reference/walk-final/
+    getDistanceLeaderboard(period: 'week' | 'month' | 'all', userIds?: string[] | null, limit?: number): Promise<{ userId: string; totalMeters: number; walkCount: number }[]>;
+    getSameCityUserIds(userId: string): Promise<string[]>;
+    getProfilesByIds(ids: string[]): Promise<{ id: string; name: string; avatar?: string; pet: string }[]>;
+
+    // Faz 14: Ödül Marketi — Moffi Puanı (PP) ile satın alınabilen gerçek katalog
+    getRewardProducts(): Promise<{ id: string; name: string; description: string | null; category: 'product' | 'experience' | 'coupon'; pricePp: number; icon: string }[]>;
+    redeemReward(productId: string, name: string, pricePp: number): Promise<number>;
     addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean>;
     getGameModules(): Promise<any[]>;
     getPetLeaderboard(limit?: number): Promise<any[]>;

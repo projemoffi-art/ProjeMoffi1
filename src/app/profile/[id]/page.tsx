@@ -10,10 +10,10 @@ import {
     Heart, MessageCircle, Share2, Copy, ExternalLink
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useChat } from "@/context/ChatContext";
 import { apiService } from "@/services/apiService";
 import { usePet } from "@/context/PetContext";
 import { showToast } from "@/lib/utils";
-import { ProfileTab } from "@/components/community/ProfileTab";
 import { AddPetModal } from "@/components/community/modals/AddPetModal";
 import { EditProfileModal } from "@/components/community/modals/EditProfileModal";
 
@@ -65,6 +65,7 @@ export default function ProfilePage() {
     const id = params.id as string;
     const { user: currentUser, updateProfile } = useAuth();
     const { pets, activePet, switchPet } = usePet();
+    const { openChat } = useChat();
     const isOwnProfile = !!(currentUser && (id === currentUser.id || id === 'me'));
 
     // ── State ──────────────────────────────────────────────
@@ -73,7 +74,6 @@ export default function ProfilePage() {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('posts');
-    const [activeSubView, setActiveSubView] = useState<any>('main');
 
     useEffect(() => {
         const view = searchParams.get('view');
@@ -130,7 +130,7 @@ export default function ProfilePage() {
 
     const handleFollowToggle = async () => {
         if (!currentUser) {
-            showToast("Giriş Gerekli", "Takip etmek için önce giriş yapmalısınız!", "User");
+            showToast("Takip etmek için önce giriş yapmalısınız!", "PawPrint");
             window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
@@ -167,6 +167,15 @@ export default function ProfilePage() {
         }
     };
 
+    const handleMessageClick = () => {
+        if (!currentUser) {
+            showToast("Mesaj göndermek için önce giriş yapmalısınız!", "PawPrint");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+        openChat(id);
+    };
+
     // ── Relations Modal (Followers / Following List) ────────
     const [isRelationsModalOpen, setIsRelationsModalOpen] = useState(false);
     const [relationsModalTab, setRelationsModalTab] = useState<'followers' | 'following'>('followers');
@@ -189,26 +198,6 @@ export default function ProfilePage() {
             setRelationsLoading(false);
         }
     };
-
-    useEffect(() => {
-        const view = searchParams.get('view');
-        if (view) {
-            setActiveSubView(view);
-        } else {
-            setActiveSubView('main');
-        }
-    }, [searchParams, router]);
-
-    // Listen to global moffi-navigate events for instant feedback
-    useEffect(() => {
-        const handleNavigate = (e: any) => {
-            if (isOwnProfile && dest) {
-                setActiveSubView(dest);
-            }
-        };
-        window.addEventListener('moffi-navigate', handleNavigate);
-        return () => window.removeEventListener('moffi-navigate', handleNavigate);
-    }, [isOwnProfile, router]);
 
     // Edit form state
     const [editName, setEditName] = useState('');
@@ -566,26 +555,36 @@ export default function ProfilePage() {
                                 </motion.button>
                             </>
                         ) : (
-                            <motion.button
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleFollowToggle}
-                                disabled={followCheckLoading || followLoading}
-                                className={`px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all duration-300 flex items-center gap-2 ${
-                                    followCheckLoading
-                                        ? "bg-emerald-500/50 text-black/50 dark:text-white/50 cursor-not-allowed shadow-none"
-                                        : isFollowing
-                                        ? "bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white border border-black/10 dark:border-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 shadow-none"
-                                        : "bg-emerald-500 text-white shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40"
-                                }`}
-                            >
-                                {followCheckLoading || followLoading ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : isFollowing ? (
-                                    "Takiptesin"
-                                ) : (
-                                    "Takip Et"
-                                )}
-                            </motion.button>
+                            <>
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={handleMessageClick}
+                                    aria-label="Mesaj gönder"
+                                    className="flex items-center justify-center w-11 h-11 bg-zinc-100 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-2xl text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors shrink-0"
+                                >
+                                    <MessageCircle className="w-5 h-5" />
+                                </motion.button>
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={handleFollowToggle}
+                                    disabled={followCheckLoading || followLoading}
+                                    className={`px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all duration-300 flex items-center gap-2 ${
+                                        followCheckLoading
+                                            ? "bg-emerald-500/50 text-black/50 dark:text-white/50 cursor-not-allowed shadow-none"
+                                            : isFollowing
+                                            ? "bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white border border-black/10 dark:border-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 shadow-none"
+                                            : "bg-emerald-500 text-white shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40"
+                                    }`}
+                                >
+                                    {followCheckLoading || followLoading ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : isFollowing ? (
+                                        "Takiptesin"
+                                    ) : (
+                                        "Takip Et"
+                                    )}
+                                </motion.button>
+                            </>
                         )}
                     </div>
                 </div>
@@ -854,7 +853,7 @@ export default function ProfilePage() {
                             <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
                                 <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
                             </button>
-                            <RoutesTab routes={[]} activePet={activePet} />
+                            <RoutesTab activePet={activePet} />
                         </motion.div>
                     ) : activeTab === 'family' && isOwnProfile ? (
                         <motion.div key="family" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
@@ -975,7 +974,7 @@ export default function ProfilePage() {
                                                         setClaimLoading(true);
                                                         try {
                                                             await apiService.verifyAndClaim(match.id, claimCode);
-                                                            showToast('Kayıt başarıyla profiline eklendi!', 'Check', 'text-green-500');
+                                                            showToast('Kayıt başarıyla profiline eklendi!', 'CheckCircle2', 'text-green-500');
                                                             setUnclaimedMatches(prev => prev.filter(m => m.id !== match.id));
                                                             if (unclaimedMatches.length === 1) setIsClaimModalOpen(false);
                                                         } catch (err: any) {
@@ -996,7 +995,7 @@ export default function ProfilePage() {
                                                     setClaimLoading(true);
                                                     try {
                                                         await apiService.requestManualClaim(match.id);
-                                                        showToast('Kliniğe onay isteği gönderildi.', 'Check', 'text-emerald-500');
+                                                        showToast('Kliniğe onay isteği gönderildi.', 'CheckCircle2', 'text-emerald-500');
                                                         setUnclaimedMatches(prev => prev.map(m => m.id === match.id ? {...m, status: 'claim_requested'} : m));
                                                     } catch (err: any) {
                                                         showToast(err.message, 'AlertCircle', 'text-red-500');

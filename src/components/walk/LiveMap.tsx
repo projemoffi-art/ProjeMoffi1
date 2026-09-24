@@ -4,13 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { PLACES, Place } from "@/data/mockPlaces";
-import { MOCK_MARKS, MapMark } from "@/data/mockMarks";
+import type { Place } from "@/data/mockPlaces";
 import { Star, Gift, Coins, Search, Coffee, Stethoscope, Trees, ShoppingBag, AlertCircle, Navigation, MapPin, Plus, Heart, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MarkCreationModal } from "./MarkCreationModal";
 import { GuardianStatusOverlay } from "@/components/guardian/GuardianStatusOverlay";
-import { useTheme } from "@/context/ThemeContext";
 
 // Inject minimal popup CSS globally since Leaflet popups are rendered outside React DOM tree sometimes
 if (typeof document !== 'undefined') {
@@ -123,39 +120,6 @@ const createCustomIcon = (type: string, isPremium: boolean, isVisited: boolean, 
     });
 };
 
-const createMarkIcon = (mark: MapMark) => {
-    const bgColorClass = {
-        'info': '#dcfce7', // green-100
-        'warning': '#ffedd5', // orange-100
-        'social': '#dbeafe', // blue-100
-        'love': '#fce7f3', // pink-100
-    }[mark.type] || '#ffffff';
-
-    const borderColorClass = {
-        'info': '#22c55e',
-        'warning': '#f97316',
-        'social': '#3b82f6',
-        'love': '#ec4899',
-    }[mark.type] || '#9ca3af';
-
-    return L.divIcon({
-        className: "custom-mark-icon",
-        html: `
-            <div style="
-                width: 40px; height: 40px; border-radius: 50% 50% 50% 5px; transform: rotate(-45deg); display: flex; 
-                align-items: center; justify-content: center; border: 2px solid ${borderColorClass}; background-color: ${bgColorClass}; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            ">
-                <div style="transform: rotate(45deg); font-size: 20px;">
-                    ${mark.emoji}
-                </div>
-            </div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -30]
-    });
-};
-
 // --- MAP CONTROLS ENGINE (The Brain) ---
 function MapEngine({ center, searchQuery, filterType, setRouteTo, userPos, routeTo }: { center: [number, number], searchQuery: string, filterType: string | null, setRouteTo: (p: [number, number] | null) => void, userPos: [number, number], routeTo: [number, number] | null }) {
     const map = useMap();
@@ -195,9 +159,6 @@ export default function LiveMap({
     hideInternalUI, markers: externalMarkers,
     onMapLongPress, customTargetPos, customTargetClaimed
 }: LiveMapProps) {
-    const { theme } = useTheme();
-    const isDark = theme === 'dark';
-
     // UI State
     const [searchQuery, setSearchQuery] = useState(externalSearchQuery || "");
     const [searchResults, setSearchResults] = useState<any[]>([]); // Real Address Results
@@ -206,10 +167,20 @@ export default function LiveMap({
     const [filterType, setFilterType] = useState<string | null>(externalFilterType || null);
     const [routeTo, setRouteTo] = useState<[number, number] | null>(null);
     const [routePath, setRoutePath] = useState<[number, number][]>([]);
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Dynamic Places List (Real OSM Data with local mock fallback)
-    const [placesList, setPlacesList] = useState<Place[]>(PLACES);
+    // 🔴 GERÇEK BULGU (2026-09-24): bu liste önceden gerçek Overpass (OSM) sorgusu
+    // başarısız/timeout olursa (ki bu ortamda HER ZAMAN öyle oluyordu — public
+    // Overpass sunucusu 3sn'lik sabit timeout'u neredeyse hiç karşılayamıyor,
+    // bazen 429 rate-limit bile veriyor) kullanıcının GERÇEK konumu etrafına
+    // RASTGELE SAÇILMIŞ sahte "Veteriner"/"Park"/"Kafe"/"Pet Shop" pinleri
+    // gösteriyordu — bazıları rastgele "premium" (altın yıldız) işaretli, her
+    // birinde gerçekte hiç çalışmayan bir "coinReward" alanı vardı. Bu pinlere
+    // tıklayınca GERÇEK Google Maps'te o UYDURMA koordinata yol tarifi açılıyordu
+    // — bir kullanıcı gerçek bir veteriner arıyorsa doğrudan yanlış yönlendirilmiş
+    // olurdu. Kullanıcıyı yanıltmamak için sahte fallback TAMAMEN kaldırıldı:
+    // gerçek OSM verisi yoksa harita dürüstçe hiçbir POI pini göstermiyor.
+    const [placesList, setPlacesList] = useState<Place[]>([]);
 
     useEffect(() => {
         let isMounted = true;
@@ -248,32 +219,19 @@ export default function LiveMap({
                             lat: lat,
                             lng: lng,
                             type: type as any,
-                            isPremium: Math.random() > 0.85,
-                            coinReward: Math.floor(Math.random() * 20) + 10
+                            // Not: `isPremium`/`coinReward` KALDIRILDI — rastgele (%15 ihtimalle)
+                            // "premium" işaretleyip gerçekte hiç verilmeyen bir "coinReward"
+                            // göstermek, gerçek bir OSM sonucu olsa bile kullanıcıyı yanıltırdı.
                         };
                     }).filter((el: any) => el.lat && el.lng); // Ensure we have valid coordinates
                     setPlacesList(mapped);
                 } else if (isMounted) {
-                    // Fallback to shifting mock PLACES to userPos if no real places found nearby
-                    const shiftedMock = PLACES.map((p, idx) => ({
-                        ...p,
-                        lat: userPos[0] + (Math.random() - 0.5) * 0.03, // Randomly spread within ~1.5km
-                        lng: userPos[1] + (Math.random() - 0.5) * 0.03,
-                        type: p.type === 'veteriner' ? 'vet' : p.type // Fix mock data type mapping if any
-                    }));
-                    setPlacesList(shiftedMock as any);
+                    // Yakında gerçek bir yer bulunamadı — dürüstçe boş bırak, sahte pin uydurma.
+                    setPlacesList([]);
                 }
             } catch (err) {
-                console.error("OSM Places fetch error, falling back to mock:", err);
-                if (isMounted) {
-                    const shiftedMock = PLACES.map((p, idx) => ({
-                        ...p,
-                        lat: userPos[0] + (Math.random() - 0.5) * 0.03,
-                        lng: userPos[1] + (Math.random() - 0.5) * 0.03,
-                        type: p.type === 'veteriner' ? 'vet' : p.type
-                    }));
-                    setPlacesList(shiftedMock as any);
-                }
+                console.error("OSM Places fetch error:", err);
+                if (isMounted) setPlacesList([]);
             }
         };
 
@@ -305,9 +263,6 @@ export default function LiveMap({
 
 
     // Moffi World State
-    const [marks, setMarks] = useState<MapMark[]>(MOCK_MARKS);
-    const [isMarkModalOpen, setIsMarkModalOpen] = useState(false);
-
     // Guardian Mode State
     const [searchParty, setSearchParty] = useState<{ id: string, lat: number, lng: number }[]>([]);
 
@@ -390,30 +345,8 @@ export default function LiveMap({
         return true;
     });
 
-    const handleCreateMark = (data: { type: string, emoji: string, message: string }) => {
-        const newMark: MapMark = {
-            id: Date.now().toString(),
-            type: data.type as any,
-            emoji: data.emoji,
-            message: data.message,
-            lat: userPos[0] + (Math.random() - 0.5) * 0.0005, // Slight jitter for demo overlap
-            lng: userPos[1] + (Math.random() - 0.5) * 0.0005,
-            user: '@Ben',
-            timestamp: 'Şimdi',
-            likes: 0
-        };
-        setMarks(prev => [...prev, newMark]);
-    };
-
     return (
         <div className="w-full h-full relative z-0">
-            {/* Modal */}
-            <MarkCreationModal
-                isOpen={isMarkModalOpen}
-                onClose={() => setIsMarkModalOpen(false)}
-                onSubmit={handleCreateMark}
-            />
-
             {/* --- GOOGLE STYLE FLOATING UI --- */}
             {!hideInternalUI && (
                 <div className="absolute top-[76px] left-6 right-6 z-[5000] flex items-center gap-4 pointer-events-none transition-all duration-500">
@@ -547,10 +480,23 @@ export default function LiveMap({
                 className={cn("w-full h-full z-0 bg-gray-100 dark:bg-[#111] transition-all duration-1000", guardianMode && "grayscale brightness-50 contrast-125 sepia-[.3]")}
             >
                 {guardianMode && <GuardianStatusOverlay />}
+                {/* 🔴 GERÇEK BULGU (2026-09-24): Carto'nun `basemaps.cartocdn.com` ücretsiz/
+                    anonim tile servisi artık HER tile'ın üzerine gerçek bir "API KEY
+                    REQUIRED" filigranı basıyor (doğrudan tile PNG'sinin içinde — bizim
+                    eklediğimiz bir overlay değil, gerçek `curl` ile doğrulandı). Bu
+                    projede hiçbir yerde bir Carto API key yapılandırması yok, yani bu
+                    "quick fix: key ekle" değil — servis gerçekten kırık/kısıtlı.
+                    OpenStreetMap'in standart tile sunucusuna geçildi (key gerektirmiyor,
+                    gerçek testte filigransız çalıştığı doğrulandı) — bilinen kısıtı: OSM
+                    standart tile'larının ayrı bir "koyu tema" varyantı yok, bu yüzden
+                    harita artık dark mode'da da açık temalı görünüyor (filigranlı, kırık
+                    bir haritadan daha iyi bir uzlaşma). Aynı Carto sorunu `SightingMapSelector.
+                    tsx`, `RadarMap.tsx`, `MapLocationPicker.tsx`'i de etkiliyor — bu oturumun
+                    kapsamı sadece yürüyüş modülü (LiveMap) olduğu için onlara dokunulmadı. */}
                 <TileLayer
-                    key={isDark ? 'dark-map' : 'light-map'}
-                    url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
-                    attribution='&copy; OpenStreetMap &copy; CARTO'
+                    key="osm-standard-map"
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; OpenStreetMap katkıda bulunanlar'
                 />
 
                 <MapEngine center={userPos} searchQuery={searchQuery} filterType={filterType} setRouteTo={setRouteTo} userPos={userPos} />

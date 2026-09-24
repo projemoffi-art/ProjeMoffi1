@@ -41,10 +41,6 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
         }
     };
 
-    const handleHubClick = () => {
-        window.dispatchEvent(new CustomEvent('open-moffi-action-hub'));
-    };
-
     const handleProfileClick = () => {
         if (user?.id) {
             router.push(`/profile/${user.id}`);
@@ -72,7 +68,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         <Home className={cn("w-5 h-5", activeTab === 'home' && "text-cyan-600 dark:text-cyan-400")} />
                     </button>
 
-                    {/* 2. KEŞFET */}
+                    {/* 2. TOPLULUK — /community?tab=feed'e gider, 'feed' iç kimliği bu yüzden korundu */}
                     <button
                         onClick={() => handleTabClick('feed')}
                         className={cn(
@@ -89,7 +85,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                             onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-ai-hub'))}
                             className={cn(
                                 "w-11 h-11 rounded-full flex items-center justify-center border-[2.5px] border-[var(--background)] dark:border-[#1c1c21] active:scale-95 transition-all group absolute -top-4",
-                                "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600 text-[#ffffff] shadow-[0_8px_20px_rgba(34,211,238,0.4)]"
+                                "bg-gradient-to-tr from-orange-400 via-[#EE5B3D] to-red-600 text-[#ffffff] shadow-[0_8px_20px_rgba(238,91,61,0.4)]"
                             )}
                         >
                             <Sparkles className="w-5 h-5 transition-transform duration-500 group-hover:scale-110" />

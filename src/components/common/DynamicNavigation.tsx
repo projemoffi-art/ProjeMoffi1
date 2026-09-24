@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePet } from "@/context/PetContext";
 import { MoffiBottomNav } from "@/components/common/MoffiBottomNav";
 import { useTheme } from "@/context/ThemeContext";
+import { ActiveWalkMiniWidget } from "@/components/walk/ActiveWalkMiniWidget";
 
 // Lazy loaded overlays — only the ones that SHOULD be overlays
 const ActionHubDrawer = dynamic(() => import("@/components/community/ActionHubDrawer").then(mod => mod.ActionHubDrawer), { ssr: false });
@@ -16,7 +17,6 @@ const WalkQuickSheet = dynamic(() => import("@/components/walk/WalkQuickSheet").
 const SettingsDrawer = dynamic(() => import("@/components/community/SettingsDrawer").then(mod => mod.SettingsDrawer), { ssr: false });
 const InboxModal = dynamic(() => import("@/components/community/InboxModal").then(mod => mod.InboxModal), { ssr: false });
 const MoffiMapsModal = dynamic(() => import("@/components/maps/MoffiMapsModal").then(mod => mod.MoffiMapsModal), { ssr: false });
-const HubOverlay = dynamic(() => import("@/components/community/HubOverlay").then(mod => mod.HubOverlay), { ssr: false });
 const SOSCommandCenter = dynamic(() => import("@/components/profile/SOSCommandCenter").then(mod => mod.SOSCommandCenter), { ssr: false });
 const SpotlightSearch = dynamic(() => import("@/components/community/SpotlightSearch").then(mod => mod.SpotlightSearch), { ssr: false });
 const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod => mod.default), { ssr: false });
@@ -26,7 +26,7 @@ const MoffiUltimateHub = dynamic(() => import("@/components/community/MoffiUltim
 const SubscriptionManagementModal = dynamic(() => import("@/components/community/modals/SubscriptionManagementModal").then(mod => mod.SubscriptionManagementModal), { ssr: false });
 const PremiumUpgradeModal = dynamic(() => import("@/components/community/modals/PremiumUpgradeModal").then(mod => mod.PremiumUpgradeModal), { ssr: false });
 
-const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth'];
+const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth', '/walk/tracking', '/walk/summary'];
 
 export function DynamicNavigation() {
     const pathname = usePathname();
@@ -41,7 +41,6 @@ export function DynamicNavigation() {
     const [isWalkOpen, setIsWalkOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isMapsOpen, setIsMapsOpen] = useState(false);
-    const [isActionHubOverlayOpen, setIsActionHubOverlayOpen] = useState(false);
     const [isSOSOpen, setIsSOSOpen] = useState(false);
     const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -56,14 +55,33 @@ export function DynamicNavigation() {
         isActionHubOpen || 
         isWalkOpen || 
         isSettingsOpen || 
-        isMapsOpen || 
-        isActionHubOverlayOpen || 
-        isSOSOpen || 
+        isMapsOpen ||
+        isSOSOpen ||
         isSpotlightOpen || 
         isAuthOpen || 
         isNotificationOpen ||
         isEcosystemPortalOpen ||
         isAIHubOpen;
+
+    // KÖK NEDEN DÜZELTMESİ (yürüyüş modülü "geri giderken beni en başa atıyor"
+    // hatası): her overlay açılışında `window.history.pushState({modal:'x'},"")`
+    // ile aynı URL'i (örn. /home) taşıyan "hayalet" bir history girdisi
+    // ekleniyordu, ama overlay kendi butonuyla (X, ya da bir yere navigate edip
+    // kapanınca) KAPANDIĞINDA bu girdi HİÇ temizlenmiyordu — sadece React state'i
+    // (`setIsWalkOpen(false)`) güncelleniyordu. Sonra kullanıcı `/walk/tracking`
+    // gibi gerçek bir sayfadan `router.back()` yaptığında, tarayıcı bu temizlenmemiş
+    // hayalet girdiye ("/home" + modal:'walk') geri dönüyor, handlePopState de
+    // overlay'i (yanlış sayfada) yeniden açıyordu — kullanıcıya "en başa atıldım"
+    // gibi görünüyordu. Düzeltme: overlay HANGİ yoldan kapanırsa kapansın (X,
+    // veya bir route'a geçip kapanma), önce bu fonksiyon çağrılıp o anki history
+    // girdisinin `modal` state'i (navigasyon yapmadan, `replaceState` ile)
+    // temizleniyor - böylece daha sonra oraya geri dönülse bile overlay bir daha
+    // yanlışlıkla açılmıyor.
+    const clearModalHistoryState = () => {
+        if (typeof window !== 'undefined' && window.history.state?.modal) {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    };
 
     const overlayOpenRef = useRef(false);
     overlayOpenRef.current = isAnyLocalOverlayOpen;
@@ -76,6 +94,27 @@ export function DynamicNavigation() {
         setIsNavAllowedByExternalOverlays(true);
         setIsNavVisible(true);
     }, [pathname]);
+
+    // KÖK NEDEN DÜZELTMESİ (Baran'ın bulduğu gerçek hata: "Yürüyüşe Başla"ya
+    // basınca panel kapanıp bir an için altındaki sayfa (ana sayfa/işletme
+    // paneli) görünüyor, SONRA yürüyüş takip ekranı geliyor — iki adımlı, sert
+    // bir geçiş). Kök neden: WalkQuickSheet'in navigasyon tetikleyen aksiyonları
+    // (Başla/Devam Et/Bitir) `onClose()`'u router.push() ile AYNI ANDA
+    // çağırıyordu — panel kapanış animasyonu oynarken (birkaç yüz ms) yeni
+    // sayfa HENÜZ boyanmamış oluyordu, bu yüzden panelin altından o anki
+    // GERÇEK sayfa (ör. /home ya da /business/dashboard) kısaca görünüyordu.
+    // Düzeltme: navigasyon aksiyonları artık paneli HEMEN kapatmıyor (sadece
+    // history temizliğini senkron yapıyor, bkz. `onNavigate` prop'u) — panel
+    // GÖRSEL olarak ancak pathname GERÇEKTEN değiştiğinde (yani yeni sayfa
+    // zaten boyanmış olduğunda) kapanıyor, böylece kapanış animasyonu eski
+    // değil YENİ sayfayı açığa çıkarıyor.
+    const prevPathnameForWalkRef = useRef(pathname);
+    useEffect(() => {
+        if (pathname !== prevPathnameForWalkRef.current) {
+            prevPathnameForWalkRef.current = pathname;
+            if (isWalkOpen) setIsWalkOpen(false);
+        }
+    }, [pathname, isWalkOpen]);
 
     useEffect(() => {
         if (isAnyLocalOverlayOpen) {
@@ -124,16 +163,8 @@ export function DynamicNavigation() {
             setIsMapsOpen(true);
         };
 
-        const handleOpenActionHubOverlay = () => {
-            window.history.pushState({ modal: 'action-overlay' }, "");
-            setIsActionHubOpen(false);
-            setIsSettingsOpen(false);
-            setIsActionHubOverlayOpen(true);
-        };
-
         const handleOpenSOS = (e: any) => {
             window.history.pushState({ modal: 'sos' }, "");
-            setIsActionHubOverlayOpen(false);
             if (e?.detail) {
                 setSosActivePet(e.detail);
             } else if (activePet) {
@@ -149,7 +180,6 @@ export function DynamicNavigation() {
 
         const handleOpenSpotlight = () => {
             window.history.pushState({ modal: 'spotlight' }, "");
-            setIsActionHubOverlayOpen(false);
             setIsSpotlightOpen(true);
         };
 
@@ -165,7 +195,6 @@ export function DynamicNavigation() {
 
         const handleOpenEcosystem = () => {
             window.history.pushState({ modal: 'ecosystem' }, "");
-            setIsActionHubOverlayOpen(false);
             setIsEcosystemPortalOpen(true);
         };
 
@@ -176,7 +205,6 @@ export function DynamicNavigation() {
             setIsWalkOpen(modal === 'walk');
             setIsSettingsOpen(modal === 'settings');
             setIsMapsOpen(modal === 'maps');
-            setIsActionHubOverlayOpen(modal === 'action-overlay');
             setIsSOSOpen(modal === 'sos');
             setIsSpotlightOpen(modal === 'spotlight');
             setIsAuthOpen(modal === 'auth');
@@ -296,7 +324,6 @@ export function DynamicNavigation() {
         window.addEventListener('open-walk-panel', handleOpenWalk);
         window.addEventListener('open-moffi-settings', handleOpenSettings);
         window.addEventListener('open-moffi-maps', handleOpenMaps);
-        window.addEventListener('open-moffi-action-hub', handleOpenActionHubOverlay);
         window.addEventListener('open-sos-center', handleOpenSOS);
         window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
         window.addEventListener('open-auth-modal', handleOpenAuth);
@@ -313,7 +340,6 @@ export function DynamicNavigation() {
             window.removeEventListener('open-walk-panel', handleOpenWalk);
             window.removeEventListener('open-moffi-settings', handleOpenSettings);
             window.removeEventListener('open-moffi-maps', handleOpenMaps);
-            window.removeEventListener('open-moffi-action-hub', handleOpenActionHubOverlay);
             window.removeEventListener('open-sos-center', handleOpenSOS);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
             window.removeEventListener('open-auth-modal', handleOpenAuth);
@@ -338,11 +364,13 @@ export function DynamicNavigation() {
         <>
             <FloatingControls />
             <MoffiSidebar />
+            <ActiveWalkMiniWidget />
 
             <ActionHubDrawer
                 isOpen={isActionHubOpen}
-                onClose={() => setIsActionHubOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsActionHubOpen(false); }}
                 onNavigate={(id) => {
+                    clearModalHistoryState();
                     setIsActionHubOpen(false);
                     window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: id }));
                 }}
@@ -351,43 +379,25 @@ export function DynamicNavigation() {
             {/* Walk stays as overlay — instant start makes sense */}
             <WalkQuickSheet
                 isOpen={isWalkOpen}
-                onClose={() => setIsWalkOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsWalkOpen(false); }}
+                onNavigateAway={clearModalHistoryState}
             />
 
             <SettingsDrawer
                 isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsSettingsOpen(false); }}
             />
 
             <InboxModal />
 
             <MoffiMapsModal
                 isOpen={isMapsOpen}
-                onClose={() => setIsMapsOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsMapsOpen(false); }}
             />
 
-            <HubOverlay
-                isOpen={isActionHubOverlayOpen}
-                onClose={() => setIsActionHubOverlayOpen(false)}
-                onMarketClick={() => { setIsActionHubOverlayOpen(false); router.push('/petshop'); }}
-                onWalkClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
-                onVetClick={() => { setIsActionHubOverlayOpen(false); router.push('/vet'); }}
-                onStudioClick={() => { setIsActionHubOverlayOpen(false); router.push('/studio'); }}
-                onGameClick={() => { setIsActionHubOverlayOpen(false); router.push('/game'); }}
-                onMoffinetClick={() => window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'MoffiNet yakında! 🌐', icon: 'Zap' } }))}
-                onSearchClick={() => window.dispatchEvent(new CustomEvent('open-moffi-spotlight'))}
-                onCommunityRadarClick={() => { setIsActionHubOverlayOpen(false); router.push('/community?tab=radar'); }}
-                onAIAsistantClick={() => {
-                    setIsActionHubOverlayOpen(false);
-                    const evt = new CustomEvent('open-ai-assistant');
-                    window.dispatchEvent(evt);
-                }}
-                onSOSClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
-            />
-
-<SOSCommandCenter
+            <SOSCommandCenter
                 isOpen={isSOSOpen}
-                onClose={() => setIsSOSOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsSOSOpen(false); }}
                 pet={sosActivePet}
                 allPets={pets}
                 onPetChange={(p) => setSosActivePet(p)}
@@ -396,14 +406,16 @@ export function DynamicNavigation() {
                     if (sosActivePet) {
                         updatePet(sosActivePet.id, { is_lost: newSosData.status === 'lost' });
                     }
+                    clearModalHistoryState();
                     setIsSOSOpen(false);
                 }}
             />
 
             <SpotlightSearch
                 isOpen={isSpotlightOpen}
-                onClose={() => setIsSpotlightOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsSpotlightOpen(false); }}
                 onNavigate={(type, id) => {
+                    clearModalHistoryState();
                     setIsSpotlightOpen(false);
                     if (type === 'action') {
                         window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: id }));
@@ -419,22 +431,22 @@ export function DynamicNavigation() {
 
             <AuthModal
                 isOpen={isAuthOpen}
-                onClose={() => setIsAuthOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsAuthOpen(false); }}
             />
 
             <NotificationDrawer
                 isOpen={isNotificationOpen}
-                onClose={() => setIsNotificationOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsNotificationOpen(false); }}
             />
 
             <EcosystemPortal
                 isOpen={isEcosystemPortalOpen}
-                onClose={() => setIsEcosystemPortalOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsEcosystemPortalOpen(false); }}
             />
 
             <MoffiUltimateHub
                 isOpen={isAIHubOpen}
-                onClose={() => setIsAIHubOpen(false)}
+                onClose={() => { clearModalHistoryState(); setIsAIHubOpen(false); }}
             />
 
             <SubscriptionManagementModal />

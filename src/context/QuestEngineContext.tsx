@@ -16,12 +16,15 @@
  */
 
 import React, {
-    createContext, useContext, useState, useEffect, useCallback, useRef
+    createContext, useContext, useState, useEffect, useCallback, useRef, useMemo
 } from 'react';
 import { useActivity } from './ActivityContext';
 import { useWeather } from './WeatherContext';
 import { usePet } from './PetContext';
+import { useAuth } from './AuthContext';
 import { supabase } from '@/lib/supabase';
+import { haversineKm } from '@/lib/utils';
+import { apiService, isSupabaseEnabled } from '@/services/apiService';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +69,25 @@ export interface Badge {
     rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
+// Faz 18: Meydan Okumalar - gerçek walkHistory/walkStats'ten türetilen,
+// AYRICA persist edilmeyen (her render'da yeniden hesaplanan) salt-okunur
+// ilerleme. `status` zaman penceresine göre (bu hafta/bu ay/süresiz) hesaplanır.
+export interface Challenge {
+    id: string;
+    title: string;
+    description: string;
+    icon: string;
+    current: number;
+    target: number;
+    unit: string;
+    badgeId: string;
+    status: 'active' | 'completed';
+    // Ekran 11 (Meydan Okumalar) — design-reference/walk-final/'e göre her kartın
+    // sağında gerçek bir ödül etiketi ("+500 Puan", "+Rozet" vb.) gösteriliyor.
+    rewardLabel: string;
+    rewardPp: number;
+}
+
 export interface ResearchTask {
     id: string;
     description: string;
@@ -104,13 +126,27 @@ export interface QuestEngineContextType {
     dailyGoal: { distance: number; duration: number };
     progressPercent: number;
     durationPercent: number;
+    // Bugün tamamlanan yürüyüşler + (varsa) şu an aktif yürüyüşün canlı değeri.
+    // progressPercent/durationPercent AYNI bu iki değerden hesaplanıyor - hub
+    // ekranındaki büyük sayı ile ilerleme çubuğu artık birbirini tutuyor.
+    todayDistanceKm: number;
+    todayDurationMin: number;
 
     // Aylık araştırma
     monthlyResearch: MonthlyResearch | null;
 
+    // Faz 18: Meydan Okumalar - gerçek, türetilen ilerleme (bkz. Challenge)
+    challenges: Challenge[];
+
     // Rozetler
     badges: Badge[];
     earnedBadges: Badge[];
+    // Ekran 7/13 — en yakın kazanılmamış rozetin gerçek ilerlemesi (yoksa null,
+    // uydurma bir yüzde asla üretilmez, bkz. getClosestBadgeProgress)
+    closestBadgeProgress: { badge: Badge; current: number; target: number; percent: number } | null;
+    // Ekran 13 (Rozetler) — badge id'sinden gerçek {current,target,percent}'e
+    // eşleme; sadece güvenilir hesaplama yapılabilen rozetler için anahtar var
+    badgeProgress: Record<string, { current: number; target: number; percent: number }>;
 
     // Ekonomi
     totalPatiPuan: number;
@@ -124,7 +160,14 @@ export interface QuestEngineContextType {
     // Streak
     currentStreak: number;
     streakShieldAvailable: boolean;
-    useStreakShield: () => void;
+    useStreakShield: () => Promise<void>;
+
+    // Faz 6/9: aktif yürüyüş sırasında kazanılan rozet (yoksa null) — merkezi,
+    // sayfa/panel geçişlerinde kaybolmayan tek kaynak
+    lastEarnedBadge: { name: string; icon: string } | null;
+    // Faz 6/9: SADECE bu yürüyüşte kazanılan PP (todayEarned.pp'nin aksine günün
+    // tamamını değil, walk start'tan bu yana biriken tutarı temsil eder)
+    walkPpEarned: number;
 
     // Günlük pullar (7-pul sistemi)
     weeklyStamps: number;
@@ -144,7 +187,11 @@ const XP_KEY = 'moffi_total_xp_v2';
 const BADGES_KEY = 'moffi_earned_badges_v2';
 const RESEARCH_KEY = 'moffi_research_v2';
 const STAMPS_KEY = 'moffi_weekly_stamps_v2';
-const SHIELD_KEY = 'moffi_streak_shield_v2';
+const LAST_STAMP_DATE_KEY = 'moffi_last_stamp_date_v2';
+// Faz 12: "photographer" rozeti ("10 post paylaş") tanımlıydı ama hiçbir kod onu
+// tetiklemiyordu — mevcut post sayaçları (socialCountsRef) GÜNLÜK sıfırlanıyor,
+// 10 gibi bir ömür boyu eşiği asla karşılayamaz. Ayrı, hiç sıfırlanmayan bir sayaç.
+const LIFETIME_POSTS_KEY = 'moffi_lifetime_posts_v1';
 
 // ─── LEVEL SYSTEM ─────────────────────────────────────────────────────────────
 
@@ -182,7 +229,21 @@ function getAdaptiveDifficulty(totalWalks: number, streak: number): QuestDifficu
 
 // ─── DAILY GOAL ENGINE ────────────────────────────────────────────────────────
 
-function computeDailyGoal(walkStats: any): { distance: number; duration: number } {
+// Piyasa araştırması #10: Tails uygulamasının ırk/yaş/boyuta göre ayarlı hedef
+// fikri — pet'in GERÇEK `size` alanına (PetContext'te zaten var: Mini/Küçük/
+// Orta/Büyük/Dev) göre bir çarpan uygulanıyor. Önceden bu fonksiyon SADECE
+// kullanıcının geçmiş performansına bakıyordu, pet'in fiziksel büyüklüğünü hiç
+// hesaba katmıyordu — bir Chihuahua için 3km hedef, bir Kangal için 3km
+// hedeften çok farklı bir zorluk demek.
+const PET_SIZE_GOAL_MULTIPLIER: Record<string, number> = {
+    'Mini': 0.6,
+    'Küçük': 0.8,
+    'Orta': 1.0,
+    'Büyük': 1.15,
+    'Dev': 1.3,
+};
+
+function computeDailyGoal(walkStats: any, petSize?: string): { distance: number; duration: number } {
     const totalWalks = walkStats?.totalWalks || 0;
     const avgDist = walkStats?.averageDistanceKm || 0;
     const avgDur = walkStats
@@ -204,6 +265,10 @@ function computeDailyGoal(walkStats: any): { distance: number; duration: number 
     }
 
     if (streak >= 7) { distance += 0.2; duration += 5; }
+
+    const sizeMultiplier = (petSize && PET_SIZE_GOAL_MULTIPLIER[petSize]) || 1.0;
+    distance *= sizeMultiplier;
+    duration *= sizeMultiplier;
 
     return {
         distance: Math.round(distance * 10) / 10,
@@ -228,7 +293,32 @@ const BADGE_POOL: Badge[] = [
     { id: 'birthday_walk', name: 'Doğum Günü Koşucusu', description: 'Pet doğum gününde yürü', icon: '🎂', category: 'pet', isHidden: true, rarity: 'legendary' },
     { id: 'first_post', name: 'İlk Gönderi', description: 'İlk postunu paylaştın', icon: '✨', category: 'social', isHidden: false, rarity: 'common' },
     { id: 'research_complete', name: 'Araştırmacı', description: 'Aylık araştırmayı tamamla', icon: '🔭', category: 'explore', isHidden: false, rarity: 'epic' },
+    // Faz 18 (Meydan Okumalar gerçek implementasyonu) rozetleri:
+    { id: 'monthly_explorer', name: 'Aylık Gezgin', description: 'Bu ay toplam 100 km yürü', icon: '🗻', category: 'explore', isHidden: false, rarity: 'epic' },
+    { id: 'park_hopper', name: 'Park Kaşifi', description: 'Bu hafta 5 farklı yerde yürü', icon: '🌳', category: 'explore', isHidden: false, rarity: 'rare' },
+    { id: 'region_explorer', name: 'Şehir Kaşifi', description: 'Kendi şehrinde 10 farklı bölge keşfet', icon: '🗺️', category: 'explore', isHidden: false, rarity: 'legendary' },
 ];
+
+// Ekran 7 (Yürüyüş Sonucu) ve Ekran 13 (Rozetler) — design-reference/walk-final/'de
+// kilitlenen "en yakın kazanılmamış rozetin gerçek ilerlemesi" gösterimi için ortak
+// hesaplayıcı. Ekran 13 (Rozetler) için kurulan `badgeProgress` haritasının
+// (bkz. aşağıda, provider içinde) aynısını paylaşıyor — iki ayrı hesaplama
+// kopyası yerine tek bir gerçek kaynak. BİLEREK sadece o haritada yer alan,
+// güvenilir/sürekli gerçek veriye sahip rozetler arasından seçiyor.
+function getClosestBadgeProgress(
+    badgeProgress: Record<string, { current: number; target: number; percent: number }>,
+    earnedBadgeIds: string[]
+) {
+    const unearned = Object.entries(badgeProgress)
+        .filter(([id]) => !earnedBadgeIds.includes(id))
+        .map(([id, v]) => ({ id, ...v }));
+    if (unearned.length === 0) return null;
+    unearned.sort((a, b) => b.percent - a.percent);
+    const closest = unearned[0];
+    const badge = BADGE_POOL.find(b => b.id === closest.id);
+    if (!badge) return null;
+    return { badge, current: closest.current, target: closest.target, percent: closest.percent };
+}
 
 // ─── QUEST TEMPLATE POOL ─────────────────────────────────────────────────────
 
@@ -575,6 +665,22 @@ const QUEST_TEMPLATES: QuestTemplate[] = [
 
 // ─── MONTHLY RESEARCH ─────────────────────────────────────────────────────────
 
+// Faz 18: tam bir coğrafi kümeleme altyapısı (POI/bölge veritabanı) yok -
+// bunun yerine gerçek GPS başlangıç noktalarını basit bir haversine mesafesiyle
+// (bkz. @/lib/utils, Ekran 9 hız hesaplaması da aynı fonksiyonu kullanıyor)
+// kümeleyip "birbirinden en az `radiusKm` uzak farklı nokta sayısı"nı gerçek
+// veriden hesaplıyoruz. Uydurma değil, ama tam bir "bölge/mahalle" kavramı da
+// değil - iki farklı yarıçapla iki farklı granülerlikte kullanılıyor
+// ("farklı park" için dar, "farklı bölge" için geniş yarıçap).
+
+function countDistinctLocations(startPoints: [number, number][], radiusKm: number): number {
+    const clusters: [number, number][] = [];
+    startPoints.forEach(p => {
+        if (clusters.every(c => haversineKm(c, p) > radiusKm)) clusters.push(p);
+    });
+    return clusters.length;
+}
+
 function getMonthlyResearch(monthKey: string): MonthlyResearch {
     return {
         id: `research_${monthKey}`,
@@ -700,6 +806,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     const { walkData, walkStats, walkHistory } = useActivity();
     const { weather } = useWeather();
     const { activePet } = usePet();
+    const { user } = useAuth();
 
     const [dailyQuests, setDailyQuests] = useState<Quest[]>([]);
     const [totalPatiPuan, setTotalPatiPuan] = useState(0);
@@ -709,14 +816,29 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     const [todayEarned, setTodayEarned] = useState({ pp: 0, xp: 0 });
     const [weeklyStamps, setWeeklyStamps] = useState(0);
     const [streakShieldAvailable, setStreakShieldAvailable] = useState(true);
+    // Faz 6/9 kontrolü: "bu yürüyüşte kazanılan rozet" artık burada, merkezi olarak
+    // tutuluyor. Öncesinde WalkQuickSheet ve tracking sayfası kendi yerel state'lerinde
+    // ayrı ayrı dinliyordu — ama WalkQuickSheet, /walk/tracking'e geçildiğinde
+    // (DynamicNavigation o rotada tamamen unmount oluyor) tamamen kayboluyor, sonra
+    // kullanıcı yürüyüşe devam edip eve dönüp paneli yeniden açtığında state sıfırdan
+    // başlıyordu — yürüyüş sırasında kazanılan bir rozet sessizce kayboluyordu.
+    const [lastEarnedBadge, setLastEarnedBadge] = useState<{ name: string; icon: string } | null>(null);
+    // Faz 6/9 kontrolü: aynı sebep — todayEarned.pp GÜN BOYUNCA kümülatif, bir kullanıcı
+    // aynı gün 2. bir yürüyüş yaparsa sonuç ekranı yanlışlıkla ilk yürüyüşün puanını da
+    // "bu yürüyüşte kazanıldı" gibi gösterirdi. Bu, sadece aktif yürüyüş sırasında
+    // kazanılanı tutar, walk start'ta sıfırlanır.
+    const [walkPpEarned, setWalkPpEarned] = useState(0);
+    const wasWalkActiveRef = useRef(false);
 
     // Social event counters (günlük)
     const socialCountsRef = useRef({ posts: 0, comments: 0, likes: 0 });
+    // Faz 12: "photographer" rozeti için ömür boyu (hiç sıfırlanmayan) post sayacı
+    const lifetimePostCountRef = useRef(0);
     const notifiedRef = useRef<Set<string>>(new Set());
     const initializedRef = useRef(false);
     const userIdRef = useRef<string | null>(null);
 
-    const dailyGoal = computeDailyGoal(walkStats);
+    const dailyGoal = computeDailyGoal(walkStats, activePet?.size);
 
     // ── Başlatma ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -729,22 +851,18 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         if (storedPP) setTotalPatiPuan(parseInt(storedPP, 10) || 0);
         if (storedXP) setTotalXP(parseInt(storedXP, 10) || 0);
 
+        // Faz 12: ömür boyu post sayacı yükle
+        lifetimePostCountRef.current = parseInt(localStorage.getItem(LIFETIME_POSTS_KEY) || '0', 10) || 0;
+
         // Rozet yükle
         const storedBadges = localStorage.getItem(BADGES_KEY);
         if (storedBadges) {
             try { setEarnedBadgeIds(JSON.parse(storedBadges)); } catch { /* ignore */ }
         }
 
-        // Streak kalkanı
-        const shieldStr = localStorage.getItem(SHIELD_KEY);
-        if (shieldStr) {
-            try {
-                const parsed = JSON.parse(shieldStr);
-                if (parsed && parsed.weekStart === getWeekStart()) {
-                    setStreakShieldAvailable(parsed.available);
-                }
-            } catch { /* ignore */ }
-        }
+        // Faz 8: Seri kalkanı artık gerçek DB'den okunuyor (bkz. aşağıdaki ayrı useEffect) —
+        // burada localStorage'dan okunmuyor, çünkü eski sistemde bu flag'in gerçek seri
+        // hesaplamasına hiçbir etkisi yoktu (bkz. CLAUDE.md Faz 8 notu).
 
         // Haftalık pullar
         const stampsStr = localStorage.getItem(STAMPS_KEY);
@@ -803,6 +921,26 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         initializedRef.current = true;
     }, []); // eslint-disable-line
 
+    // Faz 7: Moffi Puanı gerçek bakiyeyle uzlaştır — localStorage anlık/önbellek olarak
+    // kalır (hızlı ilk render için), ama gerçek kaynak artık profiles.pati_puan_balance.
+    // coin_balance/PawCoin'e HİÇ dokunmuyor, tamamen ayrı bir alan.
+    useEffect(() => {
+        if (!isSupabaseEnabled || !user?.id) return;
+        apiService.getPatiPuanBalance().then(realBalance => {
+            setTotalPatiPuan(realBalance);
+            localStorage.setItem(PUAN_KEY, String(realBalance));
+        }).catch(err => console.error('Moffi Puanı bakiyesi alınamadı:', err));
+    }, [user?.id]);
+
+    // Faz 8: gerçek seri kalkanı durumunu DB'den al (localStorage'daki eski flag'in
+    // yerine — o flag gerçek seri hesabına hiç etki etmiyordu)
+    useEffect(() => {
+        if (!isSupabaseEnabled || !user?.id) return;
+        apiService.getStreakShieldStatus().then(status => {
+            setStreakShieldAvailable(status.available);
+        }).catch(err => console.error('Seri kalkanı durumu alınamadı:', err));
+    }, [user?.id]);
+
     // ── Gece yarısı reset ─────────────────────────────────────────────────
     useEffect(() => {
         const check = () => {
@@ -853,11 +991,25 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             return next;
         });
         setTodayEarned(prev => ({ pp: prev.pp + awardedPp, xp: prev.xp + finalXp }));
+        setWalkPpEarned(prev => prev + awardedPp);
 
-        // Günlük pul ekle
-        setWeeklyStamps(prev => {
+        // Faz 7: gerçek, denetlenebilir transaction — arka planda, UI'ı bloklamadan
+        if (isSupabaseEnabled && awardedPp !== 0) {
+            apiService.awardPatiPuan(awardedPp, questTitle, 'quest', questId)
+                .catch(err => console.error('Moffi Puanı sunucuya yazılamadı:', err));
+        }
+
+        // Faz 8 düzeltmesi: pul artık GÜNDE BİR kere ekleniyor (o gün ilk görev tamamlandığında),
+        // görev sayısı kadar değil. Öncesinde bir günde 3 görev bitirince 3 pul birden
+        // ekleniyordu — bu da "7 farklı gün" anlamına gelen haftalık serinin amacını bozuyordu.
+        // NOT: bu sadece pul artışını atlar, aşağıdaki tamamlanma toast'u her zaman gösterilir.
+        const todayStrForStamp = getTodayStr();
+        const alreadyStampedToday = localStorage.getItem(LAST_STAMP_DATE_KEY) === todayStrForStamp;
+        if (!alreadyStampedToday) localStorage.setItem(LAST_STAMP_DATE_KEY, todayStrForStamp);
+
+        if (!alreadyStampedToday) setWeeklyStamps(prev => {
             const next = Math.min(7, prev + 1);
-            
+
             // Eğer pul sayısı 6'dan 7'ye ulaşıyorsa haftalık büyük ödülü ver (günlük limite takılmaz)
             if (prev === 6 && next === 7) {
                 const weeklyPp = 250;
@@ -875,7 +1027,13 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
                         return n;
                     });
                     setTodayEarned(te => ({ pp: te.pp + weeklyPp, xp: te.xp + weeklyXp }));
-                    
+                    setWalkPpEarned(p => p + weeklyPp);
+
+                    if (isSupabaseEnabled) {
+                        apiService.awardPatiPuan(weeklyPp, 'Haftalık 7 Pul Ödülü', 'streak')
+                            .catch(err => console.error('Moffi Puanı sunucuya yazılamadı:', err));
+                    }
+
                     window.dispatchEvent(new CustomEvent('moffi-toast', {
                         detail: {
                             message: `🎁 Haftalık 7 Pul Tamamlandı! Büyük Ödül Sandığı Açıldı: +250 PP · +400 XP! 🏆`,
@@ -924,6 +1082,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             const badge = BADGE_POOL.find(b => b.id === badgeId);
             if (badge) {
                 setTimeout(() => {
+                    setLastEarnedBadge({ name: badge.name, icon: badge.icon });
                     window.dispatchEvent(new CustomEvent('moffi-badge-earned', {
                         detail: badge
                     }));
@@ -939,6 +1098,17 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             return next;
         });
     }, []);
+
+    // Faz 6/9 kontrolü: yeni bir yürüyüş başladığında (false→true geçişi) önceki
+    // yürüyüşten kalma rozeti temizle — yoksa saatler önce kazanılmış alakasız bir
+    // rozet, sonraki yürüyüşün sonuç ekranında "bu yürüyüşte kazanıldı" gibi görünürdü.
+    useEffect(() => {
+        if (walkData.isActive && !wasWalkActiveRef.current) {
+            setLastEarnedBadge(null);
+            setWalkPpEarned(0);
+        }
+        wasWalkActiveRef.current = walkData.isActive;
+    }, [walkData.isActive]);
 
     // ── Görev ilerlemesini güncelle ───────────────────────────────────────
     const updateQuestProgress = useCallback((quests: Quest[]): Quest[] => {
@@ -993,12 +1163,213 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
                 if (q.templateId === 'streak_30') awardBadge('month_fire');
                 if (q.templateId === 'first_post') awardBadge('first_post');
                 if (q.templateId === 'ten_likes') awardBadge('social_dog');
+                // Faz 12 kontrolü: pet_care_week rozeti tanımlıydı ama hiçbir yerden
+                // tetiklenmiyordu — eşleşen görev şablonu (pet_feed_week) zaten vardı
+                if (q.templateId === 'pet_feed_week') awardBadge('pet_care_week');
                 return { ...q, current: Math.min(current, q.target), completedAt: new Date().toISOString() };
             }
 
             return { ...q, current };
         });
     }, [walkData, walkStats, awardReward, awardBadge]);
+
+    // ── Aylık Araştırma ilerlemesi (Faz 18 düzeltmesi) ─────────────────────
+    // Bu sistem daha önce HİÇ ilerlemiyordu: setMonthlyResearch sadece ilk
+    // yüklemede çağrılıyordu, hiçbir gerçek sinyal stage/task current'ını
+    // güncellemiyordu - currentStageIndex sonsuza kadar 0'da donuk kalıyordu
+    // (bkz. CLAUDE.md). updateQuestProgress'teki AYNI gerçek sinyalleri
+    // kullanıyor + t2_1 için walkHistory'deki gerçek yürüyüş başlangıç
+    // noktalarını basit bir haversine kümelemesiyle (>300m ayrı = farklı rota)
+    // "farklı rota" sayısına çeviriyor - tam bir coğrafi kümeleme altyapısı
+    // olmadan, ama uydurma değil, gerçek GPS verisinden hesaplanıyor.
+    const updateMonthlyResearchProgress = useCallback(() => {
+        setMonthlyResearch(prev => {
+            if (!prev || prev.completedAt) return prev;
+            const stage = prev.stages[prev.currentStageIndex];
+            if (!stage) return prev;
+
+            const distKm = walkData.distance / 1000;
+            const durationMin = walkData.time / 60;
+            const streak = walkStats?.currentStreak || 0;
+            const totalDist = walkStats?.totalDistanceKm || 0;
+
+            const weeklyWalkCount = walkHistory.filter(w => {
+                const raw = w.started_at || w.ended_at;
+                if (!raw) return false;
+                return Date.now() - new Date(raw).getTime() <= 7 * 24 * 60 * 60 * 1000;
+            }).length;
+
+            const distinctRouteCount = countDistinctLocations(
+                walkHistory.map(w => (w.path && w.path.length > 0 ? w.path[0] : null)).filter((p): p is [number, number] => !!p),
+                0.3
+            );
+
+            let anyChange = false;
+            const updatedTasks = stage.tasks.map(t => {
+                if (t.completed) return t;
+                let current = t.current;
+                switch (t.type) {
+                    case 'distance': current = distKm; break;
+                    case 'duration': current = durationMin; break;
+                    case 'streak': current = streak; break;
+                    case 'cumulative_dist': current = totalDist; break;
+                    case 'count':
+                        if (t.id === 't1_1') current = weeklyWalkCount;
+                        else if (t.id === 't2_1') current = distinctRouteCount;
+                        else if (t.id === 't1_3' || t.id === 't3_3') current = lifetimePostCountRef.current;
+                        break;
+                    default: break;
+                }
+                const isCompleted = current >= t.target;
+                if (isCompleted !== t.completed || current !== t.current) anyChange = true;
+                return { ...t, current: Math.min(current, t.target), completed: isCompleted };
+            });
+
+            if (!anyChange) return prev;
+
+            const wasStageComplete = stage.tasks.every(t => t.completed);
+            const isStageNowComplete = updatedTasks.every(t => t.completed);
+            const stageJustCompleted = isStageNowComplete && !wasStageComplete;
+
+            const updatedStages = prev.stages.map((s, i) => i === prev.currentStageIndex ? { ...s, tasks: updatedTasks } : s);
+            let nextStageIndex = prev.currentStageIndex;
+            let completedAt = prev.completedAt;
+
+            if (stageJustCompleted) {
+                awardReward(stage.reward, stage.id, stage.emoji, stage.reward.title || stage.title);
+                if (stage.reward.badgeId) awardBadge(stage.reward.badgeId);
+                if (prev.currentStageIndex + 1 < prev.stages.length) {
+                    nextStageIndex = prev.currentStageIndex + 1;
+                } else {
+                    completedAt = new Date().toISOString();
+                }
+            }
+
+            const next: MonthlyResearch = { ...prev, stages: updatedStages, currentStageIndex: nextStageIndex, completedAt };
+            localStorage.setItem(RESEARCH_KEY, JSON.stringify(next));
+            return next;
+        });
+    }, [walkData, walkStats, walkHistory, awardReward, awardBadge]);
+
+    // ── Meydan Okumalar (Faz 18) ────────────────────────────────────────────
+    // Faz 11'de referans görsel elde değilken ertelenmişti; görsel geri gelince
+    // 3 kartın da (aylık toplam mesafe / haftalık farklı yer / kalıcı farklı
+    // bölge) gerçek walkHistory verisinden hesaplanabildiği görüldü - kalıcı bir
+    // "meydan okuma tamamlama" state'i tutmuyoruz, her render'da gerçek veriden
+    // yeniden türetiliyor (basit, tutarlı, senkron kaybı riski yok).
+    // Ekran 11 (Meydan Okumalar) VE Ekran 13 (Rozetler) aynı gerçek türetilmiş
+    // metriklere ihtiyaç duyuyor (aylık km, haftalık farklı yer, ömür boyu farklı
+    // bölge, seri) — iki ayrı yerde aynı hesaplamayı tekrarlamamak için tek bir
+    // ortak `progressMetrics` içinde toplandı.
+    const progressMetrics = useMemo(() => {
+        const now = new Date();
+        const monthWalks = walkHistory.filter(w => {
+            const raw = w.started_at || w.ended_at;
+            if (!raw) return false;
+            const d = new Date(raw);
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        });
+        const weekWalks = walkHistory.filter(w => {
+            const raw = w.started_at || w.ended_at;
+            if (!raw) return false;
+            return now.getTime() - new Date(raw).getTime() <= 7 * 24 * 60 * 60 * 1000;
+        });
+
+        const monthlyKm = monthWalks.reduce((sum, w) => sum + (w.distanceKm ?? (w.distance_meters ? w.distance_meters / 1000 : 0)), 0);
+        const weeklyDistinctSpots = countDistinctLocations(
+            weekWalks.map(w => (w.path && w.path.length > 0 ? w.path[0] : null)).filter((p): p is [number, number] => !!p),
+            0.3
+        );
+        const lifetimeDistinctRegions = countDistinctLocations(
+            walkHistory.map(w => (w.path && w.path.length > 0 ? w.path[0] : null)).filter((p): p is [number, number] => !!p),
+            2
+        );
+        const currentStreak = walkStats?.currentStreak || 0;
+        const totalDistanceKm = walkStats?.totalDistanceKm || 0;
+        const totalWalks = walkStats?.totalWalks || 0;
+
+        return { monthlyKm, weeklyDistinctSpots, lifetimeDistinctRegions, currentStreak, totalDistanceKm, totalWalks };
+    }, [walkHistory, walkStats]);
+
+    // Ekran 13 (Rozetler) — 🔴🔴 design-reference/walk-final/'in EN BÜYÜK bulgusu:
+    // kilitli rozetlerde GERÇEK sayısal ilerleme gösterilmesi isteniyor (Faz 13'te
+    // "her rozetin sayacını doğrulamadan uydurma sayı göstermeyelim" diye bilinçli
+    // ERTELENMİŞTİ - artık ertelenmiş değil, referans açıkça istiyor). Sadece
+    // GÜVENİLİR, sürekli bir gerçek veriye sahip olduğumuz rozetler için hesaplanıyor
+    // (bkz. Ekran 7'deki getClosestBadgeProgress ile aynı bilinçli sınır) - sosyal/pet
+    // sayaç rozetleri (photographer, pet_care_week, social_dog, first_post) ve zaman
+    // dilimi rozetleri (morning_bird, night_walker, rain_hero, winter_warrior,
+    // birthday_walk, research_complete) için güvenilir bir "current/target" yok,
+    // bu yüzden onlarda hiç fraksiyon gösterilmiyor (uydurma sayı yerine dürüstçe
+    // sadece isim+açıklama kalıyor) - referansın da "Dağ Kaşifi"/"Ay Işığı Yürüyüşü"
+    // için yaptığı gibi (ilerlemesiz, sadece "Yakında" kilitli).
+    const badgeProgress = useMemo(() => {
+        const { monthlyKm, weeklyDistinctSpots, lifetimeDistinctRegions, currentStreak, totalDistanceKm, totalWalks } = progressMetrics;
+        const map: Record<string, { current: number; target: number; percent: number }> = {};
+        const set = (id: string, current: number, target: number) => {
+            map[id] = { current, target, percent: Math.min(100, Math.round((current / target) * 100)) };
+        };
+        set('first_step', Math.min(1, totalWalks), 1);
+        set('week_fire', Math.min(7, currentStreak), 7);
+        set('month_fire', Math.min(30, currentStreak), 30);
+        set('explorer_100', Math.min(100, totalDistanceKm), 100);
+        set('monthly_explorer', Math.min(100, monthlyKm), 100);
+        set('park_hopper', Math.min(5, weeklyDistinctSpots), 5);
+        set('region_explorer', Math.min(10, lifetimeDistinctRegions), 10);
+        return map;
+    }, [progressMetrics]);
+
+    const challenges = useMemo<Challenge[]>(() => {
+        const now = new Date();
+        const { monthlyKm, weeklyDistinctSpots, lifetimeDistinctRegions, currentStreak } = progressMetrics;
+
+        return [
+            {
+                id: 'monthly_distance', title: `${now.toLocaleDateString('tr-TR', { month: 'long' })} Yürüyüş Ayı`,
+                description: 'Bu ay toplam 100 km yürü, özel rozeti kazan!', icon: '🏔️',
+                current: Math.min(100, monthlyKm), target: 100, unit: 'km', badgeId: 'monthly_explorer',
+                status: monthlyKm >= 100 ? 'completed' : 'active',
+                rewardLabel: '+500 Puan', rewardPp: 500,
+            },
+            {
+                id: 'weekly_spots', title: 'Haftalık Patili Dostlar',
+                description: 'Bu hafta 5 farklı yerde yürü', icon: '🌲',
+                current: Math.min(5, weeklyDistinctSpots), target: 5, unit: 'yer', badgeId: 'park_hopper',
+                status: weeklyDistinctSpots >= 5 ? 'completed' : 'active',
+                rewardLabel: '+150 Puan', rewardPp: 150,
+            },
+            {
+                id: 'lifetime_regions', title: 'Şehir Gezginleri',
+                description: 'Kendi şehrinde 10 farklı bölge keşfet', icon: '⭐',
+                current: Math.min(10, lifetimeDistinctRegions), target: 10, unit: 'bölge', badgeId: 'region_explorer',
+                status: lifetimeDistinctRegions >= 10 ? 'completed' : 'active',
+                rewardLabel: '+Rozet', rewardPp: 0,
+            },
+            {
+                id: 'streak_master', title: 'Seri Ustası',
+                description: 'Aralıksız 7 gün yürü', icon: '🔥',
+                current: Math.min(7, currentStreak), target: 7, unit: 'gün', badgeId: 'week_fire',
+                status: currentStreak >= 7 ? 'completed' : 'active',
+                rewardLabel: '+200 Puan', rewardPp: 200,
+            },
+        ];
+    }, [progressMetrics]);
+
+    // Meydan okuma hedefi karşılanınca ilgili rozeti (ve varsa gerçek PP ödülünü)
+    // ver. awardBadge zaten idempotent (aynı rozeti iki kez vermiyor); awardReward
+    // da kendi `notifiedRef` Set'iyle idempotent (questId başına bir kez) - bu
+    // yüzden her render'da güvenle çağrılabilir. Önceden meydan okumalar SADECE
+    // rozet veriyordu, PP vermiyordu (referans PP de veriyormuş gibi gösteriyor,
+    // bkz. design-reference/walk-final/ Ekran 11 notu) - artık gerçekten veriyor.
+    useEffect(() => {
+        if (!initializedRef.current) return;
+        challenges.forEach(c => {
+            if (c.status === 'completed') {
+                awardBadge(c.badgeId);
+                if (c.rewardPp > 0) awardReward({ pp: c.rewardPp, xp: c.rewardPp }, `challenge_${c.id}`, c.icon, c.title);
+            }
+        });
+    }, [challenges, awardBadge, awardReward]);
 
     // ── Gizli rozet kontrolü ──────────────────────────────────────────────
     useEffect(() => {
@@ -1014,8 +1385,9 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         // Kış savaşçısı
         if (weather && weather.temp <= 5 && walkData.isActive) awardBadge('winter_warrior');
 
-        // Pet doğum günü
-        if (activePet?.birthday) {
+        // Pet doğum günü — Faz 12 düzeltmesi: rozetin açıklaması "doğum gününde YÜRÜ"
+        // diyor ama walkData.isActive kontrolü hiç yoktu, uygulamayı açmak yeterliydi
+        if (activePet?.birthday && walkData.isActive) {
             const today = new Date();
             const bday = new Date(activePet.birthday);
             if (today.getDate() === bday.getDate() && today.getMonth() === bday.getMonth()) {
@@ -1039,11 +1411,22 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         }));
     }, [walkData.distance, walkData.time, walkData.isActive, walkStats?.currentStreak, walkStats?.totalDistanceKm]); // eslint-disable-line
 
+    useEffect(() => {
+        if (!initializedRef.current) return;
+        updateMonthlyResearchProgress();
+    }, [walkData.distance, walkData.time, walkData.isActive, walkStats?.currentStreak, walkStats?.totalDistanceKm, walkHistory]); // eslint-disable-line
+
     // ── Event bus: sosyal aksiyonlar ──────────────────────────────────────
     useEffect(() => {
         const handleQuestTrigger = (e: any) => {
             const { type } = e.detail || {};
-            if (type === 'post_added') socialCountsRef.current.posts++;
+            if (type === 'post_added') {
+                socialCountsRef.current.posts++;
+                lifetimePostCountRef.current++;
+                localStorage.setItem(LIFETIME_POSTS_KEY, String(lifetimePostCountRef.current));
+                if (lifetimePostCountRef.current >= 10) awardBadge('photographer');
+                updateMonthlyResearchProgress();
+            }
             else if (type === 'comment_added') socialCountsRef.current.comments++;
             else if (type === 'like_toggled') socialCountsRef.current.likes++;
             else if (type === 'page_visited_petshop') {
@@ -1075,7 +1458,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
 
         window.addEventListener('moffi-quest-trigger', handleQuestTrigger);
         return () => window.removeEventListener('moffi-quest-trigger', handleQuestTrigger);
-    }, [updateQuestProgress, awardReward]);
+    }, [updateQuestProgress, updateMonthlyResearchProgress, awardReward, awardBadge]);
 
     // ── Manuel görev tamamlama ────────────────────────────────────────────
     const completeManualQuest = useCallback((questId: string) => {
@@ -1108,26 +1491,66 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
                 localStorage.setItem(PUAN_KEY, String(newValue));
                 return newValue;
             });
+            // Faz 7: gerçek, denetlenebilir transaction — arka planda, mevcut senkron
+            // sözleşmeyi (anında true/false dönüşü) bozmadan
+            if (isSupabaseEnabled) {
+                apiService.awardPatiPuan(-amount, 'Harcama', 'spend')
+                    .catch(err => console.error('Moffi Puanı harcaması sunucuya yazılamadı:', err));
+            }
             return true;
         }
         return false;
     }, [totalPatiPuan]);
 
     // ── Streak kalkanı ────────────────────────────────────────────────────
-    const useStreakShield = useCallback(() => {
-        if (!streakShieldAvailable) return;
-        setStreakShieldAvailable(false);
-        localStorage.setItem(SHIELD_KEY, JSON.stringify({ weekStart: getWeekStart(), available: false }));
-        window.dispatchEvent(new CustomEvent('moffi-toast', {
-            detail: { message: '🛡️ Seri Kalkanı kullanıldı! Seriniz korundu.', icon: 'Shield', color: 'text-blue-400' }
-        }));
+    // Faz 8: artık gerçek — sunucu tarafında doğrulanıyor (dünü gerçekten kapsıyor,
+    // gerçek seri hesaplamasına gerçekten yansıyor). Eskiden bu sadece bir toast
+    // gösterip localStorage flag'i kapatıyordu, gerçek seriye hiç etkisi yoktu.
+    const useStreakShield = useCallback(async () => {
+        if (!streakShieldAvailable || !isSupabaseEnabled) return;
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const y = yesterday.getFullYear(), m = String(yesterday.getMonth() + 1).padStart(2, '0'), d = String(yesterday.getDate()).padStart(2, '0');
+        const coveredDate = `${y}-${m}-${d}`;
+
+        try {
+            await apiService.useStreakShield(coveredDate);
+            setStreakShieldAvailable(false);
+            window.dispatchEvent(new CustomEvent('moffi-toast', {
+                detail: { message: '🛡️ Seri Kalkanı kullanıldı! Seriniz korundu.', icon: 'Shield', color: 'text-blue-400' }
+            }));
+        } catch (err: any) {
+            console.error('Seri kalkanı kullanılamadı:', err);
+            window.dispatchEvent(new CustomEvent('moffi-toast', {
+                detail: { message: err?.message || 'Seri kalkanı kullanılamadı.', icon: 'AlertTriangle', color: 'text-red-400' }
+            }));
+        }
     }, [streakShieldAvailable]);
 
     // ── Türetilen değerler ────────────────────────────────────────────────
     const completedCount = dailyQuests.filter(q => !!q.completedAt).length;
     const totalCount = dailyQuests.length;
-    const distKm = walkData.distance / 1000;
-    const durationMin = walkData.time / 60;
+    // Faz 18.1 düzeltmesi: bu ikisi SADECE /walk hub sayfasındaki "günlük hedef"
+    // kartlarını besliyor (tek tüketici, doğrulandı). Öncesinde `distKm`/`durationMin`
+    // yalnız AKTİF yürüyüşün canlı değeriydi - yürüyüş bittiğinde 0'a dönüyordu,
+    // hub sayfası da bu durumda sayıyı "walkStats.totalDistanceKm" (TÜM ZAMANLARIN
+    // toplamı) ile değiştirip gösteriyordu ama ilerleme çubuğu hâlâ 0'da kalıyordu -
+    // "42,3 / 5km" yazıp çubuğu boş gösteren kafa karıştırıcı bir tutarsızlıktı.
+    // Artık gerçek anlamı ("bugün ne kadar yürüdün") yansıtıyor: bugün tamamlanmış
+    // yürüyüşlerin toplamı + (varsa) şu an aktif yürüyüşün canlı değeri.
+    const todayLocalStr = getTodayStr();
+    const todayCompletedKm = walkHistory.reduce((sum, w) => {
+        const raw = w.started_at || w.ended_at;
+        if (!raw || new Date(raw).toLocaleDateString('sv-SE') !== todayLocalStr) return sum;
+        return sum + (w.distanceKm ?? (w.distance_meters ? w.distance_meters / 1000 : 0));
+    }, 0);
+    const todayCompletedMin = walkHistory.reduce((sum, w) => {
+        const raw = w.started_at || w.ended_at;
+        if (!raw || new Date(raw).toLocaleDateString('sv-SE') !== todayLocalStr) return sum;
+        return sum + (w.duration_minutes || 0);
+    }, 0);
+    const distKm = todayCompletedKm + (walkData.isActive ? walkData.distance / 1000 : 0);
+    const durationMin = todayCompletedMin + (walkData.isActive ? walkData.time / 60 : 0);
     const progressPercent = Math.min(100, (distKm / Math.max(0.01, dailyGoal.distance)) * 100);
     const durationPercent = Math.min(100, (durationMin / Math.max(1, dailyGoal.duration)) * 100);
 
@@ -1137,6 +1560,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         ...b,
         earnedAt: new Date().toISOString(),
     }));
+    const closestBadgeProgress = getClosestBadgeProgress(badgeProgress, earnedBadgeIds);
 
     return (
         <QuestEngineContext.Provider value={{
@@ -1147,9 +1571,14 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             dailyGoal,
             progressPercent,
             durationPercent,
+            todayDistanceKm: distKm,
+            todayDurationMin: durationMin,
             monthlyResearch,
+            challenges,
             badges: BADGE_POOL,
             earnedBadges,
+            closestBadgeProgress,
+            badgeProgress,
             totalPatiPuan,
             totalXP,
             level: levelInfo.level,
@@ -1160,6 +1589,8 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             currentStreak: walkStats?.currentStreak || 0,
             streakShieldAvailable,
             useStreakShield,
+            lastEarnedBadge,
+            walkPpEarned,
             weeklyStamps,
             maxWeeklyStamps: 7,
             triggerQuestEvent,

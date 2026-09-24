@@ -145,9 +145,36 @@ export function ChatMessageList({ messages, onRecall, emptyLabel = "Henüz mesaj
     );
 }
 
-const QUICK_EMOJIS = [
-    "😀", "😂", "😍", "😊", "😉", "😢", "😮", "😡", "👍", "👎", "🙏", "👏",
-    "❤️", "🔥", "🎉", "✅", "❌", "🐶", "🐱", "🐾", "📷", "⏰", "💬", "🤔",
+interface EmojiCategory {
+    key: string;
+    label: string;
+    icon: string;
+    emojis: string[];
+}
+
+// Petler her zaman ilk kategori - Moffi bir evcil hayvan uygulaması.
+// Her kategoride tam 24 emoji var (6 sütun x 4 satır ile tam sığıyor).
+const EMOJI_CATEGORIES: EmojiCategory[] = [
+    {
+        key: "pets", label: "Petler", icon: "🐾",
+        emojis: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🙈", "🙉", "🙊", "🐔", "🐧", "🐦", "🐤", "🐺", "🐴"],
+    },
+    {
+        key: "faces", label: "Yüzler", icon: "😀",
+        emojis: ["😀", "😂", "😍", "😊", "😉", "😢", "😮", "😡", "🥰", "😘", "😎", "🤔", "😴", "🥳", "😱", "🙄", "😅", "😇", "🤗", "🤩", "😋", "🥺", "😭", "🤯"],
+    },
+    {
+        key: "hearts", label: "Kalpler", icon: "❤️",
+        emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "❤️‍🩹", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "♥️", "✨", "🌹", "💐"],
+    },
+    {
+        key: "gestures", label: "Eller", icon: "👍",
+        emojis: ["👍", "👎", "👏", "🙌", "🙏", "👋", "🤝", "💪", "✌️", "🤞", "🤟", "🤘", "👌", "🤙", "👈", "👉", "👆", "👇", "☝️", "✊", "👊", "🤛", "🤜", "🖐️"],
+    },
+    {
+        key: "symbols", label: "Semboller", icon: "🔥",
+        emojis: ["🔥", "🎉", "🎊", "✅", "❌", "⭐", "🌟", "💥", "💫", "🎁", "🎈", "🎀", "🏆", "🥇", "🎯", "📷", "📸", "🎵", "🎶", "💬", "💭", "⏰", "🔔", "📍"],
+    },
 ];
 
 interface ChatComposerProps {
@@ -155,16 +182,21 @@ interface ChatComposerProps {
     uploadImage: (file: File) => Promise<string>;
     sending?: boolean;
     placeholder?: string;
+    // Kullanıcı her karakter yazdığında çağrılır (ör. "yazıyor..." sinyali göndermek için).
+    onTyping?: () => void;
 }
 
 // Metin + emoji + fotoğraf gönderebilen, ortak mesaj yazma kutusu.
-export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesajınızı yazın..." }: ChatComposerProps) {
+export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesajınızı yazın...", onTyping }: ChatComposerProps) {
     const [text, setText] = useState("");
     const [emojiOpen, setEmojiOpen] = useState(false);
+    const [emojiCategory, setEmojiCategory] = useState(EMOJI_CATEGORIES[0].key);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [pendingPreview, setPendingPreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [sendError, setSendError] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const activeCategory = EMOJI_CATEGORIES.find((c) => c.key === emojiCategory) ?? EMOJI_CATEGORIES[0];
 
     const clearPendingImage = () => {
         if (pendingPreview) URL.revokeObjectURL(pendingPreview);
@@ -198,8 +230,10 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
             await onSend(text.trim(), attachmentUrl);
             setText("");
             clearPendingImage();
+            setSendError(false);
         } catch (err) {
             console.error("Chat composer send error:", err);
+            setSendError(true);
         } finally {
             setUploading(false);
         }
@@ -223,6 +257,18 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
                         aria-label="Fotoğrafı kaldır"
                     >
                         <X className="w-3 h-3" />
+                    </button>
+                </div>
+            )}
+            {sendError && (
+                <div className="flex items-center justify-between gap-2 mb-1.5 ml-1 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs">
+                    <span className="font-medium">Mesaj gönderilemedi.</span>
+                    <button
+                        type="button"
+                        onClick={handleSend}
+                        className="font-bold underline underline-offset-2 shrink-0"
+                    >
+                        Tekrar dene
                     </button>
                 </div>
             )}
@@ -258,27 +304,50 @@ export function ChatComposer({ onSend, uploadImage, sending, placeholder = "Mesa
                     {emojiOpen && (
                         <>
                             <div className="fixed inset-0 z-10" onClick={() => setEmojiOpen(false)} />
-                            <div className="absolute bottom-full left-0 mb-3 bg-card border border-card-border rounded-2xl shadow-xl p-2 grid grid-cols-6 gap-1 z-20 w-56">
-                                {QUICK_EMOJIS.map((emoji) => (
-                                    <button
-                                        key={emoji}
-                                        type="button"
-                                        onClick={() => {
-                                            setText((t) => t + emoji);
-                                            setEmojiOpen(false);
-                                        }}
-                                        className="text-xl hover:bg-black/5 dark:hover:bg-white/10 rounded-lg p-1"
-                                    >
-                                        {emoji}
-                                    </button>
-                                ))}
+                            <div className="absolute bottom-full left-0 mb-3 bg-card border border-card-border rounded-2xl shadow-xl overflow-hidden z-20 w-64">
+                                <div className="flex items-center gap-0.5 px-1.5 pt-1.5 pb-1 border-b border-card-border">
+                                    {EMOJI_CATEGORIES.map((cat) => (
+                                        <button
+                                            key={cat.key}
+                                            type="button"
+                                            onClick={() => setEmojiCategory(cat.key)}
+                                            className={cn(
+                                                "flex-1 text-base py-1.5 rounded-lg transition-colors",
+                                                emojiCategory === cat.key ? "bg-accent/15" : "hover:bg-black/5 dark:hover:bg-white/10 opacity-60"
+                                            )}
+                                            aria-label={cat.label}
+                                            title={cat.label}
+                                        >
+                                            {cat.icon}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-6 gap-1 p-2">
+                                    {activeCategory.emojis.map((emoji, i) => (
+                                        <button
+                                            key={`${activeCategory.key}-${i}`}
+                                            type="button"
+                                            onClick={() => {
+                                                setText((t) => t + emoji);
+                                                setEmojiOpen(false);
+                                            }}
+                                            className="text-xl hover:bg-black/5 dark:hover:bg-white/10 rounded-lg p-1"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </>
                     )}
                 </div>
                 <textarea
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={(e) => {
+                        setText(e.target.value);
+                        setSendError(false);
+                        onTyping?.();
+                    }}
                     onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();

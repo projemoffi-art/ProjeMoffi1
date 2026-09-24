@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Baloo_2, Nunito } from 'next/font/google';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { usePet } from '@/context/PetContext';
@@ -13,13 +14,14 @@ import { apiService } from '@/services/apiService';
 import { 
     Bell, Search, MessageCircle, User, Home, Plus, MapPin, Calendar, 
     Syringe, AlertTriangle, ShieldAlert, Heart, HeartHandshake, Stethoscope, 
-    ShoppingBag, Scissors, Sparkles, ChevronRight, Bone, 
+    ShoppingBag, ShoppingCart, Scissors, Sparkles, ChevronRight, Bone,
     Users, Play, Navigation, Flame, Droplets, Compass, Radio, 
     Battery, Volume2, Wifi, Coins, Star, Shirt, ArrowUpRight, 
     TrendingUp, CheckCircle2, X, Shield, TrendingDown, 
     Sliders, VolumeX, Maximize2, RefreshCw, ChevronLeft, CreditCard, Zap, 
-    Fingerprint, Lock, Award, Coffee, Info, Crown, Trophy, SunMoon, Sun, Moon, 
-    Clock, Gamepad2, ShieldCheck, MessageSquare, ArrowDown, Scale, GraduationCap, Bot
+    Fingerprint, Lock, Award, Coffee, Info, Crown, SunMoon, Sun, Moon,
+    Clock, Gamepad2, ShieldCheck, MessageSquare, ArrowDown, Scale, GraduationCap, Bot,
+    PawPrint, Radar, BellRing, Megaphone, Gift, Footprints, ArrowRight
 } from 'lucide-react';
 
 import { useStories } from '../../hooks/useStories';
@@ -33,6 +35,11 @@ import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
 import { useHubData } from "@/hooks/useHubData";
 import { usePetShop } from "@/hooks/usePetShop";
 import { useDragScroll } from '@/hooks/useDragScroll';
+import { useVaccineSchedule } from '@/hooks/useVaccineSchedule';
+
+// Kilitli tasarım referansı (design-reference/home-final): başlık fontu Baloo 2, gövde fontu Nunito
+const baloo2 = Baloo_2({ subsets: ['latin'], weight: ['600', '700', '800'] });
+const nunito = Nunito({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] });
 
 const cleanDefaultTemplate = {
     name: 'Moffi',
@@ -75,55 +82,81 @@ const cleanDefaultTemplate = {
         { id: 1, text: 'Sabah Yürüyüşü Tamamla', done: false },
         { id: 2, text: 'Günlük Su İhtiyacını Karşıla', done: false },
         { id: 3, text: 'Bugünkü Beslenme Öğünlerini Bitir', done: false }
-    ],
-    specialOffer: {
-        title: 'Özel Fırsat 🎁',
-        desc: 'Evcil hayvanınız için en kaliteli besinler ve ürünler Moffi Market\'te!',
-        oldPrice: '1.200 TL',
-        newPrice: '960 TL',
-        discount: '%20 İNDİRİM'
-    }
+    ]
 };
 
 // Story Circle
-const StoryCircle = ({ image, title, type = 'normal', delay = 0 }: { image: string, title: string, type?: 'normal' | 'add' | 'sos' | 'ai' | 'featured', delay?: number }) => (
-    <motion.div 
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay, duration: 0.5, type: 'spring' }}
-        className="flex flex-col items-center gap-1.5 shrink-0"
-    >
-        <div className="relative cursor-pointer group">
-            <div className={`w-16 h-16 rounded-full p-[2px] ${
-                type === 'add' ? 'bg-gray-200' :
-                type === 'sos' ? 'bg-red-500' :
-                type === 'ai' ? 'bg-purple-400' :
-                type === 'featured' ? 'bg-gradient-to-tr from-yellow-400 to-amber-500 shadow-sm' :
-                'bg-green-600'
-            }`}>
-                <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white">
-                    <img src={image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt={title} />
-                </div>
+// author_avatar bu jenerik illüstrasyona düştüyse, o kanal için gerçek/özel bir fotoğraf yok demektir
+// (örn. daily_stars veya vet_advices tablosunda henüz hiç satır yok) — sahte fotoğraf göstermek yerine
+// dolu renkli ikon rozetine düşüyoruz, tıpkı SOS/Duyuru/Fırsat kanallarında olduğu gibi.
+const GENERIC_FALLBACK_IMG = '/images/moffi_pet_trio.png';
+
+const StoryCircle = ({ image, title, type = 'normal', delay = 0 }: { image: string, title: string, type?: 'normal' | 'add' | 'sos' | 'ai' | 'featured' | 'vet' | 'deals', delay?: number }) => {
+    const hasRealPhoto = image !== GENERIC_FALLBACK_IMG;
+    // Referans tasarım: SOS/Duyuru/Fırsat kanalları fotoğraf değil, düz renkli ikon rozeti olarak gösteriliyor
+    // + featured/vet kanallarında gerçek fotoğraf yoksa (boş veri) aynı mantıkla rozete düşüyor
+    const isSolidBadge = type === 'sos' || type === 'ai' || type === 'deals' || ((type === 'featured' || type === 'vet') && !hasRealPhoto);
+    const solidBg =
+        type === 'sos' ? '#D9432F' :
+        type === 'ai' ? '#A7A6E0' :
+        type === 'deals' ? '#F0C94E' :
+        type === 'featured' ? '#E8A33D' :
+        type === 'vet' ? '#7FC7B5' :
+        undefined;
+    const ringColor =
+        type === 'add' ? undefined :
+        type === 'featured' ? '#E8A33D' :
+        type === 'vet' ? '#7FC7B5' :
+        '#8FD14F';
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay, duration: 0.5, type: 'spring' }}
+            className="flex flex-col items-center gap-1 shrink-0"
+        >
+            <div className="relative cursor-pointer group">
+                {isSolidBadge ? (
+                    <div
+                        className="w-12 h-12 rounded-full flex items-center justify-center shadow-sm"
+                        style={{ backgroundColor: solidBg }}
+                    >
+                        {type === 'sos' && <BellRing className="w-4 h-4 text-white" strokeWidth={2} />}
+                        {type === 'ai' && <Megaphone className="w-4 h-4 text-white" strokeWidth={2} />}
+                        {type === 'deals' && <span className="text-[19px]">🎁</span>}
+                        {type === 'featured' && <Crown className="w-4 h-4 text-white" strokeWidth={2} />}
+                        {type === 'vet' && <Stethoscope className="w-4 h-4 text-white" strokeWidth={2} />}
+                    </div>
+                ) : type === 'add' ? (
+                    <div className="w-12 h-12 rounded-full p-[2px] bg-gray-200">
+                        <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white">
+                            <img src={image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt={title} />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="w-12 h-12 rounded-full p-[2px]" style={{ backgroundColor: ringColor }}>
+                        <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white">
+                            <img src={image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt={title} />
+                        </div>
+                    </div>
+                )}
+                {type === 'add' && (
+                    <div className="absolute -bottom-1 right-0 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100">
+                        <Plus className="w-3 h-3 text-gray-800" />
+                    </div>
+                )}
+                {type !== 'add' && (
+                    <span
+                        className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 border-white dark:border-[#131417]"
+                        style={{ backgroundColor: '#EE5B3D' }}
+                    />
+                )}
             </div>
-            {type === 'add' && (
-                <div className="absolute -bottom-1 right-0 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100">
-                    <Plus className="w-3.5 h-3.5 text-gray-800" />
-                </div>
-            )}
-            {type === 'sos' && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-sm border border-white text-white animate-pulse">
-                    <span className="text-[10px] font-black">!</span>
-                </div>
-            )}
-            {type === 'ai' && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center shadow-sm border border-white text-white">
-                    <Sparkles className="w-3 h-3" />
-                </div>
-            )}
-        </div>
-        <span className="text-[9.5px] font-bold text-gray-700 tracking-tight truncate max-w-[72px] text-center mt-0.5">{title}</span>
-    </motion.div>
-);
+            <span className="text-[7.5px] font-black text-[#201B16] dark:text-white tracking-tight leading-[1.15] max-w-[50px] min-h-[19px] text-center mt-0.5">{title}</span>
+        </motion.div>
+    );
+};
 
 const BentoCard = ({ children, className = "", delay = 0, onClick, layoutId }: { children: React.ReactNode, className?: string, delay?: number, onClick?: () => void, layoutId?: string }) => (
     <motion.div 
@@ -138,74 +171,33 @@ const BentoCard = ({ children, className = "", delay = 0, onClick, layoutId }: {
     </motion.div>
 );
 
-const QuickAccessBtn = ({ 
-    icon: Icon, 
-    title, 
-    subtitle,
-    gradient, 
-    bgTint,
+const QuickAccessBtn = ({
+    icon: Icon,
+    title,
+    tint = '#EE5B3D',
     delay = 0,
     className = "",
-    size = "small",
-    onClick 
-}: { 
-    icon: any, 
-    title: string, 
-    subtitle: string,
-    gradient: string, 
-    bgTint: string,
+    onClick
+}: {
+    icon: any,
+    title: string,
+    tint?: string,
     delay?: number,
     className?: string,
-    size?: "large" | "small",
-    onClick?: () => void 
+    onClick?: () => void
 }) => {
-    const isLarge = size === "large";
-    
-    if (isLarge) {
-        return (
-            <motion.button 
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay, duration: 0.5, type: "spring", stiffness: 150 }}
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={onClick}
-                className={`relative flex flex-col items-start p-3.5 sm:p-5 bg-gradient-to-br ${gradient} transition-all duration-300 cursor-pointer overflow-hidden w-full rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] ${className}`}
-            >
-                {/* Huge Background Icon */}
-                <Icon className="absolute -right-4 -bottom-4 w-24 h-24 sm:w-32 sm:h-32 text-white/20 -rotate-12 pointer-events-none drop-shadow-sm" />
-                
-                {/* Small Top-Left Icon */}
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-2.5 sm:mb-8 shadow-sm border border-white/20">
-                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" strokeWidth={2.5} />
-                </div>
-                
-                <div className="flex flex-col relative z-10 overflow-hidden w-full text-left">
-                    <span className="text-[13px] sm:text-[17px] font-black text-white tracking-tight leading-tight">{title}</span>
-                    <span className="text-[9.5px] sm:text-[11.5px] text-white/90 font-bold mt-1 sm:mt-1.5 leading-none">{subtitle}</span>
-                </div>
-            </motion.button>
-        );
-    }
-
     return (
-        <motion.button 
+        <motion.button
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ delay, duration: 0.5, type: "spring", stiffness: 150 }}
             whileHover={{ scale: 1.03, y: -2 }}
             whileTap={{ scale: 0.96 }}
             onClick={onClick}
-            className={`relative flex items-center px-2.5 sm:px-4 py-3 sm:py-4 gap-2 sm:gap-3.5 bg-white dark:bg-[#1a1b1e] border border-gray-100 dark:border-white/5 transition-all duration-300 cursor-pointer overflow-hidden w-full rounded-[1.2rem] sm:rounded-[1.5rem] shadow-sm hover:shadow-md ${className}`}
+            className={`flex flex-col items-center gap-1.5 px-1 py-2.5 bg-white dark:bg-[#1a1b1e] border border-[#ECE6D9] dark:border-white/5 transition-all duration-300 cursor-pointer w-full rounded-[1rem] shadow-sm hover:shadow-md ${className}`}
         >
-            <div className={`w-8 h-8 sm:w-11 sm:h-11 rounded-[0.8rem] sm:rounded-[1.1rem] bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm border border-white/10`}>
-                <Icon className="w-4 h-4 sm:w-[22px] sm:h-[22px] text-white drop-shadow-sm" strokeWidth={2.2} />
-            </div>
-            
-            <div className="flex flex-col relative z-10 overflow-hidden w-full text-left justify-center">
-                <span className="text-[10.5px] sm:text-[14px] font-black text-foreground tracking-tighter sm:tracking-tight leading-[1.1] sm:leading-tight">{title}</span>
-                <span className="text-[8.5px] sm:text-[10.5px] text-muted-foreground font-bold mt-0.5 sm:mt-1 leading-tight">{subtitle}</span>
-            </div>
+            <Icon className="w-7 h-7 shrink-0" style={{ color: tint }} strokeWidth={1.75} />
+            <span className="text-[8px] font-black text-[#201B16] dark:text-foreground text-center leading-[1.2]">{title}</span>
         </motion.button>
     );
 };
@@ -372,16 +364,25 @@ export default function LegendaryLightDashboard() {
     const { user: authUser, updateProfile } = useAuth();
     const { permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications(authUser?.id);
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
-    const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading, startWalk, endWalk } = useWalk();
-    const { subscriptions, cart, cartCount, cartTotal, updateCartItem, products, clearCart } = usePetShop();
-    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan } = useQuestEngine();
+    const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading } = useWalk();
+    const { subscriptions, cart, cartCount, cartTotal, updateCartItem, addToCart, products, clearCart } = usePetShop();
+    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm } = useQuestEngine();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
     const [dailyQuote, setDailyQuote] = useState(DAILY_QUOTES[0]);
     useEffect(() => {
         setDailyQuote(DAILY_QUOTES[Math.floor(Math.random() * DAILY_QUOTES.length)]);
-    }, []);// Dynamic 3D Parallax Tilt & Specular Shine Motion Values
+    }, []);
+
+    const timeGreeting = useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour < 6) return { text: 'İyi geceler', emoji: '🌙' };
+        if (hour < 12) return { text: 'Günaydın', emoji: '☀️' };
+        if (hour < 18) return { text: 'İyi günler', emoji: '🌤️' };
+        return { text: 'İyi akşamlar', emoji: '🌙' };
+    }, []);
+    // Dynamic 3D Parallax Tilt & Specular Shine Motion Values
     const tiltX = useMotionValue(200);
     const tiltY = useMotionValue(200);
     const rotateX = useTransform(tiltY, [0, 400], [5, -5]);
@@ -413,15 +414,117 @@ export default function LegendaryLightDashboard() {
 
     const hasNoPets = !isPetLoading && userPets.length === 0;
 
+    // "Hatırlatmalar" bölümü için gerçek Supabase verisi — aynı hook/servis fonksiyonları
+    // VaccineModal.tsx (useVaccineSchedule) ve MedicationModal.tsx (apiService.getPetMedications) ile paylaşılıyor.
+    const { schedule: vaccineSchedule } = useVaccineSchedule(activePetObj?.id || '');
+    const [activeMedications, setActiveMedications] = useState<any[]>([]);
+    const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!activePetObj?.id) { setActiveMedications([]); return; }
+        apiService.getPetMedications(activePetObj.id)
+            .then(setActiveMedications)
+            .catch(() => setActiveMedications([]));
+    }, [activePetObj?.id]);
+
+    useEffect(() => {
+        if (!authUser?.id || !activePetObj?.id) { setUpcomingAppointments([]); return; }
+        apiService.getAppointments(authUser.id)
+            .then((all: any[]) => {
+                const now = Date.now();
+                const upcoming = (all || []).filter((a: any) =>
+                    a.pet_id === activePetObj.id &&
+                    ['pending', 'confirmed'].includes(a.status) &&
+                    new Date(a.appointment_date).getTime() > now
+                );
+                setUpcomingAppointments(upcoming);
+            })
+            .catch(() => setUpcomingAppointments([]));
+    }, [authUser?.id, activePetObj?.id]);
+
+    const daysUntil = (dateStr: string) => Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
+    const reminders = useMemo(() => {
+        const now = Date.now();
+        const items: { id: string, icon: any, iconBg: string, title: string, dateLabel: string, daysLeft: number, badgeBg: string, badgeText: string }[] = [];
+
+        vaccineSchedule
+            .filter(v => v.status === 'pending' && new Date(v.dueDate).getTime() > now)
+            .slice(0, 3)
+            .forEach(v => {
+                items.push({
+                    id: `vaccine-${v.id}`,
+                    icon: Syringe,
+                    iconBg: 'rgba(238,91,61,0.12)',
+                    title: `${activePetObj?.name || 'Dostum'} — ${v.definition.name}`,
+                    dateLabel: new Date(v.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    daysLeft: daysUntil(v.dueDate),
+                    badgeBg: 'rgba(238,91,61,0.12)',
+                    badgeText: '#EE5B3D',
+                });
+            });
+
+        upcomingAppointments.forEach(a => {
+            items.push({
+                id: `appt-${a.id}`,
+                icon: Stethoscope,
+                iconBg: 'rgba(76,143,217,0.12)',
+                title: `${a.pet?.name || activePetObj?.name || 'Dostum'} — ${a.reason || a.clinic_name || 'Veteriner Randevusu'}`,
+                dateLabel: new Date(a.appointment_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
+                daysLeft: daysUntil(a.appointment_date),
+                badgeBg: 'rgba(76,143,217,0.12)',
+                badgeText: '#4C8FD9',
+            });
+        });
+
+        activeMedications.forEach(m => {
+            items.push({
+                id: `med-${m.id}`,
+                icon: Bone,
+                iconBg: 'rgba(143,209,79,0.15)',
+                title: `${activePetObj?.name || 'Dostum'} — ${m.name}`,
+                dateLabel: m.dosage || m.frequency || 'Aktif tedavi',
+                daysLeft: -1, // gün sayacı yok — tabloda "sonraki doz tarihi" alanı bulunmuyor
+                badgeBg: 'rgba(143,209,79,0.18)',
+                badgeText: '#5C9B2E',
+            });
+        });
+
+        return items.sort((a, b) => (a.daysLeft === -1 ? 1 : a.daysLeft) - (b.daysLeft === -1 ? 1 : b.daysLeft));
+    }, [vaccineSchedule, upcomingAppointments, activeMedications, activePetObj?.name]);
+
+    const suggestedProducts = useMemo(() => products.filter(p => p.inStock).slice(0, 6), [products]);
+
+    // Kalp ikonu şu an sadece görsel/oturum-içi bir tercih — kalıcı bir "favoriler" tablosu/kolonu
+    // veritabanında yok, bu yüzden gerçek veri gibi göstermemek için Supabase'e yazılmıyor.
+    const [favoritedProductIds, setFavoritedProductIds] = useState<Set<string>>(new Set());
+    const toggleFavoriteProduct = (id: string) => {
+        setFavoritedProductIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    // product.image_url kırık/404 dönerse gri kutu + 🐾 placeholder'a düşmek için
+    const [brokenProductImageIds, setBrokenProductImageIds] = useState<Set<string>>(new Set());
+    const markProductImageBroken = (id: string) => {
+        setBrokenProductImageIds(prev => new Set(prev).add(id));
+    };
+
     const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-    const walkedDistanceToday = useMemo(() => {
-        const historyToday = walkHistory
-            .filter(w => w.created_at && w.created_at.startsWith(todayStr))
-            .reduce((sum, w) => sum + (w.distance_meters || 0), 0);
-        const activeMeters = activeSession ? (activeSession.distance_meters || 0) : 0;
-        return (historyToday + activeMeters) / 1000; // in km
-    }, [activeSession, walkHistory, todayStr]);
+    // Baran'ın gerçek bulgusu: bu kart, kendi ayrı ("paralel, birbirinden habersiz")
+    // "bugün ne kadar yürüdün" hesabını tutuyordu — ve İKİ AYRI KÖK NEDENLE hep 0
+    // dönüyordu: (1) `WalkRecord`'da hiç `created_at` alanı yok (gerçek alanlar
+    // `started_at`/`ended_at`), filtre hep boş kalıyordu; (2) aktif yürüyüşün canlı
+    // mesafesi `activeSession.distance_meters` diye okunuyordu ama `useWalk()`
+    // sadece `distanceKm` döndürüyor — o da hep `undefined` oluyordu. Sonuç: kart hiç
+    // güncellenmiyordu, kullanıcı ne kadar yürürse yürüsün hep "0.0 km" gösteriyordu.
+    // `QuestEngineContext.todayDistanceKm` AYNI hesabı (bugün tamamlanan + aktif
+    // yürüyüşün canlısı) zaten doğru yapıyor (bkz. CLAUDE.md 8.14) — ayrı, bozuk bir
+    // kopya tutmak yerine tek doğru kaynağa bağlanıldı.
+    const walkedDistanceToday = todayDistanceKm;
 
     const targetActivityKm = useMemo(() => {
         const target = typeof activePetObj?.activity_target === 'number' 
@@ -434,12 +537,20 @@ export default function LegendaryLightDashboard() {
         return targetActivityKm > 0 ? Math.min(100, Math.round((walkedDistanceToday / targetActivityKm) * 100)) : 0;
     }, [walkedDistanceToday, targetActivityKm]);
 
+    // Yürüyüş verisinde kalori hiç tutulmuyor (WalkData/WalkRecord'da alan yok) — sabit/uydurma bir sayı
+    // göstermek yerine, gerçek girdilerden (bugün yürünen km + hayvanın kilosu) standart bir tahmin
+    // formülüyle (~1 kcal/kg/km, köpek yürüyüşü için yaygın kabul gören kaba yaklaşık değer) hesaplanıyor.
+    const estimatedWalkKcal = useMemo(() => {
+        const parsedWeight = parseFloat(String(activePetObj?.weight ?? ''));
+        const weightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 15; // gerçek ağırlık yoksa nötr bir varsayılan
+        return Math.max(0, Math.round(walkedDistanceToday * weightKg));
+    }, [walkedDistanceToday, activePetObj?.weight]);
+
     // PREMIUM DIJITAL GARDROP STATE YAPISI & COIN ENTEGRASYONU
 
 
     const [toastMsg, setToastMsg] = useState<string | null>(null);
     const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
-    const [transactions, setTransactions] = useState<any[]>([]);
     const [vaccines, setVaccines] = useState<any[]>([]);
 
     const [goalsTrigger, setGoalsTrigger] = useState(0);
@@ -500,15 +611,6 @@ export default function LegendaryLightDashboard() {
         
 
 
-        // 2. Transactions
-        const savedTx = localStorage.getItem(`moffi_transactions_${activePetObj.id}`);
-        if (savedTx) {
-            setTransactions(JSON.parse(savedTx));
-        } else {
-            setTransactions([]);
-            localStorage.setItem(`moffi_transactions_${activePetObj.id}`, JSON.stringify([]));
-        }
-
         // 3. Vaccines
         const savedVaccines = localStorage.getItem(`moffi_vaccines_${activePetObj.id}`);
         if (savedVaccines) {
@@ -520,22 +622,6 @@ export default function LegendaryLightDashboard() {
     }, [activePetObj?.id, goalsTrigger]);
 
 
-
-    const addTransaction = useCallback((type: 'gelir' | 'gider', title: string, amount: number) => {
-        if (!activePetObj?.id) return;
-        const newTx = {
-            id: Date.now(),
-            type,
-            title,
-            amount: `${type === 'gelir' ? '+' : '-'}${amount} PATI`,
-            date: 'Şimdi'
-        };
-        setTransactions(prev => {
-            const next = [newTx, ...prev];
-            localStorage.setItem(`moffi_transactions_${activePetObj.id}`, JSON.stringify(next));
-            return next;
-        });
-    }, [activePetObj?.id]);
 
     const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'events' | null>(null);
     const [isNfcScanning, setIsNfcScanning] = useState(false);
@@ -956,62 +1042,8 @@ export default function LegendaryLightDashboard() {
     }, [walkHistory]);
 
 
-    const dynamicOffer = useMemo(() => {
-        if (!activePetObj) return baseMockTemplate.specialOffer;
-        
-        const breed = (activePetObj.breed || '').toLowerCase();
-        const type = activePetObj.type || '🐶';
-        
-        // 1. Yavru (Kitten/Puppy)
-        if (activePetObj.age && parseInt(activePetObj.age.toString()) < 1) {
-             return {
-                title: 'Yavru Gelişim Maması',
-                desc: 'Yavru dostunuzun bağışıklığını ve kemik gelişimini destekleyen Hills premium mama.',
-                oldPrice: '699 TL',
-                newPrice: '549 TL',
-                discount: 'İNDİRİMLİ',
-                link: '/petshop?openProduct=ps-4'
-            };
-        }
-
-        // 2. Kedi
-        if (type === '🐱' || breed.includes('kedi') || breed.includes('scottish') || breed.includes('british')) {
-            return {
-                title: 'Özel Kedi Maması Kampanyası',
-                desc: 'Kediniz için özel formüle edilmiş Pro Plan Yetişkin Kedi Maması.',
-                oldPrice: '799 TL',
-                newPrice: '649 TL',
-                discount: 'ÇOK SATAN',
-                link: '/petshop?openProduct=ps-1'
-            };
-        }
-        
-        // 3. Büyük / Hareketli Köpek
-        if (breed.includes('golden') || breed.includes('labrador') || breed.includes('kangal') || activePetObj.size?.toLowerCase() === 'büyük') {
-            return {
-                title: 'Büyük Irk Eklem Koruyucu',
-                desc: 'Büyük ırk köpekler için özel formüle edilmiş glukozamin destekli koruyucu.',
-                oldPrice: '850 TL',
-                newPrice: '680 TL',
-                discount: '%20 İNDİRİM',
-                link: '/petshop'
-            };
-        }
-
-        // 4. Varsayılan (Herkes için uygun bakım)
-        return {
-            title: 'Tüy Bakım Fırçası',
-            desc: `${activePetObj.name || 'Dostunuz'} için profesyonel dökülme önleyici Furminator tüy bakım fırçası.`,
-            oldPrice: '499 TL',
-            newPrice: '399 TL',
-            discount: 'ÇOK SATAN',
-            link: '/petshop?openProduct=ps-11'
-        };
-    }, [activePetObj, baseMockTemplate.specialOffer]);
-
     const pet = {
         ...baseMockTemplate,
-        specialOffer: dynamicOffer,
         id: activePetObj?.id,
         name: activePetObj?.name || baseMockTemplate.name,
         image: activePetObj?.image || activePetObj?.avatar || '',
@@ -1037,6 +1069,22 @@ export default function LegendaryLightDashboard() {
             avatarMock: activePetObj?.image || activePetObj?.avatar || '',
         }
     };
+
+    // Baran'ın gerçek bulgusu: "Yürüyüş Radarı" kartı, aktif bir yürüyüş varken
+    // sadece PetSwitcher'da O AN seçili pet'in adını/hedefini gösteriyordu — Zeytin
+    // yürüyüş halindeyken kullanıcı switcher'dan başka bir pet'e geçerse (veya farklı
+    // bir pet zaten seçiliyse), kart YANLIŞ pet'i "yürüyor" gösteriyordu. Artık
+    // yürüyüşün kendisi (ActivityContext/useWalk) hangi pet olduğunu taşıyor —
+    // `activeSession.petName` walkStart anında yakalanan gerçek isim, switcher'daki
+    // seçimden tamamen bağımsız.
+    const walkingPet = React.useMemo(() => {
+        if (!activeSession?.petId) return null;
+        return userPets.find(p => String(p.id) === String(activeSession.petId)) || null;
+    }, [activeSession?.petId, userPets]);
+    const walkingPetName = activeSession ? (activeSession.petName || walkingPet?.name || pet.name) : pet.name;
+    const walkingPetActivityTarget = activeSession && walkingPet
+        ? (typeof walkingPet.activity_target === 'number' ? walkingPet.activity_target : (walkingPet.sos_settings?.activity_target ?? pet.ringProgress.activity))
+        : pet.ringProgress.activity;
 
     const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
@@ -1301,28 +1349,6 @@ export default function LegendaryLightDashboard() {
         return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     };
 
-    const handleStartWalk = useCallback(async () => {
-        const session = await startWalk();
-        if (session) setToastMsg(`🐾 ${pet.name} ile yürüyüş başladı! GPS aktif.`);
-        else setToastMsg('⚠️ Yürüyüş başlatılamadı. Konuma izin verdiğinizden emin olun.');
-    }, [startWalk, pet.name]);
-
-    const handleEndWalk = useCallback(async () => {
-        const result = await endWalk('happy');
-        if (result) {
-            const distM = result.distance_meters || 0;
-            const distKm = (distM / 1000).toFixed(2);
-            const patiEarned = Math.round(distM * 0.05); // ~50 PATI/km
-            if (patiEarned > 0) {
-                // setWalletBalance(prev => prev + patiEarned);
-                addTransaction('gelir', 'Yürüyüş Ödülü 🐾', patiEarned);
-            }
-            setToastMsg(`🎉 Yürüyüş tamamlandı! ${distKm} KM • +${patiEarned} PATI kazanıldı 🔥`);
-        }
-    }, [endWalk, addTransaction]);
-
-
-
     // Dynamic Stories Hook & States
     const { storyGroups } = useStories();
     const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
@@ -1469,7 +1495,7 @@ export default function LegendaryLightDashboard() {
     }
 
     return (
-        <div className="min-h-screen w-full bg-background text-foreground font-sans selection:bg-green-500/30 overflow-x-hidden pb-32">
+        <div className={`min-h-screen w-full bg-[#F7F3EA] dark:bg-zinc-950 text-[#201B16] dark:text-foreground selection:bg-[#EE5B3D]/30 overflow-x-hidden pb-32 ${nunito.className}`}>
             
             {/* Top Floating Toast Notification */}
             <AnimatePresence>
@@ -1506,26 +1532,46 @@ export default function LegendaryLightDashboard() {
                 transition={{ duration: 0.4, ease: 'easeInOut' }}
                 className="max-w-md mx-auto pt-6 px-5 relative"
             >
-                {/* GLOBAL TOP PHOTO BACKGROUND */}
-                <div className="absolute top-0 left-0 right-0 h-72 md:h-80 z-0 overflow-hidden rounded-b-[3rem] shadow-sm pointer-events-none">
-                    <img 
-                        src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=800" 
-                        alt="Moffi Community Background" 
-                        className="w-full h-full object-cover opacity-100 dark:opacity-90 scale-105 filter contrast-[1.05]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-background z-10" />
-                </div>
-                
+                {/* GLOBAL TOP GRADIENT BACKGROUND — kilitli tasarım: #EAF2F6 → #F7F3EA yumuşak geçiş, üstünde tam genişlikte net köpek fotoğrafı (sadece evcil hayvanı olan kullanıcıda; boş-durum ekranının kendi tasarımı var) */}
+                {!hasNoPets && (
+                    <>
+                        <div className="absolute top-0 left-0 right-0 h-64 md:h-80 z-0 pointer-events-none overflow-hidden dark:hidden">
+                            <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #EAF2F6 0%, #F7F3EA 85%)' }} />
+                            <img
+                                src="/images/header-hero.jpg"
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-cover"
+                                style={{ objectPosition: '68% 24%' }}
+                            />
+                        </div>
+                        <div className="absolute top-0 left-0 right-0 h-64 md:h-80 z-0 pointer-events-none hidden dark:block bg-gradient-to-b from-zinc-900 to-zinc-950" />
+
+                        {/* MOFFI WORDMARK — kilitli tasarım: logo + tagline, fotoğrafın üstünde */}
+                        <div className="relative z-20 pt-1 mb-2">
+                            <div className={`flex items-center gap-1.5 text-[22px] font-extrabold text-[#1C1712] dark:text-white leading-none ${baloo2.className}`}>
+                                Moffi <PawPrint className="w-4 h-4 text-[#EE5B3D]" strokeWidth={2.3} />
+                            </div>
+                            <div className="text-[10px] font-bold text-[#8A8175] dark:text-white/70 mt-1">Patiler, daha güzel yarınlar. ♡</div>
+                        </div>
+                    </>
+                )}
+                {hasNoPets && (
+                    <div className="absolute top-0 left-0 right-0 h-72 md:h-80 z-0 rounded-b-[3rem] pointer-events-none dark:hidden" style={{ background: 'linear-gradient(180deg, #EAF2F6 0%, #F7F3EA 85%)' }} />
+                )}
+                {hasNoPets && (
+                    <div className="absolute top-0 left-0 right-0 h-72 md:h-80 z-0 rounded-b-[3rem] pointer-events-none hidden dark:block bg-gradient-to-b from-zinc-900 to-zinc-950" />
+                )}
+
                 {/* 1. Header */}
                 <header className="flex justify-between items-center mb-6 relative z-20">
                     {hasNoPets ? (
                         <div className="flex items-center gap-1.5">
-                            <div className="w-10 h-10 flex items-center justify-center text-white">
-                                <Sparkles className="w-6 h-6 drop-shadow-md" />
+                            <div className="w-10 h-10 flex items-center justify-center text-[#EE5B3D]">
+                                <Sparkles className="w-6 h-6" />
                             </div>
                             <div className="flex flex-col text-left">
-                                <span className="text-[15px] font-black text-white drop-shadow-md tracking-tight leading-none">Moffi</span>
-                                <span className="text-[10px] font-bold text-white/80 drop-shadow-sm mt-0.5 leading-none">Süper App</span>
+                                <span className={`text-[15px] font-black text-[#1C1712] dark:text-white tracking-tight leading-none ${baloo2.className}`}>Moffi</span>
+                                <span className="text-[10px] font-bold text-[#8A8175] dark:text-white/70 mt-0.5 leading-none">Süper App</span>
                             </div>
                         </div>
                     ) : (
@@ -1556,12 +1602,12 @@ export default function LegendaryLightDashboard() {
                             whileTap={{ scale: 0.9 }}
                             onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
                             className={`w-10 h-10 rounded-full flex items-center justify-center relative group cursor-pointer ${
-                                lostPetMode 
-                                    ? 'bg-red-600 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
-                                    : 'bg-white/10 dark:bg-black/20 backdrop-blur-md border border-red-500/30 hover:bg-red-500/20 transition-all shadow-sm'
+                                lostPetMode
+                                    ? 'bg-red-600 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]'
+                                    : 'bg-white dark:bg-black/20 border border-[#ECE6D9] dark:border-red-500/30 hover:bg-red-50 dark:hover:bg-red-500/20 transition-all shadow-sm'
                                 }`}
                         >
-                            <ShieldAlert className={`w-5 h-5 ${lostPetMode ? 'text-white' : 'text-red-500 drop-shadow-md group-hover:scale-110 transition-transform'}`} strokeWidth={2} />
+                            <ShieldAlert className={`w-5 h-5 ${lostPetMode ? 'text-white' : 'text-red-500 group-hover:scale-110 transition-transform'}`} strokeWidth={2} />
                             
                             {!lostPetMode && (
                                 <>
@@ -1579,7 +1625,7 @@ export default function LegendaryLightDashboard() {
                             onClick={() => window.dispatchEvent(new CustomEvent('open-notifications-drawer'))}
                             className="p-1.5 relative group"
                         >
-                            <Bell className="w-6 h-6 text-white drop-shadow-md group-hover:scale-110 transition-transform" />
+                            <Bell className="w-6 h-6 text-[#3A342C] dark:text-white group-hover:scale-110 transition-transform" />
                             <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full shadow-sm animate-pulse" />
                         </button>
 
@@ -1687,32 +1733,45 @@ export default function LegendaryLightDashboard() {
                 ) : (
                     <>
 
-                {/* 2. Hikayeler (Stories) & Greeting */}
-                <section className="mb-6 relative -mx-5 px-5 pt-8 pb-4">
-                    {/* Greeting Header */}
-                    <div className="relative z-20 mb-6 px-1 pt-2">
-                        <h2 className="text-[26px] font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-tight">
-                            İyi ki bizimlesin,<br/>{authUser?.name?.split(' ')[0] || 'Dostum'}! 🐾
+                {/* 2. Greeting — fotoğrafın üstünde kalıyor */}
+                <section className="relative -mx-5 px-5 pt-5">
+                    <div className="relative z-20 mb-4 px-1 pt-2">
+                        <h2
+                            className={`text-[26px] font-black text-[#201B16] dark:text-white tracking-tight leading-tight ${baloo2.className}`}
+                            style={{ textShadow: '0 0 10px rgba(247,243,234,0.9), 0 0 4px rgba(247,243,234,0.9)' }}
+                        >
+                            {timeGreeting.text} {authUser?.name?.split(' ')[0] || 'Dostum'}! {timeGreeting.emoji}
                         </h2>
-                        <div className="mt-2 inline-block">
-                            <p className="text-[13px] font-bold text-white/95 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] italic">
+                        <div className="mt-2 inline-block max-w-[230px]">
+                            <p
+                                className="text-[13px] font-bold text-[#3A342C] dark:text-white/80 italic leading-snug"
+                                style={{ textShadow: '0 0 10px rgba(247,243,234,0.95), 0 0 4px rgba(247,243,234,0.95)' }}
+                            >
                                 "{dailyQuote}"
                             </p>
                         </div>
                     </div>
-                    <div 
+                </section>
+
+                {/* Hikayeler — beyaz/krem "sheet" fotoğrafın alt kısmına biniyor; üstteki yuvarlak köşeler
+                    ortada fotoğrafı erken kapatırken, kenarlarda fotoğrafın doğal alt sınırına kadar açık kalıyor
+                    (referanstaki "köşeler aşağı doğru kavisli" görünümü buradan geliyor) */}
+                <div className="relative z-10 -mt-8 mb-6 rounded-t-[2rem] bg-[#F7F3EA] dark:bg-[#131417] pt-6 pb-1 -mx-5 px-5">
+                    <div
                         ref={storiesScroll.ref}
                         onMouseDown={storiesScroll.onMouseDown}
                         onMouseLeave={storiesScroll.onMouseLeave}
                         onMouseUp={storiesScroll.onMouseUp}
                         onMouseMove={storiesScroll.onMouseMove}
-                        className="flex gap-4 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-5 px-5 items-center cursor-grab active:cursor-grabbing select-none"
+                        className="flex gap-2 overflow-x-auto no-scrollbar pb-2 pt-1 items-start justify-between cursor-grab active:cursor-grabbing select-none"
                     >
                         {storyGroups.map((group, index) => {
-                            let customType: 'normal' | 'sos' | 'ai' | 'featured' = 'normal';
+                            let customType: 'normal' | 'sos' | 'ai' | 'featured' | 'vet' | 'deals' = 'normal';
                             if (group.user_id === 'system_sos') customType = 'sos';
                             if (group.user_id === 'system_announcements') customType = 'ai';
                             if (group.user_id === 'system_featured_pets') customType = 'featured';
+                            if (group.user_id === 'system_vet') customType = 'vet';
+                            if (group.user_id === 'system_deals') customType = 'deals';
                             
                             // Get last word or a clean subtitle
                             const cleanTitle = group.author_name.split(' ').slice(1).join(' ') || group.author_name;
@@ -1737,71 +1796,172 @@ export default function LegendaryLightDashboard() {
                             );
                         })}
                     </div>
-                </section>
-                {/* 2.5 Hızlı Erişim (Quick Access) - 6 Premium Cards */}
-                <section className="mb-10 px-1 relative z-20">
-                    <div className="grid grid-cols-2 gap-3 relative z-10">
-                        <div className="col-span-2 grid grid-cols-2 gap-3">
-                            <QuickAccessBtn size="large" icon={Radio} title="Kayıp & Sahiplen" subtitle="İlan Merkezi" bgTint="" gradient="from-red-400 to-rose-600" delay={0.1} onClick={() => router.push('/community?tab=radar')} />
-                            <QuickAccessBtn size="large" icon={Stethoscope} title="Veteriner" subtitle="Sağlık Asistanı" bgTint="" gradient="from-indigo-400 to-purple-600" delay={0.15} onClick={() => router.push('/vet')} />
+                </div>
+
+                {/* Bugünkü Yürüyüş — kilitli tasarım kartı, GERÇEK yürüyüş verisiyle (useWalk/useActivity — sayfada zaten mevcut hook).
+                    Not: reference'taki "kalori" istatistiği gerçek veride yok (WalkData'da kalori alanı bulunmuyor),
+                    onun yerine mevcut "toplam mesafe" (walkStats) gösteriliyor — sahte sayı üretilmiyor. */}
+                <section className="mb-6 -mx-3 relative z-20">
+                    <div className="relative rounded-xl overflow-hidden min-h-[220px] bg-[#2B2A24]">
+                        <img src="/images/walk-normal.jpg" className="absolute inset-0 w-full h-full object-cover" alt="Bugünkü Yürüyüş" />
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/80" />
+                        <div className="relative px-4 pt-4 pb-1.5 h-full flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-[26px] h-[26px] rounded-lg bg-[#8FD14F] flex items-center justify-center shrink-0">
+                                        <Footprints className="w-3.5 h-3.5 text-[#1D2B0E]" strokeWidth={2.2} />
+                                    </div>
+                                    <span className="text-white text-[12.5px] font-black">Bugünkü Yürüyüş</span>
+                                </div>
+                                <span className="bg-white/92 rounded-full px-2.5 py-1 text-[#3A342C] text-[9.5px] font-black whitespace-nowrap">Hedef {targetActivityKm.toFixed(1)} km</span>
+                            </div>
+                            <div>
+                                <div className={`text-white font-bold ${baloo2.className}`} style={{ fontSize: 40 }}>
+                                    {walkedDistanceToday.toFixed(1)} <span className="text-[20px] font-bold text-white/70" style={{ fontFamily: nunito.style.fontFamily }}>km</span> <span className="text-[14px] font-bold text-white/70" style={{ fontFamily: nunito.style.fontFamily }}>/ {targetActivityKm.toFixed(1)} km</span>
+                                </div>
+                                <div className="h-1.5 rounded-full bg-white/25 overflow-hidden mt-2 w-[75%]">
+                                    <div className="h-full bg-[#8FD14F] rounded-full transition-all" style={{ width: `${activityPercent}%` }} />
+                                </div>
+                                <div className="text-white/75 text-[9.5px] font-bold mt-1">%{activityPercent}</div>
+                            </div>
+                            <div className="flex items-center justify-center mt-5">
+                                <div className="flex items-center gap-1">
+                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2.5 py-1.5 text-white shrink-0 whitespace-nowrap">
+                                        <div className="flex items-center gap-1 text-[10px] font-black">
+                                            <Clock className="w-3 h-3" /> {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
+                                        </div>
+                                        <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Süre</div>
+                                    </div>
+                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2.5 py-1.5 text-white shrink-0 whitespace-nowrap">
+                                        <div className="flex items-center gap-1 text-[10px] font-black">
+                                            <Flame className="w-3 h-3" /> {estimatedWalkKcal} kcal
+                                        </div>
+                                        <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Kalori</div>
+                                    </div>
+                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2.5 py-1.5 text-white shrink-0 whitespace-nowrap">
+                                        <div className="flex items-center gap-1 text-[10px] font-black">
+                                            <MapPin className="w-3 h-3" /> {Math.max(0, targetActivityKm - walkedDistanceToday).toFixed(1)} km
+                                        </div>
+                                        <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Kalan</div>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => window.dispatchEvent(new CustomEvent('open-walk-panel'))}
+                                    className="bg-gradient-to-r from-[#F3735A] to-[#EE5B3D] rounded-md px-3 py-2 text-white text-[10.5px] font-black text-center flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ml-3 shadow-lg shadow-black/30 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                                >
+                                    {activeSession ? (activeSession.isPaused ? 'Devam Et' : 'Takibi Gör') : 'Yürüyüşe Çık'} <ArrowUpRight className="w-4 h-4 shrink-0" />
+                                </button>
+                            </div>
                         </div>
-                        <QuickAccessBtn size="small" icon={ShoppingBag} title="Market" subtitle="Moffi Petshop" bgTint="" gradient="from-orange-400 to-red-500" delay={0.2} onClick={() => router.push('/petshop')} />
-                        <QuickAccessBtn size="small" icon={Syringe} title="Aşı Takvimi" subtitle="Sağlık Geçmişi" bgTint="" gradient="from-emerald-400 to-teal-600" delay={0.25} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
-                        
-                        <QuickAccessBtn size="small" icon={Trophy} title="Görev Merkezi" subtitle="Kazan & Harca" bgTint="" gradient="from-yellow-400 to-amber-600" delay={0.3} onClick={() => router.push('/quests')} />
-                        <QuickAccessBtn size="small" icon={Star} title="moffi.net" subtitle="Kurumsal Sitemiz" bgTint="" gradient="from-purple-400 to-fuchsia-600" delay={0.35} onClick={() => window.open('https://moffi.net', '_blank')} />
                     </div>
                 </section>
-                {/* 8.5 Arcade / Game Center Premium Banner */}
-                <section className="mb-10 px-5 relative z-20">
-                    <motion.div 
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => router.push('/game')}
-                        className="relative w-full h-32 md:h-36 rounded-[2rem] overflow-hidden cursor-pointer shadow-[0_12px_40px_rgba(139,92,246,0.3)] dark:shadow-[0_12px_40px_rgba(139,92,246,0.2)] border border-indigo-500/20 dark:border-indigo-500/30 group bg-white dark:bg-[#1a1b1e] flex items-center justify-between px-6 md:px-8"
-                    >
-                        {/* Background Gradients & Effects */}
-                        <div className="absolute right-0 top-0 bottom-0 w-2/3 bg-gradient-to-l from-indigo-500/15 to-transparent pointer-events-none z-0" />
-                        <div className="absolute -right-10 -top-10 w-48 h-48 bg-purple-500/30 dark:bg-purple-500/40 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-500/40 transition-colors z-0" />
-                        <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-cyan-500/20 dark:bg-cyan-500/30 rounded-full blur-2xl pointer-events-none group-hover:bg-cyan-500/35 transition-colors z-0" />
-                        
-                        {/* Giant Mascot in Background - Right Aligned, Much More Visible */}
-                        <div className="absolute right-4 md:right-24 -top-[30%] -bottom-[30%] w-64 md:w-72 pointer-events-none z-0 mix-blend-screen filter brightness-125 contrast-150 saturate-150" style={{ maskImage: 'radial-gradient(ellipse at center, black 60%, transparent 85%)', WebkitMaskImage: 'radial-gradient(ellipse at center, black 60%, transparent 85%)' }}>
-                            <img 
-                                src="/images/robot_moffi.jpg" 
-                                alt="Robot Moffi Background" 
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+
+                {/* 8.5 Oyun Merkezi + Görev Merkezi — kilitli tasarım: yan yana iki tam kart (true-reference sırası: Hızlı Erişim'den ÖNCE) */}
+                <section className="mb-6 -mx-2 relative z-20">
+                    <div className="grid gap-2.5" style={{ gridTemplateColumns: '1.34fr 1fr' }}>
+                        {/* Oyun Merkezi — kilitli tasarım: game-center.jpg, gerçek seviye/puan verisi (useQuestEngine) */}
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => router.push('/game')}
+                            className="relative rounded-[22px] overflow-hidden cursor-pointer min-h-[123px] min-w-0 bg-[#1D2233] flex flex-col justify-between p-3.5 group"
+                        >
+                            {/* Puslu arka plan: köpek+top hariç her yer bulanık */}
+                            <img
+                                src="/images/game-center.jpg"
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-cover scale-110"
+                                style={{ objectPosition: '54% 26%', filter: 'blur(5px)' }}
                             />
-                        </div>
-                        
-                        <div className="relative z-10 flex flex-col justify-center h-full max-w-[65%]">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] font-black tracking-widest text-indigo-600 dark:text-indigo-400 uppercase drop-shadow-sm bg-white/50 dark:bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                                    Oyun Merkezi
-                                </span>
+                            {/* Net katman: sadece köpek+top bölgesi (maske ile) */}
+                            <img
+                                src="/images/game-center.jpg"
+                                alt="Oyun Merkezi"
+                                className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                style={{
+                                    objectPosition: '54% 26%',
+                                    WebkitMaskImage: 'radial-gradient(ellipse 52% 62% at 48% 42%, black 55%, transparent 92%)',
+                                    maskImage: 'radial-gradient(ellipse 52% 62% at 48% 42%, black 55%, transparent 92%)',
+                                }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/15 to-black/70" />
+                            <div className="relative z-10 flex items-center gap-1.5 text-white text-[12px] font-black" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+                                <Gamepad2 className="w-3.5 h-3.5" /> Oyun Merkezi
                             </div>
-                            <h3 className="text-[20px] md:text-[24px] font-black text-foreground tracking-tight leading-tight drop-shadow-md">
-                                Eğlenirken<br/>Ödülleri Topla
-                            </h3>
-                        </div>
-                        
-                        {/* Moffi Puan Display / CTA */}
-                        <div className="relative z-10 flex flex-col items-end justify-center shrink-0">
-                            <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-[16px] p-[1.5px] shadow-sm mb-2 group-hover:shadow-md transition-shadow group-hover:scale-105">
-                                <div className="bg-white dark:bg-[#1a1b1e] rounded-[14px] px-3.5 py-1.5 flex items-center gap-2">
-                                    <Coins className="w-4 h-4 text-amber-500 drop-shadow-sm" />
-                                    <span className="text-[14px] font-black text-foreground">
-                                        {totalPatiPuan.toLocaleString('tr-TR')} <span className="text-amber-500 text-[10px]">PT</span>
+                            <div className="relative z-10">
+                                <div className="text-white/90 text-[8.5px] font-bold mb-2" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+                                    4 eğlenceli oyun seni bekliyor!
+                                </div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-white text-[9px] font-black" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>Seviye {level}</span>
+                                    <span className="text-[#F0C94E] text-[9px] font-black flex items-center gap-1" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+                                        <Crown className="w-3 h-3" /> {totalPatiPuan.toLocaleString('tr-TR')} puan
                                     </span>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 h-[5px] rounded-full bg-white/25 overflow-hidden">
+                                        <div
+                                            className="h-full bg-[#8FD14F] rounded-full"
+                                            style={{ width: `${levelXpRequired > 0 ? Math.min(100, Math.round((levelXpCurrent / levelXpRequired) * 100)) : 0}%` }}
+                                        />
+                                    </div>
+                                    <div className="w-7 h-7 rounded-full bg-[#201B16] flex items-center justify-center shrink-0">
+                                        <ArrowRight className="w-3.5 h-3.5 text-white" />
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1 text-[10.5px] font-bold text-gray-500 dark:text-gray-400 group-hover:text-indigo-500 transition-colors bg-white/60 dark:bg-black/60 backdrop-blur-md px-3 py-1 rounded-full shadow-sm">
-                                Hemen Oyna <ChevronRight className="w-3.5 h-3.5" />
+                        </motion.div>
+
+                        {/* Görev Merkezi */}
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => router.push('/quests')}
+                            className="relative rounded-[22px] cursor-pointer min-h-[123px] min-w-0 overflow-hidden bg-white dark:bg-[#1a1b1e] border border-[#ECE6D9] dark:border-white/5 flex flex-col justify-between p-3.5 pr-4 pb-4"
+                        >
+                            <div>
+                                <div className="flex items-center gap-1.5 text-[#201B16] dark:text-foreground text-[12px] font-black">
+                                    <Award className="w-3.5 h-3.5 text-[#EE5B3D]" /> Görev Merkezi
+                                </div>
+                                <p className="text-[8.5px] text-[#8A8175] dark:text-gray-400 font-bold mt-1.5 leading-tight">
+                                    Günlük görevlerini tamamla, rozetlerini topla!
+                                </p>
                             </div>
-                        </div>
-                    </motion.div>
+                            <div>
+                                <div className="text-[#EE5B3D] text-[10px] font-black mb-1.5">🔥 {currentStreak} günlük seri!</div>
+                                <div className="flex items-center gap-1">
+                                    {[0, 1, 2, 3].map((idx) => (
+                                        <div
+                                            key={idx}
+                                            className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-white text-[8px] shrink min-w-0 ${idx < currentStreak ? 'bg-[#8FD14F]' : 'bg-[#EDE7D9] dark:bg-zinc-800'}`}
+                                        >
+                                            {idx < currentStreak ? '✓' : ''}
+                                        </div>
+                                    ))}
+                                    <div className="w-6 h-6 rounded-full bg-[#201B16] flex items-center justify-center shrink-0 ml-auto">
+                                        <ArrowRight className="w-3 h-3 text-white" />
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
                 </section>
 
+                {/* 2.5 Hızlı Erişim (Quick Access) — true-reference: tek sıra, 5 kolon */}
+                <section className="mb-8 px-1 relative z-20">
+                    <div className="flex items-baseline justify-between mb-3">
+                        <h3 className={`text-[15px] font-bold text-[#201B16] dark:text-foreground tracking-tight ${baloo2.className}`}>Hızlı Erişim</h3>
+                        <span className="text-[9.5px] font-black text-[#EE5B3D] shrink-0">Tümünü Gör →</span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5 relative z-10">
+                        <QuickAccessBtn icon={Home} title="Kayıp & Sahiplen" tint="#EE5B3D" delay={0.1} onClick={() => router.push('/community?tab=radar')} />
+                        <QuickAccessBtn icon={ShoppingBag} title="Market Petshop" tint="#E5473D" delay={0.15} onClick={() => router.push('/petshop')} />
+                        <QuickAccessBtn icon={Stethoscope} title="Veteriner" tint="#4C8FD9" delay={0.2} onClick={() => router.push('/vet')} />
+                        <QuickAccessBtn icon={Calendar} title="Aşı Takvimi" tint="#8B7FD9" delay={0.25} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
+                        <QuickAccessBtn icon={Bone} title="Beslenme & Su" tint="#8FD14F" delay={0.3} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} />
+                    </div>
+                </section>
 
                 {/* 9. Hero Pet Identity Card - Premium 3D Parallax Card */}
                 <div 
@@ -1811,7 +1971,7 @@ export default function LegendaryLightDashboard() {
                 >
                     {/* Breathing Organic Glow Blobs behind the Card */}
                     <div className="absolute top-0 left-0 w-48 h-48 bg-emerald-500/20 dark:bg-emerald-500/30 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
-                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-purple-500/20 dark:bg-purple-500/30 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
+                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-orange-500/20 dark:bg-orange-500/30 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
 
                     <motion.div 
                         layout
@@ -1952,12 +2112,12 @@ export default function LegendaryLightDashboard() {
                             className="mt-4 p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10 flex justify-between items-center cursor-pointer group hover:bg-black/10 dark:hover:bg-black/10 dark:bg-white/10 transition-colors duration-300 relative z-10 shadow-inner"
                         >
                             <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-950 flex items-center justify-center text-[#EE5B3D] dark:text-orange-400">
                                     <Shirt className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <span className="text-[8.5px] font-black text-purple-700 dark:text-purple-400 uppercase tracking-widest block">AI TARZI & GARDIROP</span>
-                                    <span className="text-[10px] font-bold text-gray-700 dark:text-zinc-300 mt-0.5 block group-hover:text-purple-800 dark:group-hover:text-purple-300 transition-colors">{pet.dressing.activeOutfit}</span>
+                                    <span className="text-[8.5px] font-black text-[#EE5B3D] dark:text-orange-400 uppercase tracking-widest block">AI TARZI & GARDIROP</span>
+                                    <span className="text-[10px] font-bold text-gray-700 dark:text-zinc-300 mt-0.5 block group-hover:text-[#c9481f] dark:group-hover:text-orange-300 transition-colors">{pet.dressing.activeOutfit}</span>
                                 </div>
                             </div>
                             <button 
@@ -1969,7 +2129,7 @@ export default function LegendaryLightDashboard() {
                                         window.location.href = isLocal ? `http://localhost:5173/?${query}` : `/kombinle?${query}`;
                                     }
                                 }}
-                                className="flex items-center gap-1 bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-400 border border-purple-200/50 dark:border-purple-900/50 text-[9.5px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all hover:scale-95 shadow-sm shrink-0"
+                                className="flex items-center gap-1 bg-white dark:bg-zinc-800 text-[#EE5B3D] dark:text-orange-400 border border-orange-200/50 dark:border-orange-900/50 text-[9.5px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all hover:scale-95 shadow-sm shrink-0"
                             >
                                 <span>Kombinle</span>
                                 <Plus className="w-3 h-3" />
@@ -2039,7 +2199,7 @@ export default function LegendaryLightDashboard() {
                                                 isCompleted 
                                                     ? 'bg-[#EAF5EC] dark:bg-green-950/40 border-green-200 dark:border-green-900/30 text-green-700 dark:text-green-400 shadow-sm shadow-green-100 dark:shadow-none' 
                                                     : isCurrentDay
-                                                        ? 'bg-purple-500/10 dark:bg-purple-500/20 border-purple-500/30 dark:border-purple-500/40 text-purple-600 dark:text-purple-400 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.2)]'
+                                                        ? 'bg-orange-500/10 dark:bg-orange-500/20 border-orange-500/30 dark:border-orange-500/40 text-[#EE5B3D] dark:text-orange-400 animate-pulse shadow-[0_0_8px_rgba(238,91,61,0.25)]'
                                                         : 'bg-gray-50 dark:bg-zinc-800/40 border-gray-100 dark:border-zinc-700/30 text-gray-300 dark:text-zinc-600'
                                             }`}>
                                                 {isCompleted ? '✓' : day}
@@ -2070,7 +2230,7 @@ export default function LegendaryLightDashboard() {
                                     </span>
                                 </div>
                                 <h4 className="text-base font-black text-gray-800 mt-1">
-                                    {activeSession ? `${pet.name} Yürüyor! 🐾` : 'Yürüyüşü Başlat'}
+                                    {activeSession ? `${walkingPetName} Yürüyor! 🐾` : 'Yürüyüşü Başlat'}
                                 </h4>
                                 <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-0.5">
                                     {activeSession
@@ -2124,7 +2284,7 @@ export default function LegendaryLightDashboard() {
                             </svg>
                             <span className="absolute right-4 bottom-2.5 text-[9px] font-bold text-gray-500 dark:text-gray-400">
                                 {activeSession
-                                    ? `${(activeSession.distanceKm || 0).toFixed(2)} / ${pet.ringProgress.activity > 0 ? (pet.ringProgress.activity / 28).toFixed(1) : '3.5'} KM`
+                                    ? `${(activeSession.distanceKm || 0).toFixed(2)} / ${walkingPetActivityTarget > 0 ? (walkingPetActivityTarget / 28).toFixed(1) : '3.5'} KM`
                                     : 'GPS ile canlı takip'}
                             </span>
                         </div>
@@ -2266,101 +2426,164 @@ export default function LegendaryLightDashboard() {
 
                 <TodayForYouEngine />
 
-                <section className="mb-6">
-                    {/* Hızlı Erişim was moved to the top of the feed */}
-                </section>
-
-                {/* 7. Super App Vision Banner */}
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="relative bg-gradient-to-br from-slate-900 to-indigo-950 dark:from-zinc-900 dark:to-zinc-950 rounded-[32px] p-1 overflow-hidden shadow-2xl mb-8 group"
-                >
-                    {/* Animated background glows */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl group-hover:bg-indigo-500/30 transition-all duration-700 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-500/10 rounded-full blur-3xl group-hover:bg-fuchsia-500/20 transition-all duration-700 pointer-events-none" />
-                    
-                    <div className="bg-slate-900/60 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[28px] p-6 relative z-10 border border-black/10 dark:border-white/10 h-full flex flex-col">
-                        
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                                <Sparkles className="w-4 h-4 text-white" />
-                            </div>
+                {/* Senin İçin Öneriler — gerçek Supabase verisi: products tablosu (usePetShop hook'u zaten sayfada mevcuttu) — true-reference sırası: Öneriler, Hatırlatmalar'dan önce */}
+                {suggestedProducts.length > 0 && (
+                    <section className="mb-6">
+                        <div className="flex items-baseline justify-between mb-3 px-1">
                             <div>
-                                <h4 className="text-lg font-black text-white tracking-tight leading-none">Moffi Ekosistemi</h4>
-                                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mt-0.5 block">Süper Uygulama</span>
+                                <h3 className={`text-[15px] font-bold text-[#201B16] dark:text-foreground tracking-tight ${baloo2.className}`}>Senin İçin Öneriler</h3>
+                                <p className="text-[9px] text-[#9A9081] dark:text-gray-400 font-bold mt-0.5">Moffi'nin senin için seçtikleri ♡</p>
                             </div>
+                            <button onClick={() => router.push('/petshop')} className="text-[9.5px] font-black text-[#EE5B3D] shrink-0 cursor-pointer">Tümünü Gör →</button>
                         </div>
-
-                        <p className="text-xs text-slate-300 font-medium leading-relaxed mb-6">
-                            Evcil dostunuzun tüm ihtiyaçları tek bir merkezde. Yapay zeka destekli sağlık asistanından akıllı tasmaya, kişiselleştirilmiş petshop'tan sosyal ağa kadar her şey parmaklarınızın ucunda.
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-3 mb-6">
-                            {[
-                                { icon: Stethoscope, title: "Moffi AI Vet", desc: "Anlık Sağlık Analizi" },
-                                { icon: Navigation, title: "Akıllı Tasma", desc: "Canlı GPS & Aktivite" },
-                                { icon: ShoppingBag, title: "Moffi Market", desc: "Özel Fırsatlar" },
-                                { icon: Trophy, title: "Görev & Ödül", desc: "PatiPuan Kazan" }
-                            ].map((feature, idx) => (
-                                <div key={idx} className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-3 flex flex-col gap-2 hover:bg-black/10 dark:bg-white/10 transition-colors cursor-default">
-                                    <feature.icon className="w-5 h-5 text-indigo-400" />
-                                    <div>
-                                        <h5 className="text-[11px] font-bold text-white">{feature.title}</h5>
-                                        <span className="text-[9px] text-slate-400 font-medium leading-none block mt-0.5">{feature.desc}</span>
+                        <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-1 pb-1">
+                            {suggestedProducts.map((p) => {
+                                const isFav = favoritedProductIds.has(p.id);
+                                return (
+                                <div
+                                    key={p.id}
+                                    onClick={() => router.push('/petshop')}
+                                    className="w-[150px] shrink-0 bg-white dark:bg-[#1a1b1e] border border-[#ECE6D9] dark:border-white/5 rounded-[16px] overflow-hidden cursor-pointer"
+                                >
+                                    <div className="h-[110px] bg-gray-100 dark:bg-zinc-800 relative">
+                                        {p.image && !brokenProductImageIds.has(p.id) ? (
+                                            <img
+                                                src={p.image}
+                                                className="w-full h-full object-cover"
+                                                alt={p.name}
+                                                onError={() => markProductImageBroken(p.id)}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-3xl bg-gray-100 dark:bg-zinc-800 text-gray-300 dark:text-zinc-600">🐾</div>
+                                        )}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); toggleFavoriteProduct(p.id); }}
+                                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 dark:bg-black/60 flex items-center justify-center shadow-sm cursor-pointer"
+                                        >
+                                            <Heart className={`w-3 h-3 ${isFav ? 'text-[#EE5B3D]' : 'text-gray-400'}`} fill={isFav ? '#EE5B3D' : 'none'} />
+                                        </button>
+                                        {p.tag && (
+                                            <span className="absolute top-2 left-2 text-[7px] font-black px-1.5 py-0.5 rounded-full bg-white/90 dark:bg-black/60 text-[#201B16] dark:text-white uppercase tracking-wide">
+                                                {p.tag}
+                                            </span>
+                                        )}
                                     </div>
+                                    <div className="p-2.5">
+                                        <h5 className="text-[10px] font-black text-[#201B16] dark:text-foreground truncate">{p.name}</h5>
+                                        {(p.brand || p.category) && (
+                                            <p className="text-[8px] text-[#9A9081] dark:text-gray-400 font-bold mt-0.5 truncate">{p.brand || p.category}</p>
+                                        )}
+                                        <div className="mt-1.5 flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                {p.oldPrice && (
+                                                    <span className="text-[8px] text-[#9A9081] line-through font-bold shrink-0">₺{p.oldPrice}</span>
+                                                )}
+                                                <span className="text-[11px] font-black text-[#EE5B3D] truncate">₺{p.price}</span>
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); addToCart(p.id); }}
+                                                className="w-6 h-6 rounded-full bg-[#EE5B3D]/10 flex items-center justify-center shrink-0 cursor-pointer hover:bg-[#EE5B3D]/20 transition-colors"
+                                            >
+                                                <ShoppingCart className="w-3 h-3 text-[#EE5B3D]" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                );
+                            })}
+                        </div>
+                        {suggestedProducts.length > 1 && (
+                            <div className="flex justify-center gap-1 pt-2">
+                                {suggestedProducts.slice(0, 6).map((p, i) => (
+                                    <span
+                                        key={p.id}
+                                        className="h-1 rounded-full"
+                                        style={{ width: i === 0 ? 14 : 4, backgroundColor: i === 0 ? '#EE5B3D' : '#E3DACB' }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
+
+                {/* Hatırlatmalar — gerçek Supabase verisi: vaccines + appointments + medications */}
+                {reminders.length > 0 && (
+                    <section className="mb-6 px-1">
+                        <div className="flex items-baseline justify-between mb-3">
+                            <div>
+                                <h3 className={`text-[15px] font-bold text-[#201B16] dark:text-foreground tracking-tight ${baloo2.className}`}>Hatırlatmalar</h3>
+                                <p className="text-[9px] text-[#9A9081] dark:text-gray-400 font-bold mt-0.5">Patinin sağlığı bizim için önemli ♡</p>
+                            </div>
+                            <span className="text-[9.5px] font-black text-[#EE5B3D] shrink-0">Tümünü Gör →</span>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            {reminders.map((r) => (
+                                <div key={r.id} className="bg-white dark:bg-[#1a1b1e] border border-[#ECE6D9] dark:border-white/5 rounded-2xl px-3.5 py-2.5 flex items-center gap-2.5">
+                                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: r.iconBg }}>
+                                        <r.icon className="w-4 h-4" style={{ color: r.badgeText }} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-[11px] font-black text-[#201B16] dark:text-foreground truncate">{r.title}</h4>
+                                        <p className="text-[8.5px] text-[#9A9081] dark:text-gray-400 font-bold mt-0.5">📅 {r.dateLabel}</p>
+                                    </div>
+                                    {r.daysLeft >= 0 && (
+                                        <span className="text-[8.5px] font-black px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap" style={{ backgroundColor: r.badgeBg, color: r.badgeText }}>
+                                            {r.daysLeft === 0 ? 'Bugün' : `${r.daysLeft} gün kaldı`}
+                                        </span>
+                                    )}
+                                    <ChevronRight className="w-3.5 h-3.5 text-[#C9C0AF] shrink-0" strokeWidth={2.5} />
                                 </div>
                             ))}
                         </div>
+                    </section>
+                )}
 
-                        <button 
-                            onClick={() => setExpandedPanel('about')}
-                            className="w-full bg-white hover:bg-slate-100 text-slate-900 text-[12px] font-black py-3.5 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] cursor-pointer"
-                        >
-                            Uygulama Vizyonunu Keşfet
-                        </button>
+                {/* Moffi'den İlham — true-reference & Final-Ana-Sayfa.dc.html (ilham1.jpg) */}
+                <section className="mb-6 px-1">
+                    <div className="mb-3">
+                        <h3 className={`text-[15px] font-bold text-[#201B16] dark:text-foreground tracking-tight ${baloo2.className}`}>Moffi'den İlham</h3>
+                        <p className="text-[9px] text-[#9A9081] dark:text-gray-400 font-bold mt-0.5">Daha mutlu patiler, daha güzel yarınlar ♡</p>
                     </div>
-                </motion.div>
+                    <div className="rounded-[22px] overflow-hidden relative min-h-[200px]">
+                        <img src="/images/ilham1.jpg" className="absolute inset-0 w-full h-full object-cover" alt="Moffi'den İlham" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/15 to-transparent" />
+                        <Sparkles className="absolute top-5 right-[86px] w-4.5 h-4.5 text-white/90" strokeWidth={1.6} />
+                        <Heart className="absolute top-5 right-5 w-5 h-5 text-white/90" strokeWidth={1.6} />
+                        <div className="relative p-5 max-w-[190px] h-full flex flex-col justify-center">
+                            <p className={`text-white text-base italic leading-snug ${baloo2.className}`}>
+                                "Onların iyi olması, bizim en büyük mutluluğumuz."
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-3 text-white text-[11px] font-black">
+                                <PawPrint className="w-3.5 h-3.5" fill="currentColor" strokeWidth={0} />
+                                Moffi
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-center gap-1 pt-2">
+                        <span className="h-1 rounded-full" style={{ width: 14, backgroundColor: '#EE5B3D' }} />
+                        {[1, 2, 3].map((i) => (
+                            <span key={i} className="h-1 w-1 rounded-full" style={{ backgroundColor: '#E3DACB' }} />
+                        ))}
+                    </div>
+                </section>
 
-
+                {/* Moffi ile her an yanında! — yeni banner, true-reference/reference-screen-2-alt.png (ilham2.jpg) */}
+                <section className="mb-6 px-1">
+                    <div className="rounded-[22px] overflow-hidden relative min-h-[150px]">
+                        <img src="/images/ilham2.jpg" className="absolute inset-0 w-full h-full object-cover" alt="Moffi ile her an yanında" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                        <div className="relative p-4 h-full flex flex-col justify-end">
+                            <h4 className={`text-white text-[15px] font-bold ${baloo2.className}`}>Moffi ile her an yanında!</h4>
+                            <p className="text-white/85 text-[10px] font-bold mt-0.5">Sağlıklı patiler, mutlu insanlar. ♡</p>
+                        </div>
+                        <p className="absolute top-4 right-4 text-white text-[11px] italic text-right leading-tight -rotate-3 drop-shadow-md" style={{ fontFamily: 'cursive' }}>
+                            Daha çok keşfet,<br/>daha çok mutlu ol ♡
+                        </p>
+                    </div>
+                </section>
 
                 {/* Eski Akıllı Tasma Durumu kartı buradan kaldırıldı (header alanına taşındı) */}
 
-
-                {/* 12. Dynamic Shop Live Offer */}
-                <section className="mb-6">
-                    <div className="flex justify-between items-end mb-3 px-1">
-                        <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">Kişiselleştirilmiş Alışveriş Fırsatı</h3>
-                        <span className="text-[9px] font-black text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                            Akıllı Takip
-                        </span>
-                    </div>
-
-                    <BentoCard 
-                        layoutId="shop-card-container"
-                        onClick={() => router.push(pet.specialOffer.link || '/petshop')}
-                        className="bg-gradient-to-br from-amber-50/70 to-orange-50/50 !p-4 border border-orange-100/30 flex gap-4 items-center relative overflow-hidden cursor-pointer group hover:scale-[1.01] transition-transform duration-300"
-                    >
-                        <div className="absolute right-[-10px] top-[-10px] w-20 h-20 bg-orange-400/5 rounded-full blur-xl pointer-events-none" />
-                        <div className="w-16 h-16 rounded-2xl bg-white border border-orange-100/60 p-2 flex items-center justify-center shadow-sm shrink-0">
-                            <ShoppingBag className="w-8 h-8 text-orange-600" />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest">{pet.specialOffer.discount}</span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                            </div>
-                            <h4 className="text-xs font-black text-gray-800 mt-0.5">{pet.name}'in {pet.specialOffer.title}</h4>
-                            <p className="text-[10px] font-semibold text-gray-500 mt-0.5 leading-snug">{pet.specialOffer.desc}</p>
-                            
-                            <div className="mt-2.5 flex items-center gap-2">
-                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 line-through">{pet.specialOffer.oldPrice}</span>
-                                <span className="text-xs font-black text-orange-600">{pet.specialOffer.newPrice}</span>
-                            </div>
-                        </div>
-                    </BentoCard>
-                </section>
 
 
                     </>
@@ -2527,61 +2750,6 @@ export default function LegendaryLightDashboard() {
                                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                     sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                                                 />
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* 4.5. About / Ecosystem Morph Screen */}
-                                    {expandedPanel === 'about' && (
-                                        <div className="w-full bg-white dark:bg-zinc-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5 relative flex flex-col h-[85vh]">
-                                            {/* Header Image / Pattern */}
-                                            <div className="h-44 shrink-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 relative overflow-hidden flex flex-col items-center justify-center">
-                                                <div className="absolute top-0 right-0 w-64 h-64 bg-black/10 dark:bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                                                <div className="relative z-10 text-center px-4 mt-4">
-                                                    <div className="w-14 h-14 mx-auto bg-black/20 dark:bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-black/20 dark:border-white/20 mb-3 shadow-xl">
-                                                        <Sparkles className="w-7 h-7 text-white drop-shadow-md" />
-                                                    </div>
-                                                    <h2 className="text-xl font-black text-white tracking-tight drop-shadow-md leading-none">Moffi Süper Uygulaması</h2>
-                                                    <p className="text-[11px] font-bold text-indigo-100 mt-2">Evcil Hayvan Bakımının Geleceği</p>
-                                                </div>
-                                                
-                                                <button 
-                                                    onClick={() => setExpandedPanel(null)}
-                                                    className="absolute top-4 right-4 w-9 h-9 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="p-5 md:p-6 overflow-y-auto no-scrollbar flex-1 pb-24">
-                                                <div className="text-[13.5px] text-gray-700 dark:text-gray-300">
-                                                    <p className="first-letter:text-5xl first-letter:font-black first-letter:text-indigo-600 dark:first-letter:text-indigo-400 first-letter:mr-3 first-letter:float-left mb-6 leading-relaxed">
-                                                        Moffi, evcil dostunuzun hayatındaki tüm karmaşayı tek bir merkezde çözen devasa bir ekosistemdir. Biz, evcil hayvan bakımının birbirinden kopuk, düzensiz ve karmaşık uygulamalar yığını olmaktan çıkması gerektiğine inanıyoruz. Parçalanmış sistemler yerine, her şeyin birbiriyle akıcı bir şekilde konuştuğu akıllı bir gelecek inşa ediyoruz.
-                                                    </p>
-                                                    
-                                                    <p className="mb-6 leading-relaxed">
-                                                        Hayal edin; <strong>Moffi AI Veteriner</strong> sayesinde 7/24 kesintisiz, anlık ve yapay zeka destekli sağlık analizleri alabiliyorsunuz. Semptomları saniyeler içinde yorumlayıp beslenme tavsiyelerine ulaşıyorsunuz. Diğer tarafta <strong>Moffi Cüzdan</strong> teknolojimizle, anlaşmalı pet-friendly mekanlarda veya marketlerde saniyeler içinde ödeme yapıp PatiPuan kazanıyorsunuz.
-                                                    </p>
-                                                    
-                                                    <p className="mb-6 leading-relaxed">
-                                                        Üstelik sadece sağlıkla da yetinmiyoruz. <strong>Özelleştirilmiş Moffi Market</strong>, dostunuzun yaşına, ırkına ve o güne kadarki sağlık geçmişine bakarak sadece ona en uygun, en kaliteli ürünleri vitrine çıkarıyor. Kafa karıştıran binlerce ürün yerine, nokta atışı ve akıllı bir alışveriş deneyimi sunuyor.
-                                                    </p>
-
-                                                    <p className="leading-relaxed font-bold text-gray-900 dark:text-white bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
-                                                        Sonuç olarak Moffi; yalnızca bir uygulama değil, sizin ve en iyi arkadaşınızın hayatını kusursuzlaştırmak için tasarlanmış, yaşayan, öğrenen ve sürekli büyüyen dev bir <strong>Pati Ekosistemidir</strong>.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Footer Button - Fixed at bottom */}
-                                            <div className="absolute bottom-0 inset-x-0 p-5 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-950 dark:via-zinc-950 pt-10 flex justify-center border-t border-gray-100/50 dark:border-white/5">
-                                                <button 
-                                                    onClick={() => setExpandedPanel(null)}
-                                                    className="w-full py-3.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-black rounded-xl shadow-lg hover:scale-[1.02] transition-all cursor-pointer"
-                                                >
-                                                    Moffi'ye Geri Dön
-                                                </button>
                                             </div>
                                         </div>
                                     )}

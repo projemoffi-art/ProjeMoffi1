@@ -7,7 +7,7 @@ import {
     CheckCircle2, AlertCircle, Sparkles, Plus,
     ArrowRight, Info, ChevronRight, Apple
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, showToast } from '@/lib/utils';
 import { apiService } from '@/services/apiService';
 import { NutritionPlan } from '@/types/domain';
 import { useTheme } from '@/context/ThemeContext';
@@ -295,7 +295,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                 <Activity className="w-5 h-5 text-indigo-500 dark:text-indigo-400 animate-pulse" />
                                 <span className="text-[10px] font-black text-zinc-450 dark:text-white/40 uppercase tracking-widest">Metabolizma Analizi: Normal</span>
                             </div>
-                            <button className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 flex items-center gap-1.5 hover:translate-x-1 transition-transform uppercase tracking-widest cursor-pointer">DİYETİSYENE SOR <ChevronRight className="w-3 h-3" /></button>
+                            <button onClick={() => showToast('Bu özellik yakında aktif olacak.', 'Sparkles')} className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 flex items-center gap-1.5 hover:translate-x-1 transition-transform uppercase tracking-widest cursor-pointer">DİYETİSYENE SOR <ChevronRight className="w-3 h-3" /></button>
                         </div>
                     </motion.div>
                 </div>
