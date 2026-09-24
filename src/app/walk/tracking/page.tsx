@@ -227,12 +227,13 @@ function TrackingContent() {
     const parsedWeight = parseFloat(String(activePet?.weight ?? ''));
     const weightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 15;
     const calories = Math.max(0, Math.round(distKm * weightKg));
-    // Piyasa araştırması bulgusu: km her zaman öncelikliydi, gerçek zamanlı adım
-    // sayısı hiç gösterilmiyordu. Gerçek bir pedometre/ivmeölçer API'si
-    // kullanmıyoruz (tarayıcıda güvenilir değil) — bu yüzden km/km*adım
-    // formülü zaten uygulamanın HER yerinde (özet, geçmiş) kullanılan aynı
-    // dürüst tahmin — burada SADECE canlı, gerçek mesafeden sürekli güncelleniyor.
-    const steps = Math.round(walkData.distance * 1.3);
+    // Baran'ın telefonda bulduğu kritik hata: adım sayısı km*1.3 tahminine
+    // dayanıyordu — GPS'in konum farkı algılayamadığı yerlerde (ev içi, zayıf
+    // sinyal) bu asla artamıyordu. Artık `ActivityContext`'teki gerçek
+    // ivmeölçer tabanlı sayaç (`realSteps`) kullanılıyor — GPS'ten tamamen
+    // bağımsız, gerçek bir pedometre. Sensör hiç izin verilmediyse (çok nadir,
+    // ör. eski bir tarayıcı) dürüst bir mesafe tahminine düşülüyor.
+    const steps = walkData.realSteps > 0 ? walkData.realSteps : Math.round(walkData.distance * 1.3);
     const remainingKm = Math.max(0, dailyGoal.distance - distKm);
     const goalPercent = Math.round(Math.min(100, (distKm / Math.max(0.1, dailyGoal.distance)) * 100));
     const gpsStatus = gpsStatusFromIssue(walkIssue);

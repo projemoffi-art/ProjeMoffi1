@@ -55,6 +55,15 @@ interface WalkData {
     // doğru bilgi vermezdi. Artık yürüyüşün KENDİSİ hangi pet olduğunu taşıyor.
     petId?: string;
     petName?: string;
+    // Baran'ın gerçek telefonda bulduğu kritik hata: adım sayısı SADECE GPS
+    // mesafesinden (distance*1.3) türetiliyordu — yani ev içinde ya da GPS
+    // sinyalinin zayıf olduğu HERHANGİ bir yerde (GPS fiziksel olarak anlamlı
+    // bir konum farkı algılayamaz) adım sayısı asla artamıyordu, GPS ne kadar
+    // iyileştirilirse iyileştirilsin bu kökten çözülemezdi. Gerçek profesyonel
+    // çözüm: telefonun ivmeölçer sensörüyle (DeviceMotionEvent), GPS'ten TAMAMEN
+    // bağımsız, gerçek bir adım algılama sistemi (bkz. aşağıdaki devicemotion
+    // efekti) — tıpkı gerçek pedometre uygulamalarının çalışma şekli.
+    realSteps: number;
 }
 
 // Faz 2: kapanmadan/çökmeden kesilen bir yürüyüşün geri getirilebilir anlık görüntüsü
@@ -65,6 +74,7 @@ interface RecoverableWalk {
     sessionId?: string;
     petId?: string;
     petName?: string;
+    realSteps?: number;
 }
 
 interface WalkRecord {
@@ -155,7 +165,8 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         isAutoPaused: false,
         path: [],
         speed: 0,
-        splits: []
+        splits: [],
+        realSteps: 0
     });
     const [walkHistory, setWalkHistory] = useState<WalkRecord[]>([]);
     const [walkStats, setWalkStats] = useState<WalkStats | null>({
@@ -304,6 +315,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                         sessionId: parsed.sessionId,
                         petId: parsed.petId,
                         petName: parsed.petName,
+                        realSteps: parsed.realSteps || 0,
                     });
                 } else {
                     setWalkData({
@@ -318,6 +330,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                         splits: Array.isArray(parsed.splits) ? parsed.splits : [],
                         petId: parsed.petId,
                         petName: parsed.petName,
+                        realSteps: parsed.realSteps || 0,
                     });
                 }
             } catch (e) {
@@ -379,6 +392,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             splits: [],
             petId: activePet?.id ? String(activePet.id) : undefined,
             petName: activePet?.name,
+            realSteps: 0,
         });
         lastMovementAtRef.current = Date.now();
         setWalkPhase('active');
@@ -429,6 +443,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             splits: [],
             petId: recoverableWalk.petId,
             petName: recoverableWalk.petName,
+            realSteps: recoverableWalk.realSteps || 0,
         });
         setWalkPhase('active');
         setWalkIssue('none');
@@ -444,7 +459,8 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             try {
                 await apiService.endWalk(recoverableWalk.sessionId, {
                     distanceKm: recoverableWalk.distance / 1000,
-                    durationMinutes: Math.round(recoverableWalk.time / 60)
+                    durationMinutes: Math.round(recoverableWalk.time / 60),
+                    steps: recoverableWalk.realSteps || 0,
                 });
             } catch (e) {
                 console.error("Failed to end recovered walk on server:", e);
@@ -458,7 +474,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                 date: new Date().toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
                 duration: `${Math.floor(recoverableWalk.time / 60)}dk`,
                 distance: recoverableWalk.distance >= 1000 ? `${(recoverableWalk.distance / 1000).toFixed(2)}km` : `${recoverableWalk.distance.toFixed(0)}m`,
-                steps: Math.floor(recoverableWalk.distance * 1.4),
+                steps: recoverableWalk.realSteps ? recoverableWalk.realSteps : Math.floor(recoverableWalk.distance * 1.3),
                 path: recoverableWalk.path
             };
             setWalkHistory(prev => [newRecord, ...prev]);
@@ -475,7 +491,8 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                 try {
                     await apiService.endWalk(walkData.sessionId, {
                         distanceKm: walkData.distance / 1000,
-                        durationMinutes: Math.round(walkData.time / 60)
+                        durationMinutes: Math.round(walkData.time / 60),
+                        steps: walkData.realSteps,
                     });
                 } catch (e) {
                     console.error("Failed to end walk on server:", e);
@@ -487,7 +504,9 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                     date: new Date().toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
                     duration: `${Math.floor(walkData.time / 60)}dk`,
                     distance: walkData.distance >= 1000 ? `${(walkData.distance / 1000).toFixed(2)}km` : `${walkData.distance.toFixed(0)}m`,
-                    steps: Math.floor(walkData.distance * 1.4),
+                    // Gerçek sensör-tabanlı adım sayısı varsa o kullanılıyor; sıfırsa
+                    // (ör. cihaz izni reddedildiyse) dürüst bir mesafe tahminine düşülüyor.
+                    steps: walkData.realSteps > 0 ? walkData.realSteps : Math.floor(walkData.distance * 1.3),
                     path: walkData.path
                 };
                 setWalkHistory(prev => [newRecord, ...prev]);
@@ -508,7 +527,8 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             isAutoPaused: false,
             path: [],
             speed: 0,
-            splits: []
+            splits: [],
+            realSteps: 0
         });
         setWalkIssue('none');
         setWalkPhase(save ? 'completed' : 'idle');
@@ -730,6 +750,85 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             if (staleCheckIntervalRef.current) clearInterval(staleCheckIntervalRef.current);
         };
     }, [walkData.isActive, walkData.isPaused, walkData.isAutoPaused, isLoaded, autoPauseEnabled]);
+
+    // Baran'ın telefonda bulduğu kritik hata: adım sayısı SADECE GPS mesafesinden
+    // türetiliyordu — ev içinde (ya da GPS'in fiziksel olarak anlamlı bir konum
+    // farkı algılayamadığı HERHANGİ bir yerde) bu asla artamıyordu, GPS eşiği ne
+    // kadar iyileştirilirse iyileştirilsin bu kökten çözülemezdi. Gerçek
+    // profesyonel çözüm: telefonun ivmeölçer sensörüyle (DeviceMotionEvent),
+    // GPS'ten TAMAMEN bağımsız gerçek bir adım algılama sistemi — tıpkı gerçek
+    // pedometre uygulamalarının (Google Fit, Apple Health) çalışma şekli.
+    // Standart, kanıtlanmış bir pedometre algoritması: alçak-geçiren filtre ile
+    // "yerçekimi taban çizgisi" sürekli güncelleniyor, anlık ivme bu taban
+    // çizgisinden yeterince sapıp (bir adımın karakteristik sarsıntısı) geri
+    // düşünce TEK bir adım sayılıyor (min. 300ms aralıkla, çift saymayı önlemek
+    // için). Eşik sabitleri (STEP_THRESHOLD vb.) gerçek cihaz testiyle ince
+    // ayar gerektirebilir — bu, HERHANGİ bir ivmeölçer tabanlı pedometrenin
+    // (native dahil) doğası gereği ihtiyaç duyduğu kalibrasyondur, geçici bir
+    // yama değil.
+    useEffect(() => {
+        const shouldTrackSteps = walkData.isActive && (!walkData.isPaused || walkData.isAutoPaused);
+        if (!shouldTrackSteps || typeof window === 'undefined' || !('DeviceMotionEvent' in window)) return;
+
+        let filteredMagnitude = 9.81;
+        let lastStepAt = 0;
+        let risingEdge = false;
+        const ALPHA = 0.9;
+        const STEP_THRESHOLD = 1.15; // m/s² — taban çizgisinden sapma eşiği
+        const RESET_THRESHOLD = STEP_THRESHOLD * 0.35;
+        const MIN_STEP_INTERVAL_MS = 280; // ~3.5 adım/sn üst sınır, çift saymayı engeller
+
+        const handleMotion = (event: DeviceMotionEvent) => {
+            const acc = event.accelerationIncludingGravity;
+            if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
+            const magnitude = Math.sqrt((acc.x ?? 0) ** 2 + (acc.y ?? 0) ** 2 + (acc.z ?? 0) ** 2);
+            const deviation = Math.abs(magnitude - filteredMagnitude);
+            // KRİTİK düzeltme: taban çizgisi SADECE sinyal zaten sakinken (bir adım
+            // darbesinin ORTASINDA değilken) güncelleniyor. İlk denemede HER örnek
+            // (adım darbeleri dahil) taban çizgisini güncelliyordu — bu, ardışık
+            // adımların taban çizgisini yavaşça darbe değerine doğru "sürüklemesine"
+            // sebep oluyordu, birkaç adım sonra sapma eşiğin altına düşüp algılama
+            // tamamen duruyordu (gerçek cihaza hiç gerek kalmadan, Playwright'ta
+            // senkron ivme olaylarıyla yakalanan gerçek bir algoritma hatası — bkz.
+            // CLAUDE.md). Adım darbeleri sırasında taban çizgisini DONDURMAK, gerçek
+            // ivmeölçer tabanlı adım sayaçlarının kullandığı standart "gated"
+            // (kapılı) alçak-geçiren filtre tekniği.
+            if (deviation < STEP_THRESHOLD) {
+                filteredMagnitude = ALPHA * filteredMagnitude + (1 - ALPHA) * magnitude;
+            }
+            const now = Date.now();
+
+            if (deviation > STEP_THRESHOLD && !risingEdge && (now - lastStepAt) > MIN_STEP_INTERVAL_MS) {
+                risingEdge = true;
+                lastStepAt = now;
+                // Gerçek fiziksel hareket algılandı — GPS bunu göremese bile (ev
+                // içi/zayıf sinyal) otomatik duraklatmayı gerçek hareketle sıfırlıyor.
+                lastMovementAtRef.current = now;
+                stationarySinceRef.current = null;
+                setWalkData(prev => {
+                    if (!prev.isActive || (prev.isPaused && !prev.isAutoPaused)) return prev;
+                    const next = { ...prev, realSteps: prev.realSteps + 1 };
+                    if (prev.isAutoPaused) { next.isPaused = false; next.isAutoPaused = false; }
+                    return next;
+                });
+            } else if (deviation < RESET_THRESHOLD) {
+                risingEdge = false;
+            }
+        };
+
+        let cancelled = false;
+        const attach = () => { if (!cancelled) window.addEventListener('devicemotion', handleMotion); };
+        const requestPermissionIfNeeded = (DeviceMotionEvent as any).requestPermission;
+        if (typeof requestPermissionIfNeeded === 'function') {
+            requestPermissionIfNeeded()
+                .then((state: string) => { if (state === 'granted') attach(); })
+                .catch(() => {});
+        } else {
+            attach();
+        }
+
+        return () => { cancelled = true; window.removeEventListener('devicemotion', handleMotion); };
+    }, [walkData.isActive, walkData.isPaused, walkData.isAutoPaused]);
 
     // Faz 2: ağ bağlantısı koptuğunda (GPS'in kendisi değil, sunucuya senkron) kullanıcıyı bilgilendir
     useEffect(() => {

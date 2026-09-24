@@ -2836,13 +2836,21 @@ export class SupabaseApiService implements IApiService {
         const durationSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
         const distanceMeters = session?.distance_meters || 0;
         const caloriesBurned = Math.round(distanceMeters * 0.06); // ~60 cal/km
-        const steps = Math.round(distanceMeters * 1.3); // ~1300 steps/km
+        // Baran'ın telefonda bulduğu kritik hata: adım sayısı SADECE GPS mesafesinden
+        // türetiliyordu, hiçbir zaman DB'ye kalıcı olarak yazılmıyordu. Artık
+        // ActivityContext'teki gerçek ivmeölçer tabanlı sayaç (`realSteps`) buraya
+        // geliyor ve `walk_sessions.steps` kolonuna gerçekten kaydediliyor — geçmiş
+        // yürüyüşler artık gerçek adım verisi gösterebiliyor. Gerçek sayaç 0/eksikse
+        // (ör. çok eski bir çağrı ya da sensör izni reddedildiyse) dürüst bir mesafe
+        // tahminine düşülüyor, sahte bir sıfır değil.
+        const steps = typeof data?.steps === 'number' && data.steps > 0 ? data.steps : Math.round(distanceMeters * 1.3);
 
         const { data: updated, error } = await supabase
             .from('walk_sessions')
             .update({
                 status: 'completed',
-                end_time: endedAt
+                end_time: endedAt,
+                steps,
             })
             .eq('id', sessionId)
             .eq('user_id', user.id)
@@ -2850,7 +2858,7 @@ export class SupabaseApiService implements IApiService {
             .single();
 
         if (error) throw error;
-        // duration/kalori/adım DB'de saklanmıyor — burada hesaplanıp döndürülüyor (ör. bitiş özeti için)
+        // duration/kalori DB'de saklanmıyor — burada hesaplanıp döndürülüyor (ör. bitiş özeti için)
         return { ...updated, ended_at: updated.end_time, started_at: updated.start_time, duration_seconds: durationSeconds, calories_burned: caloriesBurned, steps };
     }
 

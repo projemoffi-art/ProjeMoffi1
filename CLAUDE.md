@@ -1324,6 +1324,62 @@ projedeki EN kritik hatalardan biri) tamamen görünmez bırakabiliyor —
 bundan sonra GPS testleri mutlaka hareketli bir trajectory simülasyonu da
 içermeli.**
 
+### 8.19 KRİTİK MİMARİ DÜZELTME: adım sayısı GPS'ten TAMAMEN bağımsız, gerçek ivmeölçer tabanlı bir pedometreye taşındı (2026-09-24)
+
+Baran'ın 8.18'in hemen ardından gerçek telefonunda yaptığı ikinci test: **evin
+içinde yürüdü, "hareketsizlik algılandı" diye otomatik duraklatıldı, adımlar
+hiç artmadı.** Bu, 8.18'deki GPS eşik düzeltmesinin YETERSİZ kaldığı anlamına
+geliyordu — ama asıl sorun eşik ayarı değildi: **adım sayısı MİMARİ OLARAK
+GPS mesafesine bağımlıydı** (`distance * 1.3`). Ev içinde (veya GPS'in
+fiziksel olarak konum farkı algılayamadığı HERHANGİ bir yerde) GPS mesafesi
+ne kadar eşik ince ayarı yapılırsa yapılsın ASLA anlamlı şekilde artamaz —
+bu GPS'in doğasında olan bir sınır, eşik ayarıyla çözülemez.
+
+**Gerçek, kalıcı çözüm:** adım sayısını GPS'ten TAMAMEN ayırıp telefonun
+ivmeölçer sensörüyle (`DeviceMotionEvent`) gerçek bir pedometre kurduk —
+tıpkı Google Fit/Apple Health'in çalışma şekli. `WalkData`'ya `realSteps`
+eklendi, `ActivityContext`'te GPS efektinden tamamen bağımsız yeni bir
+`devicemotion` dinleyici efekti var. Gerçek fiziksel hareket algılanınca (GPS
+göremese bile) otomatik duraklatmayı da sıfırlıyor — yani ev içi yürüyüş
+artık GERÇEKTEN "hareketsizlik" sayılmıyor.
+
+🔴 **Algoritmanın kendisinde, gerçek cihaza hiç gerek kalmadan Playwright'ta
+senkron `devicemotion` olaylarıyla İKİ ayrı gerçek hata yakalandı ve
+düzeltildi** (bu, "GPS-bağımlı/sensör-bağımlı kodu SADECE statik/tek senaryo
+ile test etmenin gerçek hataları gizleyebildiği" dersinin bir devamı):
+1. İlk denemede taban çizgisi (yerçekimi bileşeni) filtresi HER örnekle
+   (adım darbeleri dahil) güncelleniyordu — ardışık adımlar taban çizgisini
+   yavaşça darbe değerine doğru "sürüklüyor", birkaç adım sonra sapma eşiğin
+   altına düşüp algılama TAMAMEN duruyordu (debug log ile kanıtlandı: 20
+   simüle adımdan sadece 5'i sayıldı, sonra sıfıra düştü).
+2. **Kök neden çözümü:** taban çizgisi artık SADECE sinyal zaten sakinken
+   (bir adım darbesinin ORTASINDA değilken) güncelleniyor — "kapılı" (gated)
+   alçak-geçiren filtre, gerçek ivmeölçer tabanlı pedometrelerin kullandığı
+   standart teknik. Düzeltme sonrası aynı 20 simüle adımın TAMAMI doğru
+   sayıldı, GPS mesafesi 0.00km'de sabit kalırken (adımın GPS'ten gerçekten
+   bağımsız olduğunun kanıtı).
+
+**Kalıcılık:** `walk_sessions` tablosuna gerçek bir `steps` kolonu eklendi
+(migration: `add_real_steps_to_walk_sessions`) — `endWalk()` artık gerçek
+sensör sayısını (`data.steps`) buraya yazıyor, `mapSessionToRecord()` zaten
+`session.steps ?? tahmin` mantığıyla yazılmıştı (önceden hep `undefined`
+olduğu için hep tahmine düşüyordu, artık gerçek veri akıyor). `QuestEngineContext`'e
+`todaySteps` eklendi (bugün tamamlanan gerçek adımlar + aktif yürüyüşün canlı
+`realSteps`'i) — ana sayfa kartının "Adım" kutucuğu artık bunu kullanıyor.
+
+**iOS 13+ önemli detay:** `DeviceMotionEvent.requestPermission()` kullanıcının
+dokunuşuyla AYNI senkron çağrı yığınında istenmek ZORUNDA — bir `useEffect`
+içinden istemek sessizce başarısız olabiliyor. Bu yüzden gerçek izin isteği
+`WalkQuickSheet.tsx`'in `handleStartWalk`/`handleContinueRecovered` tıklama
+handler'larına eklendi (zaten oradaki `DeviceOrientationEvent.requestPermission()`
+ile aynı desen), `ActivityContext`'teki efekt sadece bir güvenlik ağı.
+
+**Eski tahmine ne oldu:** `distance*1.3` formülü SİLİNMEDİ — sadece rolü
+değişti. Artık SADECE şu durumlarda dürüst bir yedek: (a) sensör izni
+reddedildiyse/desteklenmiyorsa, (b) bu düzeltmeden ÖNCEki eski yürüyüş
+kayıtlarında (DB'de `steps` yoksa). Yeni yürüyüşlerde birincil kaynak her
+zaman gerçek sensör sayısı.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

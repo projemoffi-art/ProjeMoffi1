@@ -137,6 +137,7 @@ export interface QuestEngineContextType {
     // ekranındaki büyük sayı ile ilerleme çubuğu artık birbirini tutuyor.
     todayDistanceKm: number;
     todayDurationMin: number;
+    todaySteps: number;
 
     // Aylık araştırma
     monthlyResearch: MonthlyResearch | null;
@@ -1575,8 +1576,18 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         if (!raw || new Date(raw).toLocaleDateString('sv-SE') !== todayLocalStr) return sum;
         return sum + (w.duration_minutes || 0);
     }, 0);
+    // Baran'ın telefonda bulduğu kritik hata: adım sayısı GPS mesafesinden
+    // türetiliyordu. Artık gerçek, ivmeölçer tabanlı adım sayısı (bugün
+    // tamamlanmış yürüyüşlerin DB'ye kaydedilmiş gerçek `steps`'i + şu an aktif
+    // yürüyüşün canlı `realSteps`'i).
+    const todayCompletedSteps = walkHistory.reduce((sum, w) => {
+        const raw = w.started_at || w.ended_at;
+        if (!raw || new Date(raw).toLocaleDateString('sv-SE') !== todayLocalStr) return sum;
+        return sum + (w.steps || 0);
+    }, 0);
     const distKm = todayCompletedKm + (walkData.isActive ? walkData.distance / 1000 : 0);
     const durationMin = todayCompletedMin + (walkData.isActive ? walkData.time / 60 : 0);
+    const todaySteps = todayCompletedSteps + (walkData.isActive ? walkData.realSteps : 0);
     const progressPercent = Math.min(100, (distKm / Math.max(0.01, dailyGoal.distance)) * 100);
     const durationPercent = Math.min(100, (durationMin / Math.max(1, dailyGoal.duration)) * 100);
 
@@ -1602,6 +1613,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             durationPercent,
             todayDistanceKm: distKm,
             todayDurationMin: durationMin,
+            todaySteps,
             monthlyResearch,
             challenges,
             badges: BADGE_POOL,

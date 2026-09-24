@@ -23,6 +23,9 @@ export function useWalk() {
         // KENDİSİ taşıdığı için tüketiciler (home/page.tsx) doğru pet'i gösterebilir.
         petId: walkData.petId,
         petName: walkData.petName,
+        // Baran'ın telefonda bulduğu kritik hata: adım sayısı GPS mesafesinden
+        // türetiliyordu — artık gerçek ivmeölçer tabanlı sayaç burada da erişilebilir.
+        realSteps: walkData.realSteps,
     } : null;
 
     return {

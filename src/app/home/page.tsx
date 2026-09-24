@@ -366,7 +366,7 @@ export default function LegendaryLightDashboard() {
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading } = useWalk();
     const { subscriptions, cart, cartCount, cartTotal, updateCartItem, addToCart, products, clearCart } = usePetShop();
-    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm } = useQuestEngine();
+    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm, todaySteps } = useQuestEngine();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -1849,12 +1849,13 @@ export default function LegendaryLightDashboard() {
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Süre</div>
                                     </div>
-                                    {/* Piyasa araştırması bulgusu (bu oturumda tracking ekranına da eklendi):
-                                        adım sayısı, km'nin yanında ikinci en önemli gösterge — aynı dürüst
-                                        tahmin formülü (mesafe*1.3), sadece burada da yüzeye çıkarıldı. */}
+                                    {/* Baran'ın telefonda bulduğu kritik hata: adım sayısı GPS mesafesinden
+                                        (km*1.3) türetiliyordu — ev içi/zayıf GPS'te asla artamıyordu. Artık
+                                        gerçek ivmeölçer tabanlı sayaç (bugün tamamlanan + şu an aktif
+                                        yürüyüşün canlısı), GPS'ten tamamen bağımsız. */}
                                     <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
                                         <div className="flex items-center gap-1 text-[10px] font-black">
-                                            <Footprints className="w-3 h-3" /> {Math.round(walkedDistanceToday * 1000 * 1.3).toLocaleString('tr-TR')}
+                                            <Footprints className="w-3 h-3" /> {todaySteps.toLocaleString('tr-TR')}
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Adım</div>
                                     </div>

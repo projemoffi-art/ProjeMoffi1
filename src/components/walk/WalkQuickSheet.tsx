@@ -118,12 +118,26 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
     // Yürüyüşü başlat
     const handleStartWalk = async () => {
         // Request gyroscope permission on iOS 13+ if supported
-        if (typeof window !== 'undefined' && 
+        if (typeof window !== 'undefined' &&
             typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
             try {
                 await (DeviceOrientationEvent as any).requestPermission();
             } catch (err) {
                 console.error("Failed requesting orientation permission on iOS:", err);
+            }
+        }
+        // Baran'ın telefonda bulduğu kritik hata: adım sayısı GPS mesafesinden
+        // türetiliyordu. Artık gerçek ivmeölçer tabanlı sayaç (ActivityContext)
+        // kullanılıyor — iOS 13+ Safari'de bu iznin SENKRON olarak, kullanıcının
+        // dokunuşuyla AYNI çağrı yığınında istenmesi ŞART (bir useEffect
+        // içinden istemek sessizce başarısız olabiliyor), bu yüzden burada.
+        if (typeof window !== 'undefined' &&
+            typeof (window as any).DeviceMotionEvent !== 'undefined' &&
+            typeof (window as any).DeviceMotionEvent.requestPermission === 'function') {
+            try {
+                await (window as any).DeviceMotionEvent.requestPermission();
+            } catch (err) {
+                console.error("Failed requesting motion permission on iOS:", err);
             }
         }
         haptics.success();
@@ -189,8 +203,19 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
         }
     }, [isOpen, enterReadyPhase, exitToIdlePhase]);
 
-    const handleContinueRecovered = () => {
+    const handleContinueRecovered = async () => {
         haptics.tap();
+        // Bkz. handleStartWalk'taki açıklama — iOS 13+'ta senkron/kullanıcı
+        // dokunuşuyla aynı çağrı yığınında istenmesi gerekiyor.
+        if (typeof window !== 'undefined' &&
+            typeof (window as any).DeviceMotionEvent !== 'undefined' &&
+            typeof (window as any).DeviceMotionEvent.requestPermission === 'function') {
+            try {
+                await (window as any).DeviceMotionEvent.requestPermission();
+            } catch (err) {
+                console.error("Failed requesting motion permission on iOS:", err);
+            }
+        }
         continueRecoveredWalk();
         onNavigateAway?.();
         router.push('/walk/tracking');
