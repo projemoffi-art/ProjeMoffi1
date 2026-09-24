@@ -10,6 +10,7 @@ import { usePet } from "@/context/PetContext";
 import { MoffiBottomNav } from "@/components/common/MoffiBottomNav";
 import { useTheme } from "@/context/ThemeContext";
 import { ActiveWalkMiniWidget } from "@/components/walk/ActiveWalkMiniWidget";
+import { useActivity } from "@/context/ActivityContext";
 
 // Lazy loaded overlays — only the ones that SHOULD be overlays
 const ActionHubDrawer = dynamic(() => import("@/components/community/ActionHubDrawer").then(mod => mod.ActionHubDrawer), { ssr: false });
@@ -35,6 +36,7 @@ export function DynamicNavigation() {
     const { user } = useAuth();
     const { pets, updatePet, activePet } = usePet();
     const { seniorMode } = useTheme();
+    const { walkData } = useActivity();
 
     // Overlay states — only for things that are genuinely overlays
     const [isActionHubOpen, setIsActionHubOpen] = useState(false);
@@ -141,6 +143,19 @@ export function DynamicNavigation() {
         };
 
         const handleOpenWalk = () => {
+            // Baran'ın bulduğu gerçek hata: aktif bir yürüyüş varken "open-walk-panel"
+            // (ana sayfadaki "Devam Et"/"Takibi Gör" butonları dahil) her zaman
+            // WalkQuickSheet'i açıyordu — o panelin KENDİ, ayrı bir "aktif yürüyüş"
+            // görünümü var (büyük km rakamı, Duraklat/Bitir) ama oradan GERÇEK harita
+            // ekranına (`/walk/tracking`) dönecek hiçbir yol yoktu. Kullanıcı bir kez
+            // haritadan ayrılınca bir daha asla haritaya dönemiyordu. Kök neden çözümü:
+            // yürüyüş zaten aktifse panel hiç açılmıyor, doğrudan gerçek harita
+            // ekranına yönlendiriliyor — WalkQuickSheet artık SADECE "henüz
+            // başlamamış" hazırlık akışı için kullanılıyor.
+            if (walkData.isActive) {
+                router.push('/walk/tracking');
+                return;
+            }
             window.history.pushState({ modal: 'walk' }, "");
             setIsActionHubOpen(false);
             setIsSettingsOpen(false);
@@ -352,7 +367,7 @@ export function DynamicNavigation() {
             window.removeEventListener('scroll', handleGlobalScroll, { capture: true });
             window.removeEventListener('open-add-post', handleOpenPostGlobal);
         };
-    }, [pathname, user]);
+    }, [pathname, user, walkData.isActive, router]);
 
     const shouldHide = pathname && HIDDEN_ROUTES.some(route =>
         route === '/' ? pathname === '/' : pathname.startsWith(route)

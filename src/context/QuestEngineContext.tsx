@@ -122,8 +122,14 @@ export interface QuestEngineContextType {
     completedCount: number;
     totalCount: number;
 
-    // Hedefler
+    // Hedefler — Baran'ın bulduğu gerçek kısıt: hedef tamamen sistem tarafından
+    // (breed/geçmişe göre) belirleniyordu, kullanıcının değiştirebileceği hiçbir
+    // yer yoktu. Artık gerçek bir kullanıcı tercihi var; "Otomatik" ise SADECE
+    // bir seçenek — sistem hesaplamasını (autoDailyGoalKm) yerinde bırakıyor.
     dailyGoal: { distance: number; duration: number };
+    autoDailyGoalKm: number;
+    manualDailyGoalKm: number | null;
+    setManualDailyGoalKm: (km: number | null) => void;
     progressPercent: number;
     durationPercent: number;
     // Bugün tamamlanan yürüyüşler + (varsa) şu an aktif yürüyüşün canlı değeri.
@@ -838,7 +844,27 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     const initializedRef = useRef(false);
     const userIdRef = useRef<string | null>(null);
 
-    const dailyGoal = computeDailyGoal(walkStats, activePet?.size);
+    // Baran'ın bulduğu gerçek kısıt: günlük hedef tamamen otomatikti, kullanıcının
+    // hiçbir müdahale şansı yoktu. Artık gerçek bir tercih: `null` = "Otomatik"
+    // (sistem hesaplaması aynen çalışmaya devam ediyor), bir sayı = kullanıcının
+    // kendi seçtiği sabit hedef.
+    const [manualDailyGoalKm, setManualDailyGoalKmState] = useState<number | null>(() => {
+        if (typeof window === 'undefined') return null;
+        const saved = localStorage.getItem('moffi_manual_daily_goal_km');
+        return saved ? parseFloat(saved) : null;
+    });
+    const setManualDailyGoalKm = useCallback((km: number | null) => {
+        setManualDailyGoalKmState(km);
+        if (km === null) localStorage.removeItem('moffi_manual_daily_goal_km');
+        else localStorage.setItem('moffi_manual_daily_goal_km', String(km));
+    }, []);
+    const autoDailyGoal = computeDailyGoal(walkStats, activePet?.size);
+    const autoDailyGoalKm = autoDailyGoal.distance;
+    const dailyGoal = manualDailyGoalKm != null
+        // Süre, otomatik hedefin kendi mesafe/süre oranı korunarak orantılanıyor —
+        // uydurma sabit bir süre değil, sistemin zaten hesapladığı gerçek tempoya göre.
+        ? { distance: manualDailyGoalKm, duration: Math.round((autoDailyGoal.duration / Math.max(0.1, autoDailyGoal.distance)) * manualDailyGoalKm) }
+        : autoDailyGoal;
 
     // ── Başlatma ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -1569,6 +1595,9 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             completedCount,
             totalCount,
             dailyGoal,
+            autoDailyGoalKm,
+            manualDailyGoalKm,
+            setManualDailyGoalKm,
             progressPercent,
             durationPercent,
             todayDistanceKm: distKm,

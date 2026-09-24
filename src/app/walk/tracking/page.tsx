@@ -57,7 +57,7 @@ function TrackingContent() {
     const { walkData, startWalk, pauseWalk, resumeWalk, walkIssue, autoPauseEnabled, setAutoPauseEnabled } = useActivity();
     const { activePet } = usePet();
     const { weather } = useWeather();
-    const { dailyGoal } = useQuestEngine();
+    const { dailyGoal, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm } = useQuestEngine();
 
     const [userPos, setUserPos] = useState<[number, number]>([40.9850, 29.0300]);
     const [path, setPath] = useState<[number, number][]>([]);
@@ -81,6 +81,24 @@ function TrackingContent() {
     // Piyasa araştırması #4: Strava Beacon tarzı canlı konum paylaşımı
     const [beaconId, setBeaconId] = useState<string | null>(null);
     const [beaconLoading, setBeaconLoading] = useState(false);
+
+    // Baran'ın bulguşu: günlük hedef tamamen sistem tarafından belirleniyordu,
+    // kullanıcının hiç müdahale şansı yoktu. Artık "Otomatik" dahil gerçek bir
+    // döngü: Otomatik → 1 → 2 → 3 → 5 → 8 → 10 km → Otomatik...
+    const GOAL_PRESETS_KM = [1, 2, 3, 5, 8, 10];
+    const cycleDailyGoal = () => {
+        haptics.tap();
+        if (manualDailyGoalKm === null) {
+            setManualDailyGoalKm(GOAL_PRESETS_KM[0]);
+            return;
+        }
+        const idx = GOAL_PRESETS_KM.findIndex(v => Math.abs(v - manualDailyGoalKm) < 0.05);
+        if (idx === -1 || idx === GOAL_PRESETS_KM.length - 1) {
+            setManualDailyGoalKm(null); // döngü sona erince "Otomatik"a dön
+        } else {
+            setManualDailyGoalKm(GOAL_PRESETS_KM[idx + 1]);
+        }
+    };
 
     // Baran'ın gerçek bulgusu: gösterge paneli sabitti, kullanıcı haritayı ya da
     // paneli tam ekran yapamıyordu. Gerçek bir sürüklenebilir bottom-sheet:
@@ -541,6 +559,42 @@ function TrackingContent() {
                         </>
                     )}
 
+                    {/* Baran'ın isteği: tutamacı tam ekrana çekmenin gerçek bir amacı olmalı —
+                        sadece aynı içeriği büyütmek değil. Panel tam ekrandayken buraya gerçek,
+                        canlı veriden gelen EK bilgiler ekleniyor: kilometre-arası split analizi
+                        (zaten Faz 7'den beri `walkData.splits`'te tutuluyordu ama sadece tek bir
+                        "en hızlı km" rozeti olarak yüzeye çıkıyordu) ve durma/koklama sayacı. */}
+                    {sheetState === 'full' && (
+                        <div className="mb-5 pt-1 border-t border-slate-100 dark:border-white/5">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mt-4 mb-2.5">Kilometre Analizi</span>
+                            {walkData.splits && walkData.splits.length > 0 ? (
+                                <div className="space-y-1.5 mb-4">
+                                    {walkData.splits.map((s) => {
+                                        const fastest = Math.min(...walkData.splits.map(x => x.splitSeconds));
+                                        return (
+                                            <div key={s.km} className="flex items-center justify-between bg-slate-50 dark:bg-white/5 rounded-xl px-3.5 py-2.5">
+                                                <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300">{s.km}. km</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {s.splitSeconds === fastest && <Zap className="w-3 h-3 text-amber-500" />}
+                                                    <span className="text-[12px] font-black text-slate-800 dark:text-white font-mono">{formatTime(s.splitSeconds)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-[11px] font-bold text-slate-400 mb-4">Henüz tam bir kilometre tamamlanmadı — ilk km'yi bitirince buradaki split analizi dolmaya başlar.</p>
+                            )}
+
+                            {!!walkData.sniffStops && walkData.sniffStops > 0 && (
+                                <div className="flex items-center justify-between bg-slate-50 dark:bg-white/5 rounded-xl px-3.5 py-2.5 mb-4">
+                                    <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300">🐽 Durma / Koklama Molası</span>
+                                    <span className="text-[12px] font-black text-slate-800 dark:text-white">{walkData.sniffStops} kez</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Ekran 5 (Bitirme Onayı) artık burada inline bir buton takası değil, aşağıdaki
                         gerçek dimmed-backdrop modal'a (showStopConfirm) devrediliyor. */}
                     <div className="space-y-2.5">
@@ -656,7 +710,25 @@ function TrackingContent() {
                             <h3 className="text-base font-black text-slate-800 dark:text-slate-100 mb-5">Yürüyüş Ayarları</h3>
 
                             <div className="space-y-1">
-                                <div className="flex items-center justify-between py-3">
+                                {/* Baran'ın bulgusu: hedef tamamen sistem tarafından belirleniyordu,
+                                    kullanıcının hiç söz hakkı yoktu — artık "Otomatik" da dahil gerçek
+                                    bir tercih, dokununca döngüye giriyor. */}
+                                <button
+                                    onClick={cycleDailyGoal}
+                                    className="w-full flex items-center justify-between py-3 border-0 bg-transparent cursor-pointer"
+                                >
+                                    <div className="pr-4 text-left">
+                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Günlük Hedef</div>
+                                        <div className="text-[11px] text-slate-400 mt-0.5">
+                                            {manualDailyGoalKm === null ? `Otomatik · ${autoDailyGoalKm.toFixed(1)} km` : 'Manuel seçim'}
+                                        </div>
+                                    </div>
+                                    <span className="text-[13px] font-black text-orange-500 shrink-0">
+                                        {manualDailyGoalKm === null ? 'Otomatik' : `${manualDailyGoalKm} km`}
+                                    </span>
+                                </button>
+
+                                <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
                                     <div className="pr-4">
                                         <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Ekranı Açık Tut</div>
                                         <div className="text-[11px] text-slate-400 mt-0.5">Yürüyüş sırasında ekran kararmaz</div>
@@ -665,7 +737,7 @@ function TrackingContent() {
                                         onClick={() => { haptics.tap(); setScreenAwake(v => !v); }}
                                         className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", screenAwake ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
                                     >
-                                        <span className={cn("absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", screenAwake ? "translate-x-5" : "translate-x-0.5")} />
+                                        <span className={cn("absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", screenAwake ? "translate-x-5" : "translate-x-0")} />
                                     </button>
                                 </div>
 
@@ -678,7 +750,7 @@ function TrackingContent() {
                                         onClick={() => { haptics.tap(); setAudioEnabled(v => { const next = !v; audioCues.setEnabled(next); return next; }); }}
                                         className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", audioEnabled ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
                                     >
-                                        <span className={cn("absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", audioEnabled ? "translate-x-5" : "translate-x-0.5")} />
+                                        <span className={cn("absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", audioEnabled ? "translate-x-5" : "translate-x-0")} />
                                     </button>
                                 </div>
 
@@ -691,7 +763,7 @@ function TrackingContent() {
                                         onClick={() => { haptics.tap(); setAutoPauseEnabled(!autoPauseEnabled); }}
                                         className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", autoPauseEnabled ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
                                     >
-                                        <span className={cn("absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", autoPauseEnabled ? "translate-x-5" : "translate-x-0.5")} />
+                                        <span className={cn("absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", autoPauseEnabled ? "translate-x-5" : "translate-x-0")} />
                                     </button>
                                 </div>
 

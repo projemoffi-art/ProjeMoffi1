@@ -1145,7 +1145,94 @@ doğrulandı; typecheck her adımdan sonra kontrol edildi, hiçbir yeni hata
 eklenmedi (sadece `home/page.tsx`'te 2 GERÇEK önceden var olan hata
 düzeltildi: `created_at`/`distance_meters` tip hataları).
 
-## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
+### 8.16 EN KRİTİK BULUNAN HATA: WalkQuickSheet'in kendi "aktif yürüyüş" görünümü haritayı tamamen erişilemez kılıyordu (2026-09-24)
+
+Baran'ın 8.15'in hemen ardından fark ettiği, bu oturumun en önemli bulgusu.
+Belirtiler: "Yürüyüşe Başla"ya basınca kısa bir an "Moffi ile Yürüyüş" yazan
+büyük-km ekranı görünüp haritaya geçiyordu; ama kullanıcı bir kez haritadan
+(`/walk/tracking`) ayrılıp (geri tuşu, ana sayfa) sonra "Devam Et"/"Takibi Gör"
+gibi bir yolla yürüyüş paneline tekrar dönmeye çalışınca **bir daha asla
+haritaya ulaşamıyordu** — hep aynı büyük-km ekranında (Duraklat/Bitir
+butonlarıyla) takılı kalıyordu.
+
+**Kök neden:** `WalkQuickSheet.tsx`'in kendi, TAMAMEN AYRI bir "aktif yürüyüş"
+görünümü vardı (Apple Fitness tarzı dev km rakamı, tempo/hız grid'i, kendi
+Duraklat/Bitir/Bitirme-Onayı modalı — muhtemelen `/walk/tracking` sayfası inşa
+edilmeden ÖNCEki bir fazdan kalma). `DynamicNavigation.tsx`'teki
+`open-walk-panel` event handler'ı (ana sayfadaki "Devam Et"/"Takibi Gör"
+butonları dahil HER tetikleyici) yürüyüş zaten aktif olsa bile HER ZAMAN bu
+paneli açıyordu — ve o panelin aktif görünümünde haritaya (`/walk/tracking`)
+dönecek HİÇBİR buton/link yoktu (sadece Duraklat/Bitir vardı). Tam olarak
+CLAUDE.md Bölüm 7'nin tarif ettiği "iki paralel, birbirinden habersiz sistem"
+deseni — ve bu kez kullanıcıyı gerçek özelliğin (haritalı takip) tamamen
+DIŞINDA bırakıyordu.
+
+**Düzeltme (iki parça):**
+1. `DynamicNavigation.tsx`: `handleOpenWalk` artık önce `walkData.isActive`'i
+   kontrol ediyor — aktifse paneli hiç açmadan doğrudan `router.push('/walk/
+   tracking')` yapıyor. `WalkQuickSheet` artık SADECE "henüz başlamamış"
+   hazırlık akışı (+ "devam eden yürüyüş bulundu" recovery ekranı) için
+   kullanılıyor.
+2. `WalkQuickSheet.tsx`: kendi aktif-görünümü (büyük km, Duraklat/Bitir, ayrı
+   bir Bitirme Onayı modalı, `handleStopWalk`, `pauseWalk`/`resumeWalk`
+   kullanımı) TAMAMEN silindi — artık ulaşılamaz olduğu için kod tekrarı
+   olarak durmasının anlamı yoktu (zaten tam teşekküllü hâli `/walk/
+   tracking`'de var). Bu ayrıca "Yürüyüşe Başla"ya basınca yaşanan kısa
+   ekran-değişimi "flash"ını da ortadan kaldırdı — artık `startWalk()`
+   sırasında panel içeriğinde HİÇBİR değişiklik olmuyor (zaten sadece
+   hazırlık görünümü var), `router.push` tamamlanana kadar aynı ekran
+   sabit kalıyor.
+
+**Doğrulama:** Playwright ile tam senaryo — yürüyüş başlat → haritaya git →
+geri dön (ana sayfa) → "open-walk-panel" tekrar tetiklendi (ana sayfadaki
+gerçek buton akışıyla aynı) → doğrudan `/walk/tracking`'e gidildiği, eski
+panelin hiç açılmadığı ve gerçek Leaflet haritasının (`.leaflet-container`)
+göründüğü doğrulandı.
+
+**Aynı turda ayrıca yapılanlar:**
+- **Ayarlar panelindeki toggle hizası düzeltildi:** `absolute top-0.5` ile
+  hiç `left` belirtilmeden sadece `translate-x-0.5`/`translate-x-5`
+  kullanılıyordu — tarayıcı varsayılan konumu tutarsız kaldığı için iki durum
+  arasında simetrik olmayan bir kayma vardı. `left-0.5` taban + `translate-x-0`/
+  `translate-x-5` olarak düzeltildi (artık iki kenarda da eşit 2px boşluk).
+- **Tutamacı tam ekrana çekmenin gerçek bir amacı yoktu** (sadece aynı
+  içerik büyüyordu) — artık `sheetState==='full'`'da gerçek EK veri
+  gösteriliyor: "Kilometre Analizi" (zaten Faz 7'den beri tutulan ama sadece
+  tek bir rozet olarak yüzeye çıkan `walkData.splits` — artık km-km liste
+  halinde, en hızlısı ⚡ ile işaretli) + durma/koklama sayacı (`sniffStops`,
+  daha önce hiçbir UI'da gösterilmiyordu).
+- **Günlük hedef artık gerçek bir kullanıcı tercihi:** `QuestEngineContext`'e
+  `manualDailyGoalKm`/`setManualDailyGoalKm` eklendi (localStorage persist).
+  `null` = "Otomatik" (sistemin `computeDailyGoal()` hesaplaması aynen
+  çalışmaya devam ediyor, SADECE bir seçenek oldu). Ayarlar panelinde
+  "Günlük Hedef" satırı Otomatik→1→2→3→5→8→10km→Otomatik döngüsünde.
+  Manuel hedefin süresi, otomatik hedefin kendi mesafe/süre oranı korunarak
+  orantılanıyor (uydurma sabit süre değil).
+- **GPS/hava durumu rozetleri + haritadaki canlı konum işaretçisi gerçek
+  veriyle doğrulandı** (Baran'ın şüphesi üzerine, koda bakılarak kanıtlandı):
+  hava durumu `api.open-meteo.com`'dan gerçek fetch; GPS durumu
+  `navigator.geolocation.watchPosition`'ın gerçek `accuracy`/hata callback'
+  lerinden; haritadaki mor nokta `userPos` → `walkData.path`'in SON gerçek
+  GPS noktasından geliyor. Hiçbiri sahte/sabit değil.
+- **Çekilen fotoğrafların ne işe yaradığı doğrulandı** (Baran'ın sorusu
+  üzerine): gerçek Supabase Storage (`walk-photos` bucket) → `walk_sessions.
+  photo_urls` → `/walk/history/[id]` detay sayfasında "Fotoğraflar" galerisi
+  olarak gösteriliyor (sadece gerçek fotoğraf varsa). Uçtan uca gerçek,
+  çalışan bir özellik.
+- **Repo kökündeki ~180 eski/ilgisiz debug script'i** (`fix_*.js`,
+  `apply_*.js`, `*_diff.txt`, `ProjeMoffi1_Guncel.zip`, `.agents/` vb. —
+  önceki bir ajan oturumundan kalma) silindi.
+
+**Bilerek ertelenen (Baran'ın "şimdilik bu kadar, başkalarına sonra bakarız"
+sınırı gereği düzeltilmedi, sadece not düşülüyor):** Bu turun test sürecinde
+BİR KEZ, uzun süre GPS sinyali kaybolmuş/durağan bir test hesabında,
+haritanın üzerinde onlarca yeşil/turuncu iç içe daire ikonunun üst üste
+yığıldığı görüldü (ekran görüntüsüyle doğrulandı, ama tekrarlanabilirliği
+test edilmedi — normal kullanımda GPS sinyali bu kadar uzun süre kaybolmuş
+durağan bir senaryo nadir). Şüpheli kaynak: GPS-kayıp/yeniden-arama döngüsü
+veya Overpass POI fetch retry'ı, önceki sonuçları temizlemeden yeni
+(rastgele jitter'lı) işaretler ekliyor olabilir. Doğrulanmadı, düzeltilmedi —
+ayrı bir turda ele alınmalı.
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
 önceliklendirilmedi):
