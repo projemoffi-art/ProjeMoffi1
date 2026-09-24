@@ -1811,7 +1811,20 @@ export default function LegendaryLightDashboard() {
                                     <div className="w-[26px] h-[26px] rounded-lg bg-[#8FD14F] flex items-center justify-center shrink-0">
                                         <Footprints className="w-3.5 h-3.5 text-[#1D2B0E]" strokeWidth={2.2} />
                                     </div>
-                                    <span className="text-white text-[12.5px] font-black">Bugünkü Yürüyüş</span>
+                                    {/* Baran'ın bulgusu: kart aktif bir yürüyüş varken bile hep aynı statik
+                                        "Bugünkü Yürüyüş" yazısını gösteriyordu — hangi pet'in şu an dışarıda
+                                        olduğuna dair hiçbir işaret yoktu. Artık gerçek nabız-noktası + pet adı. */}
+                                    <div className="flex items-center gap-1.5">
+                                        {activeSession && (
+                                            <span className="relative flex h-2 w-2 shrink-0">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8FD14F] opacity-75" />
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8FD14F]" />
+                                            </span>
+                                        )}
+                                        <span className="text-white text-[12.5px] font-black">
+                                            {activeSession ? `${walkingPetName} yürüyor! 🐾` : 'Bugünkü Yürüyüş'}
+                                        </span>
+                                    </div>
                                 </div>
                                 <span className="bg-white/92 rounded-full px-2.5 py-1 text-[#3A342C] text-[9.5px] font-black whitespace-nowrap">Hedef {targetActivityKm.toFixed(1)} km</span>
                             </div>
@@ -1820,25 +1833,38 @@ export default function LegendaryLightDashboard() {
                                     {walkedDistanceToday.toFixed(1)} <span className="text-[20px] font-bold text-white/70" style={{ fontFamily: nunito.style.fontFamily }}>km</span> <span className="text-[14px] font-bold text-white/70" style={{ fontFamily: nunito.style.fontFamily }}>/ {targetActivityKm.toFixed(1)} km</span>
                                 </div>
                                 <div className="h-1.5 rounded-full bg-white/25 overflow-hidden mt-2 w-[75%]">
-                                    <div className="h-full bg-[#8FD14F] rounded-full transition-all" style={{ width: `${activityPercent}%` }} />
+                                    <motion.div
+                                        className="h-full bg-[#8FD14F] rounded-full"
+                                        animate={{ width: `${activityPercent}%` }}
+                                        transition={{ type: "spring", damping: 22, stiffness: 120 }}
+                                    />
                                 </div>
                                 <div className="text-white/75 text-[9.5px] font-bold mt-1">%{activityPercent}</div>
                             </div>
                             <div className="flex items-center justify-center mt-5">
                                 <div className="flex items-center gap-1">
-                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2.5 py-1.5 text-white shrink-0 whitespace-nowrap">
+                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
                                         <div className="flex items-center gap-1 text-[10px] font-black">
                                             <Clock className="w-3 h-3" /> {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Süre</div>
                                     </div>
-                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2.5 py-1.5 text-white shrink-0 whitespace-nowrap">
+                                    {/* Piyasa araştırması bulgusu (bu oturumda tracking ekranına da eklendi):
+                                        adım sayısı, km'nin yanında ikinci en önemli gösterge — aynı dürüst
+                                        tahmin formülü (mesafe*1.3), sadece burada da yüzeye çıkarıldı. */}
+                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
+                                        <div className="flex items-center gap-1 text-[10px] font-black">
+                                            <Footprints className="w-3 h-3" /> {Math.round(walkedDistanceToday * 1000 * 1.3).toLocaleString('tr-TR')}
+                                        </div>
+                                        <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Adım</div>
+                                    </div>
+                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
                                         <div className="flex items-center gap-1 text-[10px] font-black">
                                             <Flame className="w-3 h-3" /> {estimatedWalkKcal} kcal
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Kalori</div>
                                     </div>
-                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2.5 py-1.5 text-white shrink-0 whitespace-nowrap">
+                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
                                         <div className="flex items-center gap-1 text-[10px] font-black">
                                             <MapPin className="w-3 h-3" /> {Math.max(0, targetActivityKm - walkedDistanceToday).toFixed(1)} km
                                         </div>
@@ -1848,7 +1874,7 @@ export default function LegendaryLightDashboard() {
                                 <button
                                     type="button"
                                     onClick={() => window.dispatchEvent(new CustomEvent('open-walk-panel'))}
-                                    className="bg-gradient-to-r from-[#F3735A] to-[#EE5B3D] rounded-md px-3 py-2 text-white text-[10.5px] font-black text-center flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ml-3 shadow-lg shadow-black/30 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                                    className="bg-gradient-to-r from-[#F3735A] to-[#EE5B3D] rounded-md px-3 py-2 text-white text-[10.5px] font-black text-center flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ml-2 shadow-lg shadow-black/30 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
                                 >
                                     {activeSession ? (activeSession.isPaused ? 'Devam Et' : 'Takibi Gör') : 'Yürüyüşe Çık'} <ArrowUpRight className="w-4 h-4 shrink-0" />
                                 </button>

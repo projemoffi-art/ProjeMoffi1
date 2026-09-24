@@ -89,8 +89,17 @@ export function LeaderboardSection() {
                 });
                 setRows(merged);
 
+                // Baran'ın bulduğu gerçek hata: kullanıcı ilk 100'de değilse, burada
+                // HER ZAMAN "0 km" gösteriliyordu — gerçekten o hafta 5km yürümüş olsa
+                // bile! Kullanıcının kendi mesafesini SAHTE bir sıfırla değil, aynı
+                // güvenli RPC'yi (sadece kendi ID'siyle) tekrar çağırıp GERÇEK toplamını
+                // çekerek gösteriyoruz. Rank için de uydurma bir sayı ("ilk 100 + 1")
+                // yerine dürüstçe "100+." deniyor — tam sırasını bilmiyoruz, olduğu gibi.
                 if (currentUser && !merged.some(r => r.id === currentUser.id)) {
-                    setMyRankFallback({ rank: merged.length + 1, km: 0 });
+                    const myRow = await apiService.getDistanceLeaderboard(period, [currentUser.id], 1);
+                    if (!cancelled) {
+                        setMyRankFallback({ rank: merged.length, km: (myRow[0]?.totalMeters || 0) / 1000 });
+                    }
                 } else {
                     setMyRankFallback(null);
                 }
@@ -256,7 +265,16 @@ export function LeaderboardSection() {
                                             {isMe ? 'Sen' : item.name}
                                             {isMe && <span className="bg-orange-500 text-white text-[7px] px-1.5 py-0.5 rounded">SEN</span>}
                                         </div>
-                                        <div className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5">{item.pet}</div>
+                                        {/* Baran'ın "sıralama tatlı bir yarış gibi hissettirmeli" isteği —
+                                            "Sen" satırında pet adı yerine, hemen üstteki GERÇEK kişiyle
+                                            aradaki gerçek mesafe farkı gösteriliyor (uydurma bir hedef değil). */}
+                                        {isMe && !isSearching && rank > 1 && rows[rank - 2] ? (
+                                            <div className="text-[9px] font-bold text-orange-500/80 mt-0.5">
+                                                {(rows[rank - 2].km - item.km).toFixed(1).replace('.', ',')} km kaldı — {rows[rank - 2].name}'i geçebilirsin! 🔥
+                                            </div>
+                                        ) : (
+                                            <div className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5">{item.pet}</div>
+                                        )}
                                     </div>
                                     <div className="text-right">
                                         <div className="font-black text-xs text-orange-600">{item.km.toFixed(1).replace('.', ',')} km</div>
@@ -266,17 +284,28 @@ export function LeaderboardSection() {
                         })}
                     </div>
 
-                    {/* Kullanıcı ilk 10'da değilse (bu aralıkta hiç yürümemiş olabilir) ayrı, sabit satır */}
+                    {/* Kullanıcı ilk 100'de değilse (bu aralıkta hiç yürümemiş olabilir) ayrı, sabit satır.
+                        Baran'ın bulduğu gerçek hata: rank uydurmaydı ("ilk 100 + 1"), km her zaman 0
+                        gösteriliyordu. Artık gerçek mesafe (yukarıdaki ikinci RPC çağrısından) ve dürüst
+                        bir "100+" etiketi — tam sırasını iddia etmiyoruz, olmayan bir kesinlik vermiyoruz. */}
                     {!isSearching && myRankFallback && currentUser && (
                         <div className="mt-4">
                             <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-3.5 flex items-center">
-                                <div className="font-black w-6 text-center text-orange-600 text-xs">{myRankFallback.rank}</div>
+                                <div className="font-black w-9 text-center text-orange-600 text-xs">{myRankFallback.rank}+</div>
                                 <div className="w-10 h-10 rounded-full mx-3 overflow-hidden">
                                     <img src={currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.id}`} className="w-full h-full object-cover" />
                                 </div>
                                 <div className="flex-1 font-black text-[11px] text-foreground dark:text-white uppercase tracking-wide">Sen</div>
                                 <div className="font-black text-xs text-orange-600">{myRankFallback.km.toFixed(1).replace('.', ',')} km</div>
                             </div>
+                            {/* Teşvik edici, gerçek veriye dayalı bir mesaj — Baran'ın "sıralama tatlı
+                                bir yarış gibi hissettirmeli" isteği. Uydurma bir hedef değil: listede
+                                görünen son kişinin GERÇEK mesafesiyle karşılaştırılıyor. */}
+                            {rows.length > 0 && rows[rows.length - 1].km > myRankFallback.km && (
+                                <p className="text-[10.5px] font-bold text-orange-600/80 text-center mt-2 px-4">
+                                    Sıralamaya girmene sadece {(rows[rows.length - 1].km - myRankFallback.km).toFixed(1).replace('.', ',')} km kaldı — hadi bir yürüyüşe çık! 🐾
+                                </p>
+                            )}
                         </div>
                     )}
                 </>

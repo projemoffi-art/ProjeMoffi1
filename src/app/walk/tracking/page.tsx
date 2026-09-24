@@ -82,22 +82,18 @@ function TrackingContent() {
     const [beaconId, setBeaconId] = useState<string | null>(null);
     const [beaconLoading, setBeaconLoading] = useState(false);
 
-    // Baran'ın bulguşu: günlük hedef tamamen sistem tarafından belirleniyordu,
-    // kullanıcının hiç müdahale şansı yoktu. Artık "Otomatik" dahil gerçek bir
-    // döngü: Otomatik → 1 → 2 → 3 → 5 → 8 → 10 km → Otomatik...
-    const GOAL_PRESETS_KM = [1, 2, 3, 5, 8, 10];
-    const cycleDailyGoal = () => {
+    // Baran'ın bulgusu: günlük hedef tamamen sistem tarafından belirleniyordu,
+    // kullanıcının hiç müdahale şansı yoktu. İlk denemede sabit 6 preset arasında
+    // döngü kurulmuştu ama Baran bunu hâlâ "kısıtlı" buldu — profesyonel
+    // uygulamalar (Apple Fitness, Google Fit) gerçek bir +/- stepper sunuyor,
+    // 0.5km'lik ADIMLARLA istenen HERHANGİ bir değere gidilebiliyor. "Otomatik"
+    // ayrı bir düğme olarak duruyor, sistemin hesapladığı değere tek dokunuşla
+    // dönülüyor.
+    const adjustDailyGoal = (delta: number) => {
         haptics.tap();
-        if (manualDailyGoalKm === null) {
-            setManualDailyGoalKm(GOAL_PRESETS_KM[0]);
-            return;
-        }
-        const idx = GOAL_PRESETS_KM.findIndex(v => Math.abs(v - manualDailyGoalKm) < 0.05);
-        if (idx === -1 || idx === GOAL_PRESETS_KM.length - 1) {
-            setManualDailyGoalKm(null); // döngü sona erince "Otomatik"a dön
-        } else {
-            setManualDailyGoalKm(GOAL_PRESETS_KM[idx + 1]);
-        }
+        const base = manualDailyGoalKm === null ? autoDailyGoalKm : manualDailyGoalKm;
+        const next = Math.max(0.5, Math.min(20, Math.round((base + delta) * 2) / 2));
+        setManualDailyGoalKm(next);
     };
 
     // Baran'ın gerçek bulgusu: gösterge paneli sabitti, kullanıcı haritayı ya da
@@ -711,22 +707,44 @@ function TrackingContent() {
 
                             <div className="space-y-1">
                                 {/* Baran'ın bulgusu: hedef tamamen sistem tarafından belirleniyordu,
-                                    kullanıcının hiç söz hakkı yoktu — artık "Otomatik" da dahil gerçek
-                                    bir tercih, dokununca döngüye giriyor. */}
-                                <button
-                                    onClick={cycleDailyGoal}
-                                    className="w-full flex items-center justify-between py-3 border-0 bg-transparent cursor-pointer"
-                                >
-                                    <div className="pr-4 text-left">
+                                    kullanıcının hiç söz hakkı yoktu. İlk sürümde 6 sabit preset arasında
+                                    döngü vardı ama bu da "kısıtlı" hissettiriyordu — artık gerçek bir
+                                    +/- stepper: 0.5km'lik adımlarla HERHANGİ bir değere gidilebiliyor,
+                                    "Otomatik" ayrı bir düğme (sistemin kendi hesapladığı değere döner). */}
+                                <div className="py-3">
+                                    <div className="flex items-center justify-between mb-2.5">
                                         <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Günlük Hedef</div>
-                                        <div className="text-[11px] text-slate-400 mt-0.5">
-                                            {manualDailyGoalKm === null ? `Otomatik · ${autoDailyGoalKm.toFixed(1)} km` : 'Manuel seçim'}
-                                        </div>
+                                        <button
+                                            onClick={() => { haptics.tap(); setManualDailyGoalKm(null); }}
+                                            className={cn(
+                                                "text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border-0",
+                                                manualDailyGoalKm === null ? "bg-orange-500 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400"
+                                            )}
+                                        >
+                                            Otomatik
+                                        </button>
                                     </div>
-                                    <span className="text-[13px] font-black text-orange-500 shrink-0">
-                                        {manualDailyGoalKm === null ? 'Otomatik' : `${manualDailyGoalKm} km`}
-                                    </span>
-                                </button>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => adjustDailyGoal(-0.5)}
+                                            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-black text-lg flex items-center justify-center shrink-0 border-0 active:scale-90 transition-transform"
+                                        >
+                                            −
+                                        </button>
+                                        <div className="flex-1 text-center">
+                                            <span className="text-lg font-black text-slate-800 dark:text-white">{dailyGoal.distance.toFixed(1)} km</span>
+                                            {manualDailyGoalKm === null && (
+                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Otomatik hesaplanıyor</div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => adjustDailyGoal(0.5)}
+                                            className="w-9 h-9 rounded-full bg-orange-500 text-white font-black text-lg flex items-center justify-center shrink-0 border-0 active:scale-90 transition-transform"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
 
                                 <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
                                     <div className="pr-4">

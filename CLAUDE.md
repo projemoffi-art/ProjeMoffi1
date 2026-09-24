@@ -1234,6 +1234,55 @@ veya Overpass POI fetch retry'ı, önceki sonuçları temizlemeden yeni
 (rastgele jitter'lı) işaretler ekliyor olabilir. Doğrulanmadı, düzeltilmedi —
 ayrı bir turda ele alınmalı.
 
+### 8.17 Ayarlarda gerçek özgürlük, ana sayfa kartının canlanması, sıralamada dürüstlük + teşvik (2026-09-24)
+
+Baran'ın 8.16'nın hemen ardından verdiği geri bildirim: günlük hedef hâlâ
+"kısıtlı" hissettiriyordu, ana sayfadaki "Bugünkü Yürüyüş" kartı statik
+kalıyordu (aktif yürüyen pet'in adı bile geçmiyordu), ve sıralama ekranının
+"tatlı bir yarış alanı" ruhu yoktu. Tam serbestlik verildi ("serbestsin").
+
+- **Günlük hedef artık gerçek bir +/- stepper:** ilk denemede (8.15) 6 sabit
+  preset arasında döngü kurulmuştu — Baran bunu hâlâ kısıtlı buldu, haklıydı.
+  Artık `/walk/tracking` ayarlarında 0.5km'lik adımlarla HERHANGİ bir değere
+  gidilebiliyor (− / değer / + düğmeleri), "Otomatik" ayrı bir düğme (sistemin
+  `computeDailyGoal()` hesaplamasına tek dokunuşla dönüyor).
+- **Ana sayfadaki "Bugünkü Yürüyüş" kartı artık gerçekten canlı:**
+  - Aktif yürüyüş varken başlık gerçek nabız noktası (`animate-ping`) + gerçek
+    pet adıyla değişiyor: "Bugünkü Yürüyüş" → "{pet adı} yürüyor! 🐾" (Baran'ın
+    istediği tam olarak buydu: "Delal yürüyorken Delal yürüyor... bilgi
+    vermiyor" şikayeti).
+  - Yeni bir 4. bilgi kutucuğu: **Adım** (uygulama genelinde zaten kullanılan
+    aynı dürüst mesafe×1.3 tahmini) — Süre/Kalori/Kalan'ın yanına eklendi,
+    hiçbiri kaldırılmadı, 390px genişlikte taşma olmadan sığdığı canlı
+    Playwright testiyle doğrulandı.
+  - İlerleme çubuğu artık CSS `transition` yerine gerçek bir framer-motion
+    spring animasyonuyla dolduruyor — daha "yaşayan" bir his için.
+- **Sıralamalar ekranında (`LeaderboardSection.tsx`) iki gerçek hata bulundu
+  ve düzeltildi, artık gerçek bir teşvik katmanı var:**
+  - 🔴 Kullanıcı ilk 100'de değilse (Faz 13'ten beri) mesafesi HER ZAMAN
+    "0 km" olarak gösteriliyordu — o hafta gerçekten 5km yürümüş olsa bile.
+    Rank de uydurmaydı (`ilk100.length + 1`). Düzeltme: aynı güvenli RPC
+    (`get_distance_leaderboard`) kullanıcının SADECE kendi ID'siyle tekrar
+    çağrılıp gerçek toplam mesafesi çekiliyor; rank artık dürüstçe "100+"
+    (tam sırayı iddia etmiyor, sahte bir kesinlik vermiyor).
+  - Yeni: hem bu "100+" dışı-kalan kartında hem de listede görünen "Sen"
+    satırında, hemen üstteki/önündeki GERÇEK kişiyle aradaki gerçek km farkı
+    gösteriliyor ("X km kaldı — {isim}'i geçebilirsin! 🔥" / "Sıralamaya
+    girmene sadece X km kaldı"). Uydurma bir hedef değil — doğrudan zaten
+    çekilmiş gerçek sıralama verisinden hesaplanıyor. Kişi listede yoksa
+    (örn. 1. sıradaysa) mesaj hiç gösterilmiyor — sahte bir "seni geçecek
+    kimse yok ama yine de mesaj göster" durumu yaratılmadı.
+
+**Doğrulama:** typecheck her adımdan sonra temiz (sadece bilinen önceden var
+olan hatalar); ana sayfa kartı gerçek Playwright testiyle (walk başlat →
+ana sayfaya dön) "{pet} yürüyor!" + nabız noktası + 4 kutucuk canlı
+doğrulandı; sıralama ekranı gerçek hesapla hatasız yüklendiği, tek-kullanıcılı
+(veri kıt) ortamda motivasyon mesajının doğru şekilde HİÇ gösterilmediği
+(çünkü kıyaslanacak gerçek bir üst sıra yok) doğrulandı — kod incelemesiyle
+guard mantığının doğru olduğu teyit edildi.
+
+## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
+
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
 önceliklendirilmedi):
 - RLS aktif ama policy'si olmayan 5 tablo
