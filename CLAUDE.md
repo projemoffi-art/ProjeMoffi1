@@ -192,7 +192,10 @@ sonsuza kadar takılı kalıp ilgisiz ekranlarda yanlış rozet/durum gösterebi
 sağlayıcısı çalışmıyor (os error 362)" hatasıyla çökertiyor — dosya diskte
 gerçekten var ama Turbopack'in dev-modu dosya okuyucusu OneDrive'ın sanal
 dosya sistemiyle (cloud file provider) bir şekilde çakışıyor. Şimdiye kadar
-karşılaşılanlar: `Soup` (`soup.js`) ve `HelpCircle` (`circle-question-mark.js`).
+karşılaşılanlar: `Soup` (`soup.js`), `HelpCircle` (`circle-question-mark.js`)
+ve `Swords` (`swords.js`, 2026-09-25, Faz 24'te bulundu — bir kez dev sunucusu
+kilitlenip `.next/dev/lock`'u tutan eski bir process'i `taskkill` ile
+sonlandırıp sunucuyu yeniden başlatmak gerekti).
 Ortak bir desen yok (ikisi de sıradan, küçük SVG ikonları) — tahmin
 edilemiyor, sadece karşılaşınca fark ediliyor (genelde 500 hatası + dev
 sunucusu log'unda "Execution of <DiskFileSystem as FileSystem>::read
@@ -1769,6 +1772,111 @@ Kişiselleştirme ekranında Neon Aura artık "Prime" kilidiyle değil yeşil
 "2 GÜN 23 SAAT KALDI" rozetiyle göründü ve seçilebilir hale geldi (Dark Metal
 hâlâ doğru şekilde kilitli kaldı, satın alınmadığı için). Sonra tüm test
 verisi (PP bakiyesi, aktif perk satırı) temizlendi.
+
+### 8.25 Faz 24 — Meydan Okumalar'a gerçek kişilerle yapılan sosyal mod: Düello + Takım Görevi (2026-09-25)
+
+Baran'ın isteği: mevcut Meydan Okumalar (sadece 4 bireysel/global hedef)
+"yeterli mi bilmiyorum" — popüler uygulamaları araştırıp GERÇEK KİŞİLERLE de
+yapılabilen, teşvik edici bir sistem kurmamı istedi, kendi fikirlerimi de
+katabileceğimi söyledi.
+
+**Araştırma:** Apple Fitness'ın ücretsiz 1v1 "Activity Competition"ı (bir
+haftalık yarış, kazanan belli olur) ve Duolingo'nun "Friends Quest"i (bir
+arkadaşla BİRLİKTE ortak bir hedefe ulaşma) — ikisi de gerçek, saygın, farklı
+ama tamamlayıcı iki desen. Strava'nın grup meydan okumaları artık abonelik
+gerektiriyor, o model alınmadı.
+
+**Kurulan sistem — `/walk/challenges`'a yeni "Sosyal" sekmesi, 2 mod:**
+- **Düello:** 3/7/14 günlük 1v1 yarış — kim daha çok km yürüyecek. Süre
+  bitince kazanan belirlenir.
+- **Takım Görevi:** aynı süre içinde bir arkadaşla BİRLİKTE ortak bir km
+  hedefine ulaşma (Duolingo Friends Quest deseni) — ikisinin toplam mesafesi
+  hedefi geçerse ikisi de kazanır.
+- Sadece GERÇEK karşılıklı takip edilen kişiler (`follows` tablosunda iki
+  yönlü satır) davet edilebiliyor — rastgele/tek yönlü takip edilen biri
+  önerilmiyor, `create_social_challenge` RPC'si bunu sunucu tarafında
+  doğruluyor.
+- Davet → bildirim (mevcut gerçek `notifications` tablosu, `followUser()`'ın
+  kullandığı AYNI desen) → kabul/red → aktif hâle gelince her iki tarafın
+  gerçek `walk_sessions` mesafesi pencere (starts_at-ends_at) içinde canlı
+  hesaplanıyor (`get_social_challenge_progress` — Faz 10/13'teki gizlilik
+  disiplini korunuyor, SADECE toplam km dönüyor, hiçbir GPS/rota sızmıyor).
+- Süresi dolan aktif bir meydan okuma, katılımcılardan biri sayfayı her
+  açtığında `finalize_social_challenge` (idempotent SECURITY DEFINER RPC)
+  ile sonuçlandırılıyor — gerçek bir cron/arka plan işi yok, bilinçli olarak
+  "görüntülerken sonuçlandır" deseni kullanıldı (badge/rozet sisteminin zaten
+  kullandığı desenle tutarlı).
+
+🔴 **Bilinçli güvenlik kararı: kullanıcılar arasında HİÇBİR PP transferi yok**
+(Faz 7/8.2'de kapatılan istemci-taraflı bakiye manipülasyonu riskini yeniden
+açmamak için). Düello'da kazanan 2x, kaybeden 1x taban ödül alır — ama ikisi
+de KENDİ hesabına, kendi PP defterinden ekleniyor, kaybeden hiçbir şey
+vermiyor/kaybetmiyor.
+
+🔴🔴 **Bu fazda, canlıya çıkmadan ÖNCE kod incelemesi sırasında yakalanan 2
+kritik güvenlik hatası:**
+1. `finalize_social_challenge` fonksiyonunun ilk taslağı, `auth.uid()`'i
+   `set_config('request.jwt.claims', ...)` ile GEÇİCİ OLARAK BAŞKA bir
+   kullanıcıymış gibi taklit ederek (iki katılımcıya sırayla ödeme yapmak
+   için) `award_pati_puan()`'ı çağırıyordu — gerçek çağıranın oturum JWT
+   bağlamını aynı transaction içinde bozabilecek, tamamen standart olmayan,
+   tehlikeli bir teknikti. **Düzeltme:** hedef kullanıcıyı AÇIKÇA parametre
+   olarak alan, `authenticated`/`anon`/`PUBLIC`'e HİÇ grant edilmeyen dahili
+   bir `award_pati_puan_internal(p_user_id, ...)` fonksiyonu eklendi — sadece
+   aynı sahibin diğer SECURITY DEFINER fonksiyonları (finalize_social_challenge
+   gibi) bunu çağırabiliyor, gerçek bir istemci asla doğrudan çağıramıyor.
+2. **Daha genel ve daha ciddi olan bulgu: PostgreSQL `create function`
+   varsayılan olarak yeni fonksiyona `PUBLIC` role'üne EXECUTE veriyor**
+   (`authenticated`/`anon` bunu miras yoluyla otomatik alıyor). Bu projenin
+   belgelenmiş kuralı (Bölüm 8.10) "sadece authenticated'e EXECUTE, anon'a
+   asla" idi — ama kontrol edilince bugün (Faz 22/23/24) oluşturulan
+   `redeem_cosmetic_item`, `redeem_vip_perk`, `create_social_challenge`,
+   `respond_social_challenge`, `get_social_challenge_progress`,
+   `finalize_social_challenge` fonksiyonlarının HİÇBİRİNDE bu varsayılan
+   PUBLIC grant'i açıkça REVOKE edilmemiş olduğu bulundu. Pratikte hepsi kendi
+   içlerinde `auth.uid() is null` kontrolü yaptığı için `anon`'un gerçek bir
+   istismarı mümkün değildi — ama bu proje standardıyla tutarlı olmak ve
+   gelecekte bir auth kontrolü yanlışlıkla zayıflatılırsa savunma katmanının
+   GERÇEKTEN var olması için hepsinden `revoke execute ... from public`
+   yapıldı. **YENİ KURAL (CLAUDE.md'ye eklendi):** bundan sonra her yeni
+   SECURITY DEFINER fonksiyonda, GRANT'ten hemen sonra mutlaka
+   `revoke execute on function ... from public;` da yazılmalı — GRANT
+   vermek yeterli değil, varsayılan PUBLIC grant'ini de açıkça kaldırmak
+   gerekiyor (Bölüm 8.10'daki "GRANT eklemek yetmez" dersinin ters yönü).
+3. Ayrıca (bu fazın konusu değil ama incelemede fark edildi): mevcut
+   `followUser()` fonksiyonu `notifications` tablosuna insert ederken
+   `meta: {...}` alanı gönderiyor — ama `notifications` tablosunda `meta`
+   diye bir kolon YOK. Bu, takip bildirimi oluşturma insert'inin PROJENİN
+   BAŞINDAN BERİ sessizce başarısız olduğu (try/catch ile yutulup sadece
+   console'a loglandığı) anlamına geliyor. Bugünkü yeni bildirimler (`type`,
+   `actor_id`, `entity_id` — gerçekten var olan kolonlar) bu hataya
+   düşülmeden yazıldı. Eski hata düzeltilmedi, ayrı bir iş olarak not
+   düşüldü.
+
+**Bilerek yapılmayan (ayrı bir iş):** Düello/Takım Görevi kazanımlarına özel
+yeni rozetler (`duel_champion`, `team_player` gibi) — bu turun kapsamına
+alınmadı, mevcut rozet sistemine sonradan kolayca eklenebilir; gerçek bir
+arka plan/cron ile "süresi dolan meydan okumaları otomatik sonuçlandırma"
+(şu an sadece katılımcı sayfayı AÇTIĞINDA sonuçlanıyor — açmazsa sonuçlanmaz,
+küçük ama dürüst bir sınır, koda da yorum olarak yazıldı).
+
+**Doğrulama:** typecheck temiz (sadece önceden var olan, ilgisiz hatalar
+kaldı). Gerçek bir mutual-follow çiftiyle (test hesabı ↔ Baran'ın gerçek
+hesabı) uçtan uca SQL/RPC seviyesinde doğrulandı: davet oluşturma (mutual-
+follow kontrolü çalıştı), bildirim doğru içerikle oluştu, kabul etme
+(status→active, starts_at/ends_at doğru hesaplandı), gerçek bir test
+yürüyüşüyle ilerleme hesaplama (`get_social_challenge_progress` doğru km
+döndürdü), sonuçlandırma (doğru kazanan belirlendi, kazanana 300 PP/kaybedene
+150 PP doğru şekilde ödendi, ikinci kez çağrıldığında idempotent olduğu —
+tekrar ödeme yapmadığı — doğrulandı). Ayrıca gerçek Playwright testiyle UI
+(Sosyal sekmesi, "Yeni Meydan Okuma" oluşturma ekranı, gerçek arkadaş
+seçici gerçek fotoğrafla) doğrulandı. Yol boyunca `Swords` ikonunun Bölüm
+5.6'daki Turbopack+OneDrive çökme hatasına yeni bir örnek olarak eklendiği
+bulundu (emoji ile değiştirildi) — bu sırada dev sunucusu kilitlenip eski
+bir process `.next/dev/lock` dosyasını tutmaya devam etti, `taskkill` ile
+sonlandırılıp sunucu temiz şekilde yeniden başlatıldı. Tüm test verisi
+(sahte yürüyüş satırı, PP ödemeleri, bildirimler, meydan okuma satırı)
+sonrasında temizlendi.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 

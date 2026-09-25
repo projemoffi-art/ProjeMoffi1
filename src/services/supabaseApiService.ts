@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { 
+import {
     Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
-    SystemAnnouncement, SystemFeedback
+    SystemAnnouncement, SystemFeedback, SocialChallenge
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
@@ -4706,6 +4706,78 @@ export class SupabaseApiService implements IApiService {
         const { data, error } = await supabase.rpc('redeem_vip_perk', { p_perk_id: perkId });
         if (error) throw error;
         return data as string;
+    }
+
+    // Faz 24: Sosyal Meydan Okumalar — sadece GERÇEK karşılıklı takip (iki
+    // yönlü follows satırı) listeleniyor, "insan seçici" rastgele/tek yönlü
+    // takip edilen birini önermiyor.
+    async getMutualFollows(userId: string): Promise<{ id: string; name: string; avatar?: string }[]> {
+        try {
+            const { data: following, error: e1 } = await supabase.from('follows').select('following_id').eq('follower_id', userId);
+            if (e1) throw e1;
+            const followingIds = (following || []).map(f => f.following_id);
+            if (followingIds.length === 0) return [];
+
+            const { data: mutualRows, error: e2 } = await supabase
+                .from('follows')
+                .select('follower_id')
+                .eq('following_id', userId)
+                .in('follower_id', followingIds);
+            if (e2) throw e2;
+            const mutualIds = (mutualRows || []).map(r => r.follower_id);
+            if (mutualIds.length === 0) return [];
+
+            const { data: profiles, error: e3 } = await supabase.from('profiles').select('id, full_name, username, avatar_url').in('id', mutualIds);
+            if (e3) throw e3;
+            return (profiles || []).map(p => ({ id: p.id, name: p.full_name || p.username || 'Moffi Kullanıcısı', avatar: p.avatar_url || undefined }));
+        } catch (err) {
+            console.error("Supabase getMutualFollows failed:", err);
+            return [];
+        }
+    }
+
+    async createSocialChallenge(partnerId: string, mode: 'duel' | 'team', durationDays: number, targetKm?: number): Promise<string> {
+        const { data, error } = await supabase.rpc('create_social_challenge', {
+            p_partner_id: partnerId, p_mode: mode, p_duration_days: durationDays, p_target_km: targetKm ?? null,
+        });
+        if (error) throw error;
+        return data as string;
+    }
+
+    async respondSocialChallenge(challengeId: string, accept: boolean): Promise<void> {
+        const { error } = await supabase.rpc('respond_social_challenge', { p_challenge_id: challengeId, p_accept: accept });
+        if (error) throw error;
+    }
+
+    async getSocialChallenges(userId: string): Promise<SocialChallenge[]> {
+        try {
+            const { data, error } = await supabase
+                .from('social_challenges')
+                .select('*')
+                .or(`creator_id.eq.${userId},partner_id.eq.${userId}`)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            return (data || []).map(c => ({
+                id: c.id, mode: c.mode, creatorId: c.creator_id, partnerId: c.partner_id, status: c.status,
+                targetKm: c.target_km, durationDays: c.duration_days, startsAt: c.starts_at, endsAt: c.ends_at,
+                winnerId: c.winner_id, rewardPp: c.reward_pp, createdAt: c.created_at,
+            }));
+        } catch (err) {
+            console.error("Supabase getSocialChallenges failed:", err);
+            return [];
+        }
+    }
+
+    async getSocialChallengeProgress(challengeId: string): Promise<{ creatorKm: number; partnerKm: number }> {
+        const { data, error } = await supabase.rpc('get_social_challenge_progress', { p_challenge_id: challengeId });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        return { creatorKm: row?.creator_km ?? 0, partnerKm: row?.partner_km ?? 0 };
+    }
+
+    async finalizeSocialChallengeIfDue(challengeId: string): Promise<void> {
+        const { error } = await supabase.rpc('finalize_social_challenge', { p_challenge_id: challengeId });
+        if (error) throw error;
     }
 
     // "Aynı Şehir" filtresi: profiles.address alanı (serbest metin) tam eşleşen

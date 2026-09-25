@@ -1719,6 +1719,26 @@ export class MockApiService implements IApiService {
         return new Date().toISOString();
     }
 
+    async getMutualFollows(userId: string): Promise<{ id: string; name: string; avatar?: string }[]> {
+        return [];
+    }
+
+    async createSocialChallenge(partnerId: string, mode: 'duel' | 'team', durationDays: number, targetKm?: number): Promise<string> {
+        return 'mock-challenge-id';
+    }
+
+    async respondSocialChallenge(challengeId: string, accept: boolean): Promise<void> {}
+
+    async getSocialChallenges(userId: string): Promise<any[]> {
+        return [];
+    }
+
+    async getSocialChallengeProgress(challengeId: string): Promise<{ creatorKm: number; partnerKm: number }> {
+        return { creatorKm: 0, partnerKm: 0 };
+    }
+
+    async finalizeSocialChallengeIfDue(challengeId: string): Promise<void> {}
+
     async getProfilesByIds(ids: string[]): Promise<{ id: string; name: string; avatar?: string; pet: string }[]> {
         const NAMES: Record<string, { name: string; avatar: string; pet: string }> = {
             '1': { name: 'Luna', avatar: '', pet: 'Golden Retriever' },

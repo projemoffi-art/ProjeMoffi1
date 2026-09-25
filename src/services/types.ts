@@ -222,6 +222,23 @@ export interface ShopOrder {
     createdAt: string;
     updatedAt: string;
 }
+
+// Faz 24: Sosyal Meydan Okumalar
+export interface SocialChallenge {
+    id: string;
+    mode: 'duel' | 'team';
+    creatorId: string;
+    partnerId: string;
+    status: 'pending' | 'active' | 'completed' | 'declined' | 'cancelled';
+    targetKm: number | null;
+    durationDays: number;
+    startsAt: string | null;
+    endsAt: string | null;
+    winnerId: string | null;
+    rewardPp: number;
+    createdAt: string;
+}
+
 export interface IApiService {
     // Auth & Profile
     getCurrentUser(): Promise<UserProfile | null>;
@@ -431,6 +448,15 @@ export interface IApiService {
     getVipPerks(): Promise<{ id: string; perkKey: string; name: string; description: string; icon: string; pricePp: number; durationHours: number; rarity: 'common' | 'rare' | 'epic' | 'legendary' }[]>;
     getActivePerks(userId: string): Promise<Record<string, string>>;
     redeemVipPerk(perkId: string, name: string, pricePp: number): Promise<string>;
+
+    // Faz 24: Sosyal Meydan Okumalar — gerçek karşılıklı takip edilen kişilerle
+    // düello (1v1) veya takım görevi (ortak hedef).
+    getMutualFollows(userId: string): Promise<{ id: string; name: string; avatar?: string }[]>;
+    createSocialChallenge(partnerId: string, mode: 'duel' | 'team', durationDays: number, targetKm?: number): Promise<string>;
+    respondSocialChallenge(challengeId: string, accept: boolean): Promise<void>;
+    getSocialChallenges(userId: string): Promise<SocialChallenge[]>;
+    getSocialChallengeProgress(challengeId: string): Promise<{ creatorKm: number; partnerKm: number }>;
+    finalizeSocialChallengeIfDue(challengeId: string): Promise<void>;
     addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean>;
     getGameModules(): Promise<any[]>;
     getPetLeaderboard(limit?: number): Promise<any[]>;
