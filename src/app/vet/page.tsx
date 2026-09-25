@@ -7,7 +7,7 @@ import {
     Search, MapPin, Star, Calendar, CreditCard,
     ShieldAlert, ChevronRight, Syringe, Utensils, Clock, Pill,
     CheckCircle2, ChevronLeft, X, Filter, Activity, History,
-    ShieldCheck, Bell
+    ShieldCheck, Bell, Stethoscope, Smile
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,6 @@ import { PharmacyModal } from "@/components/vet/PharmacyModal";
 import { ClinicListModal } from "@/components/vet/ClinicListModal";
 import { ClinicDetailDrawer } from "@/components/vet/ClinicDetailDrawer";
 import { MedicationModal } from "@/components/vet/MedicationModal";
-import { PetSwitcher } from "@/components/common/PetSwitcher";
 import { useVet } from "@/hooks/useVet";
 import { VetClinic, Doctor } from "@/types/domain";
 import { Pet, usePet } from "@/context/PetContext";
@@ -72,9 +71,9 @@ function VetPageContent() {
     const categoryScroll = useDragScroll();
     const dateScroll = useDragScroll();
 
-    const { 
-        featuredClinics, allClinics, userLocation, isLoading, 
-        bookAppointment, searchByService, activeCategory,
+    const {
+        featuredClinics, allClinics, userLocation, isLoading,
+        bookAppointment,
         userProvince, userDistrict, setLocationFilter
     } = useVet();
 
@@ -89,11 +88,29 @@ function VetPageContent() {
     const [activeModal, setActiveModal] = useState<'appointment' | 'payment' | 'vaccine' | 'dental' | 'pharma' | 'sos' | 'success' | 'rating' | 'clinicList' | null>(null);
     const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
     const [selectedProv, setSelectedProv] = useState("");
-    
+
+    // Ekran 2 referansı — 4 hizmet kısayolu + "Tümü/Yakınımda/Moffi Onaylı/Açık Olanlar" hızlı filtreleri
+    const [activeServiceFilter, setActiveServiceFilter] = useState<string | null>(null);
+    const [activeQuickFilter, setActiveQuickFilter] = useState<'all' | 'nearby' | 'verified' | 'open'>('all');
+    const mapBoxRef = useRef<HTMLDivElement>(null);
+
+    const SERVICE_SHORTCUTS = [
+        { key: 'muayene', label: 'Genel Muayene', icon: Stethoscope, keywords: ['muayene', 'genel'], bg: 'bg-emerald-100 dark:bg-emerald-500/15', color: 'text-emerald-600 dark:text-emerald-400' },
+        { key: 'acil', label: 'Acil Servis', icon: ShieldAlert, keywords: ['acil'], bg: 'bg-red-100 dark:bg-red-500/15', color: 'text-red-500 dark:text-red-400' },
+        { key: 'asi', label: 'Aşı', icon: Syringe, keywords: ['aşı', 'asi'], bg: 'bg-sky-100 dark:bg-sky-500/15', color: 'text-sky-600 dark:text-sky-400' },
+        { key: 'dis', label: 'Diş Sağlığı', icon: Smile, keywords: ['diş', 'dis'], bg: 'bg-violet-100 dark:bg-violet-500/15', color: 'text-violet-600 dark:text-violet-400' },
+    ] as const;
+
+    const applyQuickFilter = (key: typeof activeQuickFilter) => {
+        setActiveQuickFilter(key);
+        setFilterSortBy(key === 'nearby' ? 'distance_asc' : null);
+        setFilterOpenNow(key === 'open');
+    };
+
     // Payment Simulation States
     const activeClinics = useMemo(() => {
         let result = [...allClinics];
-        
+
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             result = result.filter(c => {
@@ -102,11 +119,24 @@ function VetPageContent() {
                 return matchName || matchFeatures;
             });
         }
-        
+
+        if (activeServiceFilter) {
+            const shortcut = SERVICE_SHORTCUTS.find(s => s.key === activeServiceFilter);
+            if (shortcut) {
+                result = result.filter(c => (c.features || []).some((f: string) =>
+                    shortcut.keywords.some(kw => f.toLowerCase().includes(kw))
+                ));
+            }
+        }
+
+        if (activeQuickFilter === 'verified') {
+            result = result.filter(c => c.isPremium);
+        }
+
         if (filterOpenNow) {
             result = result.filter(c => c.isOpenNow);
         }
-        
+
         if (filterSortBy === 'distance_asc') {
             result.sort((a, b) => (a.calculated_distance || 0) - (b.calculated_distance || 0));
         } else if (filterSortBy === 'distance_desc') {
@@ -114,9 +144,9 @@ function VetPageContent() {
         } else if (filterSortBy === 'rating_desc') {
             result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         }
-        
+
         return result;
-    }, [allClinics, searchQuery, filterOpenNow, filterSortBy]);
+    }, [allClinics, searchQuery, filterOpenNow, filterSortBy, activeServiceFilter, activeQuickFilter]);
     
     const hasActiveFilters = filterSortBy !== null || filterOpenNow;
 
@@ -819,27 +849,75 @@ function VetPageContent() {
                 <div className="px-6 pt-8 pb-2 flex flex-col gap-5">
                     <div className="flex justify-between items-center w-full min-w-0 gap-2">
                         <div className="flex items-center gap-3 min-w-0">
-                            <button 
+                            <button
                                 onClick={() => {
                                     if (window.history.length > 2) {
                                         router.back();
                                     } else {
                                         router.push('/home');
                                     }
-                                }} 
-                                className="w-10 h-10 rounded-xl bg-card border border-card-border flex items-center justify-center hover:bg-card-border/50 hover:scale-105 active:scale-95 transition-all text-foreground/80"
+                                }}
+                                className="w-10 h-10 rounded-xl bg-card border border-card-border flex items-center justify-center hover:bg-card-border/50 hover:scale-105 active:scale-95 transition-all text-foreground/80 shrink-0"
                             >
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
-                            <div className="min-w-0 shrink">
-                                <span className="text-[7px] min-[375px]:text-[8px] sm:text-[9px] font-black text-accent dark:text-accent uppercase tracking-[0.2em] block mb-0.5 transition-all">Moffi Health</span>
-                                <h1 className="text-sm min-[375px]:text-base sm:text-xl md:text-2xl font-black text-foreground tracking-tight leading-none transition-all">
-                                    Veterinerlik Portalı
-                                </h1>
-                            </div>
+                            <h1 className="text-2xl font-black text-foreground tracking-tight leading-none transition-all truncate">
+                                Veteriner
+                            </h1>
                         </div>
-                        <div className="scale-90 origin-right shrink-0 max-w-[35vw] overflow-hidden">
-                            <PetSwitcher />
+                        <div className="relative shrink-0" ref={notifRef}>
+                            <button
+                                onClick={() => setShowNotifications(!showNotifications)}
+                                className="w-10 h-10 rounded-xl bg-card border border-card-border flex items-center justify-center hover:bg-card-border/50 active:scale-95 transition-all text-foreground/80 relative"
+                            >
+                                <Bell className="w-5 h-5" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-white text-[9px] font-black flex items-center justify-center">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </button>
+                            <AnimatePresence>
+                                {showNotifications && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="absolute top-full right-0 mt-2 w-72 bg-card border border-card-border rounded-xl shadow-xl overflow-hidden z-[170]"
+                                    >
+                                        <div className="max-h-64 overflow-y-auto">
+                                            {unreadNotifications.length > 0 ? unreadNotifications.map(notif => (
+                                                <div
+                                                    key={notif.id}
+                                                    onClick={() => handleNotificationClick(notif.id)}
+                                                    className={cn(
+                                                        "p-4 border-b border-card-border last:border-0 hover:bg-card-border/30 cursor-pointer transition-colors relative",
+                                                        notif.isReadLocally ? "opacity-50" : ""
+                                                    )}
+                                                >
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <p className="text-xs font-bold text-foreground mb-1 leading-relaxed">
+                                                            {notif.message}
+                                                        </p>
+                                                        {notif.isReadLocally && (
+                                                            <span className="text-[10px] text-green-500 flex items-center gap-1 font-bold whitespace-nowrap">
+                                                                ✓ Okundu
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[9px] font-bold text-secondary">
+                                                        {new Date(notif.created_at).toLocaleString('tr-TR')}
+                                                    </span>
+                                                </div>
+                                            )) : (
+                                                <div className="p-6 text-center">
+                                                    <p className="text-xs font-bold text-secondary">Henüz bildirim yok</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
 
@@ -848,7 +926,7 @@ function VetPageContent() {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
                         <input
                             type="text"
-                            placeholder="Klinik, veteriner veya uzmanlık alanı ara..."
+                            placeholder="Veteriner, klinik veya hizmet ara..."
                             className="w-full h-12 pl-11 pr-4 bg-card rounded-xl border border-card-border outline-none font-bold text-xs text-foreground placeholder:text-zinc-400 dark:placeholder:text-secondary/20 focus:border-accent transition-all text-left shadow-sm dark:shadow-none"
                             value={searchQuery}
                             onChange={(e) => {
@@ -936,20 +1014,16 @@ function VetPageContent() {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-between bg-card-border/30 px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
-                                <MapPin className="w-3.5 h-3.5 text-accent" />
-                                <span className="text-[11px] font-bold">
-                                    Konum: <span className="text-foreground font-black">{userProvince} / {userDistrict}</span>
-                                </span>
-                            </div>
-                            <button
-                                onClick={() => setIsLocationSelectorOpen(true)}
-                                className="text-[10px] font-black text-accent hover:text-accent bg-accent/10 px-2.5 py-1 rounded-lg transition-colors"
-                            >
-                                Değiştir
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setIsLocationSelectorOpen(true)}
+                            className="flex items-center gap-2 text-left w-fit max-w-full"
+                        >
+                            <MapPin className="w-4 h-4 text-accent shrink-0" />
+                            <span className="text-[13px] font-bold text-foreground truncate">
+                                Konumun: <span className="text-secondary font-semibold">{userProvince}, {userDistrict}</span>
+                            </span>
+                            <span className="text-[13px] text-secondary shrink-0">✎</span>
+                        </button>
                     )}
 
                     {/* View Toggle */}
@@ -968,8 +1042,32 @@ function VetPageContent() {
                         </button>
                     </div>
 
-                    {/* Clean Category Tags */}
-                    <div 
+                    {/* Hizmet kısayolları — referans Ekran 2 */}
+                    <div style={{ display: viewMode === 'clinics' ? 'grid' : 'none' }} className="grid grid-cols-4 gap-2">
+                        {SERVICE_SHORTCUTS.map(cat => {
+                            const isActive = activeServiceFilter === cat.key;
+                            const Icon = cat.icon;
+                            return (
+                                <button
+                                    key={cat.key}
+                                    onClick={() => setActiveServiceFilter(isActive ? null : cat.key)}
+                                    className="flex flex-col items-center gap-1.5"
+                                >
+                                    <div className={cn(
+                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                                        cat.bg,
+                                        isActive && "ring-2 ring-accent ring-offset-2 ring-offset-background"
+                                    )}>
+                                        <Icon className={cn("w-5 h-5", cat.color)} />
+                                    </div>
+                                    <span className="text-[9.5px] font-bold text-secondary text-center leading-tight">{cat.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Hızlı filtreler — Tümü / Yakınımda / Moffi Onaylı / Açık Olanlar */}
+                    <div
                         ref={categoryScroll.ref}
                         style={{ display: viewMode === 'clinics' ? 'flex' : 'none' }}
                         onMouseDown={categoryScroll.onMouseDown}
@@ -978,22 +1076,23 @@ function VetPageContent() {
                         onMouseMove={categoryScroll.onMouseMove}
                         className="flex gap-2 overflow-x-auto no-scrollbar touch-pan-x pb-1 momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
                     >
-                                                {[
-                            { id: 'all', label: 'Tüm Klinikler', icon: '🌍' },
-                            { id: 'clinic', label: 'Hastaneler', icon: '🏥' }
-                        ].map(cat => (
+                        {[
+                            { id: 'all' as const, label: 'Tümü' },
+                            { id: 'nearby' as const, label: 'Yakınımda' },
+                            { id: 'verified' as const, label: 'Moffi Onaylı' },
+                            { id: 'open' as const, label: 'Açık Olanlar' },
+                        ].map(f => (
                             <button
-                                key={cat.id}
-                                onClick={() => searchByService(cat.id)}
+                                key={f.id}
+                                onClick={() => applyQuickFilter(f.id)}
                                 className={cn(
-                                    "px-4 py-2 rounded-lg border flex items-center gap-1.5 whitespace-nowrap transition-all font-bold text-xs shrink-0",
-                                    activeCategory === cat.id
-                                        ? "bg-accent text-white border-accent font-black shadow-lg shadow-accent/20"
-                                        : "bg-card text-secondary border-card-border hover:border-card-border hover:text-foreground"
+                                    "px-4 py-2 rounded-full whitespace-nowrap transition-all font-bold text-xs shrink-0",
+                                    activeQuickFilter === f.id
+                                        ? "bg-foreground text-background"
+                                        : "bg-card text-secondary border border-card-border hover:text-foreground"
                                 )}
                             >
-                                <span className="text-xs">{cat.icon}</span>
-                                {cat.label}
+                                {f.label}
                             </button>
                         ))}
                     </div>
@@ -1001,54 +1100,6 @@ function VetPageContent() {
             </header>
 
             <main className="px-6 py-6 space-y-6">
-                {unreadNotifications.length > 0 && (
-                    <div className="relative z-40 mb-2" ref={notifRef}>
-                        <button 
-                            onClick={() => setShowNotifications(!showNotifications)}
-                            className="bg-accent/10 text-accent dark:text-accent border border-accent/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black w-full justify-center transition-all hover:bg-accent/20"
-                        >
-                            <Bell className={cn("w-4 h-4", unreadCount > 0 ? "animate-pulse" : "")} />
-                            {unreadCount > 0 ? `${unreadCount} Yeni Bildirim` : `Bildirimler`}
-                        </button>
-                        <AnimatePresence>
-                            {showNotifications && (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className="absolute top-full left-0 right-0 mt-2 bg-card border border-card-border rounded-xl shadow-xl overflow-hidden"
-                                >
-                                    <div className="max-h-64 overflow-y-auto">
-                                        {unreadNotifications.map(notif => (
-                                            <div 
-                                                key={notif.id} 
-                                                onClick={() => handleNotificationClick(notif.id)}
-                                                className={cn(
-                                                    "p-4 border-b border-card-border last:border-0 hover:bg-card-border/50/50 cursor-pointer transition-colors relative",
-                                                    notif.isReadLocally ? "opacity-50" : ""
-                                                )}
-                                            >
-                                                <div className="flex justify-between items-start gap-2">
-                                                    <p className="text-xs font-bold text-foreground mb-1 leading-relaxed">
-                                                        {notif.message}
-                                                    </p>
-                                                    {notif.isReadLocally && (
-                                                        <span className="text-[10px] text-green-500 flex items-center gap-1 font-bold whitespace-nowrap">
-                                                            ✓ Okundu
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <span className="text-[9px] font-bold text-secondary uppercase tracking-wider">
-                                                    {new Date(notif.created_at).toLocaleString('tr-TR')}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                )}
                 {viewMode === 'appointments' ? (
                     <MyAppointmentsPanel 
                         appointments={mappedAppointments} 
@@ -1091,7 +1142,7 @@ function VetPageContent() {
 
 
                 {/* Solid Map Box */}
-                <section className="relative w-full rounded-2xl p-6 border border-card-border shadow-xl bg-card flex flex-col items-center justify-center text-center gap-4 transition-colors duration-300">
+                <section ref={mapBoxRef} className="relative w-full rounded-2xl p-6 border border-card-border shadow-xl bg-card flex flex-col items-center justify-center text-center gap-4 transition-colors duration-300 scroll-mt-24">
                     <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
                         <MapPin className="w-6 h-6 text-accent" />
                     </div>
@@ -1119,104 +1170,80 @@ function VetPageContent() {
                 {/* Clinics Section */}
                 <section>
                     <div className="flex items-center justify-between mb-4 px-1">
-                        <div>
-                            <h2 className="text-base font-black text-foreground tracking-tight leading-none">Çevredeki klinikler</h2>
-                            <p className="text-[10px] text-secondary font-bold mt-1.5">Öne çıkan sağlık merkezleri</p>
+                        <h2 className="text-base font-black text-foreground tracking-tight leading-none">Yakındaki veterinerler</h2>
+                        <div className="flex items-center gap-3 shrink-0">
+                            <button
+                                onClick={() => mapBoxRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                                className="text-[11px] font-bold text-accent flex items-center gap-0.5 hover:opacity-80 transition-opacity"
+                            >
+                                Haritada gör <ChevronRight className="w-3 h-3" />
+                            </button>
+                            <button
+                                onClick={() => setIsFilterPanelOpen(true)}
+                                className="relative bg-card border border-card-border w-7 h-7 rounded-lg flex items-center justify-center text-secondary hover:text-foreground transition-all"
+                            >
+                                <Filter className="w-3.5 h-3.5" />
+                                {hasActiveFilters && (
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />
+                                )}
+                            </button>
                         </div>
-                        <button
-                            onClick={() => setIsFilterPanelOpen(true)}
-                            className="relative bg-card border border-card-border px-3.5 py-1.5 rounded-lg text-[10px] font-bold text-secondary flex items-center gap-1 hover:text-foreground transition-all"
-                        >
-                            <Filter className="w-3 h-3" /> Filtrele
-                            {hasActiveFilters && (
-                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />
-                            )}
-                        </button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {activeClinics.map((clinic, index) => (
                             <motion.div
                                 initial={{ opacity: 0, y: 15 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: index * 0.05 }}
-                                whileHover={{ y: -3, scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
                                 key={clinic.id || `clinic-${index}`}
-                                className={cn(
-                                    "bg-card rounded-2xl p-4 border transition-all duration-300 group relative overflow-hidden text-left",
-                                    clinic.isPremium 
-                                        ? "border-accent/30 shadow-[0_0_25px_rgba(16,185,129,0.04)]" 
-                                        : "border-card-border hover:border-zinc-350 dark:hover:border-zinc-700 shadow-sm dark:shadow-none"
-                                )}
+                                onClick={() => { setDetailClinicId(clinic.id); setDetailClinicData(clinic); }}
+                                className="bg-card rounded-2xl p-3 border border-card-border shadow-sm dark:shadow-none flex items-center gap-3 cursor-pointer transition-colors hover:border-accent/30"
                             >
-                                {clinic.isPremium && (
-                                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-accent" />
-                                )}
+                                <div className="w-16 h-16 rounded-xl overflow-hidden border border-card-border shrink-0 relative">
+                                    {clinic.imageUrl ? (
+                                        <img src={clinic.imageUrl} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center">
+                                            <span className="text-xl font-black text-zinc-500 dark:text-white/40">{(clinic.name || 'C')[0]}</span>
+                                        </div>
+                                    )}
+                                </div>
 
-                                <div className="flex gap-4">
-                                    {/* Small cover image for clinical listing */}
-                                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-card-border shrink-0 cursor-pointer relative group-hover:border-accent/30 transition-all duration-300" onClick={() => { setDetailClinicId(clinic.id); setDetailClinicData(clinic); }}>
-                                        {clinic.imageUrl ? (
-                                            <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                        ) : (
-                                            <div className="w-full h-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center">
-                                                <span className="text-3xl font-black text-zinc-500 dark:text-white/40 uppercase">{(clinic.name || 'C')[0]}</span>
-                                            </div>
-                                        )}
-                                        <div className="absolute inset-0 bg-black/10 dark:bg-black/15 group-hover:bg-black/5 transition-colors" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <h3 className="font-black text-foreground text-sm tracking-tight leading-none truncate">
+                                            {clinic.name}
+                                        </h3>
+                                        {clinic.isPremium && <ShieldCheck className="w-3.5 h-3.5 text-cyan-500 shrink-0" />}
                                     </div>
-
-                                    {/* Clinic Details */}
-                                    <div className="flex-1 flex flex-col justify-between text-left">
-                                        <div>
-                                            <div className="flex items-center justify-between">
-                                                <h3 
-                                                    className="font-black text-foreground text-sm tracking-tight leading-none group-hover:text-accent dark:group-hover:text-accent transition-colors duration-300 cursor-pointer"
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        setDetailClinicId(clinic.id); 
-                                                        setDetailClinicData(clinic); 
-                                                    }}
-                                                >
-                                                    {clinic.name}
-                                                </h3>
-                                                <div className="flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/25 px-2 py-0.5 rounded-full text-yellow-500">
-                                                    <Star className="w-3 h-3 fill-current" />
-                                                    <span className="text-[9px] font-black">{clinic.rating}</span>
-                                                </div>
-                                            </div>
-                                            <p className="text-secondary text-[9px] font-bold mt-1.5 flex items-center gap-1">
-                                                <MapPin className="w-3.5 h-3.5 text-secondary" /> {clinic.distance} • Kadıköy, İstanbul
-                                            </p>
-                                            <div className="flex gap-1 mt-2">
-                                                {(clinic.features || []).slice(0, 2).map((f: string, fIndex: number) => {
-                                                    if (!f) console.warn("🚨 BOŞ FEATURE DEĞERİ!", { f, clinicId: clinic.id, index: fIndex });
-                                                    return (
-                                                        <span key={f} className="text-[7.5px] font-bold bg-card text-secondary px-2 py-0.5 rounded border border-card-border uppercase">{f}</span>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-end gap-2.5 mt-2">
-                                            <button
-                                                onClick={() => setDetailClinicId(clinic.id)}
-                                                className="text-[10px] font-bold text-secondary hover:text-foreground transition-colors duration-300"
-                                            >
-                                                Detayları gör
-                                            </button>
-                                            <button
-                                                onClick={() => openAppointment(clinic)}
-                                                className="bg-accent text-white px-4 py-1.5 rounded-lg font-black text-[10px] hover:bg-accent/90 transition-all shadow-md shadow-accent/20 active:scale-95 duration-200"
-                                            >
-                                                Randevu al
-                                            </button>
-                                        </div>
+                                    <div className="flex items-center gap-1 mt-1.5">
+                                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                        <span className="text-[11px] font-black text-foreground">{clinic.rating}</span>
+                                        {typeof clinic.reviewCount === 'number' && (
+                                            <span className="text-[11px] font-semibold text-secondary">({clinic.reviewCount})</span>
+                                        )}
+                                        <span className="text-secondary mx-0.5">•</span>
+                                        <span className="text-[11px] font-semibold text-secondary truncate">{clinic.distance}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", clinic.isOpenNow ? "bg-accent-secondary" : "bg-secondary/40")} />
+                                        <span className={cn("text-[11px] font-semibold", clinic.isOpenNow ? "text-accent-secondary" : "text-secondary")}>
+                                            {clinic.isOpenNow ? "Açık" : "Kapalı"}
+                                        </span>
                                     </div>
                                 </div>
+
+                                <ChevronRight className="w-4 h-4 text-secondary shrink-0" />
                             </motion.div>
                         ))}
+                        {activeClinics.length === 0 && !isLoading && (
+                            <div className="text-center py-10">
+                                <p className="text-xs font-bold text-secondary">Bu bölgede henüz eşleşen klinik yok.</p>
+                            </div>
+                        )}
                     </div>
                 </section>
                     </>

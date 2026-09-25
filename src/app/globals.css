@@ -347,50 +347,50 @@ nextjs-portal,
   color: var(--foreground);
 }
 
-/* Faz 25 — .theme-vet daha önce KENDİ ayrı mavi-teal paletini (#4C8CA8)
-   kullanıyordu; bu, Baran'ın CLAUDE.md Bölüm 5'te açıkça reddettiği "mavi
-   premium değil" ilkesine doğrudan aykırıydı ve /vet sayfasının "kaba"
-   hissettirmesinin ana kaynağıydı (sayfadaki HEMEN HEMEN her buton/rozet/ikon
-   text-accent/bg-accent kullanıyor). Artık uygulamanın geri kalanıyla AYNI
-   sıcak krem+turuncu paleti kullanıyor — ayrı bir tema yerine tutarlılık.
+/* Faz 25 — .theme-vet artık design-reference/vet-final'in kendi paletini
+   kullanıyor, bu da design-reference/home-final/README.md'de KİLİTLİ olan
+   gerçek hex kodlarla birebir aynı (turuncu-kiremit #EE5B3D, krem #F7F3EA,
+   vb) — uygulamanın genel :root varsayılanından (biraz farklı, #E28F5B) BİLE
+   değil, doğrudan kilitli referanstan alındı, çünkü Baran'ın istediği "örnek
+   ui'nin birebir aynısı".
 
    ÖNEMLİ: hem --accent/--background/vb HEM DE Tailwind'in @theme'de bunlara
    eşlediği --color-accent/--color-background/vb kolonlarının İKİSİ de burada
    set ediliyor. Sadece --accent'i set etmek YETMİYOR — bkz. CLAUDE.md Bölüm
-   6.8, bu tam olarak bu yüzden sayfa hiç değişmiyormuş gibi görünüyordu. */
+   8.27, bu tam olarak bu yüzden sayfa hiç değişmiyormuş gibi görünüyordu. */
 .theme-vet {
-  --background: #FBF7F2;
-  --foreground: #2D2621;
+  --background: #F7F3EA;
+  --foreground: #201B16;
   --card-bg: #FFFFFF;
-  --card-border: rgba(45, 38, 33, 0.08);
-  --accent: #E28F5B;
-  --accent-secondary: #8BA888;
-  --secondary-text: #7A6F66;
-  --emergency: #FF3B30;
-  --color-background: #FBF7F2;
-  --color-foreground: #2D2621;
+  --card-border: #ECE6D9;
+  --accent: #EE5B3D;
+  --accent-secondary: #8FD14F;
+  --secondary-text: #6F675B;
+  --emergency: #D9432F;
+  --color-background: #F7F3EA;
+  --color-foreground: #201B16;
   --color-card: #FFFFFF;
-  --color-card-border: rgba(45, 38, 33, 0.08);
-  --color-accent: #E28F5B;
-  --color-accent-secondary: #8BA888;
-  --color-secondary: #7A6F66;
-  --color-emergency: #FF3B30;
+  --color-card-border: #ECE6D9;
+  --color-accent: #EE5B3D;
+  --color-accent-secondary: #8FD14F;
+  --color-secondary: #6F675B;
+  --color-emergency: #D9432F;
 }
 .dark .theme-vet {
-  --background: #1C1815;
-  --foreground: #EDE6DF;
-  --card-bg: #262019;
-  --card-border: rgba(255, 255, 255, 0.06);
-  --accent: #F0A874;
-  --accent-secondary: #A3C29E;
-  --secondary-text: #B3A69B;
-  --color-background: #1C1815;
-  --color-foreground: #EDE6DF;
-  --color-card: #262019;
-  --color-card-border: rgba(255, 255, 255, 0.06);
-  --color-accent: #F0A874;
-  --color-accent-secondary: #A3C29E;
-  --color-secondary: #B3A69B;
+  --background: #1E1A15;
+  --foreground: #F2ECE2;
+  --card-bg: #29241D;
+  --card-border: rgba(255, 255, 255, 0.07);
+  --accent: #FF7A57;
+  --accent-secondary: #A6DE72;
+  --secondary-text: #B8AE9E;
+  --color-background: #1E1A15;
+  --color-foreground: #F2ECE2;
+  --color-card: #29241D;
+  --color-card-border: rgba(255, 255, 255, 0.07);
+  --color-accent: #FF7A57;
+  --color-accent-secondary: #A6DE72;
+  --color-secondary: #B8AE9E;
 }
 
 @layer utilities {

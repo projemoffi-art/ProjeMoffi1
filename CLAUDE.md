@@ -192,18 +192,23 @@ sonsuza kadar takılı kalıp ilgisiz ekranlarda yanlış rozet/durum gösterebi
 sağlayıcısı çalışmıyor (os error 362)" hatasıyla çökertiyor — dosya diskte
 gerçekten var ama Turbopack'in dev-modu dosya okuyucusu OneDrive'ın sanal
 dosya sistemiyle (cloud file provider) bir şekilde çakışıyor. Şimdiye kadar
-karşılaşılanlar: `Soup` (`soup.js`), `HelpCircle` (`circle-question-mark.js`)
-ve `Swords` (`swords.js`, 2026-09-25, Faz 24'te bulundu — bir kez dev sunucusu
+karşılaşılanlar: `Soup` (`soup.js`), `HelpCircle` (`circle-question-mark.js`),
+`Swords` (`swords.js`, 2026-09-25, Faz 24'te bulundu — bir kez dev sunucusu
 kilitlenip `.next/dev/lock`'u tutan eski bir process'i `taskkill` ile
-sonlandırıp sunucuyu yeniden başlatmak gerekti).
-Ortak bir desen yok (ikisi de sıradan, küçük SVG ikonları) — tahmin
+sonlandırıp sunucuyu yeniden başlatmak gerekti), ve `Siren`/`Pencil`
+(2026-09-25, Faz 25'te AYNI OTURUMDA ART ARDA iki farklı ikonla — `/vet`
+sayfası tamamen 500 vermeye başladı, ikisi de sırasıyla `ShieldAlert`/düz
+`✎` karakterine çevrilerek düzeltildi).
+Ortak bir desen yok (hepsi sıradan, küçük SVG ikonları) — tahmin
 edilemiyor, sadece karşılaşınca fark ediliyor (genelde 500 hatası + dev
 sunucusu log'unda "Execution of <DiskFileSystem as FileSystem>::read
 failed" görülür). **Çözüm:** o ikonu KULLANMA — işlevsel olarak eşdeğer
 başka bir ikonla değiştir (ya da bu örnekte olduğu gibi düz metin/emoji
 kullan). Zaman kaybetmeden hatayı tanı ve ikonu değiştir, kök nedenini
 araştırmaya çalışma (OneDrive/Turbopack etkileşimi, bu projenin kontrolü
-dışında).
+dışında). **Alışkanlık hâline getir:** yeni bir lucide-react ikonu eklerken
+sadece typecheck'e güvenme (bu hatayı hiç yakalamaz) — sayfayı gerçekten
+`curl`/tarayıcıyla yükleyip 200 döndüğünü doğrula.
 
 ### 5.7 Yeni bir tabloya RLS policy eklemek YETMİYOR, GRANT de gerekiyor
 
@@ -2040,6 +2045,95 @@ hiçbiri benim değişikliklerimle ilgili değil).
 sayfaya gömülü, ~300 satırlık ayrı bir state machine), `VetQuickSheet.tsx`,
 ve referansın Ekran 3 (Harita Görünümü) gerçek harita+pin entegrasyonu —
 hâlâ eski stilde/yapılmadı, hâlâ ayrı, dikkatli bir iş olarak bekliyor.
+
+### 8.28 Baran'ın düzeltmesi: renk kök nedeni yetmiyordu, sayfanın DÜZENİ de referansa göre yeniden kurulmalıydı (2026-09-25)
+
+8.27'nin hemen ardından Baran net bir geri bildirim verdi: "sen şuan çok
+kısıtlı bir tasarım dışında hiçbirşey değiştirmemişsin renk değişimi de
+örnek uininkine benzemiyor... Bu tasarım düzeni profesyonel değil." Haklıydı
+— 8.27'de sadece tipografi/renk YAMASI yapılmıştı, sayfanın gerçek YAPISI
+(header, konum satırı, kategori sistemi, kart tasarımı) hâlâ referansla
+alakasızdı. Talimatı netti: **örnek UI birebir uygulanacak, referansta
+olmayan mevcut bölümler SİLİNMEYECEK ("yerinde dursunlar, en son onlara
+çözüm buluruz") — bunlar geri sistem bağlantısı ayrı, benim kararım.**
+
+**Önce renk düzeltmesi tamamlandı:** `.theme-vet` daha önce uygulamanın
+GENEL `:root` varsayılanına yakın ama BİREBİR AYNI OLMAYAN bir turuncu
+kullanıyordu (`#E28F5B`). Referansın gerçek paleti `design-reference/
+home-final/README.md`'de KİLİTLİ olan tam hex kodlarla aynı (turuncu-kiremit
+`#EE5B3D`, krem `#F7F3EA`, koyu metin `#201B16`, ikincil metin `#6F675B`,
+kart border `#ECE6D9`, ikincil/başarı yeşili `#8FD14F`) — `.theme-vet` artık
+uygulamanın genel varsayılanı yerine DOĞRUDAN bu kilitli referans hex'lerini
+kullanıyor.
+
+**Sonra `/vet/page.tsx`'in üst bölümü (Ekran 2 — "Veteriner Ana Ekranı")
+referansa göre GERÇEKTEN yeniden kuruldu, sadece yeniden renklendirilmedi:**
+- Header: "Moffi Health" eyebrow + "Veterinerlik Portalı" (uppercase/italic)
+  + `PetSwitcher` yerine, referanstaki gibi tek kelime "Veteriner" başlığı +
+  sağda GERÇEK bildirim ziline dönüştü (`unreadNotifications`/`showNotifications`
+  — zaten var olan gerçek state, önceden `<main>` içinde ayrı bir banner
+  olarak duran AYNI özellik artık header'a taşındı, kod tekrarı yaratılmadı).
+  `PetSwitcher` bu sayfadan kaldırıldı (component'in kendisi silinmedi, hâlâ
+  başka sayfalarda gerçek işlevi var) — referansta hiçbir vet ekranında
+  pet-switcher yok, pet seçimi randevu akışının kendi içinde (Ekran 5)
+  yapılıyor.
+- Konum satırı: büyük il/ilçe dropdown kutusu yerine, konum seçiliyken
+  referanstaki gibi ince tek satır "Konumun: X, Y" + düzenle işareti (`✎` —
+  bkz. aşağıdaki Turbopack notu, `Pencil` ikonu kullanılamadı).
+- **4 gerçek hizmet kısayolu eklendi** (Genel Muayene/Acil Servis/Aşı/Diş
+  Sağlığı — referansın pastel yuvarlak-kare ikonlarıyla birebir, `Stethoscope`/
+  `ShieldAlert`/`Syringe`/`Smile`): eski, referansta hiç karşılığı olmayan
+  "Tüm Klinikler/Hastaneler" 2-etiketli şerit YERİNE geçti (bu bir "silme"
+  değil, aynı yeteneğin — kategoriye göre filtreleme — referansa uygun,
+  gerçek veriyle çalışan bir üst sürümü: her ikon tıklanınca `clinic.features`
+  içinde gerçek anahtar kelime araması yapıyor, uydurma bir eşleşme değil —
+  bir klinik gerçekten o hizmeti listelemiyorsa filtrede çıkmıyor, dürüstçe
+  boş liste gösteriliyor).
+- **Gerçek "Tümü/Yakınımda/Moffi Onaylı/Açık Olanlar" hızlı filtre çipleri
+  eklendi** (referansın filtre şeridiyle birebir, aktif çip siyah/koyu dolu —
+  referansta da renkli değil monokrom) — "Yakınımda" ve "Açık Olanlar" ZATEN
+  var olan gerçek `filterSortBy`/`filterOpenNow` mantığına bağlandı (yeni bir
+  şey icat edilmedi), "Moffi Onaylı" gerçek `clinic.isPremium` alanını
+  filtreliyor.
+- **Klinik kartları referansın basit, tek-satır tıklanabilir kart desenine
+  göre YENİDEN TASARLANDI:** eski kart (foto + 2 ayrı buton — "Detayları
+  Gör"/"Randevu Seç") kaldırıldı; artık referanstaki gibi TÜM kart tıklanabilir
+  (→ `ClinicDetailDrawer` açılıyor, oradaki GERÇEK "Randevu Al" CTA'sı zaten
+  `onBookAppointment` prop'una bağlıydı — booking akışı hiç bozulmadı, sadece
+  giriş noktası sadeleşti), küçük yuvarlak foto + isim + yıldız/puan + mesafe
+  + açık/kapalı durumu (yeşil/gri nokta) — referansla birebir örtüşüyor.
+- "Çevredeki Klinikler" / "Öne Çıkan Sağlık Merkezleri" başlığı → referansın
+  "Yakındaki Veterinerler" + "Haritada Gör →" linkine çevrildi. **Dürüst bir
+  sınır:** referansın Ekran 3'ü (tam bir harita+pin görünümü) bu turda hâlâ
+  yapılmadı (ayrı, büyük bir iş) — "Haritada Gör" linki bu yüzden sahte bir
+  ekrana gitmek yerine, sayfada ZATEN var olan gerçek "Google Haritalar'da Aç"
+  kutusuna yumuşak kaydırma yapıyor (uydurma bir harita ekranı eklenmedi).
+
+**Referansta OLMAYAN, Baran'ın açık talimatıyla SİLİNMEYEN, yerinde bırakılan
+bölümler** (ileride ayrı karar verilecek): "Klinik Keşfet/Randevularım"
+görünüm sekmesi + `MyAppointmentsPanel`, "Aktif Pet Durumu" durum kartı,
+"Google Haritalar'da Aç" kutusu, gelişmiş filtre bottom-sheet'i (Sıralama/
+Açık Olanlar toggle'ı — hızlı çiplerle KISMEN örtüşüyor ama daha ayrıntılı,
+ikisi de tutuldu), randevu formu, `VetQuickSheet.tsx`.
+
+🔴 **Bu turda İKİNCİ ve ÜÇÜNCÜ kez karşılaşılan Turbopack+OneDrive ikon
+çökmesi (bkz. Bölüm 5.6):** yeni eklenen `Siren` (Acil Servis ikonu) VE
+`Pencil` (konum düzenle ikonu) ikisi de aynı "Bulut dosya sağlayıcısı
+çalışmıyor (os error 362)" hatasıyla `/vet` sayfasının TAMAMEN 500 vermesine
+yol açtı — art arda, aynı oturumda iki farklı ikonla. `Siren` → zaten
+import edilmiş olan `ShieldAlert`'e, `Pencil` → düz `✎` karakterine
+çevrildi, ikisi de düzeltti. **Güncellenmiş ders:** bu hata o kadar sık
+karşılaşılıyor ki artık YENİ bir lucide-react ikonu eklerken önce sayfayı
+gerçekten yükleyip (sadece typecheck değil) 200 döndüğünü doğrulamak
+alışkanlık hâline getirilmeli — typecheck bu hatayı hiç yakalamıyor (saf
+bir dev-sunucu dosya-okuma hatası, TypeScript'in bilgisi dışında).
+
+**Doğrulama:** typecheck temiz (aynı 4 pre-existing hata), gerçek Playwright
+testiyle (Van/Tuşba, gerçek "MoffiPet" kliniği) header/konum satırı/4 kategori
+ikonu/4 filtre çipi/yeniden tasarlanmış kart hepsi doğru render edildi,
+"Aşı" kategorisi seçilince MoffiPet'in gerçek `features` listesinde "aşı"
+geçmediği için listeden dürüstçe kayboldu (uydurma bir eşleşme yok) — "Tümü"
+seçilince geri geldi.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
