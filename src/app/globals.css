@@ -347,24 +347,50 @@ nextjs-portal,
   color: var(--foreground);
 }
 
+/* Faz 25 — .theme-vet daha önce KENDİ ayrı mavi-teal paletini (#4C8CA8)
+   kullanıyordu; bu, Baran'ın CLAUDE.md Bölüm 5'te açıkça reddettiği "mavi
+   premium değil" ilkesine doğrudan aykırıydı ve /vet sayfasının "kaba"
+   hissettirmesinin ana kaynağıydı (sayfadaki HEMEN HEMEN her buton/rozet/ikon
+   text-accent/bg-accent kullanıyor). Artık uygulamanın geri kalanıyla AYNI
+   sıcak krem+turuncu paleti kullanıyor — ayrı bir tema yerine tutarlılık.
+
+   ÖNEMLİ: hem --accent/--background/vb HEM DE Tailwind'in @theme'de bunlara
+   eşlediği --color-accent/--color-background/vb kolonlarının İKİSİ de burada
+   set ediliyor. Sadece --accent'i set etmek YETMİYOR — bkz. CLAUDE.md Bölüm
+   6.8, bu tam olarak bu yüzden sayfa hiç değişmiyormuş gibi görünüyordu. */
 .theme-vet {
-  --background: #F5F9F8;
-  --foreground: #1E2B2A;
+  --background: #FBF7F2;
+  --foreground: #2D2621;
   --card-bg: #FFFFFF;
-  --card-border: rgba(30, 43, 42, 0.07);
-  --accent: #4C8CA8;
-  --accent-secondary: #7FAE8E;
-  --secondary-text: #64748B;
+  --card-border: rgba(45, 38, 33, 0.08);
+  --accent: #E28F5B;
+  --accent-secondary: #8BA888;
+  --secondary-text: #7A6F66;
   --emergency: #FF3B30;
+  --color-background: #FBF7F2;
+  --color-foreground: #2D2621;
+  --color-card: #FFFFFF;
+  --color-card-border: rgba(45, 38, 33, 0.08);
+  --color-accent: #E28F5B;
+  --color-accent-secondary: #8BA888;
+  --color-secondary: #7A6F66;
+  --color-emergency: #FF3B30;
 }
 .dark .theme-vet {
-  --background: #10171A;
-  --foreground: #DCE6E4;
-  --card-bg: #1A2327;
+  --background: #1C1815;
+  --foreground: #EDE6DF;
+  --card-bg: #262019;
   --card-border: rgba(255, 255, 255, 0.06);
-  --accent: #6BB0D6;
-  --accent-secondary: #8FC49E;
-  --secondary-text: #94A3A6;
+  --accent: #F0A874;
+  --accent-secondary: #A3C29E;
+  --secondary-text: #B3A69B;
+  --color-background: #1C1815;
+  --color-foreground: #EDE6DF;
+  --color-card: #262019;
+  --color-card-border: rgba(255, 255, 255, 0.06);
+  --color-accent: #F0A874;
+  --color-accent-secondary: #A3C29E;
+  --color-secondary: #B3A69B;
 }
 
 @layer utilities {

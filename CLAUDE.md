@@ -1950,6 +1950,80 @@ GERÇEK veriyle (5.0 puan, 6 gerçek yorum, gerçek fotoğraf, "Şu an açık"
 durumu) sıcak/turuncu yeni tasarımla render edildi — hiçbir mock/uydurma veri
 kullanılmadı.
 
+### 8.27 KRİTİK TUZAK: sayfa-lokal `.theme-X` renk override'ı `bg-accent`/`text-accent` gibi Tailwind utility'lerini HİÇ etkilemiyordu (2026-09-25)
+
+Baran'ın 8.26'nın hemen ardından bulduğu gerçek eksik: "Şuan bakıyorum sadece
+klinik paneli uisi değişmiş geri kalan herşey aynen duruyor." — haklıydı.
+`.theme-vet`'in rengini `#4C8CA8` (mavi-teal) yerine uygulamanın gerçek
+turuncu paletine (`#E28F5B`) çevirdiğim düzeltme (8.26'daki CSS bloğu)
+TEK BAŞINA hiçbir görsel değişiklik yaratmıyordu — sayfa hâlâ eski
+mavi/camgöbeği (`#06B6D4`) renginde render oluyordu. Bu bir tarayıcı önbelleği
+sorunu DEĞİLDİ (tam temiz `rm -rf .next/cache` + sıfırdan `npm run dev` ile
+de aynen tekrarlandı — yani gerçek Vercel production build'ini de etkilerdi).
+
+🔴🔴 **Gerçek kök neden (Tailwind v4 `@theme` + CSS custom property
+inheritance'ın gerçek, spesifikasyona uygun ama sezgiye TAMAMEN aykırı bir
+etkileşimi):**
+
+`globals.css`'te `@theme { --color-accent: var(--accent); }` şeklinde bir
+"alias" tanımlanıyor — Tailwind v4 TÜM `bg-accent`/`text-accent`/`border-accent`
+gibi utility'leri `--accent` DEĞİL, doğrudan `--color-accent`'e bağlıyor
+(derlenmiş CSS'te net görülüyor: `.bg-accent { background-color:
+var(--color-accent); }`). `--color-accent` ise SADECE `:root` seviyesinde
+(`@theme` bloğunun kendisi orada üretiliyor) `var(--accent)` olarak
+tanımlanmış — başka HİÇBİR yerde tekrar tanımlanmamış.
+
+CSS custom property inheritance, sezgisel olarak sanıldığının aksine,
+"reaktif/canlı bir referans" gibi çalışmıyor. `--color-accent`'in
+COMPUTED değeri SADECE onun gerçekten tanımlandığı elementte (`:root`, yani
+`<html>`) bir kere hesaplanıyor (o anda `<html>`'in kendi `--accent` değeri
+neyse — `.theme-cyan` gibi kullanıcı kişiselleştirme sınıfı oradaysa, o
+değer kullanılıyor) ve bu ZATEN HESAPLANMIŞ SABİT DEĞER, aşağıdaki TÜM
+elementlere aynen inherit ediliyor. `.theme-vet` gibi `<html>`'den çok daha
+AŞAĞIDA (bir `<div>` üzerinde) `--accent`'i yeniden tanımlamak, `--color-accent`
+zaten `<html>`'de sabitlenmiş olduğu için HİÇBİR ETKİ YARATMIYOR — `--accent`
+kendisi doğru şekilde güncellenmiş görünse bile (`getComputedStyle` ile
+doğrulandı: `.theme-vet` altında `--accent` doğru `#e28f5b`, ama AYNI elementte
+`--color-accent` hâlâ eski `#06b6d4`).
+
+Özetle: **`--b: var(--a)` şeklindeki bir "takma ad/alias" custom property,
+`--a` daha sonra ağacın AŞAĞISINDA yeniden tanımlansa bile `--b`'yi ASLA takip
+etmiyor** — sadece `--b`'nin kendisi de AYNI (ya da daha aşağıdaki) seviyede
+yeniden tanımlanırsa güncellenir. Bu, projede zaten var olan `.theme-green`/
+`.theme-cyan`/`.theme-purple`/`.theme-gold`/`.theme-rose` (kullanıcının
+"Tema Vurgu Rengi" ayarı, `ThemeContext.tsx`) için hiç sorun yaratmıyordu
+çünkü onlar `<html>`'in KENDİSİNE uygulanıyor — yani `--color-accent`'in
+TANIMLANDIĞI TAM SEVİYEYLE aynı. Sorun SADECE `<html>`'den daha aşağıda,
+sayfa/bileşen bazlı bir renk override'ı (`.theme-vet` gibi) yapılmaya
+çalışıldığında ortaya çıkıyor — yani bu proje için YENİ bir desen, ilk kez
+`.theme-vet` ile denendi ve İLK denemede kırıldığı ortaya çıktı.
+
+**Düzeltme:** `.theme-vet`/`.dark .theme-vet` artık SADECE `--accent`/
+`--background`/vb DEĞİL, Tailwind'in gerçekten okuduğu `--color-accent`/
+`--color-background`/`--color-card`/`--color-card-border`/`--color-secondary`/
+`--color-emergency`/`--color-accent-secondary` kolonlarının HEPSİNİ DE aynı
+değerlerle doğrudan tanımlıyor. `getComputedStyle` ile doğrulandı: düzeltme
+öncesi buton `background-color: rgb(6, 182, 212)` (camgöbeği), düzeltme
+sonrası `rgb(226, 143, 91)` (doğru turuncu) — gerçek Playwright testiyle
+tüm sayfada (buton, eyebrow metni, "Haritalar'da Aç" butonu) doğrulandı.
+
+**KURAL — bundan sonra herhangi bir sayfa/bileşen bazlı `.theme-X` renk
+override'ı kurulacaksa:** `--accent` gibi "kaynak" değişkeni değil, Tailwind
+`@theme`'in gerçekten ürettiği `--color-*` hedef değişkenini DOĞRUDAN
+override et (ya da ikisini birden) — aksi halde override `<html>`'den daha
+aşağıdaki HİÇBİR elementte hiçbir Tailwind utility'sini etkilemez, sadece
+`var(--accent)` şeklinde HAM/doğrudan kullanılan (Tailwind utility'si
+olmayan) CSS'i etkiler.
+
+**Hâlâ bu turun kapsamına ALINMAYAN (Baran'ın "Nasıl ilerleyelim kral?"
+sorusuna verilen ilk yanıt sadece bu kök neden düzeltmesiydi):** `/vet/page.tsx`'in
+dış kabuğunun geri kalanı (header, İl/İlçe seçici, "Klinik Keşfet"/
+"Randevularım" sekmeleri, kategori etiketleri, "Aktif Pet Durumu" kartı,
+harita kutusu, filtre sheet'i, ve TÜM sayfadaki `uppercase italic
+tracking-widest` yazı tarzı) hâlâ referans görsele göre yeniden
+tasarlanmadı — bu düzeltme sadece rengin ARTIK doğru akmasını sağladı,
+düzenin/tipografinin kendisini referansa uydurmadı.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
