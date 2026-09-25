@@ -6,13 +6,13 @@ import { apiService } from "@/services/apiService";
 import { Plus, Users, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Doctor } from "@/types/domain";
-import { getBusinessTypeConfig } from "@/config/businessTypes";
+import { useBusinessType } from "@/context/BusinessTypeContext";
 
 export default function BusinessDoctorsPage() {
     const { user } = useAuth();
     // Faz 3 (işletme türü mimarisi) — bu sayfa artık her işletmede "Doktor"
     // demiyor, seçilen türe göre "Bakıcı"/"Eğitmen"/"Gönüllü"/"Personel".
-    const { staffLabel, staffLabelPlural } = getBusinessTypeConfig(user?.businessType);
+    const { staffLabel, staffLabelPlural } = useBusinessType();
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);

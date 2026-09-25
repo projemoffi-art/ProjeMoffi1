@@ -2404,6 +2404,51 @@ yanlışlıkla karışmış) Baran'ın talimatıyla silindi — `tsc --noEmit`'i
 filtresiz çıktısını kirleten ~106 ilgisiz hatanın kaynağıydı, gerçek build'i
 hiç etkilemiyorlardı.
 
+### 8.33 Faz 3.1: muayene akışı türe göre kapatıldı + gerçek BusinessTypeContext (2026-09-25)
+
+Baran'ın haklı bulduğu bir mimari eleştiri üzerine yapıldı: "Sidebar içinde
+olması biraz kolaycı olmuş sanki" — işletme türü zaten kayıt sırasında bir
+kere seçiliyor, panelin TAMAMI buna göre otomatik ayarlanmalı; her sayfanın
+kendi başına `getBusinessTypeConfig(user.businessType)` çağırması, türü
+"hatırlaması gereken" dağınık bir sorumluluk yaratıyordu.
+
+**Düzeltme — `src/context/BusinessTypeContext.tsx` eklendi:** `business/
+layout.tsx` (panelin GERÇEK kökü, onay/erişim kontrolünün de yapıldığı yer)
+artık `<BusinessTypeProvider>` ile SARILI — işletme türü çözümü tek bir yerde
+yapılıyor, aşağı `useBusinessType()` hook'uyla akıyor. `Sidebar.tsx`/
+`services/page.tsx`/`doctors/page.tsx` artık `getBusinessTypeConfig()`'i
+DOĞRUDAN çağırmıyor, hepsi context'ten okuyor — mimari olarak "onay kontrolü
+nerede yapılıyorsa tür kontrolü de orada yapılır" tutarlılığı sağlandı.
+
+**Asıl istenen: muayene akışı türe göre kapatıldı.** `businessTypes.ts`'e
+`hasMedicalRecords: boolean` alanı eklendi (sadece vet=true). `appointments/
+page.tsx`'teki (2400 satırlık dosya, 8.32'de riskli/dokunulmadı diye not
+düşülmüştü) randevu tamamlama akışı artık BÖLÜNMÜŞ durumda:
+- `hasMedicalRecords=true` (vet): hiçbir şey değişmedi — "Muayene Et" →
+  "Muayene & Reçete Formu" (tanı zorunlu + aşı formu + reçete formu) →
+  `medical_records`/`addPetVaccine`/`addPetMedication` yazımı aynen çalışıyor.
+- `hasMedicalRecords=false` (grooming/trainer/shelter/petshop): "Tamamla" →
+  sade "Randevuyu Tamamla" formu (SADECE opsiyonel bir not alanı — tanı/aşı/
+  reçete alanları hiç render olmuyor) → randevu doğrudan `completed` yapılır,
+  `medical_records` tablosuna HİÇ yazılmaz, pet-id UUID zorunluluğu da
+  uygulanmaz (zaten EMR yazılmıyor). Paylaşılan tıbbi pasaport önizlemesi
+  (müşterinin randevu alırken paylaştığı ırk/kilo/yaş/aşı/not) BİLİNÇLİ
+  OLARAK her türde gösterilmeye devam ediyor — bu, işletmenin EMR yazması
+  değil, müşterinin zaten paylaştığı bilgiyi okuması, her iş türü için
+  (bir kuaför da pati'nin kilosunu/ırkını bilmek ister) faydalı.
+
+**Doğrulama — gerçek DB'de uçtan uca test edildi:** test işletmesi geçici
+olarak `grooming` yapıldı, gerçek bir "Kuaför/Bakım" randevusunda "Tamamla"
+tıklanıp sade form gerçekten göründü ("RANDEVUYU TAMAMLA" başlığı, sadece
+not alanı), "Randevuyu Tamamla" tıklanınca randevu gerçekten `completed`
+oldu VE `medical_records` tablosunda o randevu için SIFIR satır oluştuğu SQL
+ile doğrulandı. Sonra hem randevu durumu hem işletme türü gerçek haline
+geri alındı. Vet tarafı da ayrıca tekrar test edildi — "Muayene & Reçete
+Formu" hiç değişmeden, tanı/aşı/reçete alanlarıyla aynen çalışıyor.
+typecheck: `appointments/page.tsx`'te değişiklik öncesi/sonrası BİREBİR
+AYNI 19 pre-existing hata (satır numaraları kaydı, içerik aynı) — sıfır
+yeni hata.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

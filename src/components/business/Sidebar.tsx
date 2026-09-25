@@ -23,8 +23,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/context/LanguageContext";
-import { useAuth } from "@/context/AuthContext";
-import { getBusinessTypeConfig, SidebarItemKey } from "@/config/businessTypes";
+import { useBusinessType } from "@/context/BusinessTypeContext";
+import { SidebarItemKey } from "@/config/businessTypes";
 
 interface SidebarProps {
     isMobileOpen?: boolean;
@@ -34,8 +34,7 @@ interface SidebarProps {
 export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
     const pathname = usePathname();
     const { t } = useTranslation();
-    const { user } = useAuth();
-    const typeConfig = getBusinessTypeConfig(user?.businessType);
+    const typeConfig = useBusinessType();
 
     // Faz 2 (işletme türü mimarisi) — bu liste artık TEK kaynak değil, sadece
     // her olası öğenin tanımı. Hangi öğelerin GÖRÜNECEĞİ businessTypes.ts'teki

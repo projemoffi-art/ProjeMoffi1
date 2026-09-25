@@ -5,13 +5,13 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Plus, Trash2, CheckCircle2, AlertCircle, Save, Loader2, Activity, Store } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getBusinessTypeConfig } from "@/config/businessTypes";
+import { useBusinessType } from "@/context/BusinessTypeContext";
 
 export default function BusinessServicesPage() {
     const { user } = useAuth();
     // Faz 3 (işletme türü mimarisi) — varsayılan hizmet listesi artık her
     // işletmeye aynı vet listesini göstermiyor, seçilen türe göre geliyor.
-    const DEFAULT_SERVICES = getBusinessTypeConfig(user?.businessType).defaultServices;
+    const DEFAULT_SERVICES = useBusinessType().defaultServices;
     const [services, setServices] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);

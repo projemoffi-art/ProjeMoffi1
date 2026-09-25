@@ -17,13 +17,15 @@ export type SidebarItemKey =
   | 'dashboard' | 'appointments' | 'patients' | 'migration' | 'finance'
   | 'orders' | 'services' | 'doctors' | 'products' | 'campaigns' | 'quests';
 
-interface BusinessTypeConfig {
+export interface BusinessTypeConfig {
   label: string;
   /** Randevu tabanlı mı (vet/grooming/trainer/shelter) yoksa sipariş tabanlı mı (petshop) — Faz 4/5'te kullanılacak, bugün sadece belgeleme amaçlı. */
   primaryFlow: 'appointment' | 'order';
   /** "Doktor Ekle" gibi personel/kaynak etiketleri buradan gelir. */
   staffLabel: string;
   staffLabelPlural: string;
+  /** Faz 3.1 — randevu tamamlama akışında aşı/ilaç/tıbbi kayıt (EMR) formu SADECE bu true olan türlerde gösterilir. */
+  hasMedicalRecords: boolean;
   sidebar: SidebarItemKey[];
   defaultServices: { name: string; duration: number; icon: string }[];
 }
@@ -34,6 +36,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     primaryFlow: 'appointment',
     staffLabel: 'Doktor',
     staffLabelPlural: 'Doktorlar',
+    hasMedicalRecords: true,
     sidebar: ['dashboard', 'appointments', 'patients', 'migration', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
     defaultServices: [
       { name: "Genel Muayene", duration: 20, icon: "🩺" },
@@ -52,6 +55,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     primaryFlow: 'appointment',
     staffLabel: 'Bakıcı',
     staffLabelPlural: 'Bakıcılar',
+    hasMedicalRecords: false,
     sidebar: ['dashboard', 'appointments', 'patients', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
     defaultServices: [
       { name: "Yıkama", duration: 30, icon: "🛁" },
@@ -67,6 +71,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     primaryFlow: 'appointment',
     staffLabel: 'Eğitmen',
     staffLabelPlural: 'Eğitmenler',
+    hasMedicalRecords: false,
     sidebar: ['dashboard', 'appointments', 'patients', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
     defaultServices: [
       { name: "Temel İtaat Eğitimi", duration: 60, icon: "🐾" },
@@ -82,6 +87,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     primaryFlow: 'appointment',
     staffLabel: 'Gönüllü',
     staffLabelPlural: 'Gönüllüler',
+    hasMedicalRecords: false,
     sidebar: ['dashboard', 'appointments', 'patients', 'campaigns', 'quests'],
     defaultServices: [],
   },
@@ -90,6 +96,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     primaryFlow: 'order',
     staffLabel: 'Personel',
     staffLabelPlural: 'Personel',
+    hasMedicalRecords: false,
     sidebar: ['dashboard', 'orders', 'products', 'finance', 'campaigns', 'quests'],
     defaultServices: [],
   },

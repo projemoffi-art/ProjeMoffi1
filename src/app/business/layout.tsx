@@ -6,6 +6,7 @@ import { Clock, XCircle, LogOut } from "lucide-react";
 import React, { useState } from "react";
 import { BusinessSidebar } from "@/components/business/Sidebar";
 import { BusinessHeader } from "@/components/business/Header";
+import { BusinessTypeProvider } from "@/context/BusinessTypeContext";
 
 export default function BusinessLayout({ children }: { children: React.ReactNode }) {
     const { user, isLoading, logout } = useAuth();
@@ -95,17 +96,19 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
     }
 
     return (
-        <div className="flex bg-[#F8F9FC] dark:bg-[#0a0a0a] min-h-screen">
-            <BusinessSidebar 
-                isMobileOpen={isMobileMenuOpen} 
-                onMobileClose={() => setIsMobileMenuOpen(false)} 
-            />
-            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden md:pl-20 lg:pl-72 transition-all duration-300">
-                <BusinessHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
-                <main className="flex-1 overflow-y-auto no-scrollbar relative">
-                    {children}
-                </main>
+        <BusinessTypeProvider>
+            <div className="flex bg-[#F8F9FC] dark:bg-[#0a0a0a] min-h-screen">
+                <BusinessSidebar
+                    isMobileOpen={isMobileMenuOpen}
+                    onMobileClose={() => setIsMobileMenuOpen(false)}
+                />
+                <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden md:pl-20 lg:pl-72 transition-all duration-300">
+                    <BusinessHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
+                    <main className="flex-1 overflow-y-auto no-scrollbar relative">
+                        {children}
+                    </main>
+                </div>
             </div>
-        </div>
+        </BusinessTypeProvider>
     );
 }

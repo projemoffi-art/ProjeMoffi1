@@ -16,10 +16,18 @@ import { supabase } from "@/lib/supabase";
 import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { NoShowBadge } from "@/components/business/NoShowBadge";
+import { useBusinessType } from "@/context/BusinessTypeContext";
 
 export default function BusinessAppointmentsPage() {
     const { customRecords, setCustomRecords, updatePet } = usePet();
     const { user } = useAuth();
+    // Faz 3.1 (işletme türü mimarisi, 2026-09-25) — muayene/aşı/reçete (EMR)
+    // akışı artık SADECE hasMedicalRecords=true olan türlerde (bugün: vet)
+    // gösteriliyor. Diğer türler (kuaför/eğitmen/gönüllü/personel) için
+    // aynı randevu daha basit, tanı/aşı/ilaç gerektirmeyen bir "hizmeti
+    // tamamla" akışına düşüyor — ama randevu durumunun kendisi (pending/
+    // confirmed/completed/rejected/cancelled) hiç değişmedi.
+    const { hasMedicalRecords, staffLabel } = useBusinessType();
 
     const checkAccessGranted = (apt: any) => {
         if (!apt.sharedPassport) return false;
@@ -783,30 +791,35 @@ export default function BusinessAppointmentsPage() {
 
     const handleCompleteConsultation = async () => {
         if (!selectedApt) return;
-        if (!diagnosis) {
+        if (hasMedicalRecords && !diagnosis) {
             showToast("Lütfen tanı alanını doldurun.", "AlertTriangle", "text-amber-500 font-bold");
             return;
         }
 
         const targetPetId = selectedApt.petId;
-        
-        // Remove mock ID fallback completely as instructed.
-        // Use regex to strictly enforce UUID to block all mock IDs (e.g. 'pet-milo' or '349b...')
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!targetPetId || !uuidRegex.test(targetPetId)) {
-            showToast("Gerçek bir evcil hayvan ID'si bulunamadı (Mock Veri). Sadece gerçek hastalara tanı girilebilir.", "AlertTriangle", "text-amber-500 font-bold");
-            return;
+
+        // Faz 3.1 — EMR (tanı/aşı/reçete) yazımı SADECE hasMedicalRecords=true
+        // olan türlerde yapılır. Diğer türlerde randevu doğrudan 'completed'
+        // yapılır, pet-id UUID zorunluluğu da sadece EMR yazarken gerekli.
+        if (hasMedicalRecords) {
+            // Remove mock ID fallback completely as instructed.
+            // Use regex to strictly enforce UUID to block all mock IDs (e.g. 'pet-milo' or '349b...')
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!targetPetId || !uuidRegex.test(targetPetId)) {
+                showToast("Gerçek bir evcil hayvan ID'si bulunamadı (Mock Veri). Sadece gerçek hastalara tanı girilebilir.", "AlertTriangle", "text-amber-500 font-bold");
+                return;
+            }
         }
 
         const updatedApt = {
             ...selectedApt,
             status: 'completed',
-            consultationData: {
+            consultationData: hasMedicalRecords ? {
                 diagnosis,
                 vaccines: addedVaccines,
                 medications: addedMeds,
                 criticalNotes
-            }
+            } : { criticalNotes }
         };
 
         // Live Supabase Integration (Atomik Sıralama)
@@ -818,60 +831,62 @@ export default function BusinessAppointmentsPage() {
                     .select('id')
                     .eq('id', selectedApt.id)
                     .single();
-                
+
                 if (authErr || !authCheck) {
                     throw new Error("Yetkisiz işlem: Bu randevuya müdahale etme izniniz yok (RLS Engeli).");
                 }
 
-                // 0. Idempotency check — bu randevu için zaten bir EMR kaydı var mı?
-                const { data: existingRecord } = await supabase
-                    .from('medical_records')
-                    .select('id')
-                    .eq('appointment_id', selectedApt.id)
-                    .maybeSingle();
+                if (hasMedicalRecords) {
+                    // 0. Idempotency check — bu randevu için zaten bir EMR kaydı var mı?
+                    const { data: existingRecord } = await supabase
+                        .from('medical_records')
+                        .select('id')
+                        .eq('appointment_id', selectedApt.id)
+                        .maybeSingle();
 
-                if (existingRecord) {
-                    showToast("Bu randevu için muayene kaydı zaten oluşturulmuş.", "AlertTriangle", "text-amber-500 font-bold");
-                    return;
-                }
+                    if (existingRecord) {
+                        showToast("Bu randevu için muayene kaydı zaten oluşturulmuş.", "AlertTriangle", "text-amber-500 font-bold");
+                        return;
+                    }
 
-                // 1. ÖNCE EN KRİTİK VERİYİ YAZ (Teşhis / EMR)
-                const { error: emrError } = await supabase.from('medical_records').insert({
-                    pet_id: targetPetId,
-                    appointment_id: selectedApt.id,
-                    clinic_id: user?.id,
-                    vet_name: user?.user_metadata?.business_name || user?.email || 'Moffi Kliniği',
-                    diagnosis: diagnosis,
-                    critical_notes: criticalNotes,
-                    medications: addedMeds,
-                });
-                
-                if (emrError) throw emrError; // Teşhis yazılamazsa hemen çık!
-
-                // 2. Aşıları kaydet
-                for (const v of addedVaccines) {
-                    await apiService.addPetVaccine(targetPetId, {
-                        name: v.name,
-                        status: 'completed',
-                        dueDate: v.nextDate || new Date().toISOString(),
-                        dateAdministered: v.date || new Date().toISOString(),
-                        vetName: user?.user_metadata?.business_name || user?.email || 'Moffi Kliniği'
+                    // 1. ÖNCE EN KRİTİK VERİYİ YAZ (Teşhis / EMR)
+                    const { error: emrError } = await supabase.from('medical_records').insert({
+                        pet_id: targetPetId,
+                        appointment_id: selectedApt.id,
+                        clinic_id: user?.id,
+                        vet_name: user?.user_metadata?.business_name || user?.email || 'Moffi Kliniği',
+                        diagnosis: diagnosis,
+                        critical_notes: criticalNotes,
+                        medications: addedMeds,
                     });
-                }
-                
-                // 3. İlaçları kaydet
-                for (const m of addedMeds) {
-                    await apiService.addPetMedication(targetPetId, {
-                        name: m.name,
-                        dosage: m.dose,
-                        instructions: `${m.duration} gün boyunca kullanılacak.`,
-                        startDate: new Date().toISOString()
-                    });
+
+                    if (emrError) throw emrError; // Teşhis yazılamazsa hemen çık!
+
+                    // 2. Aşıları kaydet
+                    for (const v of addedVaccines) {
+                        await apiService.addPetVaccine(targetPetId, {
+                            name: v.name,
+                            status: 'completed',
+                            dueDate: v.nextDate || new Date().toISOString(),
+                            dateAdministered: v.date || new Date().toISOString(),
+                            vetName: user?.user_metadata?.business_name || user?.email || 'Moffi Kliniği'
+                        });
+                    }
+
+                    // 3. İlaçları kaydet
+                    for (const m of addedMeds) {
+                        await apiService.addPetMedication(targetPetId, {
+                            name: m.name,
+                            dosage: m.dose,
+                            instructions: `${m.duration} gün boyunca kullanılacak.`,
+                            startDate: new Date().toISOString()
+                        });
+                    }
                 }
 
-                // 4. EN SON Randevuyu 'completed' yap
+                // EN SON Randevuyu 'completed' yap
                 await apiService.updateAppointmentStatus(selectedApt.id.toString(), 'completed');
-                
+
             } catch (e: any) {
                 console.error("Failed to sync consultation details with Supabase:", e);
                 // Do NOT swallow the error
@@ -885,7 +900,12 @@ export default function BusinessAppointmentsPage() {
         saveAppointments(updatedList);
 
         // Show premium toast
-        showToast("Muayene başarıyla tamamlandı ve evcil hayvan pasaportuna işlendi! 💉🩺", "Sparkles", "text-emerald-400 font-bold");
+        showToast(
+            hasMedicalRecords
+                ? "Muayene başarıyla tamamlandı ve evcil hayvan pasaportuna işlendi! 💉🩺"
+                : "Randevu başarıyla tamamlandı! ✅",
+            "Sparkles", "text-emerald-400 font-bold"
+        );
         
         // Broadcast completed consultation
         const channel = new BroadcastChannel('moffi_appointments_channel');
@@ -1292,7 +1312,9 @@ export default function BusinessAppointmentsPage() {
                                                             : 'bg-card dark:bg-white/5 border-card-border hover:bg-white dark:bg-black hover:text-white dark:hover:bg-indigo-600'
                                                         }`}
                                                     >
-                                                        {apt.status === 'completed' ? 'Muayene Detayı' : 'Muayene Et'}
+                                                        {apt.status === 'completed'
+                                                            ? (hasMedicalRecords ? 'Muayene Detayı' : 'Randevu Detayı')
+                                                            : (hasMedicalRecords ? 'Muayene Et' : 'Tamamla')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -2050,7 +2072,9 @@ export default function BusinessAppointmentsPage() {
                                     </div>
                                     <div className="text-left">
                                         <h3 className="text-xl font-black text-foreground dark:text-white italic tracking-tighter uppercase leading-none">
-                                            {selectedApt.status === 'completed' ? 'Muayene Detayları' : 'Muayene & Reçete Formu'}
+                                            {hasMedicalRecords
+                                                ? (selectedApt.status === 'completed' ? 'Muayene Detayları' : 'Muayene & Reçete Formu')
+                                                : (selectedApt.status === 'completed' ? 'Randevu Detayları' : 'Randevuyu Tamamla')}
                                         </h3>
                                         <p className="text-[10px] text-gray-500 font-bold uppercase mt-1.5 tracking-widest">
                                             {selectedApt.petName} • Sahibi: {selectedApt.ownerName}
@@ -2103,12 +2127,20 @@ export default function BusinessAppointmentsPage() {
                                 {selectedApt.status === 'completed' ? (
                                     /* READ-ONLY VIEW FOR COMPLETED APPOINTMENTS */
                                     <div className="space-y-6 text-left">
-                                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-3xl">
-                                            <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block mb-2">Tanı / Teşhis</span>
-                                            <p className="font-bold text-lg text-emerald-800 dark:text-emerald-300">{selectedApt.consultationData?.diagnosis || "Tanı girilmemiş"}</p>
-                                        </div>
+                                        {!hasMedicalRecords && !selectedApt.consultationData?.criticalNotes && (
+                                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-3xl">
+                                                <p className="font-bold text-emerald-800 dark:text-emerald-300">Bu randevu tamamlandı.</p>
+                                            </div>
+                                        )}
 
-                                        {selectedApt.consultationData?.vaccines?.length > 0 && (
+                                        {hasMedicalRecords && (
+                                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-3xl">
+                                                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block mb-2">Tanı / Teşhis</span>
+                                                <p className="font-bold text-lg text-emerald-800 dark:text-emerald-300">{selectedApt.consultationData?.diagnosis || "Tanı girilmemiş"}</p>
+                                            </div>
+                                        )}
+
+                                        {hasMedicalRecords && selectedApt.consultationData?.vaccines?.length > 0 && (
                                             <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
                                                 <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">Uygulanan Aşılar</span>
                                                 <div className="space-y-3">
@@ -2128,7 +2160,7 @@ export default function BusinessAppointmentsPage() {
                                             </div>
                                         )}
 
-                                        {selectedApt.consultationData?.medications?.length > 0 && (
+                                        {hasMedicalRecords && selectedApt.consultationData?.medications?.length > 0 && (
                                             <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
                                                 <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">Yazılan Reçete</span>
                                                 <div className="space-y-3">
@@ -2149,7 +2181,7 @@ export default function BusinessAppointmentsPage() {
 
                                         {selectedApt.consultationData?.criticalNotes && (
                                             <div className="bg-orange-500/5 border border-orange-500/10 p-4 rounded-3xl">
-                                                <span className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest block mb-1">Evcil Hayvan Pasaport Notu</span>
+                                                <span className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest block mb-1">{hasMedicalRecords ? 'Evcil Hayvan Pasaport Notu' : 'Not'}</span>
                                                 <p className="text-sm text-orange-800 dark:text-orange-300 font-semibold">{selectedApt.consultationData.criticalNotes}</p>
                                             </div>
                                         )}
@@ -2157,10 +2189,11 @@ export default function BusinessAppointmentsPage() {
                                 ) : (
                                     /* INTERACTIVE FORM FOR NEW CONSULTATION */
                                     <div className="space-y-6 text-left">
+                                      {hasMedicalRecords && (<>
                                         {/* Diagnosis */}
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Muayene Bulgusu / Tanı (Zorunlu)</label>
-                                            <input 
+                                            <input
                                                 required
                                                 value={diagnosis}
                                                 onChange={e => setDiagnosis(e.target.value)}
@@ -2293,14 +2326,17 @@ export default function BusinessAppointmentsPage() {
                                                 </div>
                                             )}
                                         </div>
+                                      </>)}
 
-                                        {/* Critical Health Notes */}
+                                        {/* Notes — vet'te "kritik sağlık/alerji notu" (pasaporta işlenir), diğer türlerde genel randevu notu */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest ml-2 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Kritik Sağlık / Alerji Notu</label>
-                                            <textarea 
+                                            <label className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest ml-2 flex items-center gap-1">
+                                                <AlertTriangle className="w-3.5 h-3.5" /> {hasMedicalRecords ? 'Kritik Sağlık / Alerji Notu' : 'Not (Opsiyonel)'}
+                                            </label>
+                                            <textarea
                                                 value={criticalNotes}
                                                 onChange={e => setCriticalNotes(e.target.value)}
-                                                placeholder="Bu evcil hayvana ait pasaportta kalıcı görünecek kritik sağlık notu..."
+                                                placeholder={hasMedicalRecords ? "Bu evcil hayvana ait pasaportta kalıcı görünecek kritik sağlık notu..." : "Bu randevuyla ilgili eklemek istediğiniz bir not..."}
                                                 className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl px-4 py-3 text-sm focus:border-orange-500 outline-none text-foreground dark:text-white transition-all min-h-[80px]"
                                             />
                                         </div>
@@ -2321,7 +2357,7 @@ export default function BusinessAppointmentsPage() {
                                         onClick={handleCompleteConsultation}
                                         className="flex-1 py-3 rounded-2xl bg-[#5B4D9D] hover:bg-[#4E3F8F] text-white font-bold transition-all text-sm shadow-lg shadow-purple-500/20"
                                     >
-                                        Muayeneyi Tamamla ve Kaydet
+                                        {hasMedicalRecords ? 'Muayeneyi Tamamla ve Kaydet' : 'Randevuyu Tamamla'}
                                     </button>
                                 </div>
                             )}
