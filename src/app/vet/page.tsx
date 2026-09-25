@@ -164,6 +164,11 @@ function VetPageContent() {
         };
     }, []);
 
+    // Ekran 5 referansı — randevu formunun kendi pet seçici satırı (önceden
+    // sadece global PetSwitcher'a bağlıydı, o header'dan kaldırılınca bu formun
+    // KENDİ seçicisi olması gerekti — hem referansa uyum hem gerçek bir işlev).
+    const [selectedAppointmentPet, setSelectedAppointmentPet] = useState<Pet | null>(null);
+
     const [tempAppointmentData, setTempAppointmentData] = useState<any>(null);
     const [cardholderName, setCardholderName] = useState("");
     const [cardNumber, setCardNumber] = useState("");
@@ -690,6 +695,8 @@ function VetPageContent() {
         setSelectedDate(dateOptions[0]?.key || '');
         setSelectedTime(null);
         setSelectedDoctor(null);
+        setSelectedSvc(null);
+        setSelectedAppointmentPet(activePet || pets?.[0] || null);
     };
 
     const calculatePetAge = (pet: any) => {
@@ -713,10 +720,12 @@ function VetPageContent() {
             return;
         }
 
+        const bookingPet = selectedAppointmentPet || activePet;
+
         let sharedVaccines: any[] = [];
-        if (shareVaccines && activePet) {
+        if (shareVaccines && bookingPet) {
             try {
-                const saved = localStorage.getItem(`moffi_vaccines_${activePet.id}`);
+                const saved = localStorage.getItem(`moffi_vaccines_${bookingPet.id}`);
                 if (saved) {
                     sharedVaccines = JSON.parse(saved);
                 }
@@ -731,16 +740,16 @@ function VetPageContent() {
             }
         }
 
-        const sharedHealthNotes = (shareNotes && activePet)
-            ? (activePet.health_notes || activePet.sos_settings?.critical_health_note || "Gluten Alerjisi, Hassas Sindirim")
+        const sharedHealthNotes = (shareNotes && bookingPet)
+            ? (bookingPet.health_notes || bookingPet.sos_settings?.critical_health_note || "Gluten Alerjisi, Hassas Sindirim")
             : "";
 
         const sharedPassport = {
-            basic: shareBasic && activePet ? {
-                name: activePet.name,
-                breed: activePet.breed || "Tekir / Mix",
-                weight: activePet.weight ? `${activePet.weight} kg` : "6.2 kg",
-                age: calculatePetAge(activePet)
+            basic: shareBasic && bookingPet ? {
+                name: bookingPet.name,
+                breed: bookingPet.breed || "Tekir / Mix",
+                weight: bookingPet.weight ? `${bookingPet.weight} kg` : "6.2 kg",
+                age: calculatePetAge(bookingPet)
             } : null,
             vaccines: shareVaccines ? sharedVaccines : null,
             healthNotes: shareNotes ? sharedHealthNotes : null,
@@ -751,7 +760,7 @@ function VetPageContent() {
             } : null
         };
 
-        const petInfo = activePet ? { id: activePet.id, name: activePet.name, image: activePet.avatar_url || activePet.image } : undefined;
+        const petInfo = bookingPet ? { id: bookingPet.id, name: bookingPet.name, image: bookingPet.image } : undefined;
 
         await bookAppointment(
             selectedClinic,
@@ -771,7 +780,7 @@ function VetPageContent() {
             const newLog = {
                 id: 'log_' + Date.now(),
                 clinicName: selectedClinic.name,
-                petName: activePet ? activePet.name : 'Evcil Hayvan',
+                petName: bookingPet ? bookingPet.name : 'Evcil Hayvan',
                 date: new Date().toLocaleString('tr-TR'),
                 sharedFields: [
                     "Temel Bilgiler",
@@ -1343,8 +1352,8 @@ function VetPageContent() {
             <AnimatePresence>
                 {/* 1. APPOINTMENT SLOTS MODAL */}
                 {activeModal === 'appointment' && selectedClinic && (
-                    <motion.div key="appointment-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[140] bg-black/50 dark:bg-black/85 backdrop-blur-sm">
-                        <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed top-0 right-0 z-[145] h-full w-full sm:w-[480px] bg-background shadow-[-20px_0_50px_rgba(0,0,0,0.05)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-card-border flex flex-col overflow-hidden text-foreground p-6 pt-12 sm:pt-6">
+                    <motion.div key="appointment-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[3100] bg-black/50 dark:bg-black/85 backdrop-blur-sm">
+                        <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed top-0 right-0 z-[3101] h-full w-full sm:w-[480px] bg-background shadow-[-20px_0_50px_rgba(0,0,0,0.05)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-card-border flex flex-col overflow-hidden text-foreground p-6 pt-12 sm:pt-6">
 
                             
                             <div className="flex justify-between items-center mb-6 mt-2 sm:mt-0">
@@ -1370,10 +1379,41 @@ function VetPageContent() {
                                     </div>
                                 </div>
 
+                                {/* PET SELECTOR — referans Ekran 5 */}
+                                {pets && pets.length > 0 && (
+                                    <div>
+                                        <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-2.5 block px-1">Kimin için?</label>
+                                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                                            {pets.map((p: Pet) => {
+                                                const isSelected = selectedAppointmentPet?.id === p.id;
+                                                return (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => setSelectedAppointmentPet(p)}
+                                                        className="flex flex-col items-center gap-1.5 shrink-0"
+                                                    >
+                                                        <div className={cn(
+                                                            "w-14 h-14 rounded-full overflow-hidden border-2 transition-all",
+                                                            isSelected ? "border-accent shadow-lg shadow-accent/20" : "border-card-border opacity-60"
+                                                        )}>
+                                                            {p.image ? (
+                                                                <img src={p.image} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full bg-card-border/50 flex items-center justify-center font-black text-secondary">{p.name?.[0]}</div>
+                                                            )}
+                                                        </div>
+                                                        <span className={cn("text-[10px] font-bold", isSelected ? "text-foreground" : "text-secondary")}>{p.name}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* SERVICE SELECTOR */}
                                 {!selectedSvc ? (
                                     <div>
-                                        <label className="text-[8px] font-black text-secondary uppercase tracking-wider mb-2 block px-1">Hizmet Seçimi</label>
+                                        <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-2.5 block px-1">Hizmet seçimi</label>
                                         {clinicServices.length === 0 ? (
                                             <div className="bg-card border border-card-border rounded-2xl p-6 text-center">
                                                 <p className="text-sm font-bold text-secondary mb-4">Bu klinik henüz hizmetlerini eklemedi.</p>
@@ -1385,20 +1425,22 @@ function VetPageContent() {
                                                 </button>
                                             </div>
                                         ) : (
-                                            <div className="space-y-3">
+                                            <div className="space-y-2.5">
                                                 {clinicServices.map((svc: any) => (
-                                                    <div key={svc.id} className="bg-card border border-card-border p-4 rounded-2xl flex items-center justify-between group transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
-                                                        <div>
-                                                            <div className="font-black text-foreground tracking-tight text-sm">{svc.service_name}</div>
+                                                    <button
+                                                        key={svc.id}
+                                                        onClick={() => setSelectedSvc(svc)}
+                                                        className="w-full bg-card border border-card-border p-4 rounded-2xl flex items-center gap-3 group transition-all hover:border-accent/30 text-left"
+                                                    >
+                                                        <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                                                            <Stethoscope className="w-4 h-4 text-accent" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-black text-foreground tracking-tight text-sm truncate">{svc.service_name}</div>
                                                             <div className="text-[10px] font-bold text-secondary mt-0.5">~{svc.duration_minutes} dk</div>
                                                         </div>
-                                                        <button
-                                                            onClick={() => setSelectedSvc(svc)}
-                                                            className="px-4 py-2 bg-card-border/50 hover:bg-accent hover:text-white dark:hover:bg-accent dark:text-white text-zinc-600 font-black text-[10px] rounded-xl transition-colors"
-                                                        >
-                                                            Seç
-                                                        </button>
-                                                    </div>
+                                                        <div className="w-5 h-5 rounded-full border-2 border-card-border shrink-0 group-hover:border-accent/50 transition-colors" />
+                                                    </button>
                                                 ))}
                                             </div>
                                         )}
@@ -1421,22 +1463,24 @@ function VetPageContent() {
                                         {/* DOCTOR SELECTOR */}
                                         {clinicDoctors.length > 0 && (
                                             <div className="mt-4 mb-4">
-                                                <label className="text-[8px] font-black text-secondary uppercase tracking-wider mb-2 block px-1">Doktor Seçimi (Opsiyonel)</label>
+                                                <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-2.5 block px-1">Doktor seçimi (opsiyonel)</label>
                                                 {!selectedDoctor ? (
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-2.5">
                                                         {clinicDoctors.map((doc: Doctor) => (
-                                                            <div key={doc.id} className="bg-card border border-card-border p-4 rounded-2xl flex items-center justify-between group transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
-                                                                <div>
-                                                                    <div className="font-black text-foreground tracking-tight text-sm">{doc.name}</div>
-                                                                    {doc.title && <div className="text-[10px] font-bold text-secondary mt-0.5">{doc.title}</div>}
+                                                            <button
+                                                                key={doc.id}
+                                                                onClick={() => setSelectedDoctor(doc)}
+                                                                className="w-full bg-card border border-card-border p-4 rounded-2xl flex items-center gap-3 group transition-all hover:border-accent/30 text-left"
+                                                            >
+                                                                <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 font-black text-accent text-xs">
+                                                                    {(doc.name || 'D')[0]}
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => setSelectedDoctor(doc)}
-                                                                    className="px-4 py-2 bg-card-border/50 hover:bg-accent hover:text-white dark:hover:bg-accent dark:text-white text-zinc-600 font-black text-[10px] rounded-xl transition-colors"
-                                                                >
-                                                                    Seç
-                                                                </button>
-                                                            </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="font-black text-foreground tracking-tight text-sm truncate">{doc.name}</div>
+                                                                    {doc.title && <div className="text-[10px] font-bold text-secondary mt-0.5 truncate">{doc.title}</div>}
+                                                                </div>
+                                                                <div className="w-5 h-5 rounded-full border-2 border-card-border shrink-0 group-hover:border-accent/50 transition-colors" />
+                                                            </button>
                                                         ))}
                                                     </div>
                                                 ) : (
@@ -1458,7 +1502,7 @@ function VetPageContent() {
 
                                 {/* DATE SELECTOR */}
                                 <div>
-                                    <label className="text-[8px] font-black text-secondary uppercase tracking-wider mb-2 block px-1">Tarih Seçimi</label>
+                                    <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-2.5 block px-1">Tarih seçimi</label>
                                     <div 
                                         ref={dateScroll.ref}
                                         onMouseDown={dateScroll.onMouseDown}
@@ -1489,7 +1533,7 @@ function VetPageContent() {
                                 </div>
 
                                 <div className="mb-6 text-left">
-                                    <label className="text-[8px] font-black text-secondary uppercase tracking-wider mb-3 block px-1">Saat Seçimi</label>
+                                    <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-3 block px-1">Saat seçimi</label>
                                     <div className="grid grid-cols-4 gap-2">
                                         {timeSlots.map(({ time, disabled }, tIndex) => {
                                             if (!time) console.warn("🚨 BOŞ TIME DEĞERİ!", { time, index: tIndex });
@@ -1619,7 +1663,7 @@ function VetPageContent() {
 
                 {/* 2. REVIEWS / RATING MODAL */}
                 {activeModal === 'rating' && (
-                    <motion.div key="rating-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[140] bg-black/50 dark:bg-black/85 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
+                    <motion.div key="rating-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[3100] bg-black/50 dark:bg-black/85 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
                         <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-card-border text-foreground relative">
                             <div className="flex flex-col items-center text-center p-4">
                                 <h3 className="font-black text-lg tracking-tight mb-2 text-foreground">Klinik değerlendir</h3>
@@ -1790,6 +1834,10 @@ function VetPageContent() {
                         setDrawerDefaultReviewAppointmentId(null);
                     }}
                     onBookAppointment={(clinic) => {
+                        setDetailClinicId(null);
+                        setDetailClinicData(null);
+                        setDrawerDefaultReview(false);
+                        setDrawerDefaultReviewAppointmentId(null);
                         openAppointment(clinic);
                     }}
                 />

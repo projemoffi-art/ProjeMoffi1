@@ -2197,6 +2197,71 @@ Playwright testiyle "Randevularım" sekmesi canlı doğrulandı: sekmeler artık
 sentence-case, "Tümü" filtre çipi ve randevu ikonu artık turuncu/sıcak
 tonlarda, indigo hiç görünmüyor.
 
+### 8.30 "Randevu Al butonu çalışmıyor" — gerçek bir z-index/state hatasıydı, + randevu formu referansa göre zenginleştirildi (2026-09-25)
+
+Baran'ın bildirdiği "randevu al butonu çalışmıyor" şikayeti GERÇEK bir hataydı,
+UI algısı değil:
+
+🔴🔴 **Kök neden:** `ClinicDetailDrawer`'ın "Randevu Al" butonu `onBookAppointment`
+prop'unu doğru çağırıyordu ve randevu formu (`activeModal==='appointment'`)
+gerçekten AÇILIYORDU — ama `ClinicDetailDrawer`'ın kendisi (`z-[6100]`/
+`z-[6200]`) KAPANMIYORDU (drawer'ı kapatan state, `detailClinicId`/
+`detailClinicData`, hiç sıfırlanmıyordu). Randevu formu ise sadece
+`z-[140]`/`z-[145]`'te açılıyordu — yani yeni açılan form, hâlâ ekranda duran
+ama çok daha yüksek z-index'li drawer'ın ARKASINDA kalıyordu. Kullanıcı için
+sonuç: butona basınca hiçbir şey olmuyormuş gibi görünüyordu (form aslında
+DOM'da açılmıştı, sadece görünmezdi). **Düzeltme:** `onBookAppointment`
+artık `openAppointment()`'tan ÖNCE drawer'ı da kapatıyor (`setDetailClinicId(null)`
+vb.) — ekran gerçekten Screen 4 (Klinik Detayı) → Screen 5 (Randevu Al) diye
+GERÇEKTEN ilerliyor, üst üste binmiyor.
+
+🔴 **İkinci, ilişkili bir z-index hatası daha bulundu:** randevu formunun
+KENDİ "Randevu Talebini İlet" gönder butonu da aynı düşük z-index'te
+(`z-[140]`/`z-[145]`) olduğu için, uygulamanın GLOBAL alt navigasyon çubuğu
+(`DynamicNavigation.tsx`, `z-[2900]`) formun tam üzerine, gönder butonunun
+ÜSTÜNE biniyordu — kullanıcı o bölgeye dokununca aslında forma değil, altındaki
+nav ikonuna basıyordu. Hem randevu formu hem "Klinik Değerlendir" modalı
+`z-[3100]`/`z-[3101]`'e çıkarıldı (VetQuickSheet'in zaten kullandığı `z-3001`
+ile aynı aile, alt navigasyonun kesin üstünde). **Genel ders:** bu sayfadaki
+diğer bazı overlay'ler de (`z-[250]` transparanlık günlüğü/değerlendirme
+toast'ı) teorik olarak aynı riski taşıyor ama `h-[70vh]`/`bottom-24` gibi
+ekranın alt kenarına tam değmeyen boyutlar kullandıkları için PRATİKTE
+sorun yaratmıyorlar — gerçek risk SADECE `h-full` (ekranın tam altına kadar
+uzanan) overlay'lerde var, bu ikisi tam olarak o kalıptaydı.
+
+**Aynı turda, "randevu al ekranı da örnek görsel gibi olsun" isteği üzerine
+Ekran 5 (Randevu Al) gerçek bir eksiği de kapatarak zenginleştirildi:**
+- 🔴 **Gerçek, önceden var olan bir işlev kaybı düzeltildi:** 8.28'de
+  `PetSwitcher` /vet header'ından kaldırılmıştı (referansta yok diye) — ama
+  bu, kullanıcının HANGİ pet için randevu aldığını bu sayfadan görme/değiştirme
+  yolunu tamamen ortadan kaldırmıştı (randevu sessizce her zaman global
+  `activePet`'i kullanıyordu). Referansın Ekran 5'i zaten TAM olarak bunun
+  çözümünü gösteriyor: formun kendi içinde bir pet seçici satırı. Gerçek
+  `pets` listesinden ("Kimin için?" başlığı altında, yuvarlak avatarlar,
+  seçili olan turuncu halkalı) yeni bir seçici eklendi, `selectedAppointmentPet`
+  state'i randevu oluşturma/veri paylaşımı akışının HER yerinde (`activePet`
+  yerine) kullanılıyor artık — hem referansa uyum hem gerçek, kaybedilmiş
+  bir işlevin geri getirilmesi.
+- Hizmet/doktor listesi satırları: ayrı bir "Seç" pill butonu yerine,
+  referanstaki gibi tüm satır tıklanabilir + solda ikon + sağda boş/dolu
+  onay dairesi deseni.
+- `openAppointment()`'a eksik olan `setSelectedSvc(null)` sıfırlaması eklendi
+  (pre-existing küçük bir hata — farklı bir klinik için tekrar randevu
+  açıldığında önceki klinikten kalma hizmet seçimi görünebiliyordu).
+- Yan ürün: `activePet.avatar_url` (tipte hiç var olmayan bir alan, sessizce
+  `undefined` dönüyordu) yerine gerçek `Pet.image` alanı kullanılmaya
+  başlandı — bir pre-existing typecheck hatası da bu sırada kendiliğinden
+  düzeldi.
+
+**Doğrulama:** gerçek Playwright testiyle UÇTAN UCA doğrulandı — "Randevu Al"
+tıklanınca drawer kapanıp form gerçekten görünür oldu, pet seçici gerçek
+pet'leri (Delal/Zelal/Evin/Moffi) gösterdi, hizmet+tarih+saat seçilip
+"Randevu Talebini İlet" gerçekten tıklanabilir hale geldi (üstünde artık
+alt nav yok) ve gerçek bir `appointments` satırı oluşturdu (SQL ile
+doğrulanıp sonra temizlendi), "Randevu Talebiniz İletildi ✨" toast'ı
+göründü. typecheck aynı 3 pre-existing hata (bir tanesi bu turda kendiliğinden
+düzeldi, 4'ten 3'e indi).
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
