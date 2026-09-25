@@ -1088,6 +1088,37 @@ export default function LegendaryLightDashboard() {
         ? (typeof walkingPet.activity_target === 'number' ? walkingPet.activity_target : (walkingPet.sos_settings?.activity_target ?? pet.ringProgress.activity))
         : pet.ringProgress.activity;
 
+    // "Bugünkü Yürüyüş" kartının duruma göre değişen 3 hâli — daha önce
+    // design-reference/home-final/README.md'de "AÇIK İŞ, karara bağlanmadı"
+    // olarak not düşülmüştü (3 foto zaten hazırlanmıştı: walk-lapsed/normal/
+    // active.jpg, ama hangi eşikte hangisinin tetikleneceği netleşmemişti).
+    // Baran'ın bu turda verdiği net eşik: aktif yürüyüş > 3+ gündür yürünmedi
+    // (lapsed) > aksaklık yok (normal). Gerçek `walkHistory`'den hesaplanıyor.
+    const daysSinceLastWalk = useMemo(() => {
+        if (walkHistory.length === 0) return Infinity;
+        const lastWalk = walkHistory.reduce((latest: any, w: any) => {
+            const d = w.ended_at || w.started_at;
+            if (!d) return latest;
+            const t = new Date(d).getTime();
+            return t > latest ? t : latest;
+        }, 0);
+        if (!lastWalk) return Infinity;
+        return (Date.now() - lastWalk) / (1000 * 60 * 60 * 24);
+    }, [walkHistory]);
+
+    const LAPSED_THRESHOLD_DAYS = 3;
+    const walkCardState: 'active' | 'lapsed' | 'normal' = activeSession
+        ? 'active'
+        : daysSinceLastWalk >= LAPSED_THRESHOLD_DAYS
+            ? 'lapsed'
+            : 'normal';
+
+    const walkCardCopy = {
+        active: { image: '/images/walk-active.jpg', title: `${walkingPetName} yürüyor! 🐾`, subtitle: null as string | null },
+        lapsed: { image: '/images/walk-lapsed.jpg', title: 'Bugünkü Yürüyüş', subtitle: 'Biraz hareket iyi gelir... Seni bekliyorum 🐾' },
+        normal: { image: '/images/walk-normal.jpg', title: 'Bugünkü Yürüyüş', subtitle: null as string | null },
+    }[walkCardState];
+
     const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
     const [selectedAnn, setSelectedAnn] = useState<any | null>(null);
@@ -1805,7 +1836,21 @@ export default function LegendaryLightDashboard() {
                     onun yerine mevcut "toplam mesafe" (walkStats) gösteriliyor — sahte sayı üretilmiyor. */}
                 <section className="mb-6 -mx-3 relative z-20">
                     <div className="relative rounded-xl overflow-hidden min-h-[220px] bg-[#2B2A24]">
-                        <img src="/images/walk-normal.jpg" className="absolute inset-0 w-full h-full object-cover" alt="Bugünkü Yürüyüş" />
+                        {/* Baran'ın bu turda karara bağladığı 3 durumlu foto sistemi (daha önce
+                            design-reference/home-final/README.md'de "AÇIK İŞ" olarak bekliyordu):
+                            aktif yürüyüş > 3+ gündür yürünmedi (lapsed) > aksaklık yok (normal). */}
+                        <AnimatePresence mode="wait">
+                            <motion.img
+                                key={walkCardState}
+                                src={walkCardCopy.image}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.4 }}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                alt="Bugünkü Yürüyüş"
+                            />
+                        </AnimatePresence>
                         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/80" />
                         <div className="relative px-4 pt-4 pb-1.5 h-full flex flex-col justify-between">
                             <div className="flex items-center justify-between">
@@ -1824,12 +1869,22 @@ export default function LegendaryLightDashboard() {
                                             </span>
                                         )}
                                         <span className="text-white text-[12.5px] font-black">
-                                            {activeSession ? `${walkingPetName} yürüyor! 🐾` : 'Bugünkü Yürüyüş'}
+                                            {walkCardCopy.title}
                                         </span>
                                     </div>
                                 </div>
                                 <span className="bg-white/92 rounded-full px-2.5 py-1 text-[#3A342C] text-[9.5px] font-black whitespace-nowrap">Hedef {targetActivityKm.toFixed(1)} km</span>
                             </div>
+                            {walkCardCopy.subtitle && (
+                                <motion.p
+                                    key={walkCardState}
+                                    initial={{ opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="text-white/90 text-[12px] font-bold italic max-w-[70%]"
+                                >
+                                    {walkCardCopy.subtitle}
+                                </motion.p>
+                            )}
                             <div>
                                 <div className={`text-white font-bold ${baloo2.className}`} style={{ fontSize: 40 }}>
                                     {walkedDistanceToday.toFixed(1)} <span className="text-[20px] font-bold text-white/70" style={{ fontFamily: nunito.style.fontFamily }}>km</span> <span className="text-[14px] font-bold text-white/70" style={{ fontFamily: nunito.style.fontFamily }}>/ {targetActivityKm.toFixed(1)} km</span>

@@ -1485,6 +1485,51 @@ değişiyor — boşta turuncu ▶ (Play), aktif yürüyüşte yeşil nabızlı 
 canlı doğrulandı: idle→aktif geçişte buton turuncudan yeşile dönüp nabız
 animasyonu başlıyor.
 
+### 8.22 Mini widget'a adım+kapatma eklendi, Capacitor+widget ilişkisi netleştirildi, "Bugünkü Yürüyüş" 3-durumlu foto sistemi karara bağlanıp kuruldu (2026-09-25)
+
+**Capacitor netliği (Baran'ın sorusu):** `ActiveWalkMiniWidget.tsx`'e kod
+yorumu olarak eklendi — bu widget SADECE uygulama ön plandayken, kendi
+sayfaları arasında görünüyor. Capacitor'e sarmak TEK BAŞINA bunu
+değiştirmiyor; uygulamadan çıkınca da görünen gerçek bir "canlı widget"
+(iOS Live Activity, Android kalıcı bildirim) AYRI, ek bir native eklenti
+gerektirir. Ayrıca: mevcut web-tabanlı pedometre (8.19-8.20) de native'e
+geçilince KALDIRILMAYACAK — Capacitor genelde web kodunu native kabukta
+ÇALIŞTIRMAYA devam ediyor (web sürümü de genelde paralel yaşamaya devam
+ediyor), bu yüzden ileride `Capacitor.isNativePlatform()` ile dallanıp
+native'de gerçek `CMPedometer`/`Sensor.TYPE_STEP_COUNTER`, web'de mevcut
+algoritma kullanılacak — biri diğerinin yerine geçmiyor, ikisi de gerekli.
+
+**`ActiveWalkMiniWidget.tsx` güncellemesi:** Artık sadece km değil, gerçek
+ivmeölçer tabanlı adım sayısı da (`walkData.realSteps`) gösteriliyor. Gerçek
+bir kapatma (X) butonu eklendi — SADECE o anki yürüyüş için kapanıyor (yeni
+bir yürüyüş/`sessionId` başlayınca otomatik tekrar görünüyor, sonsuza kadar
+gizli kalmıyor). Yer açmak için Duraklat/Devam Et butonu widget'tan
+kaldırıldı (tracking ekranından bir dokunuş uzakta zaten erişilebilir).
+
+**"Bugünkü Yürüyüş" kartının 3-durumlu foto sistemi — nihayet karara
+bağlandı:** `design-reference/home-final/README.md`'de "AÇIK İŞ, karara
+bağlanmadı" olarak aylarca bekleyen bir konsept vardı — 3 foto zaten
+hazırlanmıştı (`walk-lapsed/normal/active.jpg`, `design-reference/home-final/
+photos/`'ta duruyordu) ama hangi eşikte hangisinin tetikleneceği hiç
+netleşmemişti. Baran bu turda net eşiği verdi: **aktif yürüyüş > 3+ gündür
+yürünmedi (lapsed) > aksaklık yok (normal).** Uygulama:
+- 3 foto `public/images/`'a kopyalandı (`walk-active.jpg`/`walk-lapsed.jpg`
+  eksikti, sadece `walk-normal.jpg` vardı).
+- `daysSinceLastWalk` gerçek `walkHistory`'den (son tamamlanan yürüyüşün
+  `ended_at`/`started_at`'ı) hesaplanıyor.
+- `walkCardState`: `activeSession` varsa 'active', `daysSinceLastWalk >= 3`
+  ise 'lapsed', aksi halde 'normal'.
+- Lapsed durumu için konsept görselindeki ("walk-before-full.png") ton
+  korunarak gerçek bir alt metin eklendi: "Biraz hareket iyi gelir... Seni
+  bekliyorum 🐾" — sadece o durumda gösteriliyor.
+- Fotoğraf geçişleri `AnimatePresence`/`motion.img` ile yumuşak crossfade.
+
+**Doğrulama:** gerçek `walk_sessions` satırı geçici olarak 5 gün öncesine
+tarihlenip "lapsed" tetiklendi (doğru fotoğraf+metin göründü), sonra gerçek
+tarihine geri döndürüldü; "normal" ve "active" durumları da gerçek Playwright
+testiyle doğrulandı (görsel yolları doğru şekilde değişiyor). Bu turda ayrıca
+bugüne kadar biriken ~35 adet test `walk_sessions` satırı temizlendi.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
