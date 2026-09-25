@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { apiService } from "@/services/apiService";
-import { Search, Plus, PawPrint, Calendar, ArrowRight, Loader2, Link as LinkIcon } from "lucide-react";
-import Link from "next/link";
+import { Search, PawPrint, Calendar, Loader2, Link as LinkIcon } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -46,15 +45,6 @@ export default function BusinessPatientsPage() {
                             Kliniğinize kayıtlı veya veri göçü ile aktarılan tüm evcil hayvanlar.
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Link
-                            href="/business/appointments/new"
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Yeni Randevu
-                        </Link>
-                    </div>
                 </div>
 
                 {/* Filters / Search */}
@@ -90,7 +80,6 @@ export default function BusinessPatientsPage() {
                                         <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Hasta</th>
                                         <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Tür & Irk</th>
                                         <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Son Ziyaret</th>
-                                        <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300 text-right">İşlem</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
@@ -131,14 +120,6 @@ export default function BusinessPatientsPage() {
                                                 ) : (
                                                     <span className="text-gray-400 italic">Kayıt yok</span>
                                                 )}
-                                            </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <Link 
-                                                    href={`/business/appointments/new?pet_id=${p.pet_id}`}
-                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium transition-colors opacity-0 group-hover:opacity-100"
-                                                >
-                                                    Randevu <ArrowRight className="w-3 h-3" />
-                                                </Link>
                                             </td>
                                         </tr>
                                     ))}

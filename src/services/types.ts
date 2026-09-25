@@ -309,7 +309,7 @@ export interface IApiService {
     getPetVaccines(petId: string): Promise<any[]>;
     markVaccineAsCompleted(recordId: string, date: string, vetName: string): Promise<void>;
     checkHealthNotifications(petId: string): Promise<void>;
-    getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null): Promise<any[]>;
+    getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null, businessType?: string): Promise<any[]>;
     getClinicDetails(clinicId: string): Promise<any>;
     createAppointment(dto: any): Promise<any>;
     getAppointments(userId: string): Promise<any[]>;
@@ -503,6 +503,7 @@ export interface IApiService {
     sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean>;
     markMessagesRead(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<boolean>;
     getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number>;
+    getClinicDashboardStats(clinicId: string): Promise<any>;
     getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]>;
     createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean>;
     addClinicCampaign(data: any): Promise<boolean>;

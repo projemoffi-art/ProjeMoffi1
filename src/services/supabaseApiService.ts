@@ -1971,7 +1971,7 @@ export class SupabaseApiService implements IApiService {
         if (error) throw error;
     }
 
-    async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null): Promise<any[]> {
+    async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null, businessType?: string): Promise<any[]> {
         // Since we are no longer using the clinics table, we fetch approved businesses from profiles
         let query = supabase
             .from('profiles')
@@ -1985,10 +1985,13 @@ export class SupabaseApiService implements IApiService {
         if (district) {
             query = query.eq('district', district);
         }
+        if (businessType) {
+            query = query.eq('business_type', businessType);
+        }
 
         const { data, error } = await query;
 
-        if (error || !data) return this.mockApi.getNearbyClinics(province, district, lat, lng);
+        if (error || !data) return this.mockApi.getNearbyClinics(province, district, lat, lng, businessType);
 
         const clinicIds = data.map((d: any) => d.id);
         const { data: servicesData } = await supabase.from('clinic_services').select('clinic_id, service_name').in('clinic_id', clinicIds);
@@ -2357,11 +2360,28 @@ export class SupabaseApiService implements IApiService {
             }
         });
 
+        const completedCount = appointments.filter((a: any) => a.status === 'completed').length;
+
+        // Faz 1 (işletme türü mimarisi) — Dashboard'daki uydurma "Toplam Gösterim"/
+        // "Sayfa Tıklaması" (randevu sayısının rastgele katı) yerine gerçek bir
+        // ortalama puan gösterebilmek için gerçek clinic_reviews verisi.
+        const { data: reviews } = await supabase
+            .from('clinic_reviews')
+            .select('rating')
+            .eq('clinic_id', clinicId);
+        const reviewCount = reviews?.length || 0;
+        const averageRating = reviewCount > 0
+            ? reviews!.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewCount
+            : 0;
+
         return {
             totalBalance,
             totalPatients: uniquePatientIds.size,
             recentPatients,
-            appointmentsCount: appointments.length
+            appointmentsCount: appointments.length,
+            completedCount,
+            averageRating,
+            reviewCount
         };
     }
 

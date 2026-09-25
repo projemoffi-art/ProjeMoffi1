@@ -85,7 +85,10 @@ export function useVet() {
                 return;
             }
 
-            const rawClinics = await apiService.getNearbyClinics(prov, dist, lat, lng);
+            // Faz 1 (işletme türü mimarisi) — /vet SADECE gerçek veteriner klinikleri
+            // göstermeli; daha önce business_type hiç filtrelenmiyordu, yani onaylı
+            // her işletme (kuaför, petshop vb.) veteriner gibi listeleniyordu.
+            const rawClinics = await apiService.getNearbyClinics(prov, dist, lat, lng, 'vet');
 
             const enrich = (list: any[]) => list.map(c => {
                 if (!c.location || lat === null || lng === null) return { ...c, _distVal: 999999, distance: c.distance || 'Konum Belirtilmemiş' };

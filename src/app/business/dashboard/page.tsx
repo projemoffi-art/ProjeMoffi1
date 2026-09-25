@@ -1,23 +1,37 @@
 "use client";
 
 import { AnalyticsChart } from "@/components/business/AnalyticsChart";
-import { CreateCampaignModal } from "@/components/business/CreateCampaignModal";
 import { useAuth, User } from "@/context/AuthContext";
-import { ArrowUpRight, Users, Eye, MousePointerClick, Wallet, Megaphone, LucideIcon, Map as MapIcon, Bell } from "lucide-react";
+import { ArrowUpRight, Users, Star, Calendar, Megaphone, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import React from "react";
 
 import { apiService } from "@/services/apiService"; // imported real api
 
+// Faz 1 (işletme türü mimarisi, 2026-09-25) — bu sayfa daha önce iki gerçek
+// "güven" sorunu barındırıyordu: (1) "+ Yeni Kampanya" butonu gerçek
+// clinic_campaigns tablosuna hiç dokunmayan, sadece localStorage'a yazan ayrı
+// bir modal açıyordu — işletme sahibi kampanya yayınladığını sanıyor ama hiçbir
+// müşteri onu göremiyordu; (2) "Toplam Gösterim"/"Sayfa Tıklaması" sayıları
+// gerçek değildi, sadece randevu sayısının rastgele bir katıydı (×3, ×14).
+// İkisi de kaldırıldı: kampanya butonu artık gerçek Kampanyalar sayfasına
+// gidiyor, sahte gösterim/tıklama yerine gerçek ortalama puan + tamamlanan
+// randevu sayısı gösteriliyor. "Yakınlık Bildirimi (₺50)" kartı da tamamen
+// işlevsiz (onClick'i yoktu, arkasında hiçbir sistem yoktu) olduğu için
+// kaldırıldı — CLAUDE.md Bölüm 7'nin "işlevsiz UI" hassasiyeti.
 export default function BusinessDashboard() {
-    const [isCampaignModalOpen, setIsCampaignModalOpen] = React.useState(false); // Modal State
     const { user, isSupabaseEnabled } = useAuth();
-    
+    const router = useRouter();
+
     const [dashboardStats, setDashboardStats] = React.useState({
         totalBalance: 0,
         totalPatients: 0,
         recentPatients: [] as any[],
-        appointmentsCount: 0
+        appointmentsCount: 0,
+        completedCount: 0,
+        averageRating: 0,
+        reviewCount: 0
     });
 
     React.useEffect(() => {
@@ -30,25 +44,17 @@ export default function BusinessDashboard() {
         fetchStats();
     }, [user?.id, isSupabaseEnabled]);
 
-    // Keep active campaigns logic intact for now
     const [activeCampaignsCount, setActiveCampaignsCount] = React.useState(0);
 
     React.useEffect(() => {
-        const stored = localStorage.getItem('moffipet_campaigns');
-        if (stored) {
-            const campaigns = JSON.parse(stored);
-            setActiveCampaignsCount(campaigns.filter((c: any) => c.status === 'active').length);
-        }
-    }, []); // Run once on mount
-
-    // Callback when new campaign is created
-    const handleCampaignCreated = () => {
-        const stored = localStorage.getItem('moffipet_campaigns');
-        if (stored) {
-            const campaigns = JSON.parse(stored);
-            setActiveCampaignsCount(campaigns.filter((c: any) => c.status === 'active').length);
-        }
-    };
+        const fetchCampaigns = async () => {
+            if (isSupabaseEnabled && user?.id) {
+                const campaigns = await apiService.getClinicCampaigns(user.id);
+                setActiveCampaignsCount((campaigns || []).filter((c: any) => c.status === 'active').length);
+            }
+        };
+        fetchCampaigns();
+    }, [user?.id, isSupabaseEnabled]);
 
     // Prepare data for chart (Empty state until we have real traffic tracking)
     const chartData = [0, 0, 0, 0, 0, 0, 0];
@@ -57,17 +63,12 @@ export default function BusinessDashboard() {
     // Provide default safe values for UI
     const totalUsers = dashboardStats.totalPatients || 0;
     const recentUsers = dashboardStats.recentPatients || [];
-    const appointmentsCount = dashboardStats.appointmentsCount || 0;
+    const completedCount = dashboardStats.completedCount || 0;
+    const averageRating = dashboardStats.averageRating || 0;
+    const reviewCount = dashboardStats.reviewCount || 0;
 
     return (
         <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
-            {/* Modal */}
-            <CreateCampaignModal
-                isOpen={isCampaignModalOpen}
-                onClose={() => setIsCampaignModalOpen(false)}
-                onCreated={handleCampaignCreated}
-            />
-
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
                 <div>
@@ -75,7 +76,7 @@ export default function BusinessDashboard() {
                     <p className="text-xs md:text-base text-gray-500 font-medium">Hoşgeldin, {user?.username || 'Admin'} 👋</p>
                 </div>
                 <button
-                    onClick={() => setIsCampaignModalOpen(true)}
+                    onClick={() => router.push('/business/campaigns')}
                     className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-0.5 transition-all whitespace-nowrap"
                 >
                     + Yeni Kampanya
@@ -85,24 +86,24 @@ export default function BusinessDashboard() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <StatCard
-                        title="Toplam Gösterim"
-                        value={(appointmentsCount * 3).toString()}
-                        trend="Aktif"
-                        icon={Eye}
+                        title="Ortalama Puan"
+                        value={reviewCount > 0 ? averageRating.toFixed(1) : '—'}
+                        trend={reviewCount > 0 ? `${reviewCount} yorum` : 'Henüz yorum yok'}
+                        icon={Star}
                         color="blue"
                     />
                     <StatCard
                         title="Toplam Pati Kaydı"
                         value={totalUsers.toString()}
-                        trend={`+${Math.floor(totalUsers * 0.1)}%`}
+                        trend="Toplam"
                         icon={Users}
                         color="green"
                     />
                     <StatCard
-                        title="Sayfa Tıklaması"
-                        value={(appointmentsCount * 14).toString()}
-                        trend="+18%"
-                        icon={MousePointerClick}
+                        title="Tamamlanan Randevu"
+                        value={completedCount.toString()}
+                        trend="Toplam"
+                        icon={Calendar}
                         color="purple"
                     />
                     <StatCard
@@ -120,8 +121,6 @@ export default function BusinessDashboard() {
                     <div className="lg:col-span-2 bg-card rounded-[2rem] p-8 border border-card-border shadow-xl shadow-gray-200/40 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
 
-
-                        // ... JSX structure
                         <div className="flex justify-between items-center mb-8 relative z-10">
                             <div>
                                 <h3 className="text-xl font-bold text-foreground">Haftalık Ziyaretçi Trafiği</h3>
@@ -135,32 +134,8 @@ export default function BusinessDashboard() {
                         <AnalyticsChart data={chartData} labels={chartLabels} />
                     </div>
 
-                    {/* Proximity Alerts & Live Feed */}
+                    {/* Recent Activity */}
                     <div className="space-y-6">
-                        {/* Proximity Card */}
-                        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2rem] p-6 text-white shadow-2xl shadow-indigo-300 relative overflow-hidden flex flex-col justify-between h-[240px]">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-black/10 dark:bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
-
-                            <div>
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="w-10 h-10 bg-black/20 dark:bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-card-border">
-                                        <MapIcon className="w-5 h-5 text-white" />
-                                    </div>
-                                    <span className="bg-black/20 dark:bg-white/20 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold border border-card-border animate-pulse">Canlı</span>
-                                </div>
-                                <h3 className="text-lg font-bold mb-2">Yakınlık Bildirimi</h3>
-                                <p className="text-indigo-100 text-sm opacity-90 leading-relaxed font-medium">
-                                    Şu an çevrenizde analiz yapılıyor. Çok yakında potansiyel müşterileriniz burada görünecek.
-                                </p>
-                            </div>
-
-                            <button className="w-full bg-card text-indigo-700 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition shadow-lg flex items-center justify-center gap-2">
-                                <Bell className="w-4 h-4" />
-                                Bildirim Gönder (₺50)
-                            </button>
-                        </div>
-
-                        {/* Recent Activity */}
                         <div className="bg-card rounded-[2rem] p-6 border border-card-border shadow-lg shadow-gray-100">
                             <h3 className="font-bold text-foreground mb-4 text-sm">Son Aktiviteler (Yeni Üyeler)</h3>
                             <div className="space-y-4">

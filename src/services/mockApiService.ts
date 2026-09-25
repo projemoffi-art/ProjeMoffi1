@@ -699,7 +699,11 @@ export class MockApiService implements IApiService {
     async markVaccineAsCompleted(recordId: string, date: string, vetName: string): Promise<void> { }
     async checkHealthNotifications(petId: string): Promise<void> { }
     
-    async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null): Promise<any[]> {
+    async getClinicDashboardStats(clinicId: string): Promise<any> {
+        return { totalBalance: 0, totalPatients: 0, recentPatients: [], appointmentsCount: 0, completedCount: 0, averageRating: 0, reviewCount: 0 };
+    }
+
+    async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null, businessType?: string): Promise<any[]> {
         const clinics = [
             {
                 id: 'vet-1',

@@ -2262,6 +2262,92 @@ doğrulanıp sonra temizlendi), "Randevu Talebiniz İletildi ✨" toast'ı
 göründü. typecheck aynı 3 pre-existing hata (bir tanesi bu turda kendiliğinden
 düzeldi, 4'ten 3'e indi).
 
+### 8.31 İşletme Türü Mimarisi — genel denetim + Faz 1 (güven onarımı) (2026-09-25)
+
+Baran'ın isteği: "amiral gemisi" olarak gördüğü veteriner sisteminin işletme
+paneli + müşteri paneli tarafının GERÇEKTEN senkron olup olmadığını denetle,
+ve işletmenin kendi seçtiği türe (veteriner/kuaför/bakım/barınak/petshop) göre
+panel özelliklerinin açılıp kapanacağı bir mimari için ayrıntılı bir rapor ver
+(global platformlardan ilham alarak). Tam denetim + mimari öneri raporu
+`claude.ai/artifact/GEm6gMg3FHeAnEeGTEiSiW` linkinde (bu sohbette Baran'a
+verildi, buraya sadece özet düşülüyor).
+
+**Denetimin genel sonucu:** randevu çekirdeği (onayla/reddet/tamamla, çalışma
+saatleri/kapalı günler, gerçek sohbet, yorum+yanıt) beklenenden çok daha
+sağlam ve iki tarafta da birebir senkron çıktı — bu asla bozulmamalı.
+`business_type` (petshop/vet/grooming/trainer/shelter) veri modelinde tam,
+admin panelinde bile bir aç/kapa anahtarı var, ama panelin kendisi
+(`Sidebar.tsx`, `services/page.tsx`, `doctors/page.tsx`) bunu hiç okumuyor —
+her işletme türü, türü ne olursa olsun, aynı vet-odaklı paneli görüyor.
+
+**Bulunan, Faz 1 kapsamında bu turda düzeltilen 3 gerçek sorun:**
+
+🔴🔴 **Müşteri tarafı `business_type` hiç filtrelemiyordu.**
+`getNearbyClinics()` (supabaseApiService.ts) sadece `role='business'` +
+`business_approved=true` filtreliyordu — onaylı HERHANGİ bir işletme (kuaför,
+petshop) `/vet` keşif ekranında gerçek bir veteriner klinik gibi çıkıyordu.
+Fonksiyona (`types.ts`/`supabaseApiService.ts`/`mockApiService.ts`) opsiyonel
+bir `businessType` parametresi eklendi, `useVet.ts` artık `'vet'` geçiyor.
+Gerçek DB kontrolünde bunu doğrulayan somut kanıt: onaylı 3 işletmeden sadece
+biri (`MoffiPet`) gerçek `business_type='vet'` değerine sahipti, diğer ikisi
+`business_type: null` (isim de null) — düzeltmeden önce bunlar da teorik
+olarak "veteriner" listesinde görünebilirdi.
+
+🔴 **İşletme paneli sahibine yanlış rakam gösteriyordu.** Dashboard'daki
+"+ Yeni Kampanya" butonu `CreateCampaignModal.tsx` üzerinden SADECE
+`localStorage`'a yazıyordu (`moffipet_campaigns` anahtarı) — gerçek
+`clinic_campaigns` tablosuna hiç dokunmuyordu, dashboard'daki "Aktif Kampanya"
+sayısı da aynı sahte anahtardan okunuyordu. İşletme sahibi kampanya
+yayınladığını sanıyor, hiçbir müşteri onu asla görmüyordu (gerçek kampanya
+sistemi zaten `/business/campaigns`'ta doğru çalışıyordu — aynı işi yapan iki
+paralel sistem, Bölüm 7'nin klasik örneği). **Düzeltme:** sahte modal +
+component tamamen silindi (`CreateCampaignModal.tsx`), "+ Yeni Kampanya"
+artık gerçek Kampanyalar sayfasına yönlendiriyor, "Aktif Kampanya" sayısı
+gerçek `getClinicCampaigns()`'ten hesaplanıyor. Aynı dashboard'daki "Toplam
+Gösterim"/"Sayfa Tıklaması" kartları da uydurmaydı (randevu sayısının
+rastgele katı, ×3/×14) — gerçek veri olmadığı için tamamen kaldırıldı, yerine
+`getClinicDashboardStats()`'e eklenen GERÇEK `averageRating`/`reviewCount`
+(clinic_reviews'tan) ve `completedCount` (tamamlanan randevu sayısı)
+kondu. Tamamen işlevsiz ("Bildirim Gönder ₺50" butonunun onClick'i yoktu)
+"Yakınlık Bildirimi" kartı da silindi — Bölüm 7'nin "işlevsiz UI" örneği.
+
+🔴 **Kırık link:** `business/patients/page.tsx`'teki hem üst "Yeni Randevu"
+butonu hem her satırdaki "Randevu →" linki `/business/appointments/new`'e
+gidiyordu — bu rota hiç var olmuyordu (404). İncelemede işletme tarafının bir
+hastaya GERÇEKTEN yeni randevu oluşturabileceği hiçbir akış olmadığı (sadece
+müşteri randevu oluşturabiliyor) ortaya çıktı — bu kırık bir link değil, hiç
+yapılmamış bir özellik. **Bilinçli karar (Baran'ın "krediler tükeniyor,
+ayrıntıya giremiyorum" kısıtı gereği):** gerçek bir randevu oluşturma formu
+(hizmet/doktor/tarih/saat seçici, mevcut müşteri tarafındaki mantığın
+işletme tarafına uyarlanmış hali) kendi başına orta büyüklükte bir özellik —
+bu turda aceleye getirip yarım/riskli yapmak yerine, sadece dürüstçe var
+olmayan iki linki kaldırıldı (tablo başlığından "İşlem" sütunu da kaldırıldı)
+— **gerçek özellik ayrı, ileride ele alınacak bir iş olarak NOT düşülüyor,
+sessizce atlanmadı.**
+
+🔴 **Yol boyunca 2 kez daha karşılaşılan Turbopack+OneDrive ikon çökmesi**
+(bkz. Bölüm 5.6): `CalendarCheck2` dashboard'u tamamen 500'e düşürdü,
+`Calendar`'a (zaten güvenli, kullanılan) çevrilerek düzeltildi.
+
+**Ayrıca fark edilen, bu turda dokunulmayan bir şey:** `npx tsc --noEmit`'i
+FİLTRESİZ çalıştırınca reponun kökünde bu Next.js uygulamasıyla hiç alakası
+olmayan iki tam ayrı React Native/Expo taslağı (`AntigravitiOzelTasarim/`,
+`PrompDenemeExpo/`) olduğu görüldü — tsc'nin `**/*.tsx` include deseni
+bunları da tarıyor, yüzlerce ilgisiz "modül bulunamadı" hatası üretiyor.
+Vercel build'ini etkilemiyorlar (Next.js sadece kendi `src/app` ağacını
+derliyor) ama bundan sonra "typecheck temiz" derken artık SADECE dokunulan
+dosyalara göre filtrelenmiş sonuç kastediliyor — ham komut çıktısı bu iki
+klasör yüzünden hep kirli görünecek. Silinip silinmeyecekleri (muhtemelen
+eski bir Antigravity/mobil deneme kalıntısı) Baran'a sorulmadan karar
+verilmedi.
+
+**Doğrulama:** typecheck (dokunulan dosyalara filtrelenmiş) aynı 8
+pre-existing hata, hiçbiri yeni değil (git stash ile tek tek doğrulandı).
+Gerçek Playwright testiyle: `/vet` sayfası hâlâ doğru render oluyor, business
+dashboard'da 4 kart da gerçek sıfır/gerçek veri gösteriyor (uydurma yok),
+"+ Yeni Kampanya" gerçekten `/business/campaigns`'a gidiyor, Hastalarım
+sayfasında kırık link kalmadı.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
