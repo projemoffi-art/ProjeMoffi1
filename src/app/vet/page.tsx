@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import {
     Search, MapPin, Star, Calendar, CreditCard,
     ShieldAlert, ChevronRight, Syringe, Utensils, Clock, Pill,
-    CheckCircle2, ChevronLeft, X, Filter, PhoneCall, Activity, History,
+    CheckCircle2, ChevronLeft, X, Filter, Activity, History,
     ShieldCheck, Bell
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -833,7 +833,7 @@ function VetPageContent() {
                             </button>
                             <div className="min-w-0 shrink">
                                 <span className="text-[7px] min-[375px]:text-[8px] sm:text-[9px] font-black text-accent dark:text-accent uppercase tracking-[0.2em] block mb-0.5 transition-all">Moffi Health</span>
-                                <h1 className="text-sm min-[375px]:text-base sm:text-xl md:text-2xl font-black text-foreground tracking-tighter leading-none uppercase italic transition-all">
+                                <h1 className="text-sm min-[375px]:text-base sm:text-xl md:text-2xl font-black text-foreground tracking-tight leading-none transition-all">
                                     Veterinerlik Portalı
                                 </h1>
                             </div>
@@ -902,7 +902,7 @@ function VetPageContent() {
                         <div className="bg-card p-4 rounded-xl border border-card-border shadow-sm">
                             <div className="flex items-center gap-2 mb-3">
                                 <MapPin className="w-4 h-4 text-accent" />
-                                <h3 className="text-xs font-black uppercase tracking-wider text-foreground">Konumunuzu Seçin</h3>
+                                <h3 className="text-xs font-black text-foreground">Konumunuzu seç</h3>
                             </div>
                             <div className="flex gap-3">
                                 <select 
@@ -939,13 +939,13 @@ function VetPageContent() {
                         <div className="flex items-center justify-between bg-card-border/30 px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700">
                             <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
                                 <MapPin className="w-3.5 h-3.5 text-accent" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">
-                                    Konum: <span className="text-foreground">{userProvince} / {userDistrict}</span>
+                                <span className="text-[11px] font-bold">
+                                    Konum: <span className="text-foreground font-black">{userProvince} / {userDistrict}</span>
                                 </span>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setIsLocationSelectorOpen(true)}
-                                className="text-[9px] font-black text-accent hover:text-accent uppercase tracking-widest bg-accent/10 px-2 py-1 rounded transition-colors"
+                                className="text-[10px] font-black text-accent hover:text-accent bg-accent/10 px-2.5 py-1 rounded-lg transition-colors"
                             >
                                 Değiştir
                             </button>
@@ -954,15 +954,15 @@ function VetPageContent() {
 
                     {/* View Toggle */}
                     <div className="flex bg-card-border/50 p-1 rounded-xl">
-                        <button 
+                        <button
                             onClick={() => setViewMode('clinics')}
-                            className={cn("flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all", viewMode === 'clinics' ? "bg-card shadow-sm text-accent" : "text-zinc-500 dark:text-zinc-400")}
+                            className={cn("flex-1 py-2 rounded-lg text-xs font-black transition-all", viewMode === 'clinics' ? "bg-card shadow-sm text-accent" : "text-zinc-500 dark:text-zinc-400")}
                         >
                             Klinik Keşfet
                         </button>
-                        <button 
+                        <button
                             onClick={() => setViewMode('appointments')}
-                            className={cn("flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all", viewMode === 'appointments' ? "bg-card shadow-sm text-accent" : "text-zinc-500 dark:text-zinc-400")}
+                            className={cn("flex-1 py-2 rounded-lg text-xs font-black transition-all", viewMode === 'appointments' ? "bg-card shadow-sm text-accent" : "text-zinc-500 dark:text-zinc-400")}
                         >
                             Randevularım
                         </button>
@@ -986,9 +986,9 @@ function VetPageContent() {
                                 key={cat.id}
                                 onClick={() => searchByService(cat.id)}
                                 className={cn(
-                                    "px-4 py-2 rounded-lg border flex items-center gap-1.5 whitespace-nowrap transition-all font-bold text-[10px] uppercase tracking-wider shrink-0",
-                                    activeCategory === cat.id 
-                                        ? "bg-accent text-black border-accent font-black shadow-lg shadow-accent/10" 
+                                    "px-4 py-2 rounded-lg border flex items-center gap-1.5 whitespace-nowrap transition-all font-bold text-xs shrink-0",
+                                    activeCategory === cat.id
+                                        ? "bg-accent text-white border-accent font-black shadow-lg shadow-accent/20"
                                         : "bg-card text-secondary border-card-border hover:border-card-border hover:text-foreground"
                                 )}
                             >
@@ -1005,7 +1005,7 @@ function VetPageContent() {
                     <div className="relative z-40 mb-2" ref={notifRef}>
                         <button 
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className="bg-accent/10 text-accent dark:text-accent border border-accent/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-wider w-full justify-center transition-all hover:bg-accent/20"
+                            className="bg-accent/10 text-accent dark:text-accent border border-accent/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black w-full justify-center transition-all hover:bg-accent/20"
                         >
                             <Bell className={cn("w-4 h-4", unreadCount > 0 ? "animate-pulse" : "")} />
                             {unreadCount > 0 ? `${unreadCount} Yeni Bildirim` : `Bildirimler`}
@@ -1079,7 +1079,7 @@ function VetPageContent() {
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={() => setIsLogModalOpen(true)}
-                                className="bg-card border border-card-border hover:bg-card-border text-zinc-650 dark:text-zinc-300 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all text-[8px] font-black uppercase tracking-wider cursor-pointer"
+                                className="bg-card border border-card-border hover:bg-card-border text-zinc-650 dark:text-zinc-300 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all text-[10px] font-bold cursor-pointer"
                             >
                                 <History className="w-3.5 h-3.5 text-accent" /> Paylaşım Logları
                             </button>
@@ -1096,7 +1096,7 @@ function VetPageContent() {
                         <MapPin className="w-6 h-6 text-accent" />
                     </div>
                     <div>
-                        <h3 className="font-black text-sm text-foreground uppercase tracking-wider mb-1">Yakındaki Klinikleri Keşfet</h3>
+                        <h3 className="font-black text-sm text-foreground mb-1">Yakındaki klinikleri keşfet</h3>
                         <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">
                             Moffi üzerinden çevrenizdeki tüm onaylı veteriner kliniklerini ve nöbetçi hekimleri görebilirsiniz.
                         </p>
@@ -1109,7 +1109,7 @@ function VetPageContent() {
                                 window.open(`https://www.google.com/maps/search/veteriner`, '_blank');
                             }
                         }}
-                        className="w-full sm:w-auto bg-accent text-white px-6 py-3 rounded-xl text-xs font-black hover:bg-accent transition-all shadow-lg shadow-accent/20 uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full sm:w-auto bg-accent text-white px-6 py-3 rounded-xl text-xs font-black hover:bg-accent transition-all shadow-lg shadow-accent/20 flex items-center justify-center gap-2 cursor-pointer"
                     >
                         <MapPin className="w-4 h-4" />
                         Google Haritalar'da Aç
@@ -1120,14 +1120,14 @@ function VetPageContent() {
                 <section>
                     <div className="flex items-center justify-between mb-4 px-1">
                         <div>
-                            <h2 className="text-sm font-black text-foreground tracking-wider uppercase italic leading-none">Çevredeki Klinikler</h2>
-                            <p className="text-[8px] text-secondary font-bold uppercase tracking-wider mt-1">Öne Çıkan Sağlık Merkezleri</p>
+                            <h2 className="text-base font-black text-foreground tracking-tight leading-none">Çevredeki klinikler</h2>
+                            <p className="text-[10px] text-secondary font-bold mt-1.5">Öne çıkan sağlık merkezleri</p>
                         </div>
-                        <button 
+                        <button
                             onClick={() => setIsFilterPanelOpen(true)}
-                            className="relative bg-card border border-card-border px-3.5 py-1.5 rounded-lg text-[8px] font-black text-secondary flex items-center gap-1 hover:text-foreground transition-all"
+                            className="relative bg-card border border-card-border px-3.5 py-1.5 rounded-lg text-[10px] font-bold text-secondary flex items-center gap-1 hover:text-foreground transition-all"
                         >
-                            <Filter className="w-3 h-3" /> FİLTRELE
+                            <Filter className="w-3 h-3" /> Filtrele
                             {hasActiveFilters && (
                                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />
                             )}
@@ -1151,7 +1151,7 @@ function VetPageContent() {
                                 )}
                             >
                                 {clinic.isPremium && (
-                                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-accent to-blue-500" />
+                                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-accent" />
                                 )}
 
                                 <div className="flex gap-4">
@@ -1200,17 +1200,17 @@ function VetPageContent() {
                                         </div>
 
                                         <div className="flex items-center justify-end gap-2.5 mt-2">
-                                            <button 
+                                            <button
                                                 onClick={() => setDetailClinicId(clinic.id)}
-                                                className="text-[8px] font-black text-secondary hover:text-foreground uppercase tracking-wider transition-colors duration-300"
+                                                className="text-[10px] font-bold text-secondary hover:text-foreground transition-colors duration-300"
                                             >
-                                                Detayları Gör
+                                                Detayları gör
                                             </button>
                                             <button
                                                 onClick={() => openAppointment(clinic)}
-                                                className="bg-gradient-to-r from-accent to-blue-500 text-black px-4 py-1.5 rounded-lg font-black text-[9px] uppercase tracking-wider hover:from-accent hover:to-blue-400 transition-all shadow-md active:scale-95 duration-200"
+                                                className="bg-accent text-white px-4 py-1.5 rounded-lg font-black text-[10px] hover:bg-accent/90 transition-all shadow-md shadow-accent/20 active:scale-95 duration-200"
                                             >
-                                                Randevu Seç
+                                                Randevu al
                                             </button>
                                         </div>
                                     </div>
@@ -1242,7 +1242,7 @@ function VetPageContent() {
                         >
                             <div className="p-6">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-lg font-black text-foreground tracking-tighter uppercase italic">Sıralama & Filtre</h3>
+                                    <h3 className="text-lg font-black text-foreground tracking-tight">Sıralama ve filtre</h3>
                                     <button onClick={() => setIsFilterPanelOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
                                         <X className="w-4 h-4 text-foreground" />
                                     </button>
@@ -1290,17 +1290,17 @@ function VetPageContent() {
                                     </div>
 
                                     <div className="pt-2 space-y-2">
-                                        <button 
+                                        <button
                                             onClick={() => setIsFilterPanelOpen(false)}
-                                            className="w-full h-12 bg-foreground text-background font-black uppercase tracking-wider text-xs rounded-xl hover:bg-foreground/90 transition-all active:scale-95"
+                                            className="w-full h-12 bg-accent text-white font-black text-sm rounded-xl hover:bg-accent/90 transition-all active:scale-95 shadow-lg shadow-accent/20"
                                         >
-                                            Sonuçları Göster
+                                            Sonuçları göster
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => { setFilterSortBy(null); setFilterOpenNow(false); setIsFilterPanelOpen(false); }}
-                                            className="w-full h-12 bg-transparent text-secondary font-black uppercase tracking-wider text-xs rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                                            className="w-full h-12 bg-transparent text-secondary font-bold text-sm rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all"
                                         >
-                                            Filtreleri Temizle
+                                            Filtreleri temizle
                                         </button>
                                     </div>
                                 </div>
@@ -1773,16 +1773,6 @@ function VetPageContent() {
                     onClose={() => setActiveMedicationModal(false)} 
                     petId={activePet?.id || ''} 
                 />
-                {/* Floating Vet-Line Support Button */}
-                <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => alert("Canlı VetLine desteği başlatılıyor...")}
-                    className="fixed bottom-40 right-6 z-40 w-14 h-14 bg-accent hover:bg-accent text-white rounded-full flex items-center justify-center shadow-lg shadow-accent/30 border border-accent/20 active:scale-95 transition-all cursor-pointer"
-                    title="7/24 Canlı Veteriner Desteği"
-                >
-                    <PhoneCall className="w-5 h-5 animate-pulse" />
-                </motion.button>
         </div>
     );
 }

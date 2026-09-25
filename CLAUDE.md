@@ -2015,14 +2015,31 @@ aşağıdaki HİÇBİR elementte hiçbir Tailwind utility'sini etkilemez, sadece
 `var(--accent)` şeklinde HAM/doğrudan kullanılan (Tailwind utility'si
 olmayan) CSS'i etkiler.
 
-**Hâlâ bu turun kapsamına ALINMAYAN (Baran'ın "Nasıl ilerleyelim kral?"
-sorusuna verilen ilk yanıt sadece bu kök neden düzeltmesiydi):** `/vet/page.tsx`'in
-dış kabuğunun geri kalanı (header, İl/İlçe seçici, "Klinik Keşfet"/
-"Randevularım" sekmeleri, kategori etiketleri, "Aktif Pet Durumu" kartı,
-harita kutusu, filtre sheet'i, ve TÜM sayfadaki `uppercase italic
-tracking-widest` yazı tarzı) hâlâ referans görsele göre yeniden
-tasarlanmadı — bu düzeltme sadece rengin ARTIK doğru akmasını sağladı,
-düzenin/tipografinin kendisini referansa uydurmadı.
+**Aynı turda hemen ardından tamamlanan:** kök neden düzeltmesi TEK BAŞINA
+sadece rengin doğru akmasını sağlıyordu, düzeni/tipografiyi değiştirmiyordu —
+bu yüzden `/vet/page.tsx`'in dış kabuğunun geri kalanı (header başlığı, konum
+seçici, "Klinik Keşfet"/"Randevularım" sekmeleri, kategori etiketleri, "Aktif
+Pet Durumu" kartı, harita kutusu, "Çevredeki Klinikler" satır-içi klinik
+listesi, filtre sheet'i) AYNI oturumda `uppercase italic tracking-widest`
+yazı tarzından sentence-case/normal ağırlıklı, referans/ClinicDetailDrawer'la
+tutarlı bir dile çevrildi (küçük 7-10px eyebrow/caption etiketler — "Moffi
+Health", "Aktif Pet Durumu" gibi — bilerek KORUNDU, onlar zaten kabul edilmiş
+bir desen). Yan ürün olarak 2 gerçek "mavi = premium değil" ihlali bulundu ve
+düzeltildi (klinik kartındaki "Randevu Seç" butonu ve premium kart sol
+şeridi, ikisi de `to-blue-500` gradyanı kullanıyordu — düz `bg-accent`'e
+çevrildi). Ayrıca sayfanın en altındaki "Floating Vet-Line Support Button"
+(📞 ikonlu, sabit-pozisyonlu) tamamen ÖLÜ/SAHTE bulundu — `onClick`'i sadece
+`alert("Canlı VetLine desteği başlatılıyor...")` çağırıyordu, referansın 14
+ekranında hiç karşılığı yok — tamamen silindi (Bölüm 7'nin "işlevsiz UI"
+hassasiyetiyle birebir örtüşen bir örnek daha). Gerçek Playwright testiyle
+(Van/Tuşba konumu, gerçek "MoffiPet" klinik kartı) doğrulandı, typecheck
+öncesi/sonrası birebir aynı 4 pre-existing hata (git stash ile karşılaştırıldı,
+hiçbiri benim değişikliklerimle ilgili değil).
+
+**Hâlâ bu turun kapsamına ALINMAYAN:** randevu formu (`activeModal==='appointment'`,
+sayfaya gömülü, ~300 satırlık ayrı bir state machine), `VetQuickSheet.tsx`,
+ve referansın Ekran 3 (Harita Görünümü) gerçek harita+pin entegrasyonu —
+hâlâ eski stilde/yapılmadı, hâlâ ayrı, dikkatli bir iş olarak bekliyor.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
