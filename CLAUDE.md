@@ -2011,3 +2011,13 @@ Antigravity. Karışıklığı önlemek için şu iş bölümü kuruldu:
   ve renk paleti (referans: turuncu+yeşil, mevcut kod: mor/indigo) arasında
   bilinen, henüz çözülmemiş bir çelişki var. **Herhangi bir ajan `/walk/*`
   altında UI değişikliği yapmadan önce bu klasörü okumalı.**
+- 🔴 **Kilitli Veteriner modülü tasarımı** (2026-09-25) `design-reference/vet-final/`
+  klasöründe duruyor: `vet-module-14-screens-reference.jpg` (Baran'ın verdiği
+  14 ekranlık "Veteriner Bul & Randevu Al" referansı) + `README.md` (ekran ekran
+  döküm, renk kodları — home-final paletiyle tutarlı, yeni bir palet değil).
+  Baran'ın açık talimatı: bu görsel BİREBİR uygulanacak, önce UI, sonra (ayrı
+  bir adım olarak) mevcut/gerekli randevu-klinik altyapısına bağlanacak. Bu
+  klasör, sohbet ne kadar uzarsa uzasın ya da context sıfırlansa bile kaybolmasın
+  diye kalıcı olarak buraya kaydedildi (walk-final'ın bir kez kaybolup Faz 12/13'ün
+  görselsiz inşa edilmesi hatasının tekrarlanmaması için). **Herhangi bir ajan
+  `/vet/*` altında UI değişikliği yapmadan önce bu klasörü okumalı.**
