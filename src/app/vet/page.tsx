@@ -1348,7 +1348,7 @@ function VetPageContent() {
 
                             
                             <div className="flex justify-between items-center mb-6 mt-2 sm:mt-0">
-                                <h2 className="text-lg font-black tracking-tight uppercase">Randevu Oluştur</h2>
+                                <h2 className="text-lg font-black tracking-tight">Randevu oluştur</h2>
                                 <button onClick={() => setActiveModal(null)} className="w-8 h-8 bg-card rounded-full flex items-center justify-center border border-card-border hover:bg-card-border/80 text-foreground transition-all"><X className="w-4 h-4" /></button>
                             </div>
 
@@ -1377,11 +1377,11 @@ function VetPageContent() {
                                         {clinicServices.length === 0 ? (
                                             <div className="bg-card border border-card-border rounded-2xl p-6 text-center">
                                                 <p className="text-sm font-bold text-secondary mb-4">Bu klinik henüz hizmetlerini eklemedi.</p>
-                                                <button 
+                                                <button
                                                     onClick={() => setSelectedSvc({ service_name: 'Belirtilmedi', duration_minutes: 30 })}
-                                                    className="px-6 py-2 bg-indigo-50 dark:bg-accent/10 text-accent dark:text-accent text-xs font-black uppercase tracking-wider rounded-xl transition-colors hover:bg-indigo-100 dark:hover:bg-accent/20 inline-block"
+                                                    className="px-6 py-2 bg-accent/10 text-accent text-xs font-black rounded-xl transition-colors hover:bg-accent/20 inline-block"
                                                 >
-                                                    Yine de Randevu Talep Et
+                                                    Yine de randevu talep et
                                                 </button>
                                             </div>
                                         ) : (
@@ -1389,12 +1389,12 @@ function VetPageContent() {
                                                 {clinicServices.map((svc: any) => (
                                                     <div key={svc.id} className="bg-card border border-card-border p-4 rounded-2xl flex items-center justify-between group transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
                                                         <div>
-                                                            <div className="font-black text-foreground uppercase tracking-tight text-sm">{svc.service_name}</div>
-                                                            <div className="text-[10px] font-bold text-secondary uppercase tracking-wider mt-0.5">~{svc.duration_minutes} dk</div>
+                                                            <div className="font-black text-foreground tracking-tight text-sm">{svc.service_name}</div>
+                                                            <div className="text-[10px] font-bold text-secondary mt-0.5">~{svc.duration_minutes} dk</div>
                                                         </div>
-                                                        <button 
+                                                        <button
                                                             onClick={() => setSelectedSvc(svc)}
-                                                            className="px-4 py-2 bg-card-border/50 hover:bg-accent hover:text-black dark:hover:bg-accent dark:text-white text-zinc-600 font-black text-[10px] uppercase tracking-wider rounded-xl transition-colors"
+                                                            className="px-4 py-2 bg-card-border/50 hover:bg-accent hover:text-white dark:hover:bg-accent dark:text-white text-zinc-600 font-black text-[10px] rounded-xl transition-colors"
                                                         >
                                                             Seç
                                                         </button>
@@ -1405,10 +1405,10 @@ function VetPageContent() {
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="flex items-center justify-between bg-indigo-50 dark:bg-accent/10 border border-indigo-100 dark:border-accent/20 p-3 rounded-2xl">
+                                        <div className="flex items-center justify-between bg-accent/10 border border-accent/20 p-3 rounded-2xl">
                                             <div>
-                                                <div className="text-[9px] font-black text-accent uppercase tracking-wider mb-0.5">Seçilen Hizmet</div>
-                                                <div className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-tight">{selectedSvc.service_name}</div>
+                                                <div className="text-[9px] font-black text-accent uppercase tracking-wider mb-0.5">Seçilen hizmet</div>
+                                                <div className="text-sm font-black text-foreground tracking-tight">{selectedSvc.service_name}</div>
                                             </div>
                                             <button 
                                                 onClick={() => { setSelectedSvc(null); setSelectedDate(''); setSelectedTime(null); }}
@@ -1427,12 +1427,12 @@ function VetPageContent() {
                                                         {clinicDoctors.map((doc: Doctor) => (
                                                             <div key={doc.id} className="bg-card border border-card-border p-4 rounded-2xl flex items-center justify-between group transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
                                                                 <div>
-                                                                    <div className="font-black text-foreground uppercase tracking-tight text-sm">{doc.name}</div>
-                                                                    {doc.title && <div className="text-[10px] font-bold text-secondary uppercase tracking-wider mt-0.5">{doc.title}</div>}
+                                                                    <div className="font-black text-foreground tracking-tight text-sm">{doc.name}</div>
+                                                                    {doc.title && <div className="text-[10px] font-bold text-secondary mt-0.5">{doc.title}</div>}
                                                                 </div>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => setSelectedDoctor(doc)}
-                                                                    className="px-4 py-2 bg-card-border/50 hover:bg-accent hover:text-black dark:hover:bg-accent dark:text-white text-zinc-600 font-black text-[10px] uppercase tracking-wider rounded-xl transition-colors"
+                                                                    className="px-4 py-2 bg-card-border/50 hover:bg-accent hover:text-white dark:hover:bg-accent dark:text-white text-zinc-600 font-black text-[10px] rounded-xl transition-colors"
                                                                 >
                                                                     Seç
                                                                 </button>
@@ -1440,10 +1440,10 @@ function VetPageContent() {
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center justify-between bg-indigo-50 dark:bg-accent/10 border border-indigo-100 dark:border-accent/20 p-3 rounded-2xl">
+                                                    <div className="flex items-center justify-between bg-accent/10 border border-accent/20 p-3 rounded-2xl">
                                                         <div>
-                                                            <div className="text-[9px] font-black text-accent uppercase tracking-wider mb-0.5">Seçilen Doktor</div>
-                                                            <div className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-tight">{selectedDoctor.name}</div>
+                                                            <div className="text-[9px] font-black text-accent uppercase tracking-wider mb-0.5">Seçilen doktor</div>
+                                                            <div className="text-sm font-black text-foreground tracking-tight">{selectedDoctor.name}</div>
                                                         </div>
                                                         <button 
                                                             onClick={() => setSelectedDoctor(null)}
@@ -1475,8 +1475,8 @@ function VetPageContent() {
                                                 onClick={() => { setSelectedDate(day.key); setSelectedTime(null); }}
                                                 className={cn(
                                                     "px-4 py-3 rounded-xl min-w-[85px] text-center border transition-all flex flex-col items-center snap-start shrink-0",
-                                                    selectedDate === day.key 
-                                                        ? "bg-accent text-black border-accent shadow-lg shadow-accent/10 font-black" 
+                                                    selectedDate === day.key
+                                                        ? "bg-accent text-white border-accent shadow-lg shadow-accent/20 font-black"
                                                         : "border-card-border bg-card text-secondary hover:border-card-border hover:text-foreground"
                                                 )}
                                             >
@@ -1505,8 +1505,8 @@ function VetPageContent() {
                                                     "py-2.5 text-xs font-bold rounded-lg border transition-all text-center",
                                                     disabled
                                                         ? "opacity-50 line-through pointer-events-none bg-zinc-100 dark:bg-white/5 border-transparent text-zinc-400 dark:text-zinc-600"
-                                                        : selectedTime === time 
-                                                            ? "bg-accent text-black border-accent font-black" 
+                                                        : selectedTime === time
+                                                            ? "bg-accent text-white border-accent font-black"
                                                             : "border-card-border bg-card text-secondary hover:border-card-border hover:text-foreground"
                                                 )}
                                             >
@@ -1607,9 +1607,9 @@ function VetPageContent() {
                                 <button
                                     onClick={handleCreateAppointment}
                                     disabled={!selectedTime}
-                                    className="w-full bg-accent text-black py-4 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-accent/10 disabled:opacity-20 transition-all active:scale-95"
+                                    className="w-full bg-accent text-white py-4 rounded-xl font-black text-sm shadow-lg shadow-accent/20 disabled:opacity-20 transition-all active:scale-95"
                                 >
-                                    Randevu Talebini İlet
+                                    Randevu talebini ilet
                                 </button>
                             </div>
                         </motion.div>
@@ -1622,8 +1622,8 @@ function VetPageContent() {
                     <motion.div key="rating-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[140] bg-black/50 dark:bg-black/85 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
                         <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-card-border text-foreground relative">
                             <div className="flex flex-col items-center text-center p-4">
-                                <h3 className="font-black text-lg uppercase tracking-tight mb-2 text-foreground">Klinik Değerlendir</h3>
-                                <p className="text-[10px] text-secondary uppercase tracking-wider mb-6">Deneyiminizi diğer pati sahipleriyle paylaşın</p>
+                                <h3 className="font-black text-lg tracking-tight mb-2 text-foreground">Klinik değerlendir</h3>
+                                <p className="text-[11px] text-secondary font-semibold mb-6">Deneyiminizi diğer pati sahipleriyle paylaşın</p>
 
                                 <div className="flex gap-2 mb-6">
                                     {[1, 2, 3, 4, 5].map((star) => (
@@ -1732,8 +1732,8 @@ function VetPageContent() {
                             
                             <div className="flex justify-between items-center mb-5 mt-2 sm:mt-0">
                                 <div className="text-left">
-                                    <span className="text-[9px] font-black text-accent uppercase tracking-widest block mb-0.5">Şeffaf Paylaşım Günlüğü</span>
-                                    <h2 className="text-lg font-black tracking-tight uppercase">Veri Paylaşım Geçmişi</h2>
+                                    <span className="text-[9px] font-black text-accent uppercase tracking-widest block mb-0.5">Şeffaf paylaşım günlüğü</span>
+                                    <h2 className="text-lg font-black tracking-tight">Veri paylaşım geçmişi</h2>
                                 </div>
                                 <button onClick={() => setIsLogModalOpen(false)} className="w-8 h-8 bg-card rounded-full flex items-center justify-center border border-card-border hover:bg-card-border/80 text-foreground transition-all cursor-pointer"><X className="w-4 h-4" /></button>
                             </div>
@@ -1746,7 +1746,7 @@ function VetPageContent() {
                                         return (
                                         <div key={log.id} className="bg-card border border-card-border rounded-2xl p-4 text-left space-y-2">
                                             <div className="flex justify-between items-start">
-                                                <h4 className="text-xs font-black text-foreground uppercase">{log.clinicName}</h4>
+                                                <h4 className="text-xs font-black text-foreground">{log.clinicName}</h4>
                                                 <span className="text-[9px] text-zinc-400 font-bold">{log.date}</span>
                                             </div>
                                             <p className="text-[10.5px] text-secondary font-medium leading-relaxed">

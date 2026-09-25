@@ -21,16 +21,16 @@ const getStatusBadge = (status: string) => {
         case 'pending':
             return { label: 'Onay Bekliyor', bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', icon: <Clock className="w-3 h-3" /> };
         case 'confirmed':
-            return { label: 'Onaylandı', bg: 'bg-indigo-50 dark:bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400', icon: <CheckCircle2 className="w-3 h-3" /> };
+            return { label: 'Onaylandı', bg: 'bg-accent-secondary/10', text: 'text-accent-secondary', icon: <CheckCircle2 className="w-3 h-3" /> };
         case 'completed':
             return { label: 'Tamamlandı', bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', icon: <CheckCircle2 className="w-3 h-3" /> };
         case 'cancelled':
         case 'i̇ptal edildi':
-            return { label: 'İptal Edildi', bg: 'bg-zinc-100 dark:bg-zinc-500/10', text: 'text-zinc-500 dark:text-zinc-400', icon: <X className="w-3 h-3" /> };
+            return { label: 'İptal Edildi', bg: 'bg-card-border/50', text: 'text-secondary', icon: <X className="w-3 h-3" /> };
         case 'rejected':
             return { label: 'Reddedildi', bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', icon: <X className="w-3 h-3" /> };
         default:
-            return { label: status, bg: 'bg-zinc-50 dark:bg-zinc-800', text: 'text-zinc-500', icon: <Clock className="w-3 h-3" /> };
+            return { label: status, bg: 'bg-card-border/40', text: 'text-secondary', icon: <Clock className="w-3 h-3" /> };
     }
 };
 
@@ -128,20 +128,20 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
         <div className="space-y-4">
             <div className="flex items-center justify-between mb-4 border-b border-card-border pb-0">
                 <div className="flex">
-                    <button 
+                    <button
                         onClick={() => setActiveTab('active')}
                         className={cn(
-                            "px-6 py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all relative cursor-pointer",
+                            "px-6 py-4 text-xs sm:text-sm font-black transition-all relative cursor-pointer",
                             activeTab === 'active' ? "text-foreground" : "text-secondary hover:text-foreground"
                         )}
                     >
                         Aktif
                         {activeTab === 'active' && <div className="absolute bottom-0 inset-x-4 h-1 bg-accent rounded-t-full" />}
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('past')}
                         className={cn(
-                            "px-6 py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all relative cursor-pointer",
+                            "px-6 py-4 text-xs sm:text-sm font-black transition-all relative cursor-pointer",
                             activeTab === 'past' ? "text-foreground" : "text-secondary hover:text-foreground"
                         )}
                     >
@@ -149,12 +149,12 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                         {activeTab === 'past' && <div className="absolute bottom-0 inset-x-4 h-1 bg-accent rounded-t-full" />}
                     </button>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                     <div className="relative" ref={sortRef}>
-                        <button 
+                        <button
                             onClick={() => setIsSortOpen(!isSortOpen)}
-                            className="p-2 sm:px-4 sm:py-3 bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/60 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-foreground transition-all flex items-center gap-2"
+                            className="p-2 sm:px-4 sm:py-3 bg-card border border-card-border rounded-xl text-[10px] font-bold text-secondary hover:text-foreground transition-all flex items-center gap-2"
                         >
                             <ArrowDownUp className="w-3 h-3" />
                             <span className="hidden sm:inline">Sırala</span>
@@ -162,42 +162,42 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
 
                         <AnimatePresence>
                             {isSortOpen && (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                     transition={{ duration: 0.15 }}
                                     className="absolute right-0 top-full mt-2 w-64 bg-card border border-card-border rounded-xl shadow-xl z-50 overflow-hidden flex flex-col p-1"
                                 >
-                                    <button 
+                                    <button
                                         onClick={() => { setSortMode('date'); setIsSortOpen(false); }}
-                                        className={cn("flex items-center justify-between w-full px-3 py-3 text-left text-[11px] font-bold rounded-lg transition-colors", sortMode === 'date' ? "bg-accent/10 text-accent" : "text-foreground hover:bg-zinc-50 dark:hover:bg-zinc-800/50")}
+                                        className={cn("flex items-center justify-between w-full px-3 py-3 text-left text-[11px] font-bold rounded-lg transition-colors", sortMode === 'date' ? "bg-accent/10 text-accent" : "text-foreground hover:bg-card-border/40")}
                                     >
-                                        Tarihe Göre (Yakın→Uzak)
+                                        Tarihe göre (yakın→uzak)
                                         {sortMode === 'date' && <Check className="w-3.5 h-3.5" />}
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => { setSortMode('created'); setIsSortOpen(false); }}
-                                        className={cn("flex items-center justify-between w-full px-3 py-3 text-left text-[11px] font-bold rounded-lg transition-colors", sortMode === 'created' ? "bg-accent/10 text-accent" : "text-foreground hover:bg-zinc-50 dark:hover:bg-zinc-800/50")}
+                                        className={cn("flex items-center justify-between w-full px-3 py-3 text-left text-[11px] font-bold rounded-lg transition-colors", sortMode === 'created' ? "bg-accent/10 text-accent" : "text-foreground hover:bg-card-border/40")}
                                     >
-                                        Eklenme Sırasına Göre (Son Alınan Üstte)
+                                        Eklenme sırasına göre (son alınan üstte)
                                         {sortMode === 'created' && <Check className="w-3.5 h-3.5" />}
                                     </button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setShowAllPets(!showAllPets)}
                         className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all border mb-2",
-                        showAllPets 
-                            ? "bg-accent/10 border-accent/20 text-accent" 
+                        "flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-bold transition-all border mb-2",
+                        showAllPets
+                            ? "bg-accent/10 border-accent/20 text-accent"
                             : "bg-card border-card-border text-secondary hover:text-foreground"
                     )}
                 >
                     <Filter className="w-3.5 h-3.5" />
-                    {showAllPets ? "Tümü" : "Sadece Aktif Pati"}
+                    {showAllPets ? "Tümü" : "Sadece aktif pati"}
                 </button>
                 </div>
             </div>
@@ -208,13 +208,13 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center justify-center py-20 px-8 text-center"
                 >
-                    <div className="w-20 h-20 rounded-[2rem] bg-zinc-100 dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] flex items-center justify-center mb-6">
-                        <Calendar className="w-9 h-9 text-zinc-400 dark:text-zinc-500" />
+                    <div className="w-20 h-20 rounded-[2rem] bg-card border border-card-border flex items-center justify-center mb-6">
+                        <Calendar className="w-9 h-9 text-secondary" />
                     </div>
-                    <h3 className="text-zinc-800 dark:text-[#fafafa] font-black text-lg uppercase italic tracking-tighter">
-                        {activeTab === 'active' ? 'Henüz Aktif Randevunuz Yok' : 'Henüz Geçmiş Randevunuz Yok'}
+                    <h3 className="text-foreground font-black text-lg tracking-tight">
+                        {activeTab === 'active' ? 'Henüz aktif randevunuz yok' : 'Henüz geçmiş randevunuz yok'}
                     </h3>
-                    <p className="text-zinc-500 dark:text-[#a1a1aa] text-sm mt-2 leading-relaxed max-w-xs">
+                    <p className="text-secondary text-sm mt-2 leading-relaxed max-w-xs">
                         {activeTab === 'active' 
                             ? 'Klinik Keşfet sekmesinden çevrenizdeki veterinerleri bulup hemen randevu oluşturabilirsiniz.'
                             : 'Tamamlanan veya iptal edilen randevularınız burada listelenir.'}
@@ -228,17 +228,17 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                     const badge = getStatusBadge(appt.status);
 
                     return (
-                        <div 
-                            key={appt.id} 
-                            className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-2xl flex flex-col transition-all hover:border-zinc-300 dark:hover:border-zinc-700 overflow-hidden"
+                        <div
+                            key={appt.id}
+                            className="bg-card border border-card-border rounded-2xl flex flex-col transition-all hover:border-accent/30 overflow-hidden"
                         >
                             {/* SUMMARY (Always visible, Clickable) */}
-                            <div 
+                            <div
                                 className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none"
                                 onClick={() => toggleExpand(appt.id)}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-lg shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-lg shrink-0">
                                         {appt.icon || '🏥'}
                                     </div>
                                     <div className="flex flex-col gap-1">
@@ -246,22 +246,22 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                                             <span className="text-accent bg-accent/10 border border-accent/20 px-1.5 py-0.5 rounded-md text-[10px] font-bold">
                                                 {appt.petName}
                                             </span>
-                                            <span className="font-bold text-zinc-800 dark:text-zinc-200 text-xs truncate max-w-[120px] sm:max-w-[200px]">
+                                            <span className="font-bold text-foreground text-xs truncate max-w-[120px] sm:max-w-[200px]">
                                                 {appt.clinicName}
                                             </span>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-secondary uppercase tracking-wider">
+                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold text-secondary">
                                             <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {appt.date}</span>
                                             <span className="opacity-50">•</span>
                                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {appt.time}</span>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-2">
                                     {/* Status Badge */}
                                     <div className={cn(
-                                        "px-2 sm:px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5",
+                                        "px-2 sm:px-3 py-1 rounded-full text-[9px] font-black flex items-center gap-1.5",
                                         badge.bg,
                                         badge.text
                                     )}>
@@ -269,23 +269,23 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                                         <span className="hidden sm:inline">{badge.label}</span>
                                     </div>
 
-                                    <ChevronDown className={cn("w-4 h-4 text-zinc-400 transition-transform duration-300", isExpanded && "rotate-180")} />
+                                    <ChevronDown className={cn("w-4 h-4 text-secondary transition-transform duration-300", isExpanded && "rotate-180")} />
                                 </div>
                             </div>
 
                             {/* DETAILS (Collapsible via Grid/CSS) */}
-                            <div 
+                            <div
                                 className={cn(
                                     "grid transition-all duration-300 ease-in-out",
                                     isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                                 )}
                             >
                                 <div className="overflow-hidden">
-                                    <div className="p-4 sm:p-5 pt-0 border-t border-zinc-100 dark:border-zinc-800/60 mt-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                        
+                                    <div className="p-4 sm:p-5 pt-0 border-t border-card-border mt-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+
                                         {/* Detail Info */}
                                         <div>
-                                            <h4 className="text-zinc-800 dark:text-[#fafafa] font-black text-sm uppercase leading-tight">{appt.type}</h4>
+                                            <h4 className="text-foreground font-black text-sm leading-tight">{appt.type}</h4>
                                             {appt.realDoctorName && (
                                                 <p className="text-[10px] font-bold text-secondary mt-1 flex items-center gap-1">
                                                     Dr. {appt.realDoctorName}
@@ -296,19 +296,19 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                                         {/* Action Buttons */}
                                         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                                             {reviewableAppointmentIds?.has(appt.id) && onReviewClick && appt.clinicId && (
-                                                <button 
+                                                <button
                                                     onClick={(e) => { e.stopPropagation(); onReviewClick(appt.clinicId, appt.id); }}
-                                                    className="text-[9px] font-black text-accent hover:text-white hover:bg-accent border border-accent/20 bg-accent/5 uppercase tracking-widest transition-colors px-3 py-1.5 rounded-lg"
+                                                    className="text-[10px] font-black text-accent hover:text-white hover:bg-accent border border-accent/20 bg-accent/5 transition-colors px-3 py-1.5 rounded-lg"
                                                 >
-                                                    DEĞERLENDİR
+                                                    Değerlendir
                                                 </button>
                                             )}
                                             {activeTab === 'active' && ['pending', 'confirmed'].includes(appt.status) && (
-                                                <button 
+                                                <button
                                                     onClick={(e) => { e.stopPropagation(); setCancelModalId(appt.id); }}
-                                                    className="text-[9px] font-black text-red-500/70 hover:text-red-600 dark:hover:text-red-400 uppercase tracking-widest transition-colors px-3 py-1.5 rounded-lg border border-red-500/10 hover:border-red-500/30 bg-red-500/5 hover:bg-red-500/10"
+                                                    className="text-[10px] font-black text-red-500/80 hover:text-red-600 dark:hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg border border-red-500/15 hover:border-red-500/30 bg-red-500/5 hover:bg-red-500/10"
                                                 >
-                                                    İPTAL ET
+                                                    İptal et
                                                 </button>
                                             )}
                                         </div>
@@ -323,9 +323,9 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
 
             {/* Faz 9: No-Show Nötr Bilgi */}
             {noShowCount > 0 && (
-                <div className="mt-4 px-4 py-3 bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/60 rounded-xl flex items-center justify-center text-center">
-                    <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-                        Hesabınızda toplam <span className="font-bold text-zinc-700 dark:text-zinc-300">{noShowCount} randevuya</span> katılmama kaydı var (tüm evcil hayvanlarınız dahil).
+                <div className="mt-4 px-4 py-3 bg-card border border-card-border rounded-xl flex items-center justify-center text-center">
+                    <p className="text-[11px] font-medium text-secondary">
+                        Hesabınızda toplam <span className="font-bold text-foreground">{noShowCount} randevuya</span> katılmama kaydı var (tüm evcil hayvanlarınız dahil).
                     </p>
                 </div>
             )}
@@ -339,40 +339,40 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                         exit={{ opacity: 0 }} 
                         className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
                     >
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-[#27272a] rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative overflow-hidden"
+                            className="bg-card border border-card-border rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative overflow-hidden"
                         >
                             <div className="absolute top-0 right-0 p-4 opacity-10">
                                 <AlertCircle className="w-24 h-24 text-red-500" />
                             </div>
-                            
+
                             <div className="relative z-10 text-center">
                                 <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/20">
                                     <X className="w-8 h-8" />
                                 </div>
-                                <h3 className="text-xl font-black text-zinc-800 dark:text-white uppercase italic tracking-tight mb-2">
-                                    Randevuyu İptal Et
+                                <h3 className="text-xl font-black text-foreground tracking-tight mb-2">
+                                    Randevuyu iptal et
                                 </h3>
-                                <p className="text-zinc-500 dark:text-zinc-400 text-xs font-medium leading-relaxed mb-8">
+                                <p className="text-secondary text-xs font-medium leading-relaxed mb-8">
                                     Bu randevuyu iptal etmek istediğinize emin misiniz? Bu işlem geri alınamaz ve klinik bilgilendirilir.
                                 </p>
-                                
+
                                 <div className="flex gap-3">
-                                    <button 
+                                    <button
                                         onClick={() => setCancelModalId(null)}
-                                        className="flex-1 py-3 rounded-xl bg-zinc-100 dark:bg-[#18181b] text-zinc-600 dark:text-zinc-400 font-black text-xs uppercase tracking-wider hover:bg-zinc-200 dark:hover:bg-[#27272a] transition-colors"
+                                        className="flex-1 py-3 rounded-xl bg-card-border/40 text-secondary font-black text-xs hover:bg-card-border/70 transition-colors"
                                     >
                                         Vazgeç
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={handleCancel}
                                         disabled={isCancelling}
-                                        className="flex-1 py-3 rounded-xl bg-red-500 text-white font-black text-xs uppercase tracking-wider hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                        className="flex-1 py-3 rounded-xl bg-red-500 text-white font-black text-xs hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        {isCancelling ? 'İptal Ediliyor...' : 'Evet, İptal Et'}
+                                        {isCancelling ? 'İptal ediliyor...' : 'Evet, iptal et'}
                                     </button>
                                 </div>
                             </div>

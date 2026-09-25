@@ -2110,11 +2110,12 @@ referansa göre GERÇEKTEN yeniden kuruldu, sadece yeniden renklendirilmedi:**
   kutusuna yumuşak kaydırma yapıyor (uydurma bir harita ekranı eklenmedi).
 
 **Referansta OLMAYAN, Baran'ın açık talimatıyla SİLİNMEYEN, yerinde bırakılan
-bölümler** (ileride ayrı karar verilecek): "Klinik Keşfet/Randevularım"
-görünüm sekmesi + `MyAppointmentsPanel`, "Aktif Pet Durumu" durum kartı,
-"Google Haritalar'da Aç" kutusu, gelişmiş filtre bottom-sheet'i (Sıralama/
-Açık Olanlar toggle'ı — hızlı çiplerle KISMEN örtüşüyor ama daha ayrıntılı,
-ikisi de tutuldu), randevu formu, `VetQuickSheet.tsx`.
+bölümler** (ileride ayrı karar verilecek — YAPISAL olarak referansta yok, ama
+8.29'da renkleri düzeltildi): "Klinik Keşfet/Randevularım" görünüm sekmesi +
+`MyAppointmentsPanel`, "Aktif Pet Durumu" durum kartı, "Google Haritalar'da Aç"
+kutusu, gelişmiş filtre bottom-sheet'i (Sıralama/Açık Olanlar toggle'ı — hızlı
+çiplerle KISMEN örtüşüyor ama daha ayrıntılı, ikisi de tutuldu), randevu formu,
+`VetQuickSheet.tsx`.
 
 🔴 **Bu turda İKİNCİ ve ÜÇÜNCÜ kez karşılaşılan Turbopack+OneDrive ikon
 çökmesi (bkz. Bölüm 5.6):** yeni eklenen `Siren` (Acil Servis ikonu) VE
@@ -2128,12 +2129,73 @@ gerçekten yükleyip (sadece typecheck değil) 200 döndüğünü doğrulamak
 alışkanlık hâline getirilmeli — typecheck bu hatayı hiç yakalamıyor (saf
 bir dev-sunucu dosya-okuma hatası, TypeScript'in bilgisi dışında).
 
-**Doğrulama:** typecheck temiz (aynı 4 pre-existing hata), gerçek Playwright
+**Doğrulama (8.28):** typecheck temiz (aynı 4 pre-existing hata), gerçek Playwright
 testiyle (Van/Tuşba, gerçek "MoffiPet" kliniği) header/konum satırı/4 kategori
 ikonu/4 filtre çipi/yeniden tasarlanmış kart hepsi doğru render edildi,
 "Aşı" kategorisi seçilince MoffiPet'in gerçek `features` listesinde "aşı"
 geçmediği için listeden dürüstçe kayboldu (uydurma bir eşleşme yok) — "Tümü"
 seçilince geri geldi.
+
+### 8.29 Baran'ın ikinci düzeltmesi: "klinik panel dışındaki diğer panellerin renkleri uymuyor" — gerçekten öyleydi (2026-09-25)
+
+8.28'i inceleyen Baran net bir bulgu daha verdi: "klinik panel dışında diğer
+panellerin renkleri tam uymuyor... tarayıp bakarsan görürsün." Gerçek bir
+Playwright taramasıyla `/vet` altındaki HER paneli tek tek açıp incelendi —
+haklıydı, iki gerçek, ciddi kaçak bulundu:
+
+🔴 **`MyAppointmentsPanel.tsx` ("Randevularım" sekmesi) hiç dokunulmamıştı:**
+"AKTİF"/"GEÇMİŞ" sekmeleri, "SIRALA", durum rozetleri, "İPTAL ET" hepsi
+`uppercase tracking-widest` — sayfanın geri kalanının artık sentence-case
+diline hiç uymuyordu. Daha kötüsü: "Onaylandı" durum rozeti VE randevu
+ikonu dairesi `bg-indigo-50`/`text-indigo-600` kullanıyordu (mavi/indigo —
+CLAUDE.md Bölüm 5'in "mavi premium değil" kuralına doğrudan aykırı), kart
+zeminleri de `bg-white dark:bg-[#18181b]`/`border-zinc-200` gibi HAM,
+theme-vet tokenlarına hiç bağlı olmayan renkler kullanıyordu (bu component
+zaten `.theme-vet` içinde render oluyordu ama `bg-card`/`border-card-border`
+yerine kendi ham renklerini kullandığı için tema hiç akmıyordu). Tamamen
+sentence-case'e çevrildi, indigo → `bg-accent-secondary`/`text-accent`,
+ham zinc/beyaz → `bg-card`/`border-card-border`/`text-secondary` token'larına
+bağlandı. Randevu iptal onay modalı da aynı şekilde düzeltildi.
+
+🔴 **`VetQuickSheet.tsx` (ana sayfadan "Veteriner" hızlı erişiminden açılan
+sheet) `.theme-vet`'in TAMAMEN DIŞINDA render oluyordu** — global bir
+component olduğu için sayfa değişikliklerinden hiç etkilenmemişti, hâlâ
+eski projenin mor `#5B4D9D` paletini + indigo/mavi ikon arka planlarını +
+`uppercase italic` başlıkları kullanıyordu (`bg-white dark:bg-[#1C1C1E]`,
+`text-zinc-900 dark:text-white` — theme token'larına hiç bağlı değildi).
+**Düzeltme:** sheet'in kök elementine `.theme-vet` class'ı eklendi (artık
+`/vet` sayfasıyla AYNI mekanizmayla doğru rengi alıyor, ayrı bir renk seti
+icat edilmedi) ve tüm iç renkler token'lara (`bg-card`/`bg-accent`/
+`text-secondary`/`text-foreground`) taşındı, mor/indigo/mavi tamamen
+kaldırıldı, uppercase-italic başlıklar sentence-case'e çevrildi.
+
+**Ayrıca `/vet/page.tsx`'in randevu formunda (Ekran 5, `activeModal===
+'appointment'`) gözden kaçan indigo kalıntıları bulundu:** seçilen hizmet/
+doktor özet kartları `bg-indigo-50`/`text-indigo-700` kullanıyordu (SADECE
+dark mode zaten doğru `accent` kullanıyordu — light mode'da unutulmuştu).
+Ayrıca tarih/saat seçici butonlarında ve ana "Randevu Talebini İlet"
+CTA'sında `bg-accent text-black` kullanılıyordu — turuncu-kiremit `#EE5B3D`
+üzerinde siyah metin düşük kontrastlı/ucuz duruyordu, sayfanın geri kalanında
+zaten standart olan `text-white`'a çevrildi. Modal başlığı ve hizmet/doktor
+adları gibi GERÇEK VERİ görüntüleri de `uppercase` zorlamasından çıkarıldı
+(bir klinik/doktor adını büyük harfe zorlamak "kaba" hissettiriyordu).
+
+**Bilinçli olarak DOKUNULMAYAN (ayrı bir domain, CLAUDE.md Bölüm 5.3'te
+zaten "hedeflenen estetiğe yakın" diye not düşülmüş):** `VaccineModal.tsx`/
+`DentalCareModal.tsx`/`PharmacyModal.tsx`/`MedicationModal.tsx`/
+`NutritionModal.tsx` — bunlar kullanıcının KENDİ pet sağlık kayıtları için,
+kendi indigo/mor tek-aksan renklerini kullanıyor, referansın "klinik bul &
+randevu al" akışından TAMAMEN farklı bir özellik ailesi (bkz.
+`design-reference/vet-final/README.md`'nin "Mevcut kod durumu" notu). Bunları
+da coral/turuncuya çevirmek app genelinde ayrı, kasıtlı bir karar gerektirir
+— bugünkü kapsam SADECE referansla karşılaştırılan "klinik bul" akışıydı.
+
+**Doğrulama:** typecheck temiz (VetQuickSheet'teki 3 hata git stash ile
+karşılaştırılıp pre-existing olduğu doğrulandı — `RichVaccineRecord` tip
+tanımıyla ilgili, benim className değişikliklerimle alakasız). Gerçek
+Playwright testiyle "Randevularım" sekmesi canlı doğrulandı: sekmeler artık
+sentence-case, "Tümü" filtre çipi ve randevu ikonu artık turuncu/sıcak
+tonlarda, indigo hiç görünmüyor.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
