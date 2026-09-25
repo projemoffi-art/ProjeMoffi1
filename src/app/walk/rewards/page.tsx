@@ -3,54 +3,53 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, X, Check, ChevronRight } from "lucide-react";
+import { ArrowLeft, X, Check, ChevronRight, Shirt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
 import { haptics } from "@/lib/haptics";
 
 // Faz 14: "Ödül Marketi" — daha önce hiç yoktu, referans görselin ("7. Ödül /
-// Puan Marketi", bkz. design-reference/walk-final/) doğrudan karşılığı. Gerçek
-// `reward_products` tablosundan besleniyor, satın alma mevcut PP ekonomisini
-// (award_pati_puan RPC'si, negatif miktarla) kullanıyor — yeni bir para birimi
-// icat edilmedi. Ürün fotoğrafları yerine bilerek emoji/ikon kullanıldı (sahte
-// stok fotoğraf üretmemek için).
+// Puan Marketi", bkz. design-reference/walk-final/) doğrudan karşılığı.
+//
+// Faz 22 — Baran'ın bulgusu: piyasadaki gerçek fiziksel ürünler (bandana, mama
+// kabı vb.) hiçbir teslimat altyapısı olmadan "sepetine eklendi" diyordu — bu
+// projenin "sahte/dürüst olmayan çözüm yok" kuralına aykırıydı. Fiziksel
+// ürünler kaldırıldı (bkz. CLAUDE.md), yerlerine gerçek, teslimat gerektirmeyen
+// iki kategori geldi: (1) Kozmetik — `cosmetic_items`/`redeem_cosmetic_item`
+// üzerinden gerçek gardırop parçası satın alma (Giydirme Stüdyosu'nda
+// kullanılıyor), (2) Kuponlar — Moffi'nin kendi mağazasında geçerli gerçek
+// indirim (gerçek e-ticaret teslimatı zaten var, biz sadece indirimi veriyoruz).
 
-type TabKey = 'all' | 'product' | 'coupon' | 'experience';
+type TabKey = 'all' | 'cosmetic' | 'coupon';
 
-// Ekran 14 (Ödül Marketi) — design-reference/walk-final/'e göre sekme sırası
-// Tümü/Ürünler/Kuponlar/Özel (önceden Tümü/Ürünler/Özel Deneyimler/Kuponlar'dı).
 const TABS: { key: TabKey; label: string }[] = [
     { key: 'all', label: 'Tümü' },
-    { key: 'product', label: 'Ürünler' },
+    { key: 'cosmetic', label: 'Kozmetik' },
     { key: 'coupon', label: 'Kuponlar' },
-    { key: 'experience', label: 'Özel' },
 ];
 
-// Referans "Öne Çıkanlar" bölümü için gerçek, açıklanabilir bir kriter
-// gerekiyordu (uydurma/rastgele olmaması için) — en düşük fiyatlı (en kolay
-// ulaşılabilir) N ürün seçildi. Editöryel bir "is_featured" alanı DB'de yok;
-// Baran ileride elle seçilmiş bir öne çıkan liste isterse `reward_products`'a
-// gerçek bir `is_featured boolean` kolonu eklenebilir (bkz. README).
 const FEATURED_COUNT = 3;
 
-interface RewardProduct {
+interface ShopEntry {
     id: string;
+    kind: 'reward' | 'cosmetic';
     name: string;
     description: string | null;
-    category: 'product' | 'experience' | 'coupon';
+    category: TabKey;
     pricePp: number;
     icon: string;
+    owned: boolean;
 }
 
 export default function RewardsPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const [products, setProducts] = useState<RewardProduct[]>([]);
+    const [entries, setEntries] = useState<ShopEntry[]>([]);
     const [balance, setBalance] = useState(0);
     const [loading, setLoading] = useState(true);
     const [tab, setTab] = useState<TabKey>('all');
-    const [confirmProduct, setConfirmProduct] = useState<RewardProduct | null>(null);
+    const [confirmEntry, setConfirmEntry] = useState<ShopEntry | null>(null);
     const [redeeming, setRedeeming] = useState(false);
     const [redeemed, setRedeemed] = useState(false);
 
@@ -58,39 +57,60 @@ export default function RewardsPage() {
         let cancelled = false;
         (async () => {
             setLoading(true);
-            const [productsData, balanceData] = await Promise.all([
+            const [rewardProducts, cosmeticItems, ownedIds, balanceData] = await Promise.all([
                 apiService.getRewardProducts(),
+                apiService.getCosmeticItems(),
+                user ? apiService.getOwnedCosmeticItemIds(user.id) : Promise.resolve([] as string[]),
                 user ? apiService.getPatiPuanBalance() : Promise.resolve(0),
             ]);
             if (cancelled) return;
-            setProducts(productsData);
+            const ownedSet = new Set(ownedIds);
+            const merged: ShopEntry[] = [
+                ...rewardProducts.map(p => ({
+                    id: p.id, kind: 'reward' as const, name: p.name, description: p.description,
+                    category: 'coupon' as TabKey, pricePp: p.pricePp, icon: p.icon, owned: false,
+                })),
+                ...cosmeticItems.map(c => ({
+                    id: c.id, kind: 'cosmetic' as const, name: c.name, description: `${c.rarity === 'legendary' ? '✨ Efsanevi' : c.rarity === 'epic' ? '🔷 Epik' : c.rarity === 'rare' ? '🔹 Nadir' : 'Başlangıç'} kozmetik eşya — Giydirme Stüdyosu'nda kullanılabilir.`,
+                    category: 'cosmetic' as TabKey, pricePp: c.pricePp, icon: c.icon, owned: c.isStarter || ownedSet.has(c.id),
+                })),
+            ];
+            setEntries(merged);
             setBalance(balanceData);
             setLoading(false);
         })();
         return () => { cancelled = true; };
     }, [user]);
 
-    const filtered = products.filter(p => tab === 'all' || p.category === tab);
-    const featured = [...products].sort((a, b) => a.pricePp - b.pricePp).slice(0, FEATURED_COUNT);
+    const filtered = entries.filter(e => tab === 'all' || e.category === tab);
+    const featured = [...entries].filter(e => !e.owned).sort((a, b) => a.pricePp - b.pricePp).slice(0, FEATURED_COUNT);
 
     const closeModal = () => {
         if (redeeming) return;
-        setConfirmProduct(null);
+        setConfirmEntry(null);
         setRedeemed(false);
     };
 
     const handleRedeem = async () => {
-        if (!confirmProduct) return;
+        if (!confirmEntry) return;
         setRedeeming(true);
         try {
-            const newBalance = await apiService.redeemReward(confirmProduct.id, confirmProduct.name, confirmProduct.pricePp);
+            const newBalance = confirmEntry.kind === 'cosmetic'
+                ? await apiService.redeemCosmeticItem(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp)
+                : await apiService.redeemReward(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp);
             setBalance(newBalance);
+            setEntries(prev => prev.map(e => e.id === confirmEntry.id ? { ...e, owned: e.kind === 'cosmetic' ? true : e.owned } : e));
             haptics.success();
             setRedeemed(true);
             window.dispatchEvent(new CustomEvent('moffi-toast', {
-                detail: { message: `🎁 ${confirmProduct.name} sepetine eklendi!`, icon: 'Gift', color: 'text-emerald-400' }
+                detail: {
+                    message: confirmEntry.kind === 'cosmetic'
+                        ? `👕 ${confirmEntry.name} gardırobuna eklendi!`
+                        : `🎟️ ${confirmEntry.name} hesabına tanımlandı!`,
+                    icon: 'Gift', color: 'text-emerald-400',
+                }
             }));
-            setTimeout(() => { setConfirmProduct(null); setRedeemed(false); }, 1100);
+            setTimeout(() => { setConfirmEntry(null); setRedeemed(false); }, 1200);
         } catch (err: any) {
             haptics.warn();
             window.dispatchEvent(new CustomEvent('moffi-toast', {
@@ -131,6 +151,22 @@ export default function RewardsPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-6">
+                {(tab === 'all' || tab === 'cosmetic') && (
+                    <button
+                        onClick={() => { haptics.tap(); router.push('/dress-up'); }}
+                        className="w-full mb-5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 flex items-center gap-3 text-left cursor-pointer active:scale-[0.98] transition-transform"
+                    >
+                        <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                            <Shirt className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <span className="text-[12px] font-black text-white block">Giydirme Stüdyosu</span>
+                            <span className="text-[10px] font-bold text-white/80">Satın aldığın kozmetikleri maskotuna giydir</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-white/70 shrink-0" />
+                    </button>
+                )}
+
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
                         <span className="text-2xl animate-bounce">🐾</span>
@@ -149,18 +185,18 @@ export default function RewardsPage() {
                         <div className="mb-6">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Öne Çıkanlar</span>
                             <div className="space-y-2">
-                                {featured.map(product => (
+                                {featured.map(entry => (
                                     <button
-                                        key={product.id}
-                                        onClick={() => { haptics.tap(); setConfirmProduct(product); }}
+                                        key={entry.id}
+                                        onClick={() => { haptics.tap(); setConfirmEntry(entry); }}
                                         className="w-full bg-card rounded-2xl p-3 flex items-center gap-3 border border-card-border shadow-moffi-card cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5"
                                     >
                                         <div className="w-11 h-11 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-xl shrink-0">
-                                            {product.icon}
+                                            {entry.icon}
                                         </div>
                                         <div className="flex-1 min-w-0 text-left">
-                                            <span className="text-[12px] font-black text-foreground block truncate">{product.name}</span>
-                                            <span className="text-[10px] font-bold text-orange-600">🐾 {product.pricePp.toLocaleString('tr-TR')} puan</span>
+                                            <span className="text-[12px] font-black text-foreground block truncate">{entry.name}</span>
+                                            <span className="text-[10px] font-bold text-orange-600">🐾 {entry.pricePp.toLocaleString('tr-TR')} puan</span>
                                         </div>
                                         <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                                     </button>
@@ -169,28 +205,35 @@ export default function RewardsPage() {
                         </div>
                     )}
                     <div className="grid grid-cols-2 gap-3">
-                        {filtered.map((product, i) => {
-                            const canAfford = balance >= product.pricePp;
+                        {filtered.map((entry, i) => {
+                            const canAfford = balance >= entry.pricePp;
                             return (
                                 <motion.button
-                                    key={product.id}
+                                    key={entry.id}
                                     initial={{ opacity: 0, y: 12 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.25, delay: Math.min(i, 6) * 0.04 }}
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => { haptics.tap(); setConfirmProduct(product); }}
-                                    className="bg-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center border border-card-border shadow-moffi-card cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5"
+                                    onClick={() => { haptics.tap(); if (!entry.owned) setConfirmEntry(entry); }}
+                                    className={cn(
+                                        "rounded-2xl p-4 flex flex-col items-center gap-2 text-center border shadow-moffi-card",
+                                        entry.owned ? "bg-slate-50 dark:bg-white/[0.02] border-card-border cursor-default" : "bg-card border-card-border cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5"
+                                    )}
                                 >
                                     <div className="w-16 h-16 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-3xl">
-                                        {product.icon}
+                                        {entry.icon}
                                     </div>
-                                    <span className="text-[11px] font-black text-foreground leading-tight">{product.name}</span>
-                                    <span className={cn(
-                                        "text-[10px] font-black flex items-center gap-1 px-2 py-0.5 rounded-full",
-                                        canAfford ? "text-orange-600 bg-orange-50 dark:bg-orange-500/10" : "text-slate-400 bg-slate-100 dark:bg-white/5"
-                                    )}>
-                                        🐾 {product.pricePp.toLocaleString('tr-TR')} puan
-                                    </span>
+                                    <span className="text-[11px] font-black text-foreground leading-tight">{entry.name}</span>
+                                    {entry.owned ? (
+                                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">Sahipsin ✓</span>
+                                    ) : (
+                                        <span className={cn(
+                                            "text-[10px] font-black flex items-center gap-1 px-2 py-0.5 rounded-full",
+                                            canAfford ? "text-orange-600 bg-orange-50 dark:bg-orange-500/10" : "text-slate-400 bg-slate-100 dark:bg-white/5"
+                                        )}>
+                                            🐾 {entry.pricePp.toLocaleString('tr-TR')} puan
+                                        </span>
+                                    )}
                                 </motion.button>
                             );
                         })}
@@ -200,7 +243,7 @@ export default function RewardsPage() {
             </div>
 
             <AnimatePresence>
-                {confirmProduct && (
+                {confirmEntry && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -232,21 +275,23 @@ export default function RewardsPage() {
                                             <Check className="w-8 h-8 text-white" strokeWidth={3} />
                                         </div>
                                         <h3 className="text-base font-black text-foreground text-center">Harika, alındı! 🎉</h3>
-                                        <p className="text-[11px] font-bold text-slate-400 text-center mt-1">{confirmProduct.name} sepetine eklendi.</p>
+                                        <p className="text-[11px] font-bold text-slate-400 text-center mt-1">
+                                            {confirmEntry.kind === 'cosmetic' ? `${confirmEntry.name} gardırobuna eklendi.` : `${confirmEntry.name} hesabına tanımlandı.`}
+                                        </p>
                                     </motion.div>
                                 ) : (
                                     <motion.div key="confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                                         <div className="w-16 h-16 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-3xl mx-auto mb-4">
-                                            {confirmProduct.icon}
+                                            {confirmEntry.icon}
                                         </div>
-                                        <h3 className="text-base font-black text-foreground text-center mb-1">{confirmProduct.name}</h3>
-                                        {confirmProduct.description && (
-                                            <p className="text-[11px] font-bold text-slate-400 text-center mb-4">{confirmProduct.description}</p>
+                                        <h3 className="text-base font-black text-foreground text-center mb-1">{confirmEntry.name}</h3>
+                                        {confirmEntry.description && (
+                                            <p className="text-[11px] font-bold text-slate-400 text-center mb-4">{confirmEntry.description}</p>
                                         )}
                                         <div className="text-center mb-5">
-                                            <span className="text-[12px] font-black text-orange-600">🐾 {confirmProduct.pricePp.toLocaleString('tr-TR')} puan</span>
+                                            <span className="text-[12px] font-black text-orange-600">🐾 {confirmEntry.pricePp.toLocaleString('tr-TR')} puan</span>
                                         </div>
-                                        {balance < confirmProduct.pricePp ? (
+                                        {balance < confirmEntry.pricePp ? (
                                             <div className="text-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-white/5 rounded-2xl py-3 px-4 leading-relaxed">
                                                 Bu ödül için birkaç Moffi Puanına daha ihtiyacın var — yürümeye devam, yakında burada olacaksın! 🐾
                                             </div>

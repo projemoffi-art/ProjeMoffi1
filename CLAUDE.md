@@ -1602,6 +1602,89 @@ Sayısı+Diğer), Keşif 6 (Bölge Kaşifi+Diğer) — hepsi beklenen sayılarla
 tam eşleşti. Ekran görüntüsüyle kart stilinin (kilit ikonu, kesikli
 kenarlık, gerçek ilerleme çubuğu) hiç değişmediği de doğrulandı.
 
+### 8.23 Faz 22 — Ödül Marketi'ni fiziksel eşyadan gerçek dijital kozmetik ekonomisine taşıma + Giydirme Stüdyosu (2026-09-25)
+
+Baran'ın bulgusu: Ödül Marketi'ndeki fiyatlar çok ucuzdu (günlük ~50-150 PP
+kazanılırken ürünler 100-500 PP'ydi — tek günde alınabiliyordu) VE daha temel
+bir soru sordu: bu ödüller fiziksel mi olmalı, yoksa uygulama içinde
+kullanılabilen kozmetik eşyalar mı? Fiziksel teslimat şu an mümkün değil.
+
+🔴 **Asıl kök sorun sadece fiyat değildi:** `reward_products`'taki 5 üründen
+(Bandana, Mama Kabı, İsimlik, Sırt Çantası, Top) 4'ü/5'i gerçek fiziksel eşyaydı
+ve satın alınca "🎁 ... sepetine eklendi!" diyordu — ama hiçbir kargo/adres/
+teslimat sistemi YOK, buton sadece PP düşürüp hiçbir şey göndermiyordu. Bu,
+projenin "sahte/dürüst olmayan çözüm yok" kuralına doğrudan aykırıydı.
+
+**Araştırma (Baran'ın isteğiyle):** Duolingo/Strava/Nike Run Club ve mobil oyun
+kozmetik ekonomileri incelendi — hiçbiri fiziksel ödül vermiyor, hepsi kozmetik
+özelleştirme (avatar/tema) veya fonksiyonel oyun-içi avantaj (Duolingo "streak
+freeze" — tam olarak bizim `streak_shield`'ımızın esini) kullanıyor.
+
+**Bulunan hazır bir kaynak:** `src/integrations-pending/kombinle/` altında,
+hiç entegre edilmemiş, tamamen hazır bir "Moffi Kombinle" pet-giydirme
+prototipi duruyormuş — saf SVG maskot (`MascotSVG`, dış görsel dosyasız,
+5 slot: vücut/baş/gözlük/eller/ayak, 19 parça), etkileşimli animasyonlar
+(göz takibi, dokununca gülme/sersemleme/zıplama, kuyruk sallama, kulak
+kıpırtısı). Kendi içinde ayrıca bir "giysi görevleri" sistemi ve MoffiCoin
+ödüllü bir "Düello Arenası" (kombin oylaması) da vardı — **bu ikisi bilinçli
+olarak bu turun kapsamı DIŞINDA bırakıldı** (Baran'ın onayıyla): Arena gerçek
+bir oylama/anti-abuse altyapısı gerektiriyor ve MoffiCoin (Faz 7'de kilitlenen,
+sadece gerçek ödeme webhook'larıyla artması gereken para birimi) kazandırıyor
+— entegre edilirken mutlaka PP'ye çevrilmesi şart, ayrı ve büyük bir iş.
+
+**Kurulan gerçek sistem:**
+- `cosmetic_items` (19 gerçek parça, `slot`/`item_key`/`rarity`/`price_pp`) +
+  `user_cosmetic_items` (sahiplik) + `pets.equipped_apparel`/`avatar_body_color`/
+  `avatar_background` (per-pet giyim durumu). RLS + GRANT'ler Bölüm 8.10'daki
+  dersle birlikte kuruldu (sadece RLS yetmez, `grant select ... to authenticated,
+  anon` de gerekli).
+- Fiyatlama Kombinle'nin MoffiCoin değerlerinden değil, Moffi'nin GERÇEK günlük
+  PP kazanım hızından (~50-150/gün) türetildi: 5 parça ücretsiz/başlangıç
+  (sweatshirt, beanie, glasses, gloves, sneakers — Kombinle'de zaten "cost: 0"
+  işaretliydi), 5 "rare" (300-450 PP, ~3-4 gün), 5 "epic" (800-1200 PP, ~1-1.5
+  hafta), 4 "legendary" (1800-2800 PP, ~3-4 hafta) — rozet ailelerindeki gibi
+  gerçek bir aspirasyon eğrisi.
+- `redeem_cosmetic_item(item_id)` SECURITY DEFINER RPC — `award_pati_puan`'ı
+  içeriden çağırıp (aynı PP defteri, yeni bir para birimi icat edilmedi) atomik
+  şekilde sahiplik satırı ekliyor. Fiziksel 5 ürün silinmedi, `is_active=false`
+  yapıldı (geçmiş `point_transactions` referansları bozulmasın diye) — kupon
+  ise gerçekçi şekilde 500'den 1200 PP'ye yükseltildi.
+- Yeni `/dress-up` ("Giydirme Stüdyosu") sayfası: `MascotSVG` + CSS
+  animasyonları Kombinle'den AYNEN taşındı (`src/components/cosmetics/`),
+  gerçek gardırop (sahip olunan parçalar seçilebilir, olmayanlar kilitli+fiyat),
+  4 ücretsiz vücut rengi + 5 ücretsiz arkaplan, kaydet butonu gerçek
+  `pets` satırına yazıyor. Ödül Marketi'ne yeni "Kozmetik" sekmesi + stüdyoya
+  giden bir banner eklendi, `/walk` hub'ına da gerçek "X/19 parça" sayaçlı bir
+  kısayol kondu (mevcut Rozetlerim/Ödül Marketi kartlarıyla aynı desen).
+
+🔴 **Doğrulama sırasında bulunan, koda gitmeden düzeltilen 2 gerçek hata:**
+1. `redeem_cosmetic_item` ilk yazımında `point_transactions.source` için
+   `'cosmetic_redemption'` kullanmıştı — ama tablonun CHECK constraint'i
+   sadece `quest/badge/streak/spend/redemption/admin/other` kabul ediyor.
+   Gerçek bir satın alma denemesi sessizce değil, açık bir SQL hatasıyla
+   tamamen başarısız olurdu. `'redemption'`e düzeltildi (mevcut ödül sisteminin
+   kullandığı değerle aynı).
+2. `PetContext.tsx`'teki `Pet.type` alanının yorumu "emoji (🐶🐱)" diyordu ama
+   gerçek DB verisi düz metin `'cat'`/`'dog'` — `MascotSVG`'nin kedi/köpek kulağı
+   seçimi ilk yazımda emoji karşılaştırması yapıyordu, hiçbir zaman eşleşmezdi
+   (hep jenerik yuvarlak kulağa düşerdi). Gerçek alan formatına göre düzeltildi.
+
+**Doğrulama:** gerçek Playwright testiyle (giriş yapılmış oturum, gerçek test
+PP bakiyesi) uçtan uca doğrulandı — Kozmetik sekmesinde 19 kart, bir parça
+("Spor Atlet") gerçekten satın alındı ("Sahipsin ✓" göründü), Giydirme
+Stüdyosu'nda giydirildi ve kaydedildi, `pets.equipped_apparel` sütununa
+GERÇEKTEN yazıldığı SQL ile doğrulandı, ekran görüntüsüyle kedi kulaklarının
+doğru render edildiği (bkz. yukarıdaki 2. hata) teyit edildi. Sonra tüm test
+verisi (PP bakiyesi, sahiplik satırı, giyim durumu) temizlendi.
+
+**Bilerek yapılmayan (ayrı, gelecekteki bir faz):** Kombinle'nin giysi görevleri
++ Düello Arenası entegrasyonu (yukarıda gerekçelendirildi); "2x PP bileti" gibi
+ek fonksiyonel avantaj ürünleri (net semantiği — hangi PP kazanımı ikiye
+katlanıyor — netleşmeden yarım/belirsiz bir özellik eklenmedi, bilinçli sınır);
+kozmetik görünümün pet profili/toplulukta da gösterilmesi (şu an sadece
+Giydirme Stüdyosu'nda görünüyor — "uygulama içinde çeşitli yerlerde
+kullanılabilir" hedefinin ilk adımı, tam yaygınlaştırma ayrı bir iş).
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

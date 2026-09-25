@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { apiService } from "@/services/apiService";
+import { useAuth } from "@/context/AuthContext";
 import {
     ChevronRight, ChevronLeft,
     Footprints, Clock, TrendingUp, TrendingDown, History, FileText,
@@ -107,12 +109,31 @@ function mostFrequentStartCount(walks: { path?: [number, number][] }[], radiusKm
 
 export default function WalkPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const { walkHistory, walkStats } = useActivity();
     const { activePet } = usePet();
     const { badges, earnedBadges, totalPatiPuan, challenges } = useQuestEngine();
     const completedChallenges = challenges.filter(c => c.status === 'completed').length;
     const [period, setPeriod] = useState<Period>('1w');
     const [generatingReport, setGeneratingReport] = useState(false);
+
+    // Faz 22: Giydirme Stüdyosu kısayolu için gerçek gardırop sayısı.
+    const [wardrobeCounts, setWardrobeCounts] = useState({ owned: 0, total: 0 });
+    useEffect(() => {
+        if (!user) return;
+        let cancelled = false;
+        (async () => {
+            const [catalog, ownedIds] = await Promise.all([
+                apiService.getCosmeticItems(),
+                apiService.getOwnedCosmeticItemIds(user.id),
+            ]);
+            if (cancelled) return;
+            const ownedSet = new Set(ownedIds);
+            const owned = catalog.filter(i => i.isStarter || ownedSet.has(i.id)).length;
+            setWardrobeCounts({ owned, total: catalog.length });
+        })();
+        return () => { cancelled = true; };
+    }, [user]);
 
     const parsedWeight = parseFloat(String(activePet?.weight ?? ''));
     const weightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 15;
@@ -378,6 +399,16 @@ export default function WalkPage() {
                         <div className="w-10 h-10 rounded-2xl bg-orange-500/10 flex items-center justify-center text-lg">🎁</div>
                         <span className="text-[9.5px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wide">Ödül Marketi</span>
                         <span className="text-[10px] font-black text-orange-600">🐾 {totalPatiPuan.toLocaleString('tr-TR')}</span>
+                    </motion.button>
+
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => { haptics.tap(); router.push('/dress-up'); }}
+                        className="bg-card p-3.5 rounded-[1.5rem] flex flex-col items-center gap-1.5 shadow-moffi-card border-0 cursor-pointer"
+                    >
+                        <div className="w-10 h-10 rounded-2xl bg-pink-500/10 flex items-center justify-center text-lg">👕</div>
+                        <span className="text-[9.5px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wide text-center leading-tight">Giydirme Stüdyosu</span>
+                        <span className="text-[10px] font-black text-pink-600">{wardrobeCounts.owned}/{wardrobeCounts.total}</span>
                     </motion.button>
 
                     <motion.button

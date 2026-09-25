@@ -4578,6 +4578,91 @@ export class SupabaseApiService implements IApiService {
         return this.awardPatiPuan(-pricePp, `Ödül: ${name}`, 'redemption', productId);
     }
 
+    // Faz 22: Ödül Marketi fiziksel eşya yerine gerçek dijital gardırop —
+    // src/integrations-pending/kombinle prototipinin PP-ekonomisine bağlanmış hali.
+    async getCosmeticItems(): Promise<{ id: string; slot: 'body' | 'head' | 'eyes' | 'hands' | 'feet'; itemKey: string; name: string; icon: string; pricePp: number; rarity: 'common' | 'rare' | 'epic' | 'legendary'; isStarter: boolean }[]> {
+        try {
+            const { data, error } = await supabase
+                .from('cosmetic_items')
+                .select('id, slot, item_key, name, icon, price_pp, rarity, is_starter')
+                .eq('is_active', true)
+                .order('price_pp', { ascending: true });
+            if (error) throw error;
+            return (data || []).map(i => ({
+                id: i.id,
+                slot: i.slot,
+                itemKey: i.item_key,
+                name: i.name,
+                icon: i.icon,
+                pricePp: i.price_pp,
+                rarity: i.rarity,
+                isStarter: i.is_starter,
+            }));
+        } catch (err) {
+            console.error("Supabase getCosmeticItems failed:", err);
+            return [];
+        }
+    }
+
+    async getOwnedCosmeticItemIds(userId: string): Promise<string[]> {
+        try {
+            const { data, error } = await supabase
+                .from('user_cosmetic_items')
+                .select('item_id')
+                .eq('user_id', userId);
+            if (error) throw error;
+            return (data || []).map(r => r.item_id);
+        } catch (err) {
+            console.error("Supabase getOwnedCosmeticItemIds failed:", err);
+            return [];
+        }
+    }
+
+    // Satın alma atomik: redeem_cosmetic_item RPC'si PP'yi düşürüp aynı transaction'da
+    // sahiplik satırını ekliyor (bkz. migration add_cosmetic_wardrobe_system).
+    async redeemCosmeticItem(itemId: string, _name: string, _pricePp: number): Promise<number> {
+        const { data, error } = await supabase.rpc('redeem_cosmetic_item', { p_item_id: itemId });
+        if (error) throw error;
+        return data as number;
+    }
+
+    async getPetLook(petId: string): Promise<{ equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }> {
+        try {
+            const { data, error } = await supabase
+                .from('pets')
+                .select('equipped_apparel, avatar_body_color, avatar_background')
+                .eq('id', petId)
+                .single();
+            if (error) throw error;
+            return {
+                equippedApparel: (data?.equipped_apparel as Record<string, string | null>) || {},
+                avatarBodyColor: data?.avatar_body_color || '#8b5cf6',
+                avatarBackground: data?.avatar_background || null,
+            };
+        } catch (err) {
+            console.error("Supabase getPetLook failed:", err);
+            return { equippedApparel: {}, avatarBodyColor: '#8b5cf6', avatarBackground: null };
+        }
+    }
+
+    async updatePetLook(petId: string, look: { equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }): Promise<boolean> {
+        try {
+            const { error } = await supabase
+                .from('pets')
+                .update({
+                    equipped_apparel: look.equippedApparel,
+                    avatar_body_color: look.avatarBodyColor,
+                    avatar_background: look.avatarBackground,
+                })
+                .eq('id', petId);
+            if (error) throw error;
+            return true;
+        } catch (err) {
+            console.error("Supabase updatePetLook failed:", err);
+            return false;
+        }
+    }
+
     // "Aynı Şehir" filtresi: profiles.address alanı (serbest metin) tam eşleşen
     // diğer kullanıcılar. Gerçek bir yapılandırılmış "şehir" kolonu yok - şu an
     // hiçbir gerçek kullanıcı address girmediği için bu genelde boş dönecek,

@@ -418,6 +418,13 @@ export interface IApiService {
     // Faz 14: Ödül Marketi — Moffi Puanı (PP) ile satın alınabilen gerçek katalog
     getRewardProducts(): Promise<{ id: string; name: string; description: string | null; category: 'product' | 'experience' | 'coupon'; pricePp: number; icon: string }[]>;
     redeemReward(productId: string, name: string, pricePp: number): Promise<number>;
+
+    // Faz 22: Kozmetik gardırop — Kombinle prototipinin gerçek, PP-tabanlı sürümü.
+    getCosmeticItems(): Promise<{ id: string; slot: 'body' | 'head' | 'eyes' | 'hands' | 'feet'; itemKey: string; name: string; icon: string; pricePp: number; rarity: 'common' | 'rare' | 'epic' | 'legendary'; isStarter: boolean }[]>;
+    getOwnedCosmeticItemIds(userId: string): Promise<string[]>;
+    redeemCosmeticItem(itemId: string, name: string, pricePp: number): Promise<number>;
+    getPetLook(petId: string): Promise<{ equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }>;
+    updatePetLook(petId: string, look: { equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }): Promise<boolean>;
     addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean>;
     getGameModules(): Promise<any[]>;
     getPetLeaderboard(limit?: number): Promise<any[]>;

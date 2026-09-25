@@ -1685,6 +1685,28 @@ export class MockApiService implements IApiService {
         return 0;
     }
 
+    async getCosmeticItems(): Promise<{ id: string; slot: 'body' | 'head' | 'eyes' | 'hands' | 'feet'; itemKey: string; name: string; icon: string; pricePp: number; rarity: 'common' | 'rare' | 'epic' | 'legendary'; isStarter: boolean }[]> {
+        return [
+            { id: 'c1', slot: 'body', itemKey: 'sweatshirt', name: 'Turuncu Sweatshirt', icon: '🧡', pricePp: 0, rarity: 'common', isStarter: true },
+        ];
+    }
+
+    async getOwnedCosmeticItemIds(userId: string): Promise<string[]> {
+        return [];
+    }
+
+    async redeemCosmeticItem(itemId: string, name: string, pricePp: number): Promise<number> {
+        return 0;
+    }
+
+    async getPetLook(petId: string): Promise<{ equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }> {
+        return { equippedApparel: {}, avatarBodyColor: '#8b5cf6', avatarBackground: null };
+    }
+
+    async updatePetLook(petId: string, look: { equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }): Promise<boolean> {
+        return true;
+    }
+
     async getProfilesByIds(ids: string[]): Promise<{ id: string; name: string; avatar?: string; pet: string }[]> {
         const NAMES: Record<string, { name: string; avatar: string; pet: string }> = {
             '1': { name: 'Luna', avatar: '', pet: 'Golden Retriever' },
