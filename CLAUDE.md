@@ -1380,6 +1380,85 @@ reddedildiyse/desteklenmiyorsa, (b) bu düzeltmeden ÖNCEki eski yürüyüş
 kayıtlarında (DB'de `steps` yoksa). Yeni yürüyüşlerde birincil kaynak her
 zaman gerçek sensör sayısı.
 
+### 8.20 Pedometre algoritması araştırma-destekli hale getirildi: sallamaya karşı sağlam, çift saymayan (2026-09-25)
+
+8.19'daki ilk pedometre gerçek telefonda ÇALIŞTI ama Baran iki gerçek sorun
+daha buldu: (1) yerinde otururken telefonu sallayınca adım sayılıyordu, (2)
+gerçek yürürken bazen tek adım 2 sayılıyordu. Baran'ın isteğiyle popüler
+adım algılama literatürü araştırıldı (akademik makaleler — PMC12899432,
+PMC4634483, PMC6069265 — + Analog Devices'ın gerçek donanım pedometre
+tasarım notu) ve 3 standart teknik uygulandı:
+
+1. **Gerçek histerezis** — tek bir eşik yerine, birbirinden iyi ayrılmış İKİ
+   eşik (tepe eşiği + tepe eşiğinin %40'ı kadar düşük ayrı bir "vadi" eşiği).
+   Yeni bir tepe SADECE sinyal gerçekten vadi eşiğinin altına inince tekrar
+   "silahlanıyor" — bu, tek bir adımın darbesindeki ikincil alt-tepeciklerin
+   (topuk vuruşu + ayak düzleşmesi) çift sayılmasını engelliyor.
+2. **Adım aralığı fiziksel sınırı** — iki tepe arası süre gerçekçi bir insan
+   yürüyüş/hafif koşu aralığında (300ms–2000ms) değilse aday reddediliyor.
+3. **Ritim tutarlılığı onayı** (sallamaya karşı ASIL savunma) — ard arda
+   gelen 4 aday adımın aralıkları birbirine yakın (±%35 içinde) olmadıkça
+   GERÇEKTEN saymaya başlanmıyor. İzole/düzensiz bir sallama bu tutarlılık
+   testini geçemiyor; gerçek yürüyüş RİTMİ taklit edilemediği için sallama
+   artık sayılmıyor.
+
+🔴 **Yol boyunca, gerçek cihaza hiç gerek kalmadan Playwright'ta senkron
+`devicemotion` olaylarıyla YAKALANAN 2 gerçek algoritma hatası (bu oturumun
+"GPS-bağımlı/sensör-bağımlı kodu SADECE tek bir senaryoyla test etmenin
+gerçek hataları gizleyebildiği" dersinin devamı):**
+- **Deneme 1 (adaptif eşik):** eşiği "sakin dönemlerdeki varyansa" göre
+  kendiliğinden ayarlamak cazip görünüyordu (telefon cepte/elde farkına göre
+  kalibre olsun diye) ama gerçekte kendi kendini besleyen bir kısır döngüye
+  yol açtı: varyans başlangıç değeri (1.0) gerçek bir adım darbesinden
+  (~2.0-2.5) bile YÜKSEK bir ilk eşik (2.6) üretiyordu — İLK adım hiç
+  aşamıyor, "sakin" sayılıp varyansı KENDİSİ şişiriyor, bu da eşiği daha da
+  yükseltip algılamayı kalıcı olarak öldürüyordu (40 simüle gerçekçi adımdan
+  sadece 4'ü sayıldı, gerçek cihazda "adımlar hiç artmıyor" olarak
+  görünürdü). Varyans başlangıcı küçültülünce bu sefer YÜRÜME SIRASINDA
+  aynı kısır döngü daha yavaş ama yine oluştu (36-37/40 gibi görünse de
+  altta yatan tasarım kırılgandı).
+- **Kök neden çözümü: SABİT eşiğe dönüldü.** Adaptif/varyans-tabanlı eşik
+  tamamen kaldırıldı, yerine gerçek testle doğrulanmış SABİT bir eşik
+  (1.15 m/s²) + yukarıdaki 3 teknik (histerezis + aralık sınırı + ritim
+  tutarlılığı) kondu. Bu hem çok daha ÖNGÖRÜLEBİLİR hem de gerçek testte
+  kanıtlanmış şekilde daha SAĞLAM çıktı. **Ders: "kendiliğinden kalibre
+  olan" bir sistem her zaman daha "profesyonel" görünmüyor — geri besleme
+  döngüsü kurduğunuzda (eşik → algılama → eşiği güncelleme), küçük bir
+  başlangıç/kenar-durum hatası kalıcı bir kısır döngüye dönüşebilir. Basit,
+  sabit, iyi test edilmiş bir sistem çoğu zaman daha güvenilir.**
+
+**Son doğrulanmış sonuçlar (Playwright, gerçekçi ±%15 doğal varyasyonlu
+yürüyüş simülasyonu + 3 farklı gerçekçi sallama deseni):**
+- Düzensiz sallama (rastgele 100-900ms aralık): **0/30** yanlış sayım.
+- Hızlı sürekli titreşim (150-250ms, insan yürüyüşünden çok hızlı): **0/30**.
+- Gerçek yürüyüş (40 adım, doğal varyasyonlu): **36/40** sayıldı (küçük,
+  dürüst bir "geç başlama" gecikmesi — ritim onaylanana kadar ilk birkaç
+  adım bilerek sayılmıyor, sallamaya karşı asıl savunma budur).
+- 3 saniyelik duraklama + 10 adım daha: +6 (toplam 42) — duraklama sonrası
+  ritmin yeniden onaylanması için küçük bir gecikme, kabul edilebilir.
+
+**Bilinçli, dürüst bir sınır (silinmedi, düzeltilmedi — CLAUDE.md 8.1'deki
+"yaklaşık çözüm" listesi geleneğiyle burada not düşülüyor):** çok DELİBERATE,
+neredeyse mekanik-metronom hassasiyetinde (±480-520ms gibi) RİTMİK bir
+sallama/vurma hâlâ sayılabiliyor (test: 26-32/30) — bu, TEK eksenli ivme
+büyüklüğüne dayanan HERHANGİ bir yazılım pedometresinin (native dahil)
+paylaştığı, endüstri çapında bilinen bir sınır (gerçek insanlar telefonlarını
+"kandırmak" için bilinçli, sabit-ritimli sallama/adım taklidi yapabiliyor —
+Google Fit bile bunu ancak ~30 saniyelik pencereler üzerinde çalışan bir ML
+sınıflandırıcıyla, çok daha ağır bir yöntemle azaltabiliyor). **Önemli bağlam:
+Moffi Puanı (PP) adım sayısına DEĞİL, GPS mesafesine bağlı** (bkz. Bölüm 8.2)
+— yani bu sınırın bir ödül/kazanç suistimali riski yok, sadece ekrandaki
+sayının nadir bir kenar-durumda yanlış olabileceği anlamına geliyor.
+
+**Ekran kapalıyken/arka planda çalışmama:** Baran'ın kendi bulduğu, doğru bir
+gözlem — `DeviceMotionEvent` dinleyicisi, GPS'in zaten sahip olduğu AYNI web
+sınırına tabi (tarayıcı ekran kilitlenince/sekme arka plana geçince JS'i
+durduruyor, bkz. Bölüm 8.1). Yeni bir sorun değil, GPS'in zaten belgelenmiş
+tavanına bağlı kalıyor. Mevcut kısmi çözüm: "Ekranı Açık Tut" ayarı (Bölüm
+8.16) açıkken hem GPS hem adım sayar kesintisiz çalışıyor. Tam çözüm
+(ekran kilitliyken bile) sadece bir native sarmalayıcıyla (Capacitor)
+mümkün — web'in aşamayacağı bir sınır.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

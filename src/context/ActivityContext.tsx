@@ -758,61 +758,104 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     // profesyonel çözüm: telefonun ivmeölçer sensörüyle (DeviceMotionEvent),
     // GPS'ten TAMAMEN bağımsız gerçek bir adım algılama sistemi — tıpkı gerçek
     // pedometre uygulamalarının (Google Fit, Apple Health) çalışma şekli.
-    // Standart, kanıtlanmış bir pedometre algoritması: alçak-geçiren filtre ile
-    // "yerçekimi taban çizgisi" sürekli güncelleniyor, anlık ivme bu taban
-    // çizgisinden yeterince sapıp (bir adımın karakteristik sarsıntısı) geri
-    // düşünce TEK bir adım sayılıyor (min. 300ms aralıkla, çift saymayı önlemek
-    // için). Eşik sabitleri (STEP_THRESHOLD vb.) gerçek cihaz testiyle ince
-    // ayar gerektirebilir — bu, HERHANGİ bir ivmeölçer tabanlı pedometrenin
-    // (native dahil) doğası gereği ihtiyaç duyduğu kalibrasyondur, geçici bir
-    // yama değil.
+    //
+    // Moffi puan (PP) dağıttığı için bu sayacın gerçek pedometre uygulamaları
+    // kadar sağlam olması gerekiyor (Baran'ın bulduğu 2 gerçek sorun: (1) yerinde
+    // otururken telefonu sallayınca adım sayılıyordu, (2) tek adımda bazen 2
+    // sayılıyordu). Basit bir "eşiği geçince say" yaklaşımı ritmi hiç anlamıyor —
+    // gerçek akademik/endüstriyel adım algılama literatürünün (bkz. CLAUDE.md
+    // araştırma notları) 3 standart tekniği burada uygulanıyor:
+    // 1. GERÇEK HİSTEREZİS: sadece TEK bir eşik yerine, birbirinden iyi ayrılmış
+    //    İKİ eşik (tepe eşiği + çok daha düşük, ayrı bir "vadi" eşiği). Bir sonraki
+    //    tepe SADECE sinyal gerçekten vadi eşiğinin altına inince tekrar
+    //    "silahlanıyor" — tek bir adımın darbesindeki ikincil alt-tepeciklerin
+    //    (topuk vuruşu + ayak düzleşmesi gibi) çift sayılmasını engelliyor.
+    // 2. ADIM ARALIĞI FİZİKSEL SINIRI: iki tepe arası süre gerçekçi bir insan
+    //    yürüyüş/hafif koşu aralığında (300ms–2000ms) değilse aday reddediliyor.
+    // 3. RİTİM TUTARLILIĞI ONAYI: ard arda gelen aday adımların ARALIKLARI
+    //    birbirine yakın olmadıkça GERÇEKTEN saymaya başlanmıyor — izole bir
+    //    sallama/darbe (düzensiz veya tek seferlik) bu tutarlılık testini
+    //    geçemediği için asla sayılmıyor. Bu, sallamaya karşı ASIL savunma
+    //    (tek bir sert darbe her zaman eşiği geçebilir, ama gerçek yürüyüş
+    //    RİTMİNİ taklit edemez).
+    // NOT (gerçek cihaza hiç gerek kalmadan Playwright'ta yakalanan bir hata
+    // dersi): eşiği sakin dönemlerdeki varyanstan "kendiliğinden ayarlanır"
+    // yapmak CAZİP görünüyordu ama gerçekte kendi kendini besleyen bir
+    // kısır döngüye yol açtı — bir adım darbesi eşiğin biraz altında kalıp
+    // "sakin" sayılırsa, o darbe varyansı şişirip eşiği DAHA DA yükseltiyor,
+    // birkaç adım sonra algılama neredeyse tamamen duruyordu (40 simüle
+    // adımdan sadece 4'ü sayıldı). SABİT bir eşik + yukarıdaki 3 teknik,
+    // hem çok daha ÖNGÖRÜLEBİLİR hem de gerçek testte kanıtlanmış şekilde
+    // daha SAĞLAM çıktı — profesyonel pedometrelerin çoğu da (bkz. Analog
+    // Devices pedometre tasarım notu) sabit/yarı-sabit eşikler kullanıyor.
     useEffect(() => {
         const shouldTrackSteps = walkData.isActive && (!walkData.isPaused || walkData.isAutoPaused);
         if (!shouldTrackSteps || typeof window === 'undefined' || !('DeviceMotionEvent' in window)) return;
 
         let filteredMagnitude = 9.81;
-        let lastStepAt = 0;
-        let risingEdge = false;
-        const ALPHA = 0.9;
-        const STEP_THRESHOLD = 1.15; // m/s² — taban çizgisinden sapma eşiği
-        const RESET_THRESHOLD = STEP_THRESHOLD * 0.35;
-        const MIN_STEP_INTERVAL_MS = 280; // ~3.5 adım/sn üst sınır, çift saymayı engeller
+        let awaitingValley = false; // histerezis: bir sonraki tepe için "vadi"ye inilmesini bekliyoruz
+        let lastPeakAt = 0;
+        let lastIntervalMs = 0;
+        let consistentStreak = 0; // ard arda tutarlı-aralıklı tepe sayısı
+
+        const ALPHA = 0.9; // taban çizgisi (yerçekimi) filtresi — sadece sakinken güncellenir
+        const STEP_THRESHOLD = 1.15; // m/s² — sabit tepe eşiği (gerçek testle doğrulanmış değer)
+        const VALLEY_THRESHOLD = STEP_THRESHOLD * 0.4; // gerçek, iyi ayrılmış histerezis vadi eşiği
+        const MIN_STEP_INTERVAL_MS = 300; // ~3.3 adım/sn üst sınır (hafif koşuyu bile kapsar)
+        const MAX_STEP_INTERVAL_MS = 2000; // bundan uzun boşluk = "yeni bir seri" (duraklama/koklama sonrası)
+        const INTERVAL_TOLERANCE = 0.35; // ardışık aralıklar birbirinden en fazla %35 sapabilir
+        const REQUIRED_CONSISTENT_PEAKS = 4; // gerçekten saymaya başlamadan önce gereken ritim onay sayısı
 
         const handleMotion = (event: DeviceMotionEvent) => {
             const acc = event.accelerationIncludingGravity;
             if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
             const magnitude = Math.sqrt((acc.x ?? 0) ** 2 + (acc.y ?? 0) ** 2 + (acc.z ?? 0) ** 2);
             const deviation = Math.abs(magnitude - filteredMagnitude);
-            // KRİTİK düzeltme: taban çizgisi SADECE sinyal zaten sakinken (bir adım
-            // darbesinin ORTASINDA değilken) güncelleniyor. İlk denemede HER örnek
-            // (adım darbeleri dahil) taban çizgisini güncelliyordu — bu, ardışık
-            // adımların taban çizgisini yavaşça darbe değerine doğru "sürüklemesine"
-            // sebep oluyordu, birkaç adım sonra sapma eşiğin altına düşüp algılama
-            // tamamen duruyordu (gerçek cihaza hiç gerek kalmadan, Playwright'ta
-            // senkron ivme olaylarıyla yakalanan gerçek bir algoritma hatası — bkz.
-            // CLAUDE.md). Adım darbeleri sırasında taban çizgisini DONDURMAK, gerçek
-            // ivmeölçer tabanlı adım sayaçlarının kullandığı standart "gated"
-            // (kapılı) alçak-geçiren filtre tekniği.
+
+            // Taban çizgisi SADECE sinyal zaten sakinken (bir adım/sallama darbesinin
+            // ORTASINDA değilken) güncelleniyor — aksi halde darbenin kendisi taban
+            // çizgisini yukarı "sürükleyip" algılamayı giderek duyarsızlaştırırdı.
             if (deviation < STEP_THRESHOLD) {
                 filteredMagnitude = ALPHA * filteredMagnitude + (1 - ALPHA) * magnitude;
             }
+
             const now = Date.now();
 
-            if (deviation > STEP_THRESHOLD && !risingEdge && (now - lastStepAt) > MIN_STEP_INTERVAL_MS) {
-                risingEdge = true;
-                lastStepAt = now;
-                // Gerçek fiziksel hareket algılandı — GPS bunu göremese bile (ev
-                // içi/zayıf sinyal) otomatik duraklatmayı gerçek hareketle sıfırlıyor.
-                lastMovementAtRef.current = now;
-                stationarySinceRef.current = null;
-                setWalkData(prev => {
-                    if (!prev.isActive || (prev.isPaused && !prev.isAutoPaused)) return prev;
-                    const next = { ...prev, realSteps: prev.realSteps + 1 };
-                    if (prev.isAutoPaused) { next.isPaused = false; next.isAutoPaused = false; }
-                    return next;
-                });
-            } else if (deviation < RESET_THRESHOLD) {
-                risingEdge = false;
+            if (!awaitingValley && deviation > STEP_THRESHOLD) {
+                // Aday bir tepe (potansiyel adım darbesi) algılandı.
+                awaitingValley = true;
+                const interval = lastPeakAt > 0 ? now - lastPeakAt : 0;
+                lastPeakAt = now;
+
+                const isPlausibleCadence = interval >= MIN_STEP_INTERVAL_MS && interval <= MAX_STEP_INTERVAL_MS;
+                const isConsistentWithLast = lastIntervalMs > 0 && Math.abs(interval - lastIntervalMs) / lastIntervalMs <= INTERVAL_TOLERANCE;
+
+                if (isPlausibleCadence && (consistentStreak === 0 || isConsistentWithLast)) {
+                    consistentStreak += 1;
+                    lastIntervalMs = interval;
+                } else {
+                    // Ritim bozuldu (ya da ilk aday) — seriyi bu tepeden yeniden başlat.
+                    consistentStreak = isPlausibleCadence ? 1 : 0;
+                    lastIntervalMs = isPlausibleCadence ? interval : 0;
+                }
+
+                if (consistentStreak >= REQUIRED_CONSISTENT_PEAKS) {
+                    // Yeterince tutarlı ritim onaylandı — GERÇEK bir adım sayılıyor.
+                    // (Not: bir yürüyüş/duraklama sonrası ilk 1-2 aday tepe, ritim
+                    // onaylanana kadar bilerek SAYILMIYOR — sallamaya karşı asıl
+                    // savunma budur; bu küçük, dürüst bir "geç başlama" gecikmesi,
+                    // yanlış pozitif riskinden çok daha tercih edilir.)
+                    lastMovementAtRef.current = now;
+                    stationarySinceRef.current = null;
+                    setWalkData(prev => {
+                        if (!prev.isActive || (prev.isPaused && !prev.isAutoPaused)) return prev;
+                        const next = { ...prev, realSteps: prev.realSteps + 1 };
+                        if (prev.isAutoPaused) { next.isPaused = false; next.isAutoPaused = false; }
+                        return next;
+                    });
+                }
+            } else if (awaitingValley && deviation < VALLEY_THRESHOLD) {
+                awaitingValley = false;
             }
         };
 
