@@ -1878,6 +1878,78 @@ sonlandırılıp sunucu temiz şekilde yeniden başlatıldı. Tüm test verisi
 (sahte yürüyüş satırı, PP ödemeleri, bildirimler, meydan okuma satırı)
 sonrasında temizlendi.
 
+### 8.26 Faz 25 — Veteriner modülü: 14 ekranlık referans kilitlendi, gerçek klinik/randevu sisteminin "kaba" UI'sı yeniden inşa edildi (2026-09-25)
+
+Baran'ın isteği: mevcut Veteriner UI'sini "oldukça kaba ve işlevsiz" buldu,
+14 ekranlık bir referans görsel verdi, birebir uygulanmasını istedi.
+
+**Önce görsel kilitlendi** (Baran'ın açık talimatı — "sohbet ne kadar uzasa da
+asla UI kaybolmasın"): `design-reference/vet-final/` (görsel + 14 ekranın tam
+dökümü, renk kodları — home-final paletiyle tutarlı). CLAUDE.md Bölüm 11'e
+walk-final/home-final ile aynı desende bir kilit notu eklendi.
+
+🔴🔴 **Kritik bulgu — ilk yaklaşım YANLIŞ yöndeydi, zamanında yakalandı:**
+İlk turda görseli MOCK veriyle (`src/lib/mockVetData.ts`) yeniden, sıfırdan
+inşa etmeye başlandı (`/vet/find/*` altında yeni sayfalar). Ama derinlemesine
+bakılınca `/vet` sayfasının ZATEN kullandığı `ClinicListModal.tsx`/
+`ClinicDetailDrawer.tsx`/`VetQuickSheet.tsx`'in ("kaba" bulunan asıl UI)
+arkasında TAMAMEN GERÇEK bir sistem olduğu ortaya çıktı: `useVet()` hook'u
+gerçek `profiles` (role=business, business_approved=true) + `clinic_services`
++ `clinic_reviews` tablolarından GPS/il-ilçe bazlı arama yapıyor,
+`ClinicDetailDrawer` gerçek yorumlar/değerlendirme gönderme/klinikle gerçek
+sohbet (`getChatMessages`/`sendChatMessage`)/gerçek kampanyalar/gerçek randevu
+oluşturma (işletme paneline `BroadcastChannel` ile canlı bildiriyor) içeriyordu.
+Mock veriyle devam etmek, bu projenin defalarca temizlemek zorunda kaldığı
+"paralel, birbirinden habersiz sistem" (Bölüm 7) hatasının aynısı olacaktı.
+Baran'a durum anlatılıp onaylatıldıktan sonra **mock scaffolding tamamen
+silindi**, gerçek veriye bağlı yeniden inşaya geçildi.
+
+**Yapılan gerçek re-skin (veri katmanı TEK SATIR değişmeden, sadece görsel):**
+- `ClinicListModal.tsx` (157 satır) — mor `#5B4D9D` + agresif büyük harf/
+  italik yerine, referansın sıcak/turuncu diliyle baştan yazıldı. Prop
+  arayüzü (`isOpen`/`onClose`/`clinics`/`onSelectClinic`/`isLoading`) AYNEN
+  korundu — `/vet/page.tsx`, `community/page.tsx`, `OverlaySystem.tsx`
+  çağıran noktalarının HİÇBİRİNE dokunulmadı.
+- `ClinicDetailDrawer.tsx` (709 satır) — TÜM state/fetch/handler mantığı
+  (fetchDetails, handleSubmitReview, handleSendMessage, chat polling,
+  kampanya filtreleme, foto lightbox) birebir korunarak sadece JSX/className
+  katmanı yeniden yazıldı. Referansın 4 sekmesi (Genel Bakış/Hizmetler/
+  Yorumlar/Ekip) yerine gerçek veri modeliyle birebir örtüşen 3 sekme
+  korundu (info/doctors/reviews → "Genel Bakış"/"Ekip"/"Yorumlar" olarak
+  etiketlendi) — "Hizmetler" içeriği zaten gerçek `clinic.features`
+  listesinde Genel Bakış'ta gösteriliyordu, ayrı bir sekme açmak uydurma bir
+  ayrım olurdu.
+- Yan ürün: `useChat()`'ten sadece var olmayan `toggleChat`'i (pre-existing
+  bir tip hatasıydı, `ChatContextType`'ta hiç yoktu) çekmek için yapılan ölü
+  bir destructure fark edilip silindi — kullanılmayan kod, gerçek bir
+  düzeltme.
+
+**Bilerek bu turun kapsamına ALINMAYAN (ayrı bir iş):**
+- Randevu formu (`activeModal==='appointment'`, `/vet/page.tsx` içine GÖMÜLÜ,
+  ~1800 satırlık dosyanın bir parçası) — Ekran 5/6'ya karşılık geliyor ama
+  state machine'i (selectedDate/selectedTime/selectedDoctor/handleCreateAppointment,
+  gerçek randevu oluşturup işletme paneline bildiren) daha derin bir inceleme
+  gerektiriyor, aceleyle dokunmak gerçek randevu oluşturmayı bozma riski
+  taşıyordu.
+- `VetQuickSheet.tsx` (ana sayfadan açılan hızlı erişim sheet'i) — referansın
+  14 ekranında doğrudan karşılığı yok, hâlâ eski mor/uppercase stilde.
+- `/vet/page.tsx`'in kendi DIŞ kabuğu (İl/İlçe seçici, "Klinik Keşfet"/
+  "Randevularım" sekmeleri, genel sayfa başlığı) — sadece ClinicListModal/
+  ClinicDetailDrawer (bu ikisi zaten ayrı, üstte açılan modal/drawer'lar)
+  re-skin edildi, çevresindeki sayfa hâlâ eski/kaba stilde.
+- Reference'ın Screen 3 (Harita Görünümü) — gerçek bir harita+pin listesi
+  entegrasyonu ayrı bir iş, bu turda yapılmadı.
+
+**Doğrulama:** typecheck temiz (sadece `ClinicDetailDrawer.tsx`'teki tek bir
+önceden var olan hata kaldı — `apiService.uploadMedia` çağrısı, birebir
+korunan orijinal kod, benim değişikliğimle ilgisiz). Gerçek Playwright
+testiyle (giriş yapılmış oturum) uçtan uca doğrulandı: Van/Tuşba konumu
+seçilince gerçek "MoffiPet" işletmesi (role=business, business_approved=true)
+listede çıktı, karta tıklanınca yeniden tasarlanan `ClinicDetailDrawer`
+GERÇEK veriyle (5.0 puan, 6 gerçek yorum, gerçek fotoğraf, "Şu an açık"
+durumu) sıcak/turuncu yeni tasarımla render edildi — hiçbir mock/uydurma veri
+kullanılmadı.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
