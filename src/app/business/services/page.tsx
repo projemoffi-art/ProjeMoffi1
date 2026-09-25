@@ -5,22 +5,13 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Plus, Trash2, CheckCircle2, AlertCircle, Save, Loader2, Activity, Store } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const DEFAULT_SERVICES = [
-    { name: "Genel Muayene", duration: 20, icon: "🩺" },
-    { name: "Aşı", duration: 15, icon: "💉" },
-    { name: "Diş Bakımı/Temizliği", duration: 30, icon: "🦷" },
-    { name: "Kontrol/Takip", duration: 15, icon: "📅" },
-    { name: "Acil Müdahale", duration: 45, icon: "🚨" },
-    { name: "Kuaför/Bakım", duration: 40, icon: "✂️" },
-    { name: "Ameliyat/Operasyon", duration: 90, icon: "⚕️" },
-    { name: "Laboratuvar/Tahlil", duration: 20, icon: "🧪" },
-    { name: "Kısırlaştırma", duration: 60, icon: "🩺" },
-    { name: "Ultrason/Görüntüleme", duration: 25, icon: "🖥️" },
-];
+import { getBusinessTypeConfig } from "@/config/businessTypes";
 
 export default function BusinessServicesPage() {
     const { user } = useAuth();
+    // Faz 3 (işletme türü mimarisi) — varsayılan hizmet listesi artık her
+    // işletmeye aynı vet listesini göstermiyor, seçilen türe göre geliyor.
+    const DEFAULT_SERVICES = getBusinessTypeConfig(user?.businessType).defaultServices;
     const [services, setServices] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -151,7 +142,7 @@ export default function BusinessServicesPage() {
             <div>
                 <h1 className="text-2xl font-black text-foreground dark:text-white tracking-tight flex items-center gap-2">
                     <Activity className="w-6 h-6 text-indigo-500" />
-                    Klinik Hizmet Kataloğu
+                    Hizmet Kataloğu
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm font-medium">
                     Müşterilerinize sunduğunuz hizmetleri buradan yönetebilirsiniz. <strong className="text-indigo-500 dark:text-indigo-400">En fazla 10 hizmet</strong> ekleyebilirsiniz. Seçtiğiniz hizmetler müşterilerinize randevu ekranında gösterilecektir.

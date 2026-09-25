@@ -23,6 +23,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { getBusinessTypeConfig, SidebarItemKey } from "@/config/businessTypes";
 
 interface SidebarProps {
     isMobileOpen?: boolean;
@@ -32,20 +34,29 @@ interface SidebarProps {
 export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
     const pathname = usePathname();
     const { t } = useTranslation();
+    const { user } = useAuth();
+    const typeConfig = getBusinessTypeConfig(user?.businessType);
 
-    const menuItems = [
-        { name: t("business.sidebar.dashboard"), path: "/business/dashboard", icon: LayoutDashboard },
-        { name: t("business.sidebar.appointments"), path: "/business/appointments", icon: Calendar },
-        { name: "Hastalarım", path: "/business/patients", icon: Users },
-        { name: "Veri Taşıma", path: "/business/migration", icon: FileSpreadsheet },
-        { name: t("business.sidebar.finance"), path: "/business/finance", icon: Wallet },
-        { name: t("business.sidebar.orders"), path: "/business/orders", icon: Package },
-        { name: "Hizmetlerim", path: "/business/services", icon: Activity },
-        { name: "Doktorlar", path: "/business/doctors", icon: Stethoscope },
-        { name: t("business.sidebar.products"), path: "/business/products", icon: Store },
-        { name: "Günün Fırsatı", path: "/business/campaigns", icon: Gift },
-        { name: t("business.sidebar.quests"), path: "/business/quests", icon: Megaphone },
-    ];
+    // Faz 2 (işletme türü mimarisi) — bu liste artık TEK kaynak değil, sadece
+    // her olası öğenin tanımı. Hangi öğelerin GÖRÜNECEĞİ businessTypes.ts'teki
+    // kayıt defterinden (typeConfig.sidebar) geliyor — önceden her işletme
+    // türü, türü ne olursa olsun, aynı 11 öğeyi (Doktorlar/Ürün Yönetimi dahil)
+    // görüyordu.
+    const ALL_MENU_ITEMS: Record<SidebarItemKey, { name: string; path: string; icon: any }> = {
+        dashboard: { name: t("business.sidebar.dashboard"), path: "/business/dashboard", icon: LayoutDashboard },
+        appointments: { name: t("business.sidebar.appointments"), path: "/business/appointments", icon: Calendar },
+        patients: { name: "Hastalarım", path: "/business/patients", icon: Users },
+        migration: { name: "Veri Taşıma", path: "/business/migration", icon: FileSpreadsheet },
+        finance: { name: t("business.sidebar.finance"), path: "/business/finance", icon: Wallet },
+        orders: { name: t("business.sidebar.orders"), path: "/business/orders", icon: Package },
+        services: { name: "Hizmetlerim", path: "/business/services", icon: Activity },
+        doctors: { name: typeConfig.staffLabelPlural, path: "/business/doctors", icon: Stethoscope },
+        products: { name: t("business.sidebar.products"), path: "/business/products", icon: Store },
+        campaigns: { name: "Günün Fırsatı", path: "/business/campaigns", icon: Gift },
+        quests: { name: t("business.sidebar.quests"), path: "/business/quests", icon: Megaphone },
+    };
+
+    const menuItems = typeConfig.sidebar.map(key => ALL_MENU_ITEMS[key]);
 
     const sidebarContent = (isMobile = false) => (
         <div className="flex flex-col h-full bg-white dark:bg-[#111111] border-r border-zinc-200/80 dark:border-card-border/40 py-6 px-4">

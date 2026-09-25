@@ -6,9 +6,13 @@ import { apiService } from "@/services/apiService";
 import { Plus, Users, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Doctor } from "@/types/domain";
+import { getBusinessTypeConfig } from "@/config/businessTypes";
 
 export default function BusinessDoctorsPage() {
     const { user } = useAuth();
+    // Faz 3 (işletme türü mimarisi) — bu sayfa artık her işletmede "Doktor"
+    // demiyor, seçilen türe göre "Bakıcı"/"Eğitmen"/"Gönüllü"/"Personel".
+    const { staffLabel, staffLabelPlural } = getBusinessTypeConfig(user?.businessType);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -88,10 +92,10 @@ export default function BusinessDoctorsPage() {
             <div>
                 <h1 className="text-2xl font-black text-foreground dark:text-white tracking-tight flex items-center gap-2">
                     <Users className="w-6 h-6 text-indigo-500" />
-                    Doktor Yönetimi
+                    {staffLabel} Yönetimi
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm font-medium">
-                    Kliniğinizde çalışan doktorları buradan yönetebilir, aktif/pasif durumlarını değiştirebilirsiniz. Randevu alırken sadece aktif doktorlar listelenir.
+                    İşletmenizdeki {staffLabelPlural} listesini buradan yönetin, aktif/pasif durumunu değiştirin. Randevu alırken sadece aktif olanlar listelenir.
                 </p>
             </div>
 
@@ -105,7 +109,7 @@ export default function BusinessDoctorsPage() {
                 {success && (
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 dark:text-emerald-400 mt-4">
                         <CheckCircle2 className="w-5 h-5 shrink-0" />
-                        <span className="text-sm font-bold">Doktor başarıyla eklendi!</span>
+                        <span className="text-sm font-bold">{staffLabel} başarıyla eklendi!</span>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -113,13 +117,13 @@ export default function BusinessDoctorsPage() {
             <div className="grid lg:grid-cols-3 gap-8 mt-8">
                 <div className="lg:col-span-2 space-y-8">
                     <div className="bg-card dark:bg-[#121212] border border-card-border dark:border-[#27272a] rounded-[2rem] p-6 shadow-sm">
-                        <h2 className="text-lg font-black text-foreground dark:text-white mb-4">Klinik Doktorları</h2>
-                        
+                        <h2 className="text-lg font-black text-foreground dark:text-white mb-4">Kayıtlı {staffLabelPlural}</h2>
+
                         <div className="space-y-3">
                             {doctors.length === 0 ? (
                                 <div className="text-center py-10 opacity-50 flex flex-col items-center gap-2">
                                     <Users className="w-8 h-8 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-500">Henüz doktor eklenmedi.</span>
+                                    <span className="text-sm font-medium text-gray-500">Henüz {staffLabel.toLowerCase()} eklenmedi.</span>
                                 </div>
                             ) : (
                                 doctors.map((doc) => (
@@ -150,16 +154,16 @@ export default function BusinessDoctorsPage() {
 
                 <div>
                     <div className="sticky top-6 bg-card dark:bg-[#121212] border border-card-border dark:border-[#27272a] rounded-[2rem] p-6 shadow-xl shadow-indigo-500/5">
-                        <h2 className="text-lg font-black text-foreground dark:text-white mb-6">Yeni Doktor Ekle</h2>
-                        
+                        <h2 className="text-lg font-black text-foreground dark:text-white mb-6">Yeni {staffLabel} Ekle</h2>
+
                         <form onSubmit={handleAddDoctor} className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Doktor Adı Soyadı</label>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{staffLabel} Adı Soyadı</label>
                                 <input
                                     type="text"
                                     value={newName}
                                     onChange={e => setNewName(e.target.value)}
-                                    placeholder="Örn: Dr. Ahmet Yılmaz"
+                                    placeholder="Örn: Ahmet Yılmaz"
                                     className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-semibold focus:border-indigo-500 outline-none transition-all dark:text-white"
                                     required
                                 />
@@ -170,7 +174,7 @@ export default function BusinessDoctorsPage() {
                                     type="text"
                                     value={newTitle}
                                     onChange={e => setNewTitle(e.target.value)}
-                                    placeholder="Örn: Vet. Hekim, Baş Hekim"
+                                    placeholder="Örn: Kıdemli, Uzman"
                                     className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-semibold focus:border-indigo-500 outline-none transition-all dark:text-white"
                                 />
                             </div>
@@ -181,7 +185,7 @@ export default function BusinessDoctorsPage() {
                                 className="w-full mt-2 py-4 bg-foreground dark:bg-white text-background dark:text-black rounded-xl font-black text-sm uppercase tracking-wider hover:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                {isSaving ? 'Ekleniyor...' : 'Doktor Ekle'}
+                                {isSaving ? 'Ekleniyor...' : `${staffLabel} Ekle`}
                             </button>
                         </form>
                     </div>

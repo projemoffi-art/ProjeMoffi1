@@ -2348,6 +2348,62 @@ dashboard'da 4 kart da gerçek sıfır/gerçek veri gösteriyor (uydurma yok),
 "+ Yeni Kampanya" gerçekten `/business/campaigns`'a gidiyor, Hastalarım
 sayfasında kırık link kalmadı.
 
+### 8.32 İşletme Türü Mimarisi Faz 2+3 — gerçek kayıt defteri kuruldu, 2 tür ile canlı doğrulandı (2026-09-25)
+
+Baran'ın talimatıyla Faz 2 (kayıt defteri mimarisi) ve Faz 3 (diğer türler için
+gerçek içerik) BİRLİKTE yapıldı — Faz 3, Faz 2'nin dolu bir kayıt defterine
+ihtiyaç duyduğu için ayrı ayrı anlamlı değildi.
+
+**Kurulan:** `src/config/businessTypes.ts` — TEK kayıt defteri, 5 işletme türü
+(vet/grooming/trainer/shelter/petshop) için: görünür sidebar öğeleri, personel
+etiketi (Doktor/Bakıcı/Eğitmen/Gönüllü/Personel), ve varsayılan hizmet
+kataloğu. `getBusinessTypeConfig(user.businessType)` çağıran her yer aynı
+tek kaynaktan okuyor — hiçbir ekran kendi "eğer tür X ise..." mantığını
+tekrarlamıyor.
+
+**Buna bağlanan 3 gerçek ekran:**
+- `Sidebar.tsx` — sabit 11 öğelik menü yerine artık `typeConfig.sidebar`'ı
+  okuyor. Örn: vet için Veri Taşıma+Doktorlar var, Ürün Yönetimi/Sipariş
+  Takibi YOK; petshop için tam tersi; shelter'da Hizmetlerim/Doktorlar bile
+  yok (barınak için randevu/hasta/kampanya yeterli görüldü, hizmet kataloğu
+  kavramı oturmuyor — bu bir ürün kararı, ihtiyaç olursa kolayca eklenir).
+- `services/page.tsx` — `DEFAULT_SERVICES` artık türe göre geliyor (önceden
+  HERKESE aynı 10 vet hizmeti gösteriliyordu — "Kuaför/Bakım" bile yanlışlıkla
+  vet listesindeydi, gerçek grooming listesine taşındı). Sayfa başlığındaki
+  "Klinik Hizmet Kataloğu" da vet'e özgüydü, "Hizmet Kataloğu"na çevrildi.
+- `doctors/page.tsx` — "Doktor" kelimesi geçen HER kullanıcı metni (başlık,
+  buton, form etiketi, boş durum mesajı, başarı mesajı) artık
+  `staffLabel`/`staffLabelPlural`'dan geliyor.
+
+**Bilinçli olarak DOKUNULMAYAN (Faz 2/3'ün orijinal notunda zaten belirtilmişti,
+tekrar teyit edildi):** `appointments/page.tsx`'teki muayene-tamamlama akışı
+(aşı/ilaç/tıbbi kayıt yazma, `hasMedicalRecords` alanı config'te zaten hazır
+ama bağlanmadı) — 2400 satırlık, kritik/hassas bir dosya, kredi/zaman kısıtı
+gereği bu turda riske atılmadı. Müşteri tarafındaki "Doktor" kelimesi de
+BİLEREK değiştirilmedi — `/vet` zaten SADECE `business_type='vet'` gösteriyor
+(bkz. 8.31), yani müşteri tarafında "Doktor" demek hâlâ her zaman doğru;
+bu ancak Faz 5'te (müşteri tarafının genellenmesi) gündeme gelir.
+
+**Doğrulama — gerçek DB'de tür değiştirilerek canlı test edildi:** test
+işletmesi (`MoffiPet`) geçici olarak `business_type='grooming'` yapıldı,
+Playwright ile gerçek ekran görüntüsü alındı — sidebar'da "Doktorlar" →
+"Bakıcılar" oldu, "Veri Taşıma" kayboldu, Hizmetlerim sayfasında Yıkama/
+Tıraş-Trim/Tırnak Kesimi/Kulak Temizliği/Tüy Bakımı/Tam Bakım Paketi
+(gerçek grooming varsayılanları) göründü, önceden kaydedilmiş gerçek hizmet
+satırları (Kısırlaştırma vb.) da doğru şekilde korundu (varsayılan liste
+değişse de müşterinin gerçek geçmiş verisi silinmedi). Doktorlar sayfasında
+"Bakıcı Yönetimi"/"Kayıtlı Bakıcılar"/"Yeni Bakıcı Ekle"/"BAKICI EKLE" hepsi
+doğru göründü. Test sonrası `business_type` gerçek değerine (`vet`) geri
+alındı. typecheck (dokunulan dosyalara filtrelenmiş) sıfır yeni hata.
+
+**Ayrıca bu turda temizlenen, ilgisiz bir bulgu:** repo kökünde bu Next.js
+uygulamasıyla hiç ilgisi olmayan iki React Native/Expo taslağı
+(`AntigravitiOzelTasarim/`, `PrompDenemeExpo/` — muhtemelen önceki bir
+Antigravity oturumunda `feat(ai): enhance MoffiAssistant...` commit'ine
+yanlışlıkla karışmış) Baran'ın talimatıyla silindi — `tsc --noEmit`'in
+filtresiz çıktısını kirleten ~106 ilgisiz hatanın kaynağıydı, gerçek build'i
+hiç etkilemiyorlardı.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
