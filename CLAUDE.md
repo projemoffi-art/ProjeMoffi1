@@ -1459,6 +1459,32 @@ tavanına bağlı kalıyor. Mevcut kısmi çözüm: "Ekranı Açık Tut" ayarı 
 (ekran kilitliyken bile) sadece bir native sarmalayıcıyla (Capacitor)
 mümkün — web'in aşamayacağı bir sınır.
 
+### 8.21 Ana sayfa kartındaki "iki paralel hedef sistemi" hatası + kutucuk taşması + gerçek yuvarlak takip butonu (2026-09-25)
+
+Baran'ın bulgusu: "Bugünkü Yürüyüş" kartındaki Hedef/Süre/Adım/Kalori/Kalan
+değerleri hâlâ "mock gibi görünüyor" — ve gerçekten de öyleydi:
+
+🔴 **Gerçek hata — CLAUDE.md Bölüm 7'nin "iki paralel, birbirinden habersiz
+sistem" deseninin bir örneği daha:** kart kendi AYRI hedef hesabını
+tutuyordu (`activePetObj.activity_target / 20`, varsayılan 70 → hep sabit
+"3.5 km") — yürüyüş modülünün asıl hedef sistemiyle (`QuestEngineContext.
+dailyGoal`, 8.17'de gerçek bir kullanıcı stepper'ı da eklendi) HİÇ
+konuşmuyordu. Kullanıcı tracking ekranından hedefini 3km'ye değiştirse bile
+ana sayfa hep eski, ayrı "3.5"ini gösterirdi. Düzeltme: `targetActivityKm`
+artık doğrudan `dailyGoal.distance` — TEK doğru kaynak.
+
+🔴 **Yapısal taşma:** 4 bilgi kutucuğu (Süre/Adım/Kalori/Kalan) + metinli
+buton ("Yürüyüşe Çık" + ok ikonu) TEK satırda 390px genişlikte kesinlikle
+sığmıyordu — kartın "kırık/mock" görünmesinin bir sebebi de buydu. Düzeltme:
+kutucuklar artık gerçek bir 2x2 grid'de (her zaman sığar), buton ayrı.
+
+**Gerçek, yuvarlak, anlık takibe göre davranan buton** (Baran'ın isteği):
+metin+ok yerine artık 56px çapında gerçek bir daire, ikonu CANLI duruma göre
+değişiyor — boşta turuncu ▶ (Play), aktif yürüyüşte yeşil nabızlı 🧭
+(Navigation, "canlı görüntüle"), duraklatılmışsa tekrar ▶. Playwright ile
+canlı doğrulandı: idle→aktif geçişte buton turuncudan yeşile dönüp nabız
+animasyonu başlıyor.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

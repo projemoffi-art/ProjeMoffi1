@@ -366,7 +366,7 @@ export default function LegendaryLightDashboard() {
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading } = useWalk();
     const { subscriptions, cart, cartCount, cartTotal, updateCartItem, addToCart, products, clearCart } = usePetShop();
-    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm, todaySteps } = useQuestEngine();
+    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm, todaySteps, dailyGoal } = useQuestEngine();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -526,12 +526,14 @@ export default function LegendaryLightDashboard() {
     // kopya tutmak yerine tek doğru kaynağa bağlanıldı.
     const walkedDistanceToday = todayDistanceKm;
 
-    const targetActivityKm = useMemo(() => {
-        const target = typeof activePetObj?.activity_target === 'number' 
-            ? activePetObj.activity_target 
-            : (activePetObj?.sos_settings?.activity_target ?? 70); // default target 70
-        return target > 0 ? (target / 20) : 3.5;
-    }, [activePetObj?.activity_target, activePetObj?.sos_settings?.activity_target]);
+    // Baran'ın bulduğu gerçek hata: bu kart kendi AYRI hedef hesabını
+    // (`activePetObj.activity_target / 20`) tutuyordu — yürüyüş modülünün asıl
+    // hedef sistemiyle (`QuestEngineContext.dailyGoal`, artık ayarlar panelinden
+    // gerçek bir kullanıcı tercihi de içeriyor) hiç konuşmuyordu. Tam olarak
+    // CLAUDE.md Bölüm 7'nin "iki paralel, birbirinden habersiz sistem" deseni —
+    // kullanıcı tracking ekranından hedefini değiştirse bile ana sayfa hep
+    // kendi eski, ayrı hesabını gösterirdi. Artık TEK doğru kaynağa bağlı.
+    const targetActivityKm = dailyGoal.distance;
 
     const activityPercent = useMemo(() => {
         return targetActivityKm > 0 ? Math.min(100, Math.round((walkedDistanceToday / targetActivityKm) * 100)) : 0;
@@ -1841,11 +1843,16 @@ export default function LegendaryLightDashboard() {
                                 </div>
                                 <div className="text-white/75 text-[9.5px] font-bold mt-1">%{activityPercent}</div>
                             </div>
-                            <div className="flex items-center justify-center mt-5">
-                                <div className="flex items-center gap-1">
-                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
+                            {/* Baran'ın bulgusu: 4 kutucuk + metinli buton TEK satırda hiç sığmıyordu
+                                (390px genişlikte "Yürüyüşe Çık" metni + ok ikonu + 4 kutucuk kesinlikle
+                                taşıyordu, mock/kırık görünmesinin bir sebebi de buydu). Artık kutucuklar
+                                2x2 gerçek bir grid'de (her zaman sığar), takip butonu da AYRI, gerçek
+                                yuvarlak bir FAB — anlık takip durumuna göre ikonu/nabzı değişiyor. */}
+                            <div className="flex items-center gap-3 mt-5">
+                                <div className="grid grid-cols-2 gap-1.5 flex-1 min-w-0">
+                                    <div className="bg-white/15 backdrop-blur-md rounded-lg px-2.5 py-1.5 text-white min-w-0">
                                         <div className="flex items-center gap-1 text-[10px] font-black">
-                                            <Clock className="w-3 h-3" /> {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
+                                            <Clock className="w-3 h-3 shrink-0" /> {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Süre</div>
                                     </div>
@@ -1853,32 +1860,47 @@ export default function LegendaryLightDashboard() {
                                         (km*1.3) türetiliyordu — ev içi/zayıf GPS'te asla artamıyordu. Artık
                                         gerçek ivmeölçer tabanlı sayaç (bugün tamamlanan + şu an aktif
                                         yürüyüşün canlısı), GPS'ten tamamen bağımsız. */}
-                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
-                                        <div className="flex items-center gap-1 text-[10px] font-black">
-                                            <Footprints className="w-3 h-3" /> {todaySteps.toLocaleString('tr-TR')}
+                                    <div className="bg-white/15 backdrop-blur-md rounded-lg px-2.5 py-1.5 text-white min-w-0">
+                                        <div className="flex items-center gap-1 text-[10px] font-black truncate">
+                                            <Footprints className="w-3 h-3 shrink-0" /> {todaySteps.toLocaleString('tr-TR')}
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Adım</div>
                                     </div>
-                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
-                                        <div className="flex items-center gap-1 text-[10px] font-black">
-                                            <Flame className="w-3 h-3" /> {estimatedWalkKcal} kcal
+                                    <div className="bg-white/15 backdrop-blur-md rounded-lg px-2.5 py-1.5 text-white min-w-0">
+                                        <div className="flex items-center gap-1 text-[10px] font-black truncate">
+                                            <Flame className="w-3 h-3 shrink-0" /> {estimatedWalkKcal} kcal
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Kalori</div>
                                     </div>
-                                    <div className="bg-white/15 backdrop-blur-md rounded-md px-2 py-1.5 text-white shrink-0 whitespace-nowrap">
-                                        <div className="flex items-center gap-1 text-[10px] font-black">
-                                            <MapPin className="w-3 h-3" /> {Math.max(0, targetActivityKm - walkedDistanceToday).toFixed(1)} km
+                                    <div className="bg-white/15 backdrop-blur-md rounded-lg px-2.5 py-1.5 text-white min-w-0">
+                                        <div className="flex items-center gap-1 text-[10px] font-black truncate">
+                                            <MapPin className="w-3 h-3 shrink-0" /> {Math.max(0, targetActivityKm - walkedDistanceToday).toFixed(1)} km
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Kalan</div>
                                     </div>
                                 </div>
-                                <button
+                                {/* Gerçek, yuvarlak, anlık takibe göre davranan takip butonu — Baran'ın
+                                    isteği. İdle: turuncu Play. Aktif (duraklatılmamış): yeşil nabız +
+                                    "canlı görüntüle" ikonu. Duraklatılmış: Play (devam et). */}
+                                <motion.button
                                     type="button"
+                                    whileTap={{ scale: 0.92 }}
                                     onClick={() => window.dispatchEvent(new CustomEvent('open-walk-panel'))}
-                                    className="bg-gradient-to-r from-[#F3735A] to-[#EE5B3D] rounded-md px-3 py-2 text-white text-[10.5px] font-black text-center flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ml-2 shadow-lg shadow-black/30 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                                    className={`relative w-14 h-14 rounded-full flex items-center justify-center shrink-0 shadow-lg cursor-pointer ${
+                                        activeSession && !activeSession.isPaused
+                                            ? 'bg-[#22C55E] shadow-[#22C55E]/40'
+                                            : 'bg-gradient-to-br from-[#F3735A] to-[#EE5B3D] shadow-black/30'
+                                    }`}
                                 >
-                                    {activeSession ? (activeSession.isPaused ? 'Devam Et' : 'Takibi Gör') : 'Yürüyüşe Çık'} <ArrowUpRight className="w-4 h-4 shrink-0" />
-                                </button>
+                                    {activeSession && !activeSession.isPaused && (
+                                        <span className="absolute inset-0 rounded-full bg-[#22C55E] animate-ping opacity-60" />
+                                    )}
+                                    {activeSession && !activeSession.isPaused ? (
+                                        <Navigation className="w-5 h-5 text-white relative z-10" />
+                                    ) : (
+                                        <Play className="w-5 h-5 text-white fill-current relative z-10 ml-0.5" />
+                                    )}
+                                </motion.button>
                             </div>
                         </div>
                     </div>
