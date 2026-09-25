@@ -1707,6 +1707,18 @@ export class MockApiService implements IApiService {
         return true;
     }
 
+    async getVipPerks(): Promise<{ id: string; perkKey: string; name: string; description: string; icon: string; pricePp: number; durationHours: number; rarity: 'common' | 'rare' | 'epic' | 'legendary' }[]> {
+        return [];
+    }
+
+    async getActivePerks(userId: string): Promise<Record<string, string>> {
+        return {};
+    }
+
+    async redeemVipPerk(perkId: string, name: string, pricePp: number): Promise<string> {
+        return new Date().toISOString();
+    }
+
     async getProfilesByIds(ids: string[]): Promise<{ id: string; name: string; avatar?: string; pet: string }[]> {
         const NAMES: Record<string, { name: string; avatar: string; pet: string }> = {
             '1': { name: 'Luna', avatar: '', pet: 'Golden Retriever' },

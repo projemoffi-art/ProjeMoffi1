@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, X, Check, ChevronRight, Shirt } from "lucide-react";
+import { ArrowLeft, X, Check, ChevronRight, Shirt, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
+import { useQuestEngine } from "@/context/QuestEngineContext";
 import { haptics } from "@/lib/haptics";
+import { formatRemaining } from "@/lib/vipFrames";
 
 // Faz 14: "Ödül Marketi" — daha önce hiç yoktu, referans görselin ("7. Ödül /
 // Puan Marketi", bkz. design-reference/walk-final/) doğrudan karşılığı.
@@ -20,12 +22,21 @@ import { haptics } from "@/lib/haptics";
 // üzerinden gerçek gardırop parçası satın alma (Giydirme Stüdyosu'nda
 // kullanılıyor), (2) Kuponlar — Moffi'nin kendi mağazasında geçerli gerçek
 // indirim (gerçek e-ticaret teslimatı zaten var, biz sadece indirimi veriyoruz).
+//
+// Faz 23 — Baran'ın isteği: ödüller sadece Kombinle'yle sınırlı kalmasın,
+// "VIP gibi" geçici olarak kullanılabilecek başka gerçek şeyler de olsun.
+// İncelemede Moffi Prime'ın (`PremiumUpgradeModal.tsx`) 10 vaadinden SADECE
+// Profil Aura/Neon çerçevelerinin gerçek çalışan kodu olduğu bulundu (diğer
+// 9'u sadece pazarlama metni) — bu yüzden VIP sekmesi bilinçli olarak sadece
+// bunu kapsıyor. `vip_perks`/`user_active_perks`/`redeem_vip_perk` üzerinden,
+// süresi dolan bir "geçici tadım" (bkz. src/lib/vipFrames.ts).
 
-type TabKey = 'all' | 'cosmetic' | 'coupon';
+type TabKey = 'all' | 'cosmetic' | 'coupon' | 'vip';
 
 const TABS: { key: TabKey; label: string }[] = [
     { key: 'all', label: 'Tümü' },
     { key: 'cosmetic', label: 'Kozmetik' },
+    { key: 'vip', label: 'VIP' },
     { key: 'coupon', label: 'Kuponlar' },
 ];
 
@@ -33,11 +44,12 @@ const FEATURED_COUNT = 3;
 
 interface ShopEntry {
     id: string;
-    kind: 'reward' | 'cosmetic';
+    kind: 'reward' | 'cosmetic' | 'vip';
     name: string;
     description: string | null;
     category: TabKey;
     pricePp: number;
+    perkKey?: string;
     icon: string;
     owned: boolean;
 }
@@ -45,6 +57,7 @@ interface ShopEntry {
 export default function RewardsPage() {
     const router = useRouter();
     const { user } = useAuth();
+    const { activePerks, refreshActivePerks } = useQuestEngine();
     const [entries, setEntries] = useState<ShopEntry[]>([]);
     const [balance, setBalance] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -57,10 +70,11 @@ export default function RewardsPage() {
         let cancelled = false;
         (async () => {
             setLoading(true);
-            const [rewardProducts, cosmeticItems, ownedIds, balanceData] = await Promise.all([
+            const [rewardProducts, cosmeticItems, ownedIds, vipPerks, balanceData] = await Promise.all([
                 apiService.getRewardProducts(),
                 apiService.getCosmeticItems(),
                 user ? apiService.getOwnedCosmeticItemIds(user.id) : Promise.resolve([] as string[]),
+                apiService.getVipPerks(),
                 user ? apiService.getPatiPuanBalance() : Promise.resolve(0),
             ]);
             if (cancelled) return;
@@ -73,6 +87,10 @@ export default function RewardsPage() {
                 ...cosmeticItems.map(c => ({
                     id: c.id, kind: 'cosmetic' as const, name: c.name, description: `${c.rarity === 'legendary' ? '✨ Efsanevi' : c.rarity === 'epic' ? '🔷 Epik' : c.rarity === 'rare' ? '🔹 Nadir' : 'Başlangıç'} kozmetik eşya — Giydirme Stüdyosu'nda kullanılabilir.`,
                     category: 'cosmetic' as TabKey, pricePp: c.pricePp, icon: c.icon, owned: c.isStarter || ownedSet.has(c.id),
+                })),
+                ...vipPerks.map(v => ({
+                    id: v.id, kind: 'vip' as const, name: v.name, description: v.description,
+                    category: 'vip' as TabKey, pricePp: v.pricePp, icon: v.icon, owned: false, perkKey: v.perkKey,
                 })),
             ];
             setEntries(merged);
@@ -95,20 +113,26 @@ export default function RewardsPage() {
         if (!confirmEntry) return;
         setRedeeming(true);
         try {
-            const newBalance = confirmEntry.kind === 'cosmetic'
-                ? await apiService.redeemCosmeticItem(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp)
-                : await apiService.redeemReward(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp);
-            setBalance(newBalance);
-            setEntries(prev => prev.map(e => e.id === confirmEntry.id ? { ...e, owned: e.kind === 'cosmetic' ? true : e.owned } : e));
+            let successMessage = '';
+            if (confirmEntry.kind === 'cosmetic') {
+                const newBalance = await apiService.redeemCosmeticItem(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp);
+                setBalance(newBalance);
+                setEntries(prev => prev.map(e => e.id === confirmEntry.id ? { ...e, owned: true } : e));
+                successMessage = `👕 ${confirmEntry.name} gardırobuna eklendi!`;
+            } else if (confirmEntry.kind === 'vip') {
+                const newExpiresAt = await apiService.redeemVipPerk(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp);
+                setBalance(prev => prev - confirmEntry.pricePp);
+                await refreshActivePerks();
+                successMessage = `👑 ${confirmEntry.name} aktif! ${formatRemaining(newExpiresAt)}.`;
+            } else {
+                const newBalance = await apiService.redeemReward(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp);
+                setBalance(newBalance);
+                successMessage = `🎟️ ${confirmEntry.name} hesabına tanımlandı!`;
+            }
             haptics.success();
             setRedeemed(true);
             window.dispatchEvent(new CustomEvent('moffi-toast', {
-                detail: {
-                    message: confirmEntry.kind === 'cosmetic'
-                        ? `👕 ${confirmEntry.name} gardırobuna eklendi!`
-                        : `🎟️ ${confirmEntry.name} hesabına tanımlandı!`,
-                    icon: 'Gift', color: 'text-emerald-400',
-                }
+                detail: { message: successMessage, icon: 'Gift', color: 'text-emerald-400' }
             }));
             setTimeout(() => { setConfirmEntry(null); setRedeemed(false); }, 1200);
         } catch (err: any) {
@@ -207,6 +231,8 @@ export default function RewardsPage() {
                     <div className="grid grid-cols-2 gap-3">
                         {filtered.map((entry, i) => {
                             const canAfford = balance >= entry.pricePp;
+                            const activeExpiry = entry.kind === 'vip' && entry.perkKey ? activePerks[entry.perkKey] : undefined;
+                            const isActiveVip = !!activeExpiry && new Date(activeExpiry).getTime() > Date.now();
                             return (
                                 <motion.button
                                     key={entry.id}
@@ -224,6 +250,11 @@ export default function RewardsPage() {
                                         {entry.icon}
                                     </div>
                                     <span className="text-[11px] font-black text-foreground leading-tight">{entry.name}</span>
+                                    {isActiveVip && (
+                                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                                            👑 Aktif — {formatRemaining(activeExpiry!)}
+                                        </span>
+                                    )}
                                     {entry.owned ? (
                                         <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">Sahipsin ✓</span>
                                     ) : (
@@ -231,7 +262,7 @@ export default function RewardsPage() {
                                             "text-[10px] font-black flex items-center gap-1 px-2 py-0.5 rounded-full",
                                             canAfford ? "text-orange-600 bg-orange-50 dark:bg-orange-500/10" : "text-slate-400 bg-slate-100 dark:bg-white/5"
                                         )}>
-                                            🐾 {entry.pricePp.toLocaleString('tr-TR')} puan
+                                            🐾 {entry.pricePp.toLocaleString('tr-TR')} puan{isActiveVip ? ' (uzat)' : ''}
                                         </span>
                                     )}
                                 </motion.button>

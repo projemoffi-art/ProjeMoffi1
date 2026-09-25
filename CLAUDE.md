@@ -1685,6 +1685,91 @@ kozmetik görünümün pet profili/toplulukta da gösterilmesi (şu an sadece
 Giydirme Stüdyosu'nda görünüyor — "uygulama içinde çeşitli yerlerde
 kullanılabilir" hedefinin ilk adımı, tam yaygınlaştırma ayrı bir iş).
 
+### 8.24 Faz 23 — VIP Merkezi: Ödül Merkezi'nin Kombinle'nin ötesine genişlemesi + kritik bir Moffi Prime bulgusu (2026-09-25)
+
+Baran'ın isteği: ödüller sadece Kombinle'yle sınırlı kalmasın; "avatar
+çerçevesi ama 3 günlük/1 saatlik, oyunlardaki VIP gibi" örneğini verdi,
+gerisini kendi araştırıp bulmamı istedi, Görev Merkezi'ne (QuestEngineContext)
+bağlı, kombine bir sistem olmasını istedi.
+
+**Araştırma + kod incelemesi ortaya çıkardı:** "avatar çerçevesi" örneği zaten
+gerçek, çalışan bir özellik olarak vardı — `ProfileHeader.tsx`/
+`SettingsDrawer.tsx`'te 4 stil (Minimal/Glassmorphism serbest, Neon Aura/Dark
+Metal `is_prime` ile kilitli), ama SADECE profil sayfasında render ediliyordu
+ve PP ekonomisiyle hiç konuşmuyordu.
+
+🔴🔴 **Çok daha önemli bir bulgu: Moffi Prime'ın kendi 10 vaadinden SADECE
+1'inin (Aura/Neon çerçeveler) gerçek kodu var.** `PremiumUpgradeModal.tsx`'teki
+karşılaştırma tablosunda listelenen diğer 9 perk — Elite Rozet, AI asistan
+soru hakkı artışı, AI görüntü analizi, profil ziyaretçilerini görme,
+reklamsız deneyim, NFC ödeme limiti, stüdyo kargo hakkı, sınırsız günlük adım
+puanı, öncelikli destek — kod tabanında SIFIR karşılık buluyor (`grep` ile
+doğrulandı: `MoffiAssistant.tsx`'te hiçbir Prime/limit kontrolü yok, ne
+reklam ne ziyaretçi-takibi ne elite-rozet-render'ı hiçbir yerde yok). Yani
+Moffi Prime şu an **parayla ödeyen kullanıcılara bile** vaat ettiği
+özelliklerin çoğunu fiilen vermiyor. Bu, bugünkü PP-mağazası işinden bağımsız,
+muhtemelen daha öncelikli, ayrı bir iş olarak not düşüldü — ya bu 9 özellik
+gerçekten inşa edilmeli ya da karşılaştırma tablosundan çıkarılmalı (aksi
+halde bu proje boyunca defalarca kaçınılan "sahte vaat" durumu, şu an
+PARA ÖDEYEN gerçek müşteriler için geçerli).
+
+**Bu yüzden bugünkü VIP Merkezi bilinçli olarak SADECE çerçevelere
+odaklandı** (Baran'ın onayıyla) — var olmayan 9 özellik için sahte bir
+"geçici açma" düğmesi kurmak, tam olarak bu projenin kaçındığı türden bir
+dürüst-olmayan özellik olurdu.
+
+**Kurulan gerçek sistem:**
+- `vip_perks` (2 gerçek ürün: Neon Aura Çerçevesi 3 gün/600 PP, Dark Metal
+  Çerçevesi 3 gün/600 PP) + `user_active_perks` (user_id, perk_key,
+  expires_at) + `redeem_vip_perk(perk_id)` SECURITY DEFINER RPC — `award_pati_puan`'ı
+  içeriden çağırıp aynı PP defterini kullanıyor, sahiplik KALICI değil SÜRELİ
+  (kozmetik gardıroptan farklı olarak). Erken tekrar satın alma süreleri ÜST
+  ÜSTE BİNDİRİYOR (`greatest(mevcut bitiş, şimdi) + süre`) — kullanıcı erken
+  yenilerse süre kaybetmesin diye.
+- `src/lib/vipFrames.ts` — "bu çerçeveyi kullanmaya gerçekten hakkı var mı"
+  kontrolü (`isPrime || aktif VIP perk`) TEK bir yerde toplandı, hem
+  `ProfileHeader.tsx` hem `SettingsDrawer.tsx` aynı fonksiyonu çağırıyor —
+  iki ayrı yerin aynı mantığı tekrarlayıp birbirinden habersizleşmesi riski
+  (bkz. Bölüm 7) baştan engellendi.
+- 🔴 **Bu incelemede pre-existing bir client-trust açığı da bulundu:**
+  `ProfileHeader.tsx` daha önce `frameStyle`'ı (kullanıcının kayıtlı tercihi)
+  HİÇBİR yeniden doğrulama yapmadan render ediyordu — `SettingsDrawer.tsx`'teki
+  seçim ekranı sadece SEÇİM anında `is_prime` kontrolü yapıyordu, ama bir kez
+  `settings.appearance.frameStyle='neon'` kaydedildikten sonra (örn. Prime iptal
+  olduktan sonra, ya da devtools'tan profil güncelleme API'si doğrudan
+  çağrılırsa) hiçbir yerde tekrar kontrol edilmiyordu. `resolveFrameStyle()`
+  artık KENDİ profilimiz için render anında yeniden doğruluyor (hak yoksa
+  sessizce 'minimal'e düşüyor). Başkasının profilini görüntülerken hâlâ
+  `aura_settings.frameStyle`'a güveniliyor (sunucu tarafında ayrıca
+  doğrulanmıyor) — bu kısmı TAM kapatmak (her profil görüntülemesinde
+  sunucu taraflı yeniden doğrulama) ayrı, daha büyük bir iş, bilinçli olarak
+  bugünün kapsamına alınmadı.
+- Ödül Marketi'ne yeni "VIP" sekmesi: satın alma sonrası kart hem "Aktif — X
+  gün Y saat kaldı" gösteriyor hem de HÂLÂ satın alınabilir kalıyor (süre
+  uzatma) — kozmetik/kupon kartlarının "Sahipsin ✓" ile kilitlenen
+  davranışından bilinçli olarak farklı, çünkü bu bir tüketilebilir süre, kalıcı
+  bir mülkiyet değil.
+- `SettingsDrawer.tsx`'teki çerçeve seçim ekranına Ödül Merkezi'ne giden gerçek
+  bir keşfedilebilirlik linki eklendi ("...veya Ödül Merkezi'nden birkaç
+  günlüğüne dene!").
+
+**Bilerek yapılmayan (ayrı bir iş):** Moffi Prime'ın diğer 9 sahte perk'i
+(yukarıda not düşüldü); çerçevenin community gönderileri/sıralama gibi diğer
+avatar gösterilen yerlerde de render edilmesi (post yazarı avatarı farklı
+fetch fonksiyonlarından geliyor, `aura_settings`'in her birine doğru
+akıp akmadığı doğrulanmadan sağlıklı bir genişletme yapılamazdı — ayrı bir
+inceleme gerektiriyor); başkasının profilini görüntülerken sunucu taraflı
+tam yeniden doğrulama.
+
+**Doğrulama:** typecheck temiz (sadece önceden var olan, ilgisiz hatalar
+kaldı), gerçek Playwright testiyle (giriş yapılmış oturum, gerçek test PP
+bakiyesi) uçtan uca doğrulandı — VIP sekmesinde 2 kart, Neon Aura gerçekten
+satın alındı, kart "Aktif — 2 gün 23 saat kaldı" gösterdi, Ayarlar → Profil
+Kişiselleştirme ekranında Neon Aura artık "Prime" kilidiyle değil yeşil
+"2 GÜN 23 SAAT KALDI" rozetiyle göründü ve seçilebilir hale geldi (Dark Metal
+hâlâ doğru şekilde kilitli kaldı, satın alınmadığı için). Sonra tüm test
+verisi (PP bakiyesi, aktif perk satırı) temizlendi.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

@@ -4663,6 +4663,51 @@ export class SupabaseApiService implements IApiService {
         }
     }
 
+    // Faz 23: VIP Merkezi — gerçek Prime özelliklerinin (şu an sadece profil
+    // çerçeveleri) PP karşılığında geçici tadımı.
+    async getVipPerks(): Promise<{ id: string; perkKey: string; name: string; description: string; icon: string; pricePp: number; durationHours: number; rarity: 'common' | 'rare' | 'epic' | 'legendary' }[]> {
+        try {
+            const { data, error } = await supabase
+                .from('vip_perks')
+                .select('id, perk_key, name, description, icon, price_pp, duration_hours, rarity')
+                .eq('is_active', true)
+                .order('price_pp', { ascending: true });
+            if (error) throw error;
+            return (data || []).map(p => ({
+                id: p.id, perkKey: p.perk_key, name: p.name, description: p.description,
+                icon: p.icon, pricePp: p.price_pp, durationHours: p.duration_hours, rarity: p.rarity,
+            }));
+        } catch (err) {
+            console.error("Supabase getVipPerks failed:", err);
+            return [];
+        }
+    }
+
+    // Sadece gerçekten hâlâ aktif (expires_at > now) satırları döndürür —
+    // süresi dolmuş bir perk'i "aktif" gibi göstermemek için filtre burada.
+    async getActivePerks(userId: string): Promise<Record<string, string>> {
+        try {
+            const { data, error } = await supabase
+                .from('user_active_perks')
+                .select('perk_key, expires_at')
+                .eq('user_id', userId)
+                .gt('expires_at', new Date().toISOString());
+            if (error) throw error;
+            const map: Record<string, string> = {};
+            (data || []).forEach(r => { map[r.perk_key] = r.expires_at; });
+            return map;
+        } catch (err) {
+            console.error("Supabase getActivePerks failed:", err);
+            return {};
+        }
+    }
+
+    async redeemVipPerk(perkId: string, _name: string, _pricePp: number): Promise<string> {
+        const { data, error } = await supabase.rpc('redeem_vip_perk', { p_perk_id: perkId });
+        if (error) throw error;
+        return data as string;
+    }
+
     // "Aynı Şehir" filtresi: profiles.address alanı (serbest metin) tam eşleşen
     // diğer kullanıcılar. Gerçek bir yapılandırılmış "şehir" kolonu yok - şu an
     // hiçbir gerçek kullanıcı address girmediği için bu genelde boş dönecek,

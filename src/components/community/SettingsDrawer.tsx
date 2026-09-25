@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     User, Bell, Lock, HelpCircle, 
@@ -18,8 +19,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useQuestEngine } from '@/context/QuestEngineContext';
 import { exportUserData } from '@/lib/utils/dataExport';
 import { apiService } from '@/services/apiService';
+import { isFrameUnlocked, formatRemaining, type FrameStyle } from '@/lib/vipFrames';
 
 interface SettingsDrawerProps {
     isOpen: boolean;
@@ -204,11 +207,17 @@ SliderRow.displayName = 'SliderRow';
 
 const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps) => {
     const isPrime = user?.is_prime;
+    // Faz 23: Neon/Metal artık Prime OLMADAN da Ödül Merkezi'nden alınan
+    // geçici bir VIP perk'iyle açılabiliyor (bkz. src/lib/vipFrames.ts) —
+    // seçim ekranı bunu da hesaba katmalı, yoksa kullanıcı PP ile satın aldığı
+    // çerçeveyi burada hâlâ "Prime" kilitli görüp seçemezdi.
+    const { activePerks } = useQuestEngine();
+    const router = useRouter();
     // @ts-ignore
     const currentFrame = user?.settings?.appearance?.frameStyle || 'minimal';
 
-    const handleSelect = (style: string, locked: boolean) => {
-        if (locked && !isPrime) {
+    const handleSelect = (style: FrameStyle, locked: boolean) => {
+        if (locked) {
             window.dispatchEvent(new CustomEvent('open-premium-modal'));
             return;
         }
@@ -239,7 +248,14 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
             </div>
             
             <p className="text-[11px] text-secondary mb-6 font-medium leading-relaxed">
-                Profil fotoğrafı çerçeveni seç. Neon ve Metal Aura tarzları Prime üyelerine özeldir. Ziyaretçilerini büyüle!
+                Profil fotoğrafı çerçeveni seç. Neon ve Metal Aura tarzları Prime üyelerine özeldir — veya{' '}
+                <button
+                    onClick={() => router.push('/walk/rewards')}
+                    className="underline font-black text-accent"
+                >
+                    Ödül Merkezi
+                </button>
+                'nden Moffi Puanı ile birkaç günlüğüne dene!
             </p>
 
             <div className="space-y-6">
@@ -248,12 +264,14 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
                     <h3 className="text-[10px] font-black text-secondary uppercase tracking-widest mb-3 px-1">1. Profil Çerçevesi</h3>
                     <div className="space-y-2">
                         {frames.map(frame => {
-                            const isLocked = frame.isPremium && !isPrime;
+                            const unlockedViaVip = !isPrime && frame.isPremium && isFrameUnlocked(frame.id as FrameStyle, { isPrime: false, activePerks });
+                            const isLocked = frame.isPremium && !isPrime && !unlockedViaVip;
                             const isSelected = currentFrame === frame.id;
+                            const vipPerkKey = frame.id === 'neon' ? 'frame_neon' : frame.id === 'metal' ? 'frame_metal' : null;
                             return (
-                                <button 
+                                <button
                                     key={frame.id}
-                                    onClick={() => handleSelect(frame.id, frame.isPremium)}
+                                    onClick={() => handleSelect(frame.id as FrameStyle, isLocked)}
                                     className={cn(
                                         "w-full text-left p-3 rounded-2xl border-2 transition-all relative overflow-hidden group",
                                         isSelected ? "border-accent bg-accent/5" : "border-card-border bg-foreground/[0.02] hover:bg-foreground/[0.05]",
@@ -264,6 +282,12 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
                                         <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-[#FFD700]/10 text-[#FFD700] px-2 py-1 rounded-lg">
                                             <Lock className="w-3 h-3" />
                                             <span className="text-[9px] font-black uppercase">Prime</span>
+                                        </div>
+                                    )}
+                                    {unlockedViaVip && vipPerkKey && activePerks[vipPerkKey] && (
+                                        <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-lg">
+                                            <Zap className="w-3 h-3" />
+                                            <span className="text-[9px] font-black uppercase">{formatRemaining(activePerks[vipPerkKey])}</span>
                                         </div>
                                     )}
                                     <div className="flex items-center gap-4">

@@ -425,6 +425,12 @@ export interface IApiService {
     redeemCosmeticItem(itemId: string, name: string, pricePp: number): Promise<number>;
     getPetLook(petId: string): Promise<{ equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }>;
     updatePetLook(petId: string, look: { equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }): Promise<boolean>;
+
+    // Faz 23: VIP Merkezi — gerçek Prime özelliklerinin (şu an sadece Aura/Neon
+    // profil çerçeveleri) PP karşılığında GEÇİCİ tadımı.
+    getVipPerks(): Promise<{ id: string; perkKey: string; name: string; description: string; icon: string; pricePp: number; durationHours: number; rarity: 'common' | 'rare' | 'epic' | 'legendary' }[]>;
+    getActivePerks(userId: string): Promise<Record<string, string>>;
+    redeemVipPerk(perkId: string, name: string, pricePp: number): Promise<string>;
     addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean>;
     getGameModules(): Promise<any[]>;
     getPetLeaderboard(limit?: number): Promise<any[]>;

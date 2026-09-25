@@ -12,7 +12,9 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useShare } from "@/context/ShareContext";
+import { useQuestEngine } from "@/context/QuestEngineContext";
 import { ModerationService } from "@/services/ai/ModerationService";
+import { resolveFrameStyle } from "@/lib/vipFrames";
 
 interface ProfileHeaderProps {
     user: {
@@ -43,12 +45,22 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
     const [loading, setLoading] = useState(false);
     const { user: currentUser } = useAuth();
     const { openShare } = useShare();
+    const { activePerks } = useQuestEngine();
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
-    const frameStyle = user.isOwnProfile 
-        // @ts-ignore
-        ? (currentUser?.settings?.appearance?.frameStyle || 'minimal') 
-        : (user.aura_settings?.frameStyle || 'minimal');
+    // Faz 23: Neon/Metal çerçeveleri Prime ABONELİĞİ veya Ödül Merkezi'nden
+    // alınmış GEÇİCİ bir VIP perk gerektiriyor — istemcinin gönderdiği
+    // `frameStyle` tercihi burada yeniden doğrulanıyor (bkz. src/lib/vipFrames.ts),
+    // körü körüne güvenilmiyor (örn. Prime iptal olduysa otomatik 'minimal'e düşer).
+    // Not: bu yeniden doğrulama sadece KENDİ profilimiz için tam güvenilir —
+    // `activePerks` sadece giriş yapmış kullanıcıya ait. Başka birinin profilini
+    // görüntülerken hâlâ `aura_settings.frameStyle`'a güveniliyor (pre-existing,
+    // sunucu tarafında ayrıca doğrulanmıyor — CLAUDE.md'de not düşüldü).
+    // @ts-ignore
+    const rawFrameStyle = user.isOwnProfile ? (currentUser?.settings?.appearance?.frameStyle || 'minimal') : (user.aura_settings?.frameStyle || 'minimal');
+    const frameStyle = user.isOwnProfile
+        ? resolveFrameStyle(rawFrameStyle, { isPrime: !!currentUser?.is_prime, activePerks })
+        : rawFrameStyle;
 
     const handleJoinPack = async () => {
         if (!currentUser) return;

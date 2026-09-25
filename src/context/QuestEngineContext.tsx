@@ -172,6 +172,13 @@ export interface QuestEngineContextType {
     levelXpRequired: number;
     todayEarned: { pp: number; xp: number };
 
+    // Faz 23: VIP Merkezi — perk_key -> ISO expiresAt (sadece süresi geçmemiş
+    // satırlar). Örn. activePerks['frame_neon'] varsa Neon Aura çerçevesi
+    // Prime olmadan da geçici olarak kullanılabilir (bkz. src/lib/vipFrames.ts).
+    activePerks: Record<string, string>;
+    hasActivePerk: (perkKey: string) => boolean;
+    refreshActivePerks: () => Promise<void>;
+
     // Streak
     currentStreak: number;
     streakShieldAvailable: boolean;
@@ -1027,6 +1034,26 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         }).catch(err => console.error('Moffi Puanı bakiyesi alınamadı:', err));
     }, [user?.id]);
 
+    // Faz 23: VIP Merkezi — aktif geçici perkleri (örn. frame_neon) yükle.
+    // Persist EDİLMİYOR (localStorage'a yazılmıyor) — süre kontrolü sunucu
+    // saatine göre yapılmalı, bayat bir client cache'i "hâlâ aktif" gibi
+    // gösterebilir.
+    const [activePerks, setActivePerks] = useState<Record<string, string>>({});
+    const refreshActivePerks = useCallback(async () => {
+        if (!user?.id) { setActivePerks({}); return; }
+        try {
+            const perks = await apiService.getActivePerks(user.id);
+            setActivePerks(perks);
+        } catch (err) {
+            console.error('Aktif VIP perkleri alınamadı:', err);
+        }
+    }, [user?.id]);
+    useEffect(() => { refreshActivePerks(); }, [refreshActivePerks]);
+    const hasActivePerk = useCallback((perkKey: string) => {
+        const expiresAt = activePerks[perkKey];
+        return !!expiresAt && new Date(expiresAt).getTime() > Date.now();
+    }, [activePerks]);
+
     // Faz 8: gerçek seri kalkanı durumunu DB'den al (localStorage'daki eski flag'in
     // yerine — o flag gerçek seri hesabına hiç etki etmiyordu)
     useEffect(() => {
@@ -1791,6 +1818,9 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             levelXpCurrent: levelInfo.levelXpCurrent,
             levelXpRequired: levelInfo.levelXpRequired,
             todayEarned,
+            activePerks,
+            hasActivePerk,
+            refreshActivePerks,
             currentStreak: walkStats?.currentStreak || 0,
             streakShieldAvailable,
             useStreakShield,
