@@ -67,6 +67,14 @@ export interface Badge {
     isHidden: boolean;
     earnedAt?: string;
     rarity: 'common' | 'rare' | 'epic' | 'legendary';
+    // Faz 21: rozetleri "öylesine dağıtılan" tekil eşiklerden, gerçek bir
+    // ölçüte (toplam km, en iyi seri, yürüyüş sayısı vb.) dayalı kademeli
+    // "aile" sistemine taşıma isteği (Baran). `family` aynı ölçütü paylaşan
+    // rozetleri gruplar, `tier` o aile içindeki sırasını verir — Rozetlerim
+    // ekranı bunu bir "zincir" olarak gösterir. Ailesi olmayan rozetler
+    // (anlık/durumsal: hava, saat, doğum günü vb.) bu alanları taşımaz.
+    family?: string;
+    tier?: number;
 }
 
 // Faz 18: Meydan Okumalar - gerçek walkHistory/walkStats'ten türetilen,
@@ -199,6 +207,12 @@ const LAST_STAMP_DATE_KEY = 'moffi_last_stamp_date_v2';
 // tetiklemiyordu — mevcut post sayaçları (socialCountsRef) GÜNLÜK sıfırlanıyor,
 // 10 gibi bir ömür boyu eşiği asla karşılayamaz. Ayrı, hiç sıfırlanmayan bir sayaç.
 const LIFETIME_POSTS_KEY = 'moffi_lifetime_posts_v1';
+// Faz 21: "social_dog" ("10 farklı posta beğeni bırak") AYNI sınıf hataya
+// sahipti — socialCountsRef.current.likes de günlük sıfırlanıyor, yani günde
+// 10 beğeni gibi çok daha zor bir çıtaya karşılık geliyordu, ömür boyu
+// anlamına gelmiyordu (bkz. CLAUDE.md 8.7'deki photographer bulgusuyla aynı
+// desen). Aynı çözüm: ayrı, hiç sıfırlanmayan bir ömür-boyu sayaç.
+const LIFETIME_LIKES_KEY = 'moffi_lifetime_likes_v1';
 
 // ─── LEVEL SYSTEM ─────────────────────────────────────────────────────────────
 
@@ -285,25 +299,75 @@ function computeDailyGoal(walkStats: any, petSize?: string): { distance: number;
 
 // ─── BADGE POOL ───────────────────────────────────────────────────────────────
 
+// Faz 21 — Baran'ın isteği: "öylesine dağıtılan değil birbirine bağlantılı
+// sistemli olsun, rozet sayısı da çok olsun". Önceki 17 rozetin çoğu (7/30 gün
+// seri, 100km, 10 post gibi) aslında GERÇEK, sürekli takip edilen bir ölçütün
+// (toplam km, en iyi seri, ömür boyu yürüyüş/post/beğeni sayısı, farklı bölge
+// sayısı) TEK bir noktasıydı — birbirinden habersiz, dağınık yerlerden
+// (görev şablonu eşleşmesi, meydan okuma tamamlanması, zaman/hava kontrolü)
+// tetikleniyordu. Artık aynı ölçütün ÇOKLU eşiği bir "aile" (`family`/`tier`)
+// olarak tanımlanıyor ve TEK bir merkezi effect'ten (aşağıda, "Faz 21: aile
+// bazlı kademeli rozet kontrolü") veriliyor — var olan rozet ID'leri (first_step,
+// week_fire, explorer_100, month_fire, social_dog, photographer, first_post,
+// region_explorer) KORUNDU, sadece ait oldukları ailenin bir kademesi hâline
+// geldiler (zaten kazanılmış rozetler kaybolmaz/değişmez, sadece artık bir
+// zincirin parçası). Durumsal/anlık rozetler (hava, saat, doğum günü, aylık
+// araştırma, pet bakımı) tek bir gerçek metriğe bağlı olmadığı için ailesiz
+// kaldı — bu bilinçli bir sınır, eksiklik değil (bkz. CLAUDE.md).
 const BADGE_POOL: Badge[] = [
-    { id: 'first_step', name: 'İlk Adım', description: 'İlk yürüyüşünü tamamladın', icon: '🥾', category: 'activity', isHidden: false, rarity: 'common' },
+    // ── Mesafe Ustası ailesi (walkStats.totalDistanceKm, ömür boyu) ──
+    { id: 'dist_10', name: 'İlk Kilometreler', description: 'Toplam 10 km yürüdün', icon: '🚶', category: 'activity', isHidden: false, rarity: 'common', family: 'distance', tier: 1 },
+    { id: 'dist_50', name: 'Yol Arkadaşı', description: 'Toplam 50 km yürüdün', icon: '🏃', category: 'activity', isHidden: false, rarity: 'common', family: 'distance', tier: 2 },
+    { id: 'explorer_100', name: 'Büyük Kaşif', description: 'Toplam 100 km yürüyüş', icon: '🌍', category: 'activity', isHidden: false, rarity: 'rare', family: 'distance', tier: 3 },
+    { id: 'dist_250', name: 'Yorulmaz Gezgin', description: 'Toplam 250 km yürüdün', icon: '🧭', category: 'activity', isHidden: false, rarity: 'rare', family: 'distance', tier: 4 },
+    { id: 'dist_500', name: 'Menzil Canavarı', description: 'Toplam 500 km yürüdün', icon: '🚀', category: 'activity', isHidden: false, rarity: 'epic', family: 'distance', tier: 5 },
+    { id: 'dist_1000', name: 'Efsanevi Yürüyüşçü', description: 'Toplam 1000 km yürüdün', icon: '🌌', category: 'activity', isHidden: false, rarity: 'legendary', family: 'distance', tier: 6 },
+
+    // ── Seri Gücü ailesi (walkStats.bestStreak, en uzun kesintisiz seri) ──
+    { id: 'streak_3', name: 'Isınıyoruz', description: '3 günlük kesintisiz seri', icon: '🌱', category: 'activity', isHidden: false, rarity: 'common', family: 'streak', tier: 1 },
+    { id: 'week_fire', name: 'Haftanın Ateşi', description: '7 günlük seri', icon: '🔥', category: 'activity', isHidden: false, rarity: 'common', family: 'streak', tier: 2 },
+    { id: 'streak_14', name: 'İki Haftalık Azim', description: '14 günlük kesintisiz seri', icon: '💥', category: 'activity', isHidden: false, rarity: 'rare', family: 'streak', tier: 3 },
+    { id: 'month_fire', name: 'Aylık Alev', description: '30 günlük kesintisiz seri', icon: '🏆', category: 'activity', isHidden: false, rarity: 'rare', family: 'streak', tier: 4 },
+    { id: 'streak_100', name: 'Sarsılmaz', description: '100 günlük kesintisiz seri', icon: '⚡', category: 'activity', isHidden: false, rarity: 'epic', family: 'streak', tier: 5 },
+    { id: 'streak_365', name: 'Bir Yıllık Efsane', description: '365 günlük kesintisiz seri', icon: '👑', category: 'activity', isHidden: false, rarity: 'legendary', family: 'streak', tier: 6 },
+
+    // ── Yürüyüş Sayısı ailesi (walkStats.totalWalks, ömür boyu) ──
+    { id: 'first_step', name: 'İlk Adım', description: 'İlk yürüyüşünü tamamladın', icon: '🥾', category: 'activity', isHidden: false, rarity: 'common', family: 'walks', tier: 1 },
+    { id: 'walks_10', name: 'Alışkanlık', description: 'Toplam 10 yürüyüş tamamladın', icon: '🐕', category: 'activity', isHidden: false, rarity: 'common', family: 'walks', tier: 2 },
+    { id: 'walks_50', name: 'Düzenli Yürüyüşçü', description: 'Toplam 50 yürüyüş tamamladın', icon: '🐕‍🦺', category: 'activity', isHidden: false, rarity: 'rare', family: 'walks', tier: 3 },
+    { id: 'walks_100', name: 'Yüzüncü Adım', description: 'Toplam 100 yürüyüş tamamladın', icon: '🎖️', category: 'activity', isHidden: false, rarity: 'epic', family: 'walks', tier: 4 },
+    { id: 'walks_365', name: 'Her Gün Bir Yürüyüş', description: 'Toplam 365 yürüyüş tamamladın', icon: '🏵️', category: 'activity', isHidden: false, rarity: 'legendary', family: 'walks', tier: 5 },
+
+    // ── Paylaşım ailesi (ömür boyu post sayısı) ──
+    { id: 'first_post', name: 'İlk Gönderi', description: 'İlk postunu paylaştın', icon: '✨', category: 'social', isHidden: false, rarity: 'common', family: 'posts', tier: 1 },
+    { id: 'photographer', name: 'Fotoğrafçı', description: '10 post paylaş', icon: '📸', category: 'social', isHidden: false, rarity: 'common', family: 'posts', tier: 2 },
+    { id: 'posts_25', name: 'İçerik Üretici', description: '25 post paylaş', icon: '🖼️', category: 'social', isHidden: false, rarity: 'rare', family: 'posts', tier: 3 },
+    { id: 'posts_50', name: 'Topluluk Yıldızı', description: '50 post paylaş', icon: '🎞️', category: 'social', isHidden: false, rarity: 'epic', family: 'posts', tier: 4 },
+    { id: 'posts_100', name: 'Moffi Efsanesi', description: '100 post paylaş', icon: '💎', category: 'social', isHidden: false, rarity: 'legendary', family: 'posts', tier: 5 },
+
+    // ── Beğeni Toplayıcı ailesi (ömür boyu, farklı postlara atılan beğeni) ──
+    { id: 'social_dog', name: 'Sosyal Köpek', description: '10 farklı posta beğeni bırak', icon: '👥', category: 'social', isHidden: false, rarity: 'common', family: 'likes', tier: 1 },
+    { id: 'likes_25', name: 'Etkileşim Ustası', description: '25 farklı posta beğeni bırak', icon: '💬', category: 'social', isHidden: false, rarity: 'rare', family: 'likes', tier: 2 },
+    { id: 'likes_50', name: 'Topluluk Dostu', description: '50 farklı posta beğeni bırak', icon: '❤️', category: 'social', isHidden: false, rarity: 'epic', family: 'likes', tier: 3 },
+    { id: 'likes_100', name: 'Herkesin Sevgilisi', description: '100 farklı posta beğeni bırak', icon: '🌟', category: 'social', isHidden: false, rarity: 'legendary', family: 'likes', tier: 4 },
+
+    // ── Bölge Kaşifi ailesi (ömür boyu farklı bölge sayısı) ──
+    { id: 'regions_5', name: 'Mahalle Kaşifi', description: 'Kendi şehrinde 5 farklı bölge keşfet', icon: '🏘️', category: 'explore', isHidden: false, rarity: 'rare', family: 'regions', tier: 1 },
+    { id: 'region_explorer', name: 'Şehir Kaşifi', description: 'Kendi şehrinde 10 farklı bölge keşfet', icon: '🗺️', category: 'explore', isHidden: false, rarity: 'epic', family: 'regions', tier: 2 },
+    { id: 'regions_25', name: 'Şehrin Efsanesi', description: 'Kendi şehrinde 25 farklı bölge keşfet', icon: '🏙️', category: 'explore', isHidden: false, rarity: 'legendary', family: 'regions', tier: 3 },
+
+    // ── Meydan Okuma rozetleri (haftalık/aylık pencereli, tekil — aile değil) ──
+    { id: 'monthly_explorer', name: 'Aylık Gezgin', description: 'Bu ay toplam 100 km yürü', icon: '🗻', category: 'explore', isHidden: false, rarity: 'epic' },
+    { id: 'park_hopper', name: 'Park Kaşifi', description: 'Bu hafta 5 farklı yerde yürü', icon: '🌳', category: 'explore', isHidden: false, rarity: 'rare' },
+
+    // ── Durumsal/anlık rozetler (tek bir sürekli metriğe bağlı değil) ──
     { id: 'morning_bird', name: 'Sabah Kuşu', description: 'Sabah 07:00 öncesi yürüyüş', icon: '🌅', category: 'health', isHidden: true, rarity: 'rare' },
     { id: 'night_walker', name: 'Gece Gezgini', description: 'Gece 21:00 sonrası yürüyüş', icon: '🌙', category: 'health', isHidden: true, rarity: 'rare' },
     { id: 'rain_hero', name: 'Yağmur Kahramanı', description: 'Yağmurda yürüyüş yaptın', icon: '🌧️', category: 'activity', isHidden: true, rarity: 'epic' },
-    { id: 'week_fire', name: 'Haftanın Ateşi', description: '7 günlük seri', icon: '🔥', category: 'activity', isHidden: false, rarity: 'rare' },
     { id: 'winter_warrior', name: 'Kış Savaşçısı', description: '5°C altında yürüyüş', icon: '❄️', category: 'activity', isHidden: true, rarity: 'epic' },
-    { id: 'social_dog', name: 'Sosyal Köpek', description: '10 farklı posta like at', icon: '👥', category: 'social', isHidden: false, rarity: 'common' },
-    { id: 'photographer', name: 'Fotoğrafçı', description: '10 post paylaş', icon: '📸', category: 'social', isHidden: false, rarity: 'common' },
-    { id: 'explorer_100', name: 'Büyük Kaşif', description: 'Toplam 100 km yürüyüş', icon: '🌍', category: 'activity', isHidden: false, rarity: 'legendary' },
-    { id: 'month_fire', name: 'Aylık Alev', description: '30 günlük kesintisiz seri', icon: '🏆', category: 'activity', isHidden: false, rarity: 'epic' },
     { id: 'pet_care_week', name: 'Özenli Sahip', description: '7 gün mama kaydı tut', icon: '🐾', category: 'pet', isHidden: false, rarity: 'common' },
     { id: 'birthday_walk', name: 'Doğum Günü Koşucusu', description: 'Pet doğum gününde yürü', icon: '🎂', category: 'pet', isHidden: true, rarity: 'legendary' },
-    { id: 'first_post', name: 'İlk Gönderi', description: 'İlk postunu paylaştın', icon: '✨', category: 'social', isHidden: false, rarity: 'common' },
     { id: 'research_complete', name: 'Araştırmacı', description: 'Aylık araştırmayı tamamla', icon: '🔭', category: 'explore', isHidden: false, rarity: 'epic' },
-    // Faz 18 (Meydan Okumalar gerçek implementasyonu) rozetleri:
-    { id: 'monthly_explorer', name: 'Aylık Gezgin', description: 'Bu ay toplam 100 km yürü', icon: '🗻', category: 'explore', isHidden: false, rarity: 'epic' },
-    { id: 'park_hopper', name: 'Park Kaşifi', description: 'Bu hafta 5 farklı yerde yürü', icon: '🌳', category: 'explore', isHidden: false, rarity: 'rare' },
-    { id: 'region_explorer', name: 'Şehir Kaşifi', description: 'Kendi şehrinde 10 farklı bölge keşfet', icon: '🗺️', category: 'explore', isHidden: false, rarity: 'legendary' },
 ];
 
 // Ekran 7 (Yürüyüş Sonucu) ve Ekran 13 (Rozetler) — design-reference/walk-final/'de
@@ -841,6 +905,8 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     const socialCountsRef = useRef({ posts: 0, comments: 0, likes: 0 });
     // Faz 12: "photographer" rozeti için ömür boyu (hiç sıfırlanmayan) post sayacı
     const lifetimePostCountRef = useRef(0);
+    // Faz 21: "social_dog" ailesi için aynı desende ömür boyu beğeni sayacı
+    const lifetimeLikeCountRef = useRef(0);
     const notifiedRef = useRef<Set<string>>(new Set());
     const initializedRef = useRef(false);
     const userIdRef = useRef<string | null>(null);
@@ -880,6 +946,8 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
 
         // Faz 12: ömür boyu post sayacı yükle
         lifetimePostCountRef.current = parseInt(localStorage.getItem(LIFETIME_POSTS_KEY) || '0', 10) || 0;
+        // Faz 21: ömür boyu beğeni sayacı yükle
+        lifetimeLikeCountRef.current = parseInt(localStorage.getItem(LIFETIME_LIKES_KEY) || '0', 10) || 0;
 
         // Rozet yükle
         const storedBadges = localStorage.getItem(BADGES_KEY);
@@ -1183,13 +1251,12 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             const isNowCompleted = current >= q.target;
             if (isNowCompleted && !q.completedAt) {
                 awardReward(q.reward, q.id, q.icon, q.title);
-                // Rozet kontrol
-                if (q.templateId === 'first_walk') awardBadge('first_step');
-                if (q.templateId === 'streak_7') awardBadge('week_fire');
-                if (q.templateId === 'cumulative_100km') awardBadge('explorer_100');
-                if (q.templateId === 'streak_30') awardBadge('month_fire');
-                if (q.templateId === 'first_post') awardBadge('first_post');
-                if (q.templateId === 'ten_likes') awardBadge('social_dog');
+                // Faz 21: first_step/week_fire/explorer_100/month_fire/social_dog/
+                // first_post artık "Mesafe Ustası"/"Seri Gücü"/"Yürüyüş Sayısı"/
+                // "Beğeni Toplayıcı"/"Paylaşım" ailelerinin bir kademesi — merkezi
+                // olarak aşağıdaki "aile bazlı kademeli rozet kontrolü" effect'inden
+                // (ve post/like event handler'larından) veriliyor, burada TEKRAR
+                // tetiklenmiyor (awardBadge idempotent olsa da tek sorumluluk için).
                 // Faz 12 kontrolü: pet_care_week rozeti tanımlıydı ama hiçbir yerden
                 // tetiklenmiyordu — eşleşen görev şablonu (pet_feed_week) zaten vardı
                 if (q.templateId === 'pet_feed_week') awardBadge('pet_care_week');
@@ -1331,20 +1398,55 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     // sadece isim+açıklama kalıyor) - referansın da "Dağ Kaşifi"/"Ay Işığı Yürüyüşü"
     // için yaptığı gibi (ilerlemesiz, sadece "Yakında" kilitli).
     const badgeProgress = useMemo(() => {
-        const { monthlyKm, weeklyDistinctSpots, lifetimeDistinctRegions, currentStreak, totalDistanceKm, totalWalks } = progressMetrics;
+        const { monthlyKm, weeklyDistinctSpots, lifetimeDistinctRegions, totalDistanceKm, totalWalks } = progressMetrics;
+        const bestStreak = walkStats?.bestStreak || 0;
+        const posts = lifetimePostCountRef.current;
+        const likes = lifetimeLikeCountRef.current;
         const map: Record<string, { current: number; target: number; percent: number }> = {};
         const set = (id: string, current: number, target: number) => {
             map[id] = { current, target, percent: Math.min(100, Math.round((current / target) * 100)) };
         };
-        set('first_step', Math.min(1, totalWalks), 1);
-        set('week_fire', Math.min(7, currentStreak), 7);
-        set('month_fire', Math.min(30, currentStreak), 30);
+        // Mesafe Ustası
+        set('dist_10', Math.min(10, totalDistanceKm), 10);
+        set('dist_50', Math.min(50, totalDistanceKm), 50);
         set('explorer_100', Math.min(100, totalDistanceKm), 100);
+        set('dist_250', Math.min(250, totalDistanceKm), 250);
+        set('dist_500', Math.min(500, totalDistanceKm), 500);
+        set('dist_1000', Math.min(1000, totalDistanceKm), 1000);
+        // Seri Gücü
+        set('streak_3', Math.min(3, bestStreak), 3);
+        set('week_fire', Math.min(7, bestStreak), 7);
+        set('streak_14', Math.min(14, bestStreak), 14);
+        set('month_fire', Math.min(30, bestStreak), 30);
+        set('streak_100', Math.min(100, bestStreak), 100);
+        set('streak_365', Math.min(365, bestStreak), 365);
+        // Yürüyüş Sayısı
+        set('first_step', Math.min(1, totalWalks), 1);
+        set('walks_10', Math.min(10, totalWalks), 10);
+        set('walks_50', Math.min(50, totalWalks), 50);
+        set('walks_100', Math.min(100, totalWalks), 100);
+        set('walks_365', Math.min(365, totalWalks), 365);
+        // Paylaşım
+        set('first_post', Math.min(1, posts), 1);
+        set('photographer', Math.min(10, posts), 10);
+        set('posts_25', Math.min(25, posts), 25);
+        set('posts_50', Math.min(50, posts), 50);
+        set('posts_100', Math.min(100, posts), 100);
+        // Beğeni Toplayıcı
+        set('social_dog', Math.min(10, likes), 10);
+        set('likes_25', Math.min(25, likes), 25);
+        set('likes_50', Math.min(50, likes), 50);
+        set('likes_100', Math.min(100, likes), 100);
+        // Bölge Kaşifi
+        set('regions_5', Math.min(5, lifetimeDistinctRegions), 5);
+        set('region_explorer', Math.min(10, lifetimeDistinctRegions), 10);
+        set('regions_25', Math.min(25, lifetimeDistinctRegions), 25);
+        // Meydan okuma rozetleri (aile değil, tekil pencereli)
         set('monthly_explorer', Math.min(100, monthlyKm), 100);
         set('park_hopper', Math.min(5, weeklyDistinctSpots), 5);
-        set('region_explorer', Math.min(10, lifetimeDistinctRegions), 10);
         return map;
-    }, [progressMetrics]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- lifetimePostCountRef/lifetimeLikeCountRef bilinçli olarak dep dizisinde: ömür boyu sayaçlar state değil ref, ama render anındaki .current değerleri karşılaştırılarak doğru şekilde yeniden hesaplanmasını tetikliyor.
+    }, [progressMetrics, walkStats, lifetimePostCountRef.current, lifetimeLikeCountRef.current]);
 
     const challenges = useMemo<Challenge[]>(() => {
         const now = new Date();
@@ -1397,6 +1499,47 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             }
         });
     }, [challenges, awardBadge, awardReward]);
+
+    // Faz 21 — Baran'ın isteği: rozetleri "birbirine bağlantılı sistemli" hale
+    // getirme. Mesafe/Seri/Yürüyüş Sayısı/Bölge aileleri artık dağınık görev-
+    // şablonu eşleşmeleri yerine TEK bir yerden, doğrudan gerçek walkStats/
+    // progressMetrics ölçütlerine göre kontrol ediliyor — bir ailenin YENİ bir
+    // eşiği eklenecekse (örn. ileride dist_2000) tek satır burada eklenir,
+    // görev sistemi/meydan okumalar hiç bilmez bile. awardBadge idempotent
+    // olduğu için aynı anda birden fazla eşiğin karşılanması (örn. geçmiş
+    // verinin ilk senkronizasyonu) güvenli — her biri sırayla, tek seferlik
+    // verilir. Paylaşım/Beğeni aileleri ise ömür boyu sayaçları event bazlı
+    // arttığı için kendi event handler'larında (post_added/like_toggled)
+    // kontrol ediliyor, burada tekrar edilmiyor.
+    useEffect(() => {
+        if (!initializedRef.current) return;
+        const { totalDistanceKm, totalWalks, lifetimeDistinctRegions } = progressMetrics;
+        const bestStreak = walkStats?.bestStreak || 0;
+
+        if (totalDistanceKm >= 10) awardBadge('dist_10');
+        if (totalDistanceKm >= 50) awardBadge('dist_50');
+        if (totalDistanceKm >= 100) awardBadge('explorer_100');
+        if (totalDistanceKm >= 250) awardBadge('dist_250');
+        if (totalDistanceKm >= 500) awardBadge('dist_500');
+        if (totalDistanceKm >= 1000) awardBadge('dist_1000');
+
+        if (bestStreak >= 3) awardBadge('streak_3');
+        if (bestStreak >= 7) awardBadge('week_fire');
+        if (bestStreak >= 14) awardBadge('streak_14');
+        if (bestStreak >= 30) awardBadge('month_fire');
+        if (bestStreak >= 100) awardBadge('streak_100');
+        if (bestStreak >= 365) awardBadge('streak_365');
+
+        if (totalWalks >= 1) awardBadge('first_step');
+        if (totalWalks >= 10) awardBadge('walks_10');
+        if (totalWalks >= 50) awardBadge('walks_50');
+        if (totalWalks >= 100) awardBadge('walks_100');
+        if (totalWalks >= 365) awardBadge('walks_365');
+
+        if (lifetimeDistinctRegions >= 5) awardBadge('regions_5');
+        if (lifetimeDistinctRegions >= 10) awardBadge('region_explorer');
+        if (lifetimeDistinctRegions >= 25) awardBadge('regions_25');
+    }, [progressMetrics, walkStats, awardBadge]);
 
     // ── Gizli rozet kontrolü ──────────────────────────────────────────────
     useEffect(() => {
@@ -1451,11 +1594,32 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
                 socialCountsRef.current.posts++;
                 lifetimePostCountRef.current++;
                 localStorage.setItem(LIFETIME_POSTS_KEY, String(lifetimePostCountRef.current));
-                if (lifetimePostCountRef.current >= 10) awardBadge('photographer');
+                // Faz 21: "Paylaşım" ailesi — tek bir eşik yerine tüm kademeler
+                // aynı ömür boyu sayaçtan, tek noktadan kontrol ediliyor.
+                const posts = lifetimePostCountRef.current;
+                if (posts >= 1) awardBadge('first_post');
+                if (posts >= 10) awardBadge('photographer');
+                if (posts >= 25) awardBadge('posts_25');
+                if (posts >= 50) awardBadge('posts_50');
+                if (posts >= 100) awardBadge('posts_100');
                 updateMonthlyResearchProgress();
             }
             else if (type === 'comment_added') socialCountsRef.current.comments++;
-            else if (type === 'like_toggled') socialCountsRef.current.likes++;
+            else if (type === 'like_toggled') {
+                socialCountsRef.current.likes++;
+                // Faz 21: "Beğeni Toplayıcı" ailesi — social_dog eskiden GÜNLÜK
+                // sıfırlanan socialCountsRef.current.likes'a bağlıydı (bkz.
+                // yukarıdaki LIFETIME_LIKES_KEY yorumu), yani günde 10 beğeni
+                // gerektiriyordu, "ömür boyu 10 farklı posta beğeni" değil —
+                // artık ayrı, hiç sıfırlanmayan sayaçtan.
+                lifetimeLikeCountRef.current++;
+                localStorage.setItem(LIFETIME_LIKES_KEY, String(lifetimeLikeCountRef.current));
+                const likes = lifetimeLikeCountRef.current;
+                if (likes >= 10) awardBadge('social_dog');
+                if (likes >= 25) awardBadge('likes_25');
+                if (likes >= 50) awardBadge('likes_50');
+                if (likes >= 100) awardBadge('likes_100');
+            }
             else if (type === 'page_visited_petshop') {
                 setDailyQuests(prev => {
                     const updated = prev.map(q => {

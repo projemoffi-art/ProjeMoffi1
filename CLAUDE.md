@@ -1530,6 +1530,78 @@ tarihine geri döndürüldü; "normal" ve "active" durumları da gerçek Playwri
 testiyle doğrulandı (görsel yolları doğru şekilde değişiyor). Bu turda ayrıca
 bugüne kadar biriken ~35 adet test `walk_sessions` satırı temizlendi.
 
+### 8.15 Faz 21 — Rozet sistemi: "öylesine dağıtılan" 17 rozetten, 38 rozetlik gerçek "aile/kademe" sistemine (2026-09-25)
+
+Baran'ın isteği: rozetler birbirine bağlantılı/sistemli olsun, sayı artsın,
+kazanılmış/kazanılmamış görsel ayrımı ("şimdiki gibi") aynen korunsun.
+
+**Analiz:** eski 17 rozetin çoğu (7/30 gün seri, 100km, 10 post gibi) aslında
+TEK bir sürekli ölçütün (toplam km, en iyi seri, ömür boyu post/beğeni/yürüyüş
+sayısı, farklı bölge sayısı) yalnızca BİR eşiğiydi — ve her biri farklı,
+birbirinden habersiz bir yerden (görev şablonu eşleşmesi, meydan okuma
+tamamlanması) tetikleniyordu. `awardBadge` çağrıları `QuestEngineContext.tsx`
+içinde ~7 farklı yere dağılmıştı.
+
+🔴 **Bu incelemede AYRI, gerçek bir bug daha bulundu: `social_dog` ("10 farklı
+posta like at") `photographer`'ın Faz 12'de düzeltilen TAM AYNI hatasına
+sahipti.** Tetikleyicisi `socialCountsRef.current.likes` — GÜNLÜK sıfırlanan
+bir sayaç — yani rozet aslında "ömür boyu 10 beğeni" değil, "TEK BİR GÜNDE 10
+beğeni" gerektiriyordu, pratikte neredeyse hiç kazanılamazdı. Çözüm
+`photographer`'la birebir aynı desen: yeni, hiç sıfırlanmayan
+`lifetimeLikeCountRef` + `LIFETIME_LIKES_KEY` localStorage kalıcılığı.
+
+**Kurulan yapı — 6 gerçek "aile" (`Badge.family`/`Badge.tier`):**
+- **Mesafe Ustası** (`totalDistanceKm`, ömür boyu): 10 → 50 → 100
+  (`explorer_100`, korunan ID) → 250 → 500 → 1000 km.
+- **Seri Gücü** (`walkStats.bestStreak` — canlı `currentStreak` değil, "şimdiye
+  kadar en iyi" — kazanılan rozet daha sonra seri bozulsa da geçerli kalır):
+  3 → 7 (`week_fire`) → 14 → 30 (`month_fire`) → 100 → 365 gün.
+- **Yürüyüş Sayısı** (`totalWalks`, ömür boyu): 1 (`first_step`) → 10 → 50 →
+  100 → 365 yürüyüş.
+- **Paylaşım** (ömür boyu post sayısı): 1 (`first_post`) → 10 (`photographer`)
+  → 25 → 50 → 100.
+- **Beğeni Toplayıcı** (yukarıdaki bugu düzelten yeni ömür boyu sayaç): 10
+  (`social_dog`) → 25 → 50 → 100.
+- **Bölge Kaşifi** (`lifetimeDistinctRegions`): 5 → 10 (`region_explorer`,
+  korunan ID) → 25 farklı bölge.
+
+Var olan, zaten kazanılmış rozet ID'leri (`first_step`, `week_fire`,
+`explorer_100`, `month_fire`, `social_dog`, `photographer`, `first_post`,
+`region_explorer`) KORUNDU — hiçbir kullanıcı kazandığı bir rozeti kaybetmedi,
+sadece artık bir zincirin bir kademesi. Meydan-okuma bağlantılı, pencere bazlı
+rozetler (`monthly_explorer` bu ay 100km, `park_hopper` bu hafta 5 farklı yer)
+ve durumsal/anlık rozetler (hava, saat, doğum günü, `pet_care_week`,
+`research_complete`) bilinçli olarak aile dışı bırakıldı — tek bir sürekli
+lifetime ölçütleri yok, ailelendirmek uydurma olurdu.
+
+**Mimari düzeltme (asıl "sistemli hale getirme"):** aile bazlı rozetlerin
+TAMAMI artık TEK bir merkezi `useEffect`'ten (`progressMetrics`/`walkStats`
+değiştikçe tetiklenen) veriliyor — eskiden görev-tamamlama bloğunda dağınık
+duran `if (q.templateId === 'streak_7') awardBadge('week_fire')` gibi ~6 ayrı
+satır kaldırıldı (ileride yeni bir eşik eklemek tek satırlık bir iş).
+Paylaşım/Beğeni aileleri ömür boyu sayaçları ref üzerinden arttığı için kendi
+event handler'larında (`post_added`/`like_toggled`) kontrol ediliyor —
+`photographer` deseniyle tutarlı. `badgeProgress` haritası da tüm 38 rozetin
+gerçek current/target değerini üretecek şekilde genişletildi (artık post/like
+sayaçları da güvenilir/lifetime olduğu için, önceki "uydurma sayı
+göstermeyelim" sınırı posts/likes için de kalktı).
+
+**`/walk/badges` ekranı:** kart görünümü (kazanıldı: renkli gradient+"Kazanıldı
+✓"; kazanılmadı: gri/soluk+kilit rozeti+ilerleme çubuğu) BİREBİR KORUNDU —
+sadece her ailenin kendi başlığı (+ o ailedeki kazanılan/toplam sayısı) altında
+gruplandı, ailesiz rozetler "Diğer Rozetler" başlığı altında toplandı. Yeni bir
+"Sosyal" sekmesi eklendi (Paylaşım+Beğeni aileleri artık 9 rozet, eskiden hiçbir
+sekmede görünmüyorlardı). "Seri" sekmesindeki `STREAK_BADGE_IDS` seti 2'den
+6'ya genişletildi.
+
+**Doğrulama:** typecheck temiz (sadece proje genelinde önceden var olan,
+ilgisiz hatalar kaldı), gerçek Playwright testiyle (giriş yapılmış oturum)
+doğrulandı — Tümü sekmesi 38 rozet + 7 grup başlığı (6 aile + Diğer),
+Sosyal 9, Seri 6 (tek "Seri Gücü" başlığı), Yürüyüş 13 (Mesafe+Yürüyüş
+Sayısı+Diğer), Keşif 6 (Bölge Kaşifi+Diğer) — hepsi beklenen sayılarla
+tam eşleşti. Ekran görüntüsüyle kart stilinin (kilit ikonu, kesikli
+kenarlık, gerçek ilerleme çubuğu) hiç değişmediği de doğrulandı.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

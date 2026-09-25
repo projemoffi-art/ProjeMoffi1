@@ -25,11 +25,12 @@ import { haptics } from "@/lib/haptics";
 // Keşif/Seri'ye güncellendi (Sosyal ve Özel/gizli sekmeleri kaldırıldı — gizli
 // rozetler artık sadece "Tümü" ve ait oldukları tematik sekmede görünüyor).
 
-type TabKey = 'all' | 'activity' | 'explore' | 'streak';
+type TabKey = 'all' | 'activity' | 'social' | 'explore' | 'streak';
 
 const TABS: { key: TabKey; label: string }[] = [
     { key: 'all', label: 'Tümü' },
     { key: 'activity', label: 'Yürüyüş' },
+    { key: 'social', label: 'Sosyal' },
     { key: 'explore', label: 'Keşif' },
     { key: 'streak', label: 'Seri' },
 ];
@@ -37,19 +38,36 @@ const TABS: { key: TabKey; label: string }[] = [
 // Seri-tipi rozetler kendi "category" alanlarında ('activity') diğerleriyle
 // karışık duruyor — referansın ayrı "Seri" sekmesi için burada özel olarak
 // işaretleniyor, BADGE_POOL'un kendisi bozulmadan.
-const STREAK_BADGE_IDS = new Set(['week_fire', 'month_fire']);
+const STREAK_BADGE_IDS = new Set(['streak_3', 'week_fire', 'streak_14', 'month_fire', 'streak_100', 'streak_365']);
+
+// Faz 21 — rozetler artık gerçek ölçüt ailelerine (family) ayrıldı: Rozetlerim
+// ekranında her aile kendi başlığı altında, kademe sırasına göre bir "zincir"
+// olarak gösteriliyor (kartların kendisi — kazanılmış/kazanılmamış görünümü —
+// Baran'ın "şimdiki gibi kalsın" isteği gereği DOKUNULMADI, sadece gruplama
+// eklendi). Ailesi olmayan (durumsal/anlık) rozetler "Diğer Rozetler" başlığı
+// altında, eskisi gibi tek tek listeleniyor.
+const FAMILY_LABELS: Record<string, string> = {
+    distance: 'Mesafe Ustası',
+    streak: 'Seri Gücü',
+    walks: 'Yürüyüş Sayısı',
+    posts: 'Paylaşım',
+    likes: 'Beğeni Toplayıcı',
+    regions: 'Bölge Kaşifi',
+};
+const OTHER_GROUP_LABEL = 'Diğer Rozetler';
 
 // Birim etiketleri, sadece `badgeProgress` haritasında karşılığı olan rozetler için
 const PROGRESS_UNIT: Record<string, string> = {
-    first_step: 'yürüyüş',
-    week_fire: 'gün',
-    month_fire: 'gün',
-    explorer_100: 'km',
-    monthly_explorer: 'km',
+    first_step: 'yürüyüş', walks_10: 'yürüyüş', walks_50: 'yürüyüş', walks_100: 'yürüyüş', walks_365: 'yürüyüş',
+    streak_3: 'gün', week_fire: 'gün', streak_14: 'gün', month_fire: 'gün', streak_100: 'gün', streak_365: 'gün',
+    dist_10: 'km', dist_50: 'km', explorer_100: 'km', dist_250: 'km', dist_500: 'km', dist_1000: 'km', monthly_explorer: 'km',
     park_hopper: 'yer',
-    region_explorer: 'bölge',
+    regions_5: 'bölge', region_explorer: 'bölge', regions_25: 'bölge',
+    first_post: 'post', photographer: 'post', posts_25: 'post', posts_50: 'post', posts_100: 'post',
+    social_dog: 'beğeni', likes_25: 'beğeni', likes_50: 'beğeni', likes_100: 'beğeni',
 };
-const isKmUnit = (id: string) => id === 'explorer_100' || id === 'monthly_explorer';
+const KM_UNIT_IDS = new Set(['explorer_100', 'monthly_explorer', 'dist_10', 'dist_50', 'dist_250', 'dist_500', 'dist_1000']);
+const isKmUnit = (id: string) => KM_UNIT_IDS.has(id);
 
 const RARITY_RING: Record<Badge['rarity'], string> = {
     common: 'from-slate-400 to-slate-500',
@@ -73,6 +91,17 @@ export default function BadgesPage() {
     });
 
     const earnedCount = filtered.filter(b => earnedIds.has(b.id)).length;
+
+    // Faz 21: aynı aileden rozetleri (varsa) kademe sırasına göre grupla, ailesiz
+    // olanları "Diğer Rozetler" altında BADGE_POOL sırasıyla topla. Map kullanmak
+    // ilk-görülme sırasını (dolayısıyla BADGE_POOL'daki aile sırasını) koruyor.
+    const groups = new Map<string, Badge[]>();
+    for (const b of filtered) {
+        const key = b.family || '__other__';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(b);
+    }
+    for (const list of groups.values()) list.sort((a, b) => (a.tier || 0) - (b.tier || 0));
 
     return (
         <main className="min-h-screen max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans flex flex-col border-x border-card-border">
@@ -110,57 +139,80 @@ export default function BadgesPage() {
                         <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Bu kategoride henüz rozet yok.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-3 gap-3">
-                        {filtered.map((badge, i) => {
-                            const isEarned = earnedIds.has(badge.id);
+                    <div className="space-y-6">
+                        {Array.from(groups.entries()).map(([familyKey, familyBadges], groupIdx) => {
+                            const earnedInFamily = familyBadges.filter(b => earnedIds.has(b.id)).length;
                             return (
-                                <motion.div
-                                    key={badge.id}
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    transition={{ duration: 0.22, delay: Math.min(i, 12) * 0.025 }}
-                                    whileTap={{ scale: 0.94 }}
-                                    className={cn(
-                                        "rounded-2xl p-3 flex flex-col items-center gap-1.5 text-center border cursor-default",
-                                        isEarned
-                                            ? "bg-card border-card-border shadow-moffi-card"
-                                            : "bg-slate-50 dark:bg-white/[0.02] border-dashed border-slate-200 dark:border-white/5"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "w-12 h-12 rounded-2xl flex items-center justify-center text-xl relative",
-                                        isEarned ? `bg-gradient-to-br ${RARITY_RING[badge.rarity]} shadow-md` : "bg-slate-200 dark:bg-white/5"
-                                    )}>
-                                        <span className={isEarned ? "drop-shadow" : "grayscale opacity-40"}>{badge.icon}</span>
-                                        {!isEarned && (
-                                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-300 dark:bg-white/10 flex items-center justify-center">
-                                                <Lock className="w-2.5 h-2.5 text-slate-500" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <span className={cn("text-[9px] font-black leading-tight", isEarned ? "text-foreground" : "text-slate-400")}>
-                                        {badge.name}
-                                    </span>
-                                    <span className="text-[7.5px] font-bold text-slate-400 leading-tight">{badge.description}</span>
-
-                                    {isEarned ? (
-                                        <span className="text-[7px] font-black text-emerald-600 uppercase tracking-wide mt-0.5">Kazanıldı ✓</span>
-                                    ) : badgeProgress[badge.id] ? (
-                                        <div className="w-full mt-1 space-y-1">
-                                            <div className="h-1 w-full bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-orange-500 rounded-full"
-                                                    style={{ width: `${Math.max(4, badgeProgress[badge.id].percent)}%` }}
-                                                />
-                                            </div>
-                                            <span className="text-[7px] font-black text-orange-500">
-                                                {isKmUnit(badge.id)
-                                                    ? `${badgeProgress[badge.id].current.toFixed(1)}/${badgeProgress[badge.id].target} ${PROGRESS_UNIT[badge.id]}`
-                                                    : `${Math.floor(badgeProgress[badge.id].current)}/${badgeProgress[badge.id].target} ${PROGRESS_UNIT[badge.id]}`}
+                                <div key={familyKey}>
+                                    {familyKey !== '__other__' ? (
+                                        <div className="flex items-center justify-between mb-2.5 px-0.5">
+                                            <h2 className="text-[11px] font-black text-foreground uppercase tracking-wide">
+                                                {FAMILY_LABELS[familyKey] || familyKey}
+                                            </h2>
+                                            <span className="text-[9px] font-bold text-slate-400">
+                                                {earnedInFamily}/{familyBadges.length}
                                             </span>
                                         </div>
+                                    ) : groups.size > 1 ? (
+                                        <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-wide mb-2.5 px-0.5">
+                                            {OTHER_GROUP_LABEL}
+                                        </h2>
                                     ) : null}
-                                </motion.div>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {familyBadges.map((badge, i) => {
+                                            const isEarned = earnedIds.has(badge.id);
+                                            return (
+                                                <motion.div
+                                                    key={badge.id}
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    transition={{ duration: 0.22, delay: Math.min(groupIdx * 3 + i, 12) * 0.025 }}
+                                                    whileTap={{ scale: 0.94 }}
+                                                    className={cn(
+                                                        "rounded-2xl p-3 flex flex-col items-center gap-1.5 text-center border cursor-default",
+                                                        isEarned
+                                                            ? "bg-card border-card-border shadow-moffi-card"
+                                                            : "bg-slate-50 dark:bg-white/[0.02] border-dashed border-slate-200 dark:border-white/5"
+                                                    )}
+                                                >
+                                                    <div className={cn(
+                                                        "w-12 h-12 rounded-2xl flex items-center justify-center text-xl relative",
+                                                        isEarned ? `bg-gradient-to-br ${RARITY_RING[badge.rarity]} shadow-md` : "bg-slate-200 dark:bg-white/5"
+                                                    )}>
+                                                        <span className={isEarned ? "drop-shadow" : "grayscale opacity-40"}>{badge.icon}</span>
+                                                        {!isEarned && (
+                                                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-300 dark:bg-white/10 flex items-center justify-center">
+                                                                <Lock className="w-2.5 h-2.5 text-slate-500" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <span className={cn("text-[9px] font-black leading-tight", isEarned ? "text-foreground" : "text-slate-400")}>
+                                                        {badge.name}
+                                                    </span>
+                                                    <span className="text-[7.5px] font-bold text-slate-400 leading-tight">{badge.description}</span>
+
+                                                    {isEarned ? (
+                                                        <span className="text-[7px] font-black text-emerald-600 uppercase tracking-wide mt-0.5">Kazanıldı ✓</span>
+                                                    ) : badgeProgress[badge.id] ? (
+                                                        <div className="w-full mt-1 space-y-1">
+                                                            <div className="h-1 w-full bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-orange-500 rounded-full"
+                                                                    style={{ width: `${Math.max(4, badgeProgress[badge.id].percent)}%` }}
+                                                                />
+                                                            </div>
+                                                            <span className="text-[7px] font-black text-orange-500">
+                                                                {isKmUnit(badge.id)
+                                                                    ? `${badgeProgress[badge.id].current.toFixed(1)}/${badgeProgress[badge.id].target} ${PROGRESS_UNIT[badge.id]}`
+                                                                    : `${Math.floor(badgeProgress[badge.id].current)}/${badgeProgress[badge.id].target} ${PROGRESS_UNIT[badge.id]}`}
+                                                            </span>
+                                                        </div>
+                                                    ) : null}
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             );
                         })}
                     </div>
