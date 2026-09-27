@@ -2497,6 +2497,44 @@ yeni bir işletme hesabıyla test edilmedi.
 için `isVerified` her kartta true — "Moffi Onaylı" çipi şu an filtre etkisi
 yaratmıyor. Anlamlı olması için ayrı bir doğrulama kriteri gerekir.
 
+### 8.36 Senkron denetimi + Faz A (güvenlik ve bütünlük) (2026-09-28)
+
+Denetim raporu ve 7 fazlık yol haritası: `claude.ai/artifact/EpwJ7SKUCHbwb9GQXupsBH`
+(A güvenlik → B tek olay omurgası → C takvim → D işletme verimliliği → E müşteri
+deneyimi → F Pet Shop ticareti → G temizlik).
+
+🔴 **Randevu durumu artık SADECE sunucu fonksiyonlarıyla değişir.** `appointments`
+tablosunda istemcinin UPDATE/DELETE yetkisi yok. Geçişler:
+`transition_appointment(id, status, reason)` (işletme: pending→confirmed/rejected/
+cancelled/completed, confirmed→completed/cancelled; müşteri: sadece iptal),
+`set_appointment_attendance(id, 'attended'|'no_show'|null)` (sadece işletme).
+İkisi de karşı tarafa `appointment_notifications` bildirimini kendisi yazar;
+istemcinin o tabloya INSERT yetkisi kaldırıldı (sahte bildirim açığı).
+Yeni randevu `appointments_before_insert` tetikleyicisiyle her zaman `pending`
+başlar ve sadece onaylı işletmeye alınabilir. `status_reason` kolonu eklendi.
+
+🔴 **Çift rezervasyon veritabanında engelleniyor:** `appointments_no_overlap`
+(btree_gist exclusion, aynı işletme + çakışan zaman, sadece pending/confirmed).
+İstemci hatası `23P01` → servis `SLOT_TAKEN` koduyla anlaşılır mesaj fırlatır.
+Müşteri dolu saatleri `get_clinic_busy_slots` ile alır (kişisel veri yok) —
+eskiden RLS yüzünden sadece kendi randevularını görüp başkasının saatini boş sanıyordu.
+
+🔴 **Sipariş sızıntısı kapatıldı:** `orders`/`order_items` koşulsuz okuma
+kuralları silindi, anon'un tüm yetkileri alındı. Satıcı erişimi
+`is_order_seller`/`is_order_item_seller` (RLS döngüsünü kırmak için SECURITY
+DEFINER) üzerinden; satıcı `order_items`'ta sadece `status` kolonunu
+güncelleyebilir, kargo bilgisi `set_order_tracking` RPC ile.
+
+**Aynı turda bulunan ek hata:** `/vet` müşteri sayfasında tanımsız
+`setLoadingExceptions` çağrısı, işletmenin kapalı gün/istisna verisini her
+seferinde sessizce boş bırakıyordu (kapatılan günde müşteri yine saat görüyordu).
+Düzeltildi. Randevu oluşturma hatası da artık kullanıcıya gösteriliyor.
+
+**Bilinen borç:** randevu saati istemcide `YYYY-MM-DDTHH:mm:00` (saat dilimi
+olmadan) gönderiliyor, Postgres bunu UTC kabul ediyor — "duvar saati UTC'de"
+tutuluyor. Tüm gösterimler buna göre çalışıyor ama gerçek bir saat dilimi
+düzeltmesi Faz C'de yapılmalı. `createOrder` gerçek serviste hâlâ yok (Faz F).
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

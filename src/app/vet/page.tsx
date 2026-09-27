@@ -10,7 +10,7 @@ import {
     ShieldCheck, Bell, Stethoscope
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, showToast } from "@/lib/utils";
 import { DentalCareModal } from "@/components/vet/DentalCareModal";
 import { PharmacyModal } from "@/components/vet/PharmacyModal";
 import { ClinicListModal } from "@/components/vet/ClinicListModal";
@@ -325,21 +325,25 @@ function VetPageContent() {
         };
     }, [showNotifications]);
 
+    const refreshBusySlots = async (clinicId: string) => {
+        try {
+            const from = new Date();
+            from.setHours(0, 0, 0, 0);
+            const to = new Date(from);
+            to.setDate(to.getDate() + 31);
+            setDbAppointments(await apiService.getClinicBusySlots(clinicId, from.toISOString(), to.toISOString()));
+        } catch (e) {
+            console.error("Failed to load busy slots:", e);
+        }
+    };
+
     useEffect(() => {
         if (!isSupabaseEnabled || !selectedClinic?.id) return;
-        
-        const loadDbAppointments = async () => {
-            try {
-                const list = await apiService.getClinicAppointments(selectedClinic.id);
-                setDbAppointments(list);
-            } catch (e) {
-                console.error("Failed to load DB appointments for slot filtering:", e);
-            }
-        };
+
+        const loadDbAppointments = () => refreshBusySlots(selectedClinic.id);
 
         const loadClinicExceptions = async () => {
             try {
-                setLoadingExceptions(true); 
                 const today = new Date();
                 const todayStr = today.toLocaleDateString('sv-SE');
                 const future = new Date();
@@ -774,16 +778,25 @@ function VetPageContent() {
 
         const petInfo = bookingPet ? { id: bookingPet.id, name: bookingPet.name, image: bookingPet.image } : undefined;
 
-        await bookAppointment(
-            selectedClinic,
-            selectedDate,
-            selectedTime,
-            selectedSvc?.service_name || 'general',
-            sharedPassport,
-            petInfo,
-            selectedSvc?.duration_minutes || 30,
-            selectedDoctor?.id
-        );
+        try {
+            await bookAppointment(
+                selectedClinic,
+                selectedDate,
+                selectedTime,
+                selectedSvc?.service_name || 'general',
+                sharedPassport,
+                petInfo,
+                selectedSvc?.duration_minutes || 30,
+                selectedDoctor?.id
+            );
+        } catch (error: any) {
+            showToast(error?.message || "Randevu oluşturulamadı, lütfen tekrar dene.", "AlertCircle", "text-red-500 font-bold");
+            if (error?.code === 'SLOT_TAKEN') {
+                setSelectedTime("");
+                refreshBusySlots(selectedClinic.id);
+            }
+            return;
+        }
 
         if (isVeterinary && sharedPassport) {
             try {

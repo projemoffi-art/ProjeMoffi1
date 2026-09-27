@@ -232,24 +232,11 @@ export default function BusinessAppointmentsPage() {
                 if (cancelAppointments && conflictingAppts.length > 0) {
                     setCloseWarningModal(prev => ({ ...prev, isProcessing: true }));
                     for (const appt of conflictingAppts) {
-                        console.log("İptal ediliyor:", appt.id, "Appt Objesi:", appt);
-                        console.log(`[RLS DEBUG] Randevu clinic_id: ${appt.clinicId} | Oturum açan user.id: ${user.id} | Eşleşiyor mu: ${appt.clinicId === user.id}`);
                         try {
-                            console.log("updateAppointmentStatus çağrılıyor:", appt.id);
-                            await apiService.updateAppointmentStatus(appt.id.toString(), 'cancelled');
-                            console.log("Başarıyla iptal edildi:", appt.id);
+                            await apiService.updateAppointmentStatus(appt.id.toString(), 'cancelled', 'İşletme bu tarihte kapalı');
                         } catch (e) {
                             console.error("İptal hatası:", e);
                         }
-                        
-                        try {
-                            const { error: notifError } = await supabase.from('appointment_notifications').insert({
-                                appointment_id: appt.id,
-                                recipient_id: appt.userId,
-                                message: "Kliniğiniz bu tarihte kapandığı için randevunuz iptal edildi."
-                            });
-                            if (notifError) console.error("Notif error", notifError);
-                        } catch (err) {}
                     }
                     setCloseWarningModal(prev => ({ ...prev, isProcessing: false, isOpen: false }));
                     fetchAppointmentsFromDb();
@@ -960,23 +947,11 @@ export default function BusinessAppointmentsPage() {
             if (cancelAppointments && conflictingAppts.length > 0) {
                 setCloseWarningModal(prev => ({ ...prev, isProcessing: true }));
                 for (const appt of conflictingAppts) {
-                    console.log("İptal ediliyor (Settings):", appt.id, "Appt Objesi:", appt);
-                    console.log(`[RLS DEBUG] Randevu clinic_id: ${appt.clinicId} | Oturum açan user.id: ${user.id} | Eşleşiyor mu: ${appt.clinicId === user.id}`);
                     try {
-                        await apiService.updateAppointmentStatus(appt.id.toString(), 'cancelled');
-                        console.log("Başarıyla iptal edildi:", appt.id);
+                        await apiService.updateAppointmentStatus(appt.id.toString(), 'cancelled', 'İşletme bu gün kapalı');
                     } catch (e) {
                         console.error("İptal hatası:", e);
                     }
-
-                    try {
-                        const { error: notifError } = await supabase.from('appointment_notifications').insert({
-                            appointment_id: appt.id,
-                            recipient_id: appt.userId,
-                            message: "Kliniğiniz bu tarihte kapandığı için randevunuz iptal edildi."
-                        });
-                        if (notifError) console.error("Notif error", notifError);
-                    } catch (err) {}
                 }
                 setCloseWarningModal(prev => ({ ...prev, isProcessing: false, isOpen: false }));
                 fetchAppointmentsFromDb();

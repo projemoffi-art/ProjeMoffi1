@@ -2115,25 +2115,7 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
 
-        const clinicId = dto.clinicId || null;
-        const appointmentDate = dto.appointmentDate || dto.date;
-
-        if (clinicId && appointmentDate) {
-            // Check for double booking
-            const { data: existing, error: checkErr } = await supabase
-                .from('appointments')
-                .select('id')
-                .eq('clinic_id', clinicId)
-                .eq('appointment_date', appointmentDate)
-                .in('status', ['pending', 'confirmed']);
-
-            if (checkErr) {
-                console.error("Error checking appointments:", checkErr);
-            } else if (existing && existing.length > 0) {
-                throw new Error("Bu saat dolu, lütfen başka bir saat seçin.");
-            }
-        }
-
+        // Çakışma kontrolü veritabanındaki appointments_no_overlap kısıtında; durum her zaman 'pending' başlar.
         const { data, error } = await supabase
             .from('appointments')
             .insert({
@@ -2145,7 +2127,6 @@ export class SupabaseApiService implements IApiService {
                 doctor_id: dto.doctorId || null,
                 appointment_date: dto.appointmentDate || dto.date,
                 reason: dto.notes || dto.reason || '',
-                status: dto.status || 'pending',
                 payment_id: dto.paymentId || null,
                 payment_amount: dto.paymentAmount || null,
                 payment_status: dto.paymentStatus || null,
@@ -2155,8 +2136,23 @@ export class SupabaseApiService implements IApiService {
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            if (error.code === '23P01') {
+                throw Object.assign(new Error("Bu saat az önce doldu, lütfen başka bir saat seç."), { code: 'SLOT_TAKEN' });
+            }
+            throw error;
+        }
         return data;
+    }
+
+    async getClinicBusySlots(clinicId: string, from: string, to: string): Promise<{ appointment_date: string; duration_minutes: number; doctor_id: string | null }[]> {
+        const { data, error } = await supabase.rpc('get_clinic_busy_slots', {
+            p_clinic_id: clinicId,
+            p_from: from,
+            p_to: to
+        });
+        if (error) throw error;
+        return data || [];
     }
 
     async getAppointments(userId: string): Promise<any[]> {
@@ -2182,41 +2178,12 @@ export class SupabaseApiService implements IApiService {
     }
 
     async cancelAppointment(appointmentId: string): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error('Giriş gerekli');
-
-        // Bildirim için gereken verileri önceden çekiyoruz
-        const { data: appt } = await supabase
-            .from('appointments')
-            .select(`
-                clinic_id, 
-                appointment_date, 
-                user:profiles!appointments_user_id_fkey(full_name, username)
-            `)
-            .eq('id', appointmentId)
-            .single();
-
-        const { error } = await supabase
-            .from('appointments')
-            .update({ status: 'cancelled' })
-            .eq('id', appointmentId)
-            .eq('user_id', user.id);
-
+        // Durum geçişi ve karşı tarafa bildirim sunucudaki transition_appointment içinde.
+        const { error } = await supabase.rpc('transition_appointment', {
+            p_appointment_id: appointmentId,
+            p_status: 'cancelled'
+        });
         if (error) throw error;
-
-        // Randevu başarıyla iptal edildiyse kliniğe bildirim gönder (Faz 9)
-        if (appt && appt.clinic_id) {
-            const dateStr = appt.appointment_date 
-                ? new Date(appt.appointment_date).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
-                : 'Belirtilmedi';
-            const userName = appt.user?.full_name || appt.user?.username || 'Müşteri';
-            
-            await supabase.from('appointment_notifications').insert({
-                appointment_id: appointmentId,
-                recipient_id: appt.clinic_id,
-                message: `${userName} randevusunu iptal etti: ${dateStr}`
-            });
-        }
     }
 
     async getClinicAppointments(clinicId: string): Promise<any[]> {
@@ -2386,45 +2353,22 @@ export class SupabaseApiService implements IApiService {
         };
     }
 
-    async updateAppointmentStatus(appointmentId: string, status: string, rejectReason?: string): Promise<void> {
-        const { data, error } = await supabase
-            .from('appointments')
-            .update({ status: status })
-            .eq('id', appointmentId)
-            .select();
-
+    // İzinli geçişler ve karşı tarafa bildirim sunucudaki transition_appointment içinde tanımlı.
+    async updateAppointmentStatus(appointmentId: string, status: string, reason?: string): Promise<void> {
+        const { error } = await supabase.rpc('transition_appointment', {
+            p_appointment_id: appointmentId,
+            p_status: status,
+            p_reason: reason || null
+        });
         if (error) throw error;
-        if (!data || data.length === 0) throw new Error('Güncelleme 0 satır etkiledi - RLS engelliyor olabilir.');
-
-        // Onay veya Ret durumunda müşteriye bildirim gönder (Faz 9)
-        if (status === 'confirmed' || status === 'rejected') {
-            const appt = data[0];
-            if (appt && appt.user_id) {
-                const dateStr = appt.appointment_date 
-                    ? new Date(appt.appointment_date).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
-                    : 'Belirtilmedi';
-                const statusText = status === 'confirmed' ? 'onaylandı' : 'reddedildi';
-                const reasonText = (status === 'rejected' && rejectReason) ? `. Sebep: ${rejectReason}` : '';
-                
-                await supabase.from('appointment_notifications').insert({
-                    appointment_id: appointmentId,
-                    recipient_id: appt.user_id,
-                    message: `Randevunuz ${statusText}: ${dateStr}${reasonText}`
-                });
-            }
-        }
     }
 
-    // Randevunun katılım durumunu günceller (Faz 9)
     async updateAttendanceStatus(appointmentId: string, attendanceStatus: 'attended' | 'no_show' | null): Promise<void> {
-        const { data, error } = await supabase
-            .from('appointments')
-            .update({ attendance_status: attendanceStatus })
-            .eq('id', appointmentId)
-            .select();
-
+        const { error } = await supabase.rpc('set_appointment_attendance', {
+            p_appointment_id: appointmentId,
+            p_attendance: attendanceStatus
+        });
         if (error) throw error;
-        if (!data || data.length === 0) throw new Error('Güncelleme 0 satır etkiledi - RLS engelliyor olabilir.');
     }
 
     // Bir müşterinin toplam 'gelmedi' (no_show) sayısını döndürür (Faz 9)
@@ -3875,14 +3819,11 @@ export class SupabaseApiService implements IApiService {
     }
 
     async updateOrderTracking(orderId: string, trackingNumber: string, carrier: string): Promise<void> {
-        const { error } = await supabase
-            .from('orders')
-            .update({ 
-                tracking_number: trackingNumber, 
-                carrier: carrier, 
-                shipped_at: new Date().toISOString() 
-            })
-            .eq('id', orderId);
+        const { error } = await supabase.rpc('set_order_tracking', {
+            p_order_id: orderId,
+            p_tracking_number: trackingNumber,
+            p_carrier: carrier
+        });
         if (error) throw error;
     }
 

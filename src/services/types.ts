@@ -315,6 +315,7 @@ export interface IApiService {
     getAppointments(userId: string): Promise<any[]>;
     cancelAppointment(id: string): Promise<void>;
     getClinicAppointments(clinicId: string): Promise<any[]>;
+    getClinicBusySlots(clinicId: string, from: string, to: string): Promise<{ appointment_date: string; duration_minutes: number; doctor_id: string | null }[]>;
     getClinicServices(clinicId: string): Promise<any[]>;
     getClinicDoctors(clinicId: string): Promise<Doctor[]>;
     getAllClinicDoctors(clinicId: string): Promise<Doctor[]>;
