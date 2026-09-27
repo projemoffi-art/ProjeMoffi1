@@ -17,6 +17,7 @@ import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { NoShowBadge } from "@/components/business/NoShowBadge";
 import { useBusinessType } from "@/context/BusinessTypeContext";
+import { wallParts, todayKey, addDaysKey } from "@/lib/appointmentTime";
 
 export default function BusinessAppointmentsPage() {
     const { customRecords, setCustomRecords, updatePet } = usePet();
@@ -27,7 +28,7 @@ export default function BusinessAppointmentsPage() {
     // aynı randevu daha basit, tanı/aşı/ilaç gerektirmeyen bir "hizmeti
     // tamamla" akışına düşüyor — ama randevu durumunun kendisi (pending/
     // confirmed/completed/rejected/cancelled) hiç değişmedi.
-    const { hasMedicalRecords, staffLabel } = useBusinessType();
+    const { hasMedicalRecords: typeHasMedicalRecords, staffLabel } = useBusinessType();
 
     const checkAccessGranted = (apt: any) => {
         if (!apt.sharedPassport) return false;
@@ -63,6 +64,8 @@ export default function BusinessAppointmentsPage() {
 
     // Consultation Form States
     const [selectedApt, setSelectedApt] = useState<any | null>(null);
+    // Moffi hesabı olmayan (misafir) müşterinin hesabına bağlı bir evcil hayvan yok; muayene kaydı yazılamaz.
+    const hasMedicalRecords = typeHasMedicalRecords && !selectedApt?.isGuest;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [diagnosis, setDiagnosis] = useState("");
     
@@ -305,31 +308,14 @@ export default function BusinessAppointmentsPage() {
             const list = await apiService.getClinicAppointments(clinicId);
             const mapped = list.map((item: any) => {
                 let time = "00:00";
-                let dateStr = "Bugün";
-                try {
-                    if (item.appointment_date) {
-                        const d = new Date(item.appointment_date);
-                        time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                        
-                        const year = d.getFullYear();
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        dateStr = `${year}-${month}-${day}`;
-                        
-                        const today = new Date();
-                        if (d.toDateString() === today.toDateString()) {
-                            dateStr = "Bugün";
-                        } else {
-                            const tomorrow = new Date();
-                            tomorrow.setDate(today.getDate() + 1);
-                            if (d.toDateString() === tomorrow.toDateString()) {
-                                dateStr = "Yarın";
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error parsing date:", e);
+                let dateStr = "";
+                if (item.appointment_date) {
+                    const wall = wallParts(item.appointment_date);
+                    time = wall.time;
+                    const today = todayKey();
+                    dateStr = wall.dateKey === today ? "Bugün" : wall.dateKey === addDaysKey(today, 1) ? "Yarın" : wall.dateKey;
                 }
+                const ownerName = item.user?.full_name || item.user?.username || item.guest_name || "Müşteri";
 
                 let parsedType = "Rutin Kontrol";
                 if (item.reason && item.reason.includes('Randevu tipi:')) {
@@ -341,24 +327,26 @@ export default function BusinessAppointmentsPage() {
                 return {
                     id: item.id,
                     userId: item.user_id,
-                    petName: item.pet?.name || "Milo",
-                    ownerName: item.user?.full_name || item.user?.username || "Pati Sahibi",
+                    petName: item.pet?.name || item.guest_pet_name || "Evcil hayvan belirtilmedi",
+                    ownerName,
+                    isGuest: !item.user_id,
+                    guestPhone: item.guest_phone || null,
                     time: time,
                     date: dateStr,
                     rawDate: item.appointment_date,
                     type: parsedType,
                     status: item.status,
-                    image: item.pet?.avatar_url || item.pet?.photo_url || item.pet?.image || "https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=100",
+                    image: item.pet?.avatar_url || null,
                     petId: item.pet_id,
                     sharedPassport: item.shared_passport || {
-                        basic: {
-                            breed: item.pet?.breed || "Bilinmiyor",
-                            weight: item.pet?.weight || "10kg",
-                            age: item.pet?.age || "2.1"
-                        },
+                        basic: (item.pet?.breed || item.pet?.weight || item.pet?.age) ? {
+                            breed: item.pet?.breed || null,
+                            weight: item.pet?.weight ? `${item.pet.weight} kg` : null,
+                            age: item.pet?.age || null
+                        } : null,
                         ownerInfo: {
-                            name: item.user?.full_name || item.user?.username || "Pati Sahibi",
-                            phone: item.user?.phone || ""
+                            name: ownerName,
+                            phone: item.user?.phone || item.guest_phone || ""
                         }
                     },
                     clinicId: item.clinic_id,
@@ -1172,8 +1160,10 @@ export default function BusinessAppointmentsPage() {
                                             <div key={apt.id} className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
                                                 <div className="font-mono font-bold text-gray-500 dark:text-gray-400 min-w-[3rem] text-right">{apt.time || "--:--"}</div>
                                                 <div className="relative">
-                                                    <div className="w-16 h-16 rounded-2xl bg-gray-200 overflow-hidden">
-                                                        <img src={apt.image} className="w-full h-full object-cover" />
+                                                    <div className="w-16 h-16 rounded-2xl bg-gray-200 dark:bg-white/10 overflow-hidden flex items-center justify-center text-xl font-black text-gray-500">
+                                                        {apt.image
+                                                            ? <img src={apt.image} alt="" className="w-full h-full object-cover" />
+                                                            : (apt.petName || apt.ownerName || '?').charAt(0).toLocaleUpperCase('tr-TR')}
                                                     </div>
                                                     <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-4 border-white dark:border-[#121212] flex items-center justify-center ${apt.status === 'completed' ? 'bg-[#5B4D9D]' : 'bg-green-500'}`}>
                                                         <CheckCircle2 className="w-3 h-3 text-white" />
@@ -1254,8 +1244,8 @@ export default function BusinessAppointmentsPage() {
                                                         }`}
                                                     >
                                                         {apt.status === 'completed'
-                                                            ? (hasMedicalRecords ? 'Muayene Detayı' : 'Randevu Detayı')
-                                                            : (hasMedicalRecords ? 'Muayene Et' : 'Tamamla')}
+                                                            ? (typeHasMedicalRecords && !apt.isGuest ? 'Muayene Detayı' : 'Randevu Detayı')
+                                                            : (typeHasMedicalRecords && !apt.isGuest ? 'Muayene Et' : 'Tamamla')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -1308,7 +1298,9 @@ export default function BusinessAppointmentsPage() {
                                                     className="bg-[#F8F9FC] dark:bg-white/5 p-4 rounded-3xl border border-indigo-100 dark:border-card-border"
                                                 >
                                                     <div className="flex gap-4 mb-4">
-                                                        <img src={req.image} className="w-14 h-14 rounded-2xl object-cover" />
+                                                        {req.image
+                                                            ? <img src={req.image} alt="" className="w-14 h-14 rounded-2xl object-cover" />
+                                                            : <div className="w-14 h-14 rounded-2xl bg-gray-200 dark:bg-white/10 flex items-center justify-center text-lg font-black text-gray-500 shrink-0">{(req.petName || req.ownerName || '?').charAt(0).toLocaleUpperCase('tr-TR')}</div>}
                                                         <div>
                                                             <div className="font-black text-foreground dark:text-white text-lg flex items-center flex-wrap">
                                                                 {req.petName}
@@ -2268,6 +2260,12 @@ export default function BusinessAppointmentsPage() {
                                             )}
                                         </div>
                                       </>)}
+
+                                        {typeHasMedicalRecords && selectedApt?.isGuest && (
+                                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 rounded-2xl p-3">
+                                                Bu müşteri henüz Moffi&apos;de değil. Randevuyu tamamlayabilirsin; muayene kaydı, müşteri hesabını Veri Taşıma üzerinden eşleştirdiğinde evcil hayvanının pasaportuna girilebilir.
+                                            </p>
+                                        )}
 
                                         {/* Notes — vet'te "kritik sağlık/alerji notu" (pasaporta işlenir), diğer türlerde genel randevu notu */}
                                         <div className="space-y-2">

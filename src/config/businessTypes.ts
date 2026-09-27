@@ -11,7 +11,7 @@ import type { BusinessType } from "@/context/AuthContext";
 // randevu/sipariş akışı metinlerini alır; sipariş tabanlı türler mağazaya gider.
 
 export type SidebarItemKey =
-  | 'dashboard' | 'appointments' | 'patients' | 'migration' | 'finance'
+  | 'dashboard' | 'calendar' | 'appointments' | 'patients' | 'migration' | 'finance'
   | 'orders' | 'services' | 'doctors' | 'products' | 'campaigns' | 'quests';
 
 export const BUSINESS_TYPE_ORDER: BusinessType[] = ['vet', 'grooming', 'trainer', 'shelter', 'petshop'];
@@ -59,7 +59,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     staffLabel: 'Doktor',
     staffLabelPlural: 'Doktorlar',
     hasMedicalRecords: true,
-    sidebar: ['dashboard', 'appointments', 'patients', 'migration', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
+    sidebar: ['dashboard', 'calendar', 'appointments', 'patients', 'migration', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
     defaultServices: [
       { name: "Genel Muayene", duration: 20, icon: "🩺" },
       { name: "Aşı", duration: 15, icon: "💉" },
@@ -92,7 +92,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     staffLabel: 'Bakıcı',
     staffLabelPlural: 'Bakıcılar',
     hasMedicalRecords: false,
-    sidebar: ['dashboard', 'appointments', 'patients', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
+    sidebar: ['dashboard', 'calendar', 'appointments', 'patients', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
     defaultServices: [
       { name: "Yıkama", duration: 30, icon: "🛁" },
       { name: "Tıraş / Trim", duration: 45, icon: "✂️" },
@@ -122,7 +122,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     staffLabel: 'Eğitmen',
     staffLabelPlural: 'Eğitmenler',
     hasMedicalRecords: false,
-    sidebar: ['dashboard', 'appointments', 'patients', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
+    sidebar: ['dashboard', 'calendar', 'appointments', 'patients', 'finance', 'services', 'doctors', 'campaigns', 'quests'],
     defaultServices: [
       { name: "Temel İtaat Eğitimi", duration: 60, icon: "🐾" },
       { name: "Sosyalleşme Eğitimi", duration: 60, icon: "🤝" },
@@ -147,7 +147,7 @@ export const BUSINESS_TYPE_CONFIG: Record<BusinessType, BusinessTypeConfig> = {
     staffLabel: 'Gönüllü',
     staffLabelPlural: 'Gönüllüler',
     hasMedicalRecords: false,
-    sidebar: ['dashboard', 'appointments', 'patients', 'campaigns', 'quests'],
+    sidebar: ['dashboard', 'calendar', 'appointments', 'patients', 'campaigns', 'quests'],
     defaultServices: [],
   },
   petshop: {

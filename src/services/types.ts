@@ -1,4 +1,37 @@
 import { Doctor } from '@/types/domain';
+export interface BusinessAppointmentInput {
+    start: string;
+    durationMinutes: number;
+    serviceName: string;
+    doctorId?: string | null;
+    userId?: string | null;
+    petId?: string | null;
+    guestName?: string | null;
+    guestPhone?: string | null;
+    guestPetName?: string | null;
+    guestPetSpecies?: string | null;
+    notes?: string | null;
+    ignoreHours?: boolean;
+}
+
+export interface ClinicClient {
+    client_key: string;
+    kind: 'moffi' | 'guest';
+    owner_id: string | null;
+    owner_name: string | null;
+    phone: string | null;
+    pet_id: string | null;
+    pet_name: string | null;
+    species: string | null;
+    breed: string | null;
+    avatar_url: string | null;
+    last_visit: string | null;
+    next_visit: string | null;
+    visit_count: number;
+    no_show_count: number;
+    note: string | null;
+}
+
 export interface Pet {
     id: string;
     name: string;
@@ -317,6 +350,10 @@ export interface IApiService {
     getClinicAppointments(clinicId: string): Promise<any[]>;
     getAvailableSlots(clinicId: string, date: string, durationMinutes: number | null, doctorId: string | null): Promise<{ slot_time: string; available: boolean }[]>;
     getClinicCalendar(clinicId: string, fromDate: string, days: number): Promise<{ day: string; is_open: boolean }[]>;
+    createBusinessAppointment(input: BusinessAppointmentInput): Promise<string>;
+    rescheduleAppointment(appointmentId: string, newStart: string, doctorId: string | null, ignoreHours: boolean): Promise<void>;
+    getClinicClients(): Promise<ClinicClient[]>;
+    saveClientNote(clinicId: string, clientKey: string, note: string): Promise<void>;
     getClinicServices(clinicId: string): Promise<any[]>;
     getClinicDoctors(clinicId: string): Promise<Doctor[]>;
     getAllClinicDoctors(clinicId: string): Promise<Doctor[]>;
@@ -485,7 +522,6 @@ export interface IApiService {
     approveManualClaim(unclaimedId: string): Promise<string>;
 
     // CRM / Clinic Patients
-    getClinicPatients(): Promise<any[]>;
 
     // Clinic Exceptions (Faz 6)
     getClinicExceptions(clinicId: string, startDate?: string, endDate?: string): Promise<any[]>;

@@ -2599,6 +2599,40 @@ müşteri randevu ekranında fiyat görünür. Personel sayfasında her kişi i�
 **Kapsam dışı bırakılan:** hizmet–personel eşleşmesi (hangi hizmeti kim verir)
 henüz yok; tüm aktif personel her hizmeti verebilir kabul ediliyor.
 
+### 8.39 Faz D — işletme verimliliği: takvim, işletmenin randevu girmesi, müşteri kartı (2026-09-28)
+
+- **Moffi dışı müşteri = `unclaimed_patients`** (Veri Taşıma'nın zaten var olan kaydı, yeni
+  paralel tablo açılmadı). `appointments.user_id` artık nullable; misafir randevuda
+  `unclaimed_patient_id` + `guest_name/guest_phone/guest_pet_name` anlık görüntüsü tutulur
+  (`appointments_owner_check`). `created_by` = 'customer' | 'business'. Müşteri hesabını
+  eşleştirince (`verify_and_claim`/`approve_manual_claim`) `on_unclaimed_claimed_link_appointments`
+  tetikleyicisi randevu geçmişini hesabına taşır. Randevusu olan misafir 90 günde "expired" olmaz.
+- `create_business_appointment(...)` — işletme telefon/kapıdan gelen ya da kayıtlı müşterisi
+  için doğrudan onaylı randevu açar; sadece kendi müşteri listesindeki Moffi üyelerine
+  (önceki randevu/eşleşme) açabilir. `p_ignore_hours` = mesai dışı/acil (yalnız çakışma
+  kontrolü kalır). İstemci tetikleyiciyi atlayamaz; atlama yalnızca bu fonksiyonun
+  transaction-lokal `moffi.trusted_appointment_insert` ayarıyla olur.
+- `reschedule_appointment(...)` — işletme yeniden planlama, müşteriye bildirim.
+  `find_slot_doctor` artık `p_exclude_id` (kendini hariç tut) ve `p_ignore_hours` alıyor.
+- `get_clinic_clients()` — TÜM işletme türleri için müşteri listesi (eski
+  `get_clinic_patients` sadece muayene kaydı olanları sayıyordu → kuaför/eğitmen listesi hep
+  boştu; silindi). `clinic_client_notes` = işletmeye özel müşteri notu.
+- Yeni ekranlar: `/business/calendar` (gün/hafta, personel sütunları, boş saate tıkla →
+  randevu, detay panelinde onay/red/iptal/yeniden planla/geldi-gelmedi, "tümünü onayla"),
+  `NewAppointmentModal`, `TodaySummary` (panoda "Bugün"), Hastalarım/Müşterilerim yeniden
+  yazıldı (müşteri kartı: geçmiş, gelmeme sayısı, not, bu müşteriye randevu).
+- `src/lib/appointmentTime.ts` — duvar saati yardımcıları. 🔴 İşletme randevu sayfası saati
+  `toLocaleTimeString` ile tarayıcı saat dilimine çeviriyordu (müşterinin 14:00'ü işletmede
+  17:00 görünüyordu); artık `wallParts` (UTC alanları) kullanılıyor. Aynı sayfadaki sahte
+  varsayılanlar ("Milo", "Pati Sahibi", "10kg", "2.1 yaş", stok fotoğraf) kaldırıldı.
+- 🔴 İşletme panosu `isSupabaseEnabled`'ı `useAuth()`'tan okuyordu (orada yok → hep
+  undefined) — panonun istatistikleri Faz 1'den beri hiç yüklenmiyordu. Düzeltildi.
+- Misafir müşterinin veteriner randevusunda muayene kaydı (EMR) yazılmaz (bağlı Moffi
+  evcil hayvanı yok); randevu tamamlanabilir, kayıt hesap eşleşince girilebilir.
+
+**Kapsam dışı:** 2400 satırlık `business/appointments/page.tsx` bölünmedi; yeni özellikler
+ayrı bileşen/sayfa olarak yazıldı. Takvimde sürükle-bırak yok (yeniden planla paneli var).
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

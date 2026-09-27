@@ -2,7 +2,7 @@
 import {
     Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
-    SystemAnnouncement, SystemFeedback, SocialChallenge
+    SystemAnnouncement, SystemFeedback, SocialChallenge, BusinessAppointmentInput, ClinicClient
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
@@ -2174,6 +2174,57 @@ export class SupabaseApiService implements IApiService {
         });
         if (error) throw error;
         return data || [];
+    }
+
+    async createBusinessAppointment(input: BusinessAppointmentInput): Promise<string> {
+        const { data, error } = await supabase.rpc('create_business_appointment', {
+            p_start: input.start,
+            p_minutes: input.durationMinutes,
+            p_service_name: input.serviceName,
+            p_doctor_id: input.doctorId || null,
+            p_user_id: input.userId || null,
+            p_pet_id: input.petId || null,
+            p_guest_name: input.guestName || null,
+            p_guest_phone: input.guestPhone || null,
+            p_guest_pet_name: input.guestPetName || null,
+            p_guest_pet_species: input.guestPetSpecies || null,
+            p_notes: input.notes || null,
+            p_ignore_hours: input.ignoreHours === true
+        });
+        if (error) {
+            if (error.code === '23P01') throw Object.assign(new Error(error.message), { code: 'SLOT_TAKEN' });
+            throw new Error(error.message);
+        }
+        return data as string;
+    }
+
+    async rescheduleAppointment(appointmentId: string, newStart: string, doctorId: string | null, ignoreHours: boolean): Promise<void> {
+        const { error } = await supabase.rpc('reschedule_appointment', {
+            p_appointment_id: appointmentId,
+            p_new_start: newStart,
+            p_doctor_id: doctorId,
+            p_ignore_hours: ignoreHours
+        });
+        if (error) {
+            if (error.code === '23P01') throw Object.assign(new Error(error.message), { code: 'SLOT_TAKEN' });
+            throw new Error(error.message);
+        }
+    }
+
+    async getClinicClients(): Promise<ClinicClient[]> {
+        const { data, error } = await supabase.rpc('get_clinic_clients');
+        if (error) {
+            console.error("Error fetching clinic clients:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    async saveClientNote(clinicId: string, clientKey: string, note: string): Promise<void> {
+        const { error } = await supabase
+            .from('clinic_client_notes')
+            .upsert({ clinic_id: clinicId, client_key: clientKey, note, updated_at: new Date().toISOString() });
+        if (error) throw error;
     }
 
     async getClinicCalendar(clinicId: string, fromDate: string, days: number): Promise<{ day: string; is_open: boolean }[]> {
@@ -4883,12 +4934,6 @@ export class SupabaseApiService implements IApiService {
         });
         if (error) { console.error(error); throw error; }
         return data;
-    }
-
-    async getClinicPatients(): Promise<any[]> {
-        const { data, error } = await supabase.rpc('get_clinic_patients');
-        if (error) { console.error("Error fetching clinic patients:", error); return []; }
-        return data || [];
     }
 
 

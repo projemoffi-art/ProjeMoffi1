@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import React from "react";
 
-import { apiService } from "@/services/apiService"; // imported real api
+import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { useBusinessType } from "@/context/BusinessTypeContext";
+import { TodaySummary } from "@/components/business/TodaySummary";
 
 // Faz 1 (işletme türü mimarisi, 2026-09-25) — bu sayfa daha önce iki gerçek
 // "güven" sorunu barındırıyordu: (1) "+ Yeni Kampanya" butonu gerçek
@@ -21,8 +23,9 @@ import { apiService } from "@/services/apiService"; // imported real api
 // işlevsiz (onClick'i yoktu, arkasında hiçbir sistem yoktu) olduğu için
 // kaldırıldı — CLAUDE.md Bölüm 7'nin "işlevsiz UI" hassasiyeti.
 export default function BusinessDashboard() {
-    const { user, isSupabaseEnabled } = useAuth();
+    const { user } = useAuth();
     const router = useRouter();
+    const { primaryFlow } = useBusinessType();
 
     const [dashboardStats, setDashboardStats] = React.useState({
         totalBalance: 0,
@@ -82,6 +85,8 @@ export default function BusinessDashboard() {
                     + Yeni Kampanya
                 </button>
             </div>
+
+            {isSupabaseEnabled && user?.id && primaryFlow === 'appointment' && <TodaySummary clinicId={user.id} />}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

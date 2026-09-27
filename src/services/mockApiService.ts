@@ -760,6 +760,10 @@ export class MockApiService implements IApiService {
         return ['09:00', '09:30', '10:00', '10:30', '11:00', '14:00', '14:30', '15:00'].map(slot_time => ({ slot_time, available: true }));
     }
     async getClinicCalendar(clinicId: string, fromDate: string, days: number): Promise<{ day: string; is_open: boolean }[]> { return []; }
+    async createBusinessAppointment(input: any): Promise<string> { throw new Error('Demo modunda işletme randevusu oluşturulamaz.'); }
+    async rescheduleAppointment(appointmentId: string, newStart: string, doctorId: string | null, ignoreHours: boolean): Promise<void> { throw new Error('Demo modunda yeniden planlama yapılamaz.'); }
+    async getClinicClients(): Promise<any[]> { return []; }
+    async saveClientNote(clinicId: string, clientKey: string, note: string): Promise<void> {}
     async getClinicServices(clinicId: string): Promise<any[]> { return []; }
     async getClinicDoctors(clinicId: string): Promise<any[]> { return []; }
     async getAllClinicDoctors(clinicId: string): Promise<any[]> { return []; }
@@ -1807,31 +1811,6 @@ export class MockApiService implements IApiService {
 
     async approveManualClaim(unclaimedId: string): Promise<string> {
         return "mock-pet-id";
-    }
-
-    async getClinicPatients(): Promise<any[]> {
-        return [
-            {
-                pet_id: "mock-pet-1",
-                pet_name: "Mock Karabaş",
-                species: "Köpek",
-                breed: "Kangal",
-                avatar_url: null,
-                owner_id: "mock-owner-1",
-                last_visit: new Date().toISOString(),
-                source: "appointment"
-            },
-            {
-                pet_id: "mock-pet-2",
-                pet_name: "Mock Duman",
-                species: "Kedi",
-                breed: "Tekir",
-                avatar_url: null,
-                owner_id: "mock-owner-2",
-                last_visit: new Date().toISOString(),
-                source: "migrated"
-            }
-        ];
     }
 
     async submitFeedback(feedback: Partial<SystemFeedback>): Promise<void> {}

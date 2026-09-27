@@ -18,7 +18,8 @@ import {
     Users,
     FileSpreadsheet,
     Activity,
-    Stethoscope
+    Stethoscope,
+    Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -43,8 +44,9 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
     // görüyordu.
     const ALL_MENU_ITEMS: Record<SidebarItemKey, { name: string; path: string; icon: any }> = {
         dashboard: { name: t("business.sidebar.dashboard"), path: "/business/dashboard", icon: LayoutDashboard },
-        appointments: { name: t("business.sidebar.appointments"), path: "/business/appointments", icon: Calendar },
-        patients: { name: "Hastalarım", path: "/business/patients", icon: Users },
+        calendar: { name: "Takvim", path: "/business/calendar", icon: Calendar },
+        appointments: { name: t("business.sidebar.appointments"), path: "/business/appointments", icon: Clock },
+        patients: { name: typeConfig.hasMedicalRecords ? "Hastalarım" : "Müşterilerim", path: "/business/patients", icon: Users },
         migration: { name: "Veri Taşıma", path: "/business/migration", icon: FileSpreadsheet },
         finance: { name: t("business.sidebar.finance"), path: "/business/finance", icon: Wallet },
         orders: { name: t("business.sidebar.orders"), path: "/business/orders", icon: Package },
