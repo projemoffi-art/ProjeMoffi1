@@ -2566,6 +2566,39 @@ sekmeye dönüşte tazelenir, çakışmayı zaten veritabanı kısıtı engeller
 dinliyor — birleştirilmeli (Faz G). Klinik sohbeti hâlâ 4–10 sn yoklamayla
 çalışıyor (`ClinicDetailDrawer`, işletme randevu sayfası) — Faz G.
 
+### 8.38 Faz C — takvimin doğruluğu: uygunluk tamamen sunucuda (2026-09-28)
+
+🔴 **Randevu uygunluğunun TEK kaynağı veritabanı.** İstemci artık saat hesaplamıyor.
+- `clinic_day_hours(clinic, date)` — gün saatleri: özel gün (`clinic_schedule_exceptions`)
+  > `profiles.working_hours[gün]` > `clinic_settings` başlangıç/bitiş (hafta içi).
+  Öğle arası ve aralık adımı `clinic_settings`'ten.
+- `find_slot_doctor(clinic, start, dakika, doktor?)` — geçmiş saat, çalışma saati,
+  öğle arası, personelin kendi saatleri (`doctors.working_hours`, null = işletme
+  saatleri), izin günü (`doctor_time_off`) ve çakışan randevuları kontrol eder;
+  uygunsa personel atar (gün içi en az yüklü olan).
+- `get_available_slots(clinic, date, dakika, doktor?)` müşteri saat listesi,
+  `get_clinic_calendar` kapalı günler, `get_clinics_open_status` gerçek "şu an açık /
+  X'e kadar / X'te açılıyor" bilgisi (liste ve detay ekranı).
+- `appointments_before_insert` aynı `find_slot_doctor`'u çağırır: uygun değilse
+  `23P01` (istemcide `SLOT_TAKEN`), uygunsa `doctor_id`/`doctor_name`'i atar.
+  Çakışma kısıtı artık (işletme, personel) bazında — iki doktorlu klinikte paralel
+  randevu mümkün. Personelsiz işletmede işletme bazında.
+- **Saat kuralı:** randevu saatleri Türkiye duvar saati, UTC etiketiyle tutulur
+  (`wall_now()` = İstanbul şimdisi aynı etikette). Tüm fonksiyonlar buna göre yazıldı.
+
+Düzeltilen eski hatalar: uygunluk hizmet süresine değil sabit adıma göre bakıyordu
+(60 dk hizmet sonraki randevuya taşabiliyordu), kapanışa/öğle arasına taşma ve
+doktor müsaitliği hiç kontrol edilmiyordu; klinik detayında çalışma saatleri
+("09:00-18:00"), e-posta, web sitesi, "açık" durumu, adres ("X Çevresi") ve mesafe
+("Yakında") sahteydi; klinik sorgusu hata verince canlıda mock klinikler gösteriliyordu.
+
+İşletme tarafı: Hizmetlerim'de süre + fiyat (`clinic_services.price`) düzenlenebilir,
+müşteri randevu ekranında fiyat görünür. Personel sayfasında her kişi için
+"Saatler ve izinler" (`StaffScheduleEditor`).
+
+**Kapsam dışı bırakılan:** hizmet–personel eşleşmesi (hangi hizmeti kim verir)
+henüz yok; tüm aktif personel her hizmeti verebilir kabul ediliyor.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

@@ -244,9 +244,9 @@ function VetPageContent() {
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [transparencyLogs, setTransparencyLogs] = useState<any[]>([]);
 
-    const [dbAppointments, setDbAppointments] = useState<any[]>([]);
-    const [clinicSettings, setClinicSettings] = useState<any>(null);
-    const [clinicExceptions, setClinicExceptions] = useState<any[]>([]);
+    const [timeSlots, setTimeSlots] = useState<{ time: string; disabled: boolean }[]>([]);
+    const [slotsLoading, setSlotsLoading] = useState(false);
+    const [openDays, setOpenDays] = useState<Record<string, boolean>>({});
     const [clinicServices, setClinicServices] = useState<any[]>([]);
     const [selectedSvc, setSelectedSvc] = useState<any>(null);
     const [appointmentType, setAppointmentType] = useState<string>('');
@@ -331,53 +331,17 @@ function VetPageContent() {
         };
     }, [showNotifications]);
 
-    const refreshBusySlots = async (clinicId: string) => {
-        try {
-            const from = new Date();
-            from.setHours(0, 0, 0, 0);
-            const to = new Date(from);
-            to.setDate(to.getDate() + 31);
-            setDbAppointments(await apiService.getClinicBusySlots(clinicId, from.toISOString(), to.toISOString()));
-        } catch (e) {
-            console.error("Failed to load busy slots:", e);
-        }
-    };
-
     useEffect(() => {
-        if (!isSupabaseEnabled || !selectedClinic?.id) return;
+        if (!selectedClinic?.id) return;
 
-        const loadDbAppointments = () => refreshBusySlots(selectedClinic.id);
-
-        const loadClinicExceptions = async () => {
+        const loadCalendar = async () => {
             try {
-                const today = new Date();
-                const todayStr = today.toLocaleDateString('sv-SE');
-                const future = new Date();
-                future.setDate(today.getDate() + 14);
-                const futureStr = future.toLocaleDateString('sv-SE');
-                const exceptions = await apiService.getClinicExceptions(selectedClinic.id, todayStr, futureStr);
-                console.log("Müşteri paneli getClinicExceptions SONUCU:", exceptions);
-                setClinicExceptions(exceptions || []);
+                const today = new Date().toLocaleDateString('sv-SE');
+                const days = await apiService.getClinicCalendar(selectedClinic.id, today, 14);
+                setOpenDays(Object.fromEntries(days.map(d => [d.day, d.is_open])));
             } catch (e) {
-                console.error("Failed to load clinic exceptions:", e);
-            }
-        };
-
-        const loadClinicSettings = async () => {
-            try {
-                const [settings, profile] = await Promise.all([
-                    apiService.getClinicSettings(selectedClinic.id),
-                    apiService.getUserProfile(selectedClinic.id)
-                ]);
-                
-                if (settings || profile) {
-                    setClinicSettings({
-                        ...(settings || {}),
-                        working_hours: profile?.working_hours || settings?.working_hours
-                    });
-                }
-            } catch (e) {
-                console.error("Failed to load clinic settings from database:", e);
+                console.error("Failed to load clinic calendar:", e);
+                setOpenDays({});
             }
         };
 
@@ -401,21 +365,9 @@ function VetPageContent() {
             }
         };
 
-        loadDbAppointments();
-        loadClinicSettings();
-        loadClinicExceptions();
+        loadCalendar();
         loadClinicServices();
         loadClinicDoctors();
-        
-        // Başkalarının randevuları RLS gereği canlı dinlenemez; sekmeye dönüşte dolu saatler tazelenir.
-        const handleVisibility = () => {
-            if (document.visibilityState === 'visible') loadDbAppointments();
-        };
-        document.addEventListener('visibilitychange', handleVisibility);
-
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibility);
-        };
     }, [selectedClinic?.id]);
 
     // Load sharing preferences from localStorage on mount
@@ -525,189 +477,55 @@ function VetPageContent() {
         const d = new Date();
         d.setDate(d.getDate() + i);
         const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-        const daysEng = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-        
-        let isClosed = false;
-        try {
-            let settings = clinicSettings;
-            if (!settings) {
-                const saved = typeof window !== 'undefined' ? localStorage.getItem('moffi_clinic_settings') : null;
-                settings = saved ? JSON.parse(saved) : null;
-            }
-            
-            const dayNameLower = daysEng[d.getDay()];
-            
-            if (settings?.working_hours && settings.working_hours[dayNameLower]) {
-                isClosed = settings.working_hours[dayNameLower].closed === true;
-            } else {
-                const defaultDays = { Monday: true, Tuesday: true, Wednesday: true, Thursday: true, Friday: true, Saturday: false, Sunday: false };
-                const workingDays = settings?.workingDays || defaultDays;
-                const daysEngTitle = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                isClosed = !workingDays[daysEngTitle[d.getDay()]];
-            }
-        
-        } catch(e) {}
-        
-        // Apply Date-Specific Exceptions
-        const dateStrForEx = d.toLocaleDateString('sv-SE');
-        const exception = clinicExceptions.find(ex => ex.exception_date === dateStrForEx);
-        if (exception) {
-            isClosed = exception.is_closed;
-        }
-
+        const key = d.toLocaleDateString('sv-SE');
         return {
-            key: d.toLocaleDateString('sv-SE'),
+            key,
             label: i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : `${d.getDate()} ${monthNames[d.getMonth()]}`,
             dayName: dayNames[d.getDay()],
-            closed: isClosed
+            closed: openDays[key] === false
         };
     });
 
-    const getDynamicSlots = (dateStr: string) => {
-        if (typeof window === 'undefined') return [];
+    // Uygun saatler tamamen sunucuda hesaplanır: çalışma saati, öğle arası, özel günler,
+    // hizmet süresi, personel izni/saatleri ve mevcut randevular (get_available_slots).
+    const slotRequestRef = useRef(0);
+    const loadSlots = async () => {
+        if (!selectedClinic?.id || !selectedDate) { setTimeSlots([]); return; }
+        const requestId = ++slotRequestRef.current;
+        setSlotsLoading(true);
         try {
-            let settings = clinicSettings;
-            if (!settings) {
-                const saved = localStorage.getItem('moffi_clinic_settings');
-                settings = saved ? JSON.parse(saved) : null;
+            const slots = await apiService.getAvailableSlots(
+                selectedClinic.id,
+                selectedDate,
+                selectedSvc?.duration_minutes || null,
+                selectedDoctor?.id || null
+            );
+            if (requestId === slotRequestRef.current) {
+                setTimeSlots(slots.map(s => ({ time: s.slot_time, disabled: !s.available })));
+                setSelectedTime(prev => (prev && slots.some(s => s.slot_time === prev && s.available)) ? prev : null);
             }
-
-            const dayOfW = new Date(dateStr);
-            const daysEng = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const dayNameEng = daysEng[dayOfW.getDay()];
-            const dayNameLower = dayNameEng.toLowerCase();
-
-            // Check for date-specific exceptions first
-            const exception = clinicExceptions.find(ex => ex.exception_date === dateStr);
-            let isExceptionOverride = false;
-            let exOpen = "09:00";
-            let exClose = "18:00";
-            
-            if (exception) {
-                if (exception.is_closed) return []; // Explicitly closed via exception
-                isExceptionOverride = true;
-                exOpen = exception.open_time || "09:00";
-                exClose = exception.close_time || "18:00";
-            }
-
-            // Support both old workingDays and new working_hours structure
-            let daySettings: any = null;
-            
-            if (!isExceptionOverride) {
-                if (settings?.working_hours && settings.working_hours[dayNameLower]) {
-                    daySettings = settings.working_hours[dayNameLower];
-                    if (daySettings.closed) return []; // Day is closed
-                } else {
-                    // Fallback to old structure
-                    const defaultDays = { Monday: true, Tuesday: true, Wednesday: true, Thursday: true, Friday: true, Saturday: false, Sunday: false };
-                    const workingDays = settings?.workingDays || defaultDays;
-                    if (!workingDays[dayNameEng]) return [];
-                    
-                    daySettings = {
-                        open: settings?.startTime || "09:00",
-                        close: settings?.endTime || "18:00"
-                    };
-                }
-            }
-
-            const startTime = isExceptionOverride ? exOpen : (daySettings?.open || "09:00");
-            const endTime = isExceptionOverride ? exClose : (daySettings?.close || "18:00");
-            const lunchStart = settings?.lunchStart || "12:00";
-            const lunchEnd = settings?.lunchEnd || "13:00";
-            const slotDuration = settings?.slotDuration || 30;
-
-            const slots: { time: string, disabled: boolean }[] = [];
-            const [startH, startM] = startTime.split(':').map(Number);
-            const [endH, endM] = endTime.split(':').map(Number);
-            const [lunchStartH, lunchStartM] = lunchStart.split(':').map(Number);
-            const [lunchEndH, lunchEndM] = lunchEnd.split(':').map(Number);
-
-            const startMinutes = startH * 60 + startM;
-            const endMinutes = endH * 60 + endM;
-            const lunchStartMinutes = lunchStartH * 60 + lunchStartM;
-            const lunchEndMinutes = lunchEndH * 60 + lunchEndM;
-
-            const blockedIntervals: { start: number, end: number }[] = [];
-
-            if (isSupabaseEnabled) {
-                dbAppointments.forEach((apt: any) => {
-                    if (apt.appointment_date && apt.status !== 'rejected' && apt.status !== 'cancelled') {
-                        try {
-                            const aptDateStr = apt.appointment_date.split('T')[0];
-                            if (aptDateStr === dateStr) {
-                                const timeStr = apt.appointment_date.split('T')[1].substring(0, 5);
-                                const duration = apt.duration_minutes || 30;
-                                const [h, m] = timeStr.split(':').map(Number);
-                                const startMin = h * 60 + m;
-                                const endMin = startMin + duration;
-                                blockedIntervals.push({ start: startMin, end: endMin });
-                            }
-                        } catch (e) {}
-                    }
-                });
-            } else {
-                const pendingSaved = localStorage.getItem('moffi_pending_appointments');
-                const confirmedSaved = localStorage.getItem('moffi_confirmed_appointments');
-                
-                const pendingList = pendingSaved ? JSON.parse(pendingSaved) : [];
-                const confirmedList = confirmedSaved ? JSON.parse(confirmedSaved) : [];
-                
-                const addBlocked = (apt: any) => {
-                    const duration = apt.duration_minutes || 30;
-                    const [h, m] = apt.time.split(':').map(Number);
-                    const startMin = h * 60 + m;
-                    const endMin = startMin + duration;
-                    blockedIntervals.push({ start: startMin, end: endMin });
-                };
-
-                pendingList.forEach((apt: any) => {
-                    if (apt.date === dateStr && apt.status !== 'rejected') addBlocked(apt);
-                });
-                confirmedList.forEach((apt: any) => {
-                    if (apt.date === dateStr && apt.status !== 'rejected' && apt.status !== 'cancelled') addBlocked(apt);
-                });
-            }
-
-            for (let min = startMinutes; min < endMinutes; min += slotDuration) {
-                if (min >= lunchStartMinutes && min < lunchEndMinutes) {
-                    continue;
-                }
-                const h = Math.floor(min / 60);
-                const m = min % 60;
-                const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                
-                const slotStart = min;
-                const slotEnd = min + slotDuration;
-                
-                const isBlocked = blockedIntervals.some(interval => 
-                    Math.max(interval.start, slotStart) < Math.min(interval.end, slotEnd)
-                );
-                
-                slots.push({ time: timeStr, disabled: isBlocked });
-            }
-
-            return slots;
         } catch (e) {
-            console.error("Error generating dynamic slots:", e);
-            return [];
+            console.error("Failed to load available slots:", e);
+            if (requestId === slotRequestRef.current) setTimeSlots([]);
+        } finally {
+            if (requestId === slotRequestRef.current) setSlotsLoading(false);
         }
     };
 
-    const timeSlots = (() => {
-        if (!selectedDate) return [];
-        const generated = getDynamicSlots(selectedDate);
-        if (selectedDate === dateOptions[0]?.key) {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const currentMin = now.getMinutes();
-            return generated.filter(slot => {
-                const [h, m] = slot.time.split(':').map(Number);
-                return h > currentHour || (h === currentHour && m > currentMin);
-            });
-        }
-        return generated;
-    })();
+    useEffect(() => {
+        if (activeModal !== 'appointment') return;
+        loadSlots();
+    }, [activeModal, selectedClinic?.id, selectedDate, selectedSvc?.duration_minutes, selectedDoctor?.id]);
+
+    useEffect(() => {
+        if (activeModal !== 'appointment') return;
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') loadSlots();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, [activeModal, selectedClinic?.id, selectedDate, selectedSvc?.duration_minutes, selectedDoctor?.id]);
 
     const openAppointment = (clinic: VetClinic) => {
         setSelectedClinic(clinic);
@@ -717,7 +535,6 @@ function VetPageContent() {
         setSelectedDoctor(null);
         setSelectedSvc(null);
         setSelectedAppointmentPet(activePet || pets?.[0] || null);
-        if (isSupabaseEnabled && clinic?.id) refreshBusySlots(clinic.id);
     };
 
     const calculatePetAge = (pet: any) => {
@@ -795,7 +612,7 @@ function VetPageContent() {
             showToast(error?.message || "Randevu oluşturulamadı, lütfen tekrar dene.", "AlertCircle", "text-red-500 font-bold");
             if (error?.code === 'SLOT_TAKEN') {
                 setSelectedTime(null);
-                refreshBusySlots(selectedClinic.id);
+                loadSlots();
             }
             return;
         }
@@ -1302,7 +1119,9 @@ function VetPageContent() {
                                     <div className="flex items-center gap-1.5 mt-1">
                                         <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", clinic.isOpenNow ? "bg-accent-secondary" : "bg-secondary/40")} />
                                         <span className={cn("text-[11px] font-semibold", clinic.isOpenNow ? "text-accent-secondary" : "text-secondary")}>
-                                            {clinic.isOpenNow ? "Açık" : "Kapalı"}
+                                            {clinic.isOpenNow
+                                                ? (clinic.closesAt ? `Açık · ${clinic.closesAt}'e kadar` : "Açık")
+                                                : (clinic.opensAt ? `Kapalı · ${clinic.opensAt}'de açılıyor` : "Kapalı")}
                                         </span>
                                     </div>
                                 </div>
@@ -1501,7 +1320,10 @@ function VetPageContent() {
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="font-black text-foreground tracking-tight text-sm truncate">{svc.service_name}</div>
-                                                            <div className="text-[10px] font-bold text-secondary mt-0.5">~{svc.duration_minutes} dk</div>
+                                                            <div className="text-[10px] font-bold text-secondary mt-0.5">
+                                                                ~{svc.duration_minutes} dk
+                                                                {svc.price != null && <> · {Number(svc.price).toLocaleString('tr-TR')} ₺</>}
+                                                            </div>
                                                         </div>
                                                         <div className="w-5 h-5 rounded-full border-2 border-card-border shrink-0 group-hover:border-accent/50 transition-colors" />
                                                     </button>
@@ -1515,6 +1337,10 @@ function VetPageContent() {
                                             <div>
                                                 <div className="text-[9px] font-black text-accent uppercase tracking-wider mb-0.5">Seçilen hizmet</div>
                                                 <div className="text-sm font-black text-foreground tracking-tight">{selectedSvc.service_name}</div>
+                                                <div className="text-[10px] font-bold text-secondary mt-0.5">
+                                                    ~{selectedSvc.duration_minutes || 30} dk
+                                                    {selectedSvc.price != null && <> · {Number(selectedSvc.price).toLocaleString('tr-TR')} ₺</>}
+                                                </div>
                                             </div>
                                             <button 
                                                 onClick={() => { setSelectedSvc(null); setSelectedDate(''); setSelectedTime(null); }}
@@ -1585,11 +1411,14 @@ function VetPageContent() {
                                                     "px-4 py-3 rounded-xl min-w-[85px] text-center border transition-all flex flex-col items-center snap-start shrink-0",
                                                     selectedDate === day.key
                                                         ? "bg-accent text-white border-accent shadow-lg shadow-accent/20 font-black"
-                                                        : "border-card-border bg-card text-secondary hover:border-card-border hover:text-foreground"
+                                                        : day.closed
+                                                            ? "border-transparent bg-card/50 text-secondary/50"
+                                                            : "border-card-border bg-card text-secondary hover:border-card-border hover:text-foreground"
                                                 )}
                                             >
                                                 <div className="text-[8px] font-bold uppercase tracking-wider mb-0.5">{day.dayName}</div>
                                                 <div className="text-xs font-black">{day.label}</div>
+                                                {day.closed && <div className="text-[8px] font-bold mt-0.5">Kapalı</div>}
                                             </button>
                                             );
                                         })}
@@ -1598,7 +1427,14 @@ function VetPageContent() {
 
                                 <div className="mb-6 text-left">
                                     <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-3 block px-1">Saat seçimi</label>
-                                    <div className="grid grid-cols-4 gap-2">
+                                    {!slotsLoading && selectedDate && timeSlots.filter(s => !s.disabled).length === 0 && (
+                                        <div className="bg-card border border-card-border rounded-2xl p-4 text-center text-xs font-bold text-secondary">
+                                            {openDays[selectedDate] === false
+                                                ? "İşletme bu gün kapalı. Başka bir gün seç."
+                                                : "Bu gün için uygun saat kalmadı. Başka bir gün seç."}
+                                        </div>
+                                    )}
+                                    <div className={cn("grid grid-cols-4 gap-2 transition-opacity", slotsLoading && "opacity-50")}>
                                         {timeSlots.map(({ time, disabled }, tIndex) => {
                                             if (!time) console.warn("🚨 BOŞ TIME DEĞERİ!", { time, index: tIndex });
                                             return (

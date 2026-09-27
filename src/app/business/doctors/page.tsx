@@ -7,6 +7,7 @@ import { Plus, Users, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Doctor } from "@/types/domain";
 import { useBusinessType } from "@/context/BusinessTypeContext";
+import { StaffScheduleEditor } from "@/components/business/StaffScheduleEditor";
 
 export default function BusinessDoctorsPage() {
     const { user } = useAuth();
@@ -19,6 +20,7 @@ export default function BusinessDoctorsPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<boolean>(false);
 
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     const [newName, setNewName] = useState("");
     const [newTitle, setNewTitle] = useState("");
 
@@ -127,7 +129,8 @@ export default function BusinessDoctorsPage() {
                                 </div>
                             ) : (
                                 doctors.map((doc) => (
-                                    <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+                                    <div key={doc.id} className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+                                    <div className="flex items-center justify-between gap-3">
                                         <div>
                                             <div className="font-bold text-sm text-foreground dark:text-white flex items-center gap-2">
                                                 {doc.name}
@@ -139,12 +142,26 @@ export default function BusinessDoctorsPage() {
                                             </div>
                                             {doc.title && <div className="text-xs text-gray-500 font-medium mt-1">{doc.title}</div>}
                                         </div>
-                                        <button
-                                            onClick={() => handleToggleStatus(doc)}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${doc.is_active ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                                        >
-                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${doc.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
-                                        </button>
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            <button
+                                                onClick={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
+                                                aria-expanded={expandedId === doc.id}
+                                                className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                                            >
+                                                {expandedId === doc.id ? 'Kapat' : 'Saatler ve izinler'}
+                                            </button>
+                                            <button
+                                                onClick={() => handleToggleStatus(doc)}
+                                                aria-label={doc.is_active ? 'Pasif yap' : 'Aktif yap'}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${doc.is_active ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                                            >
+                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${doc.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {expandedId === doc.id && user?.id && (
+                                        <StaffScheduleEditor doctorId={doc.id} clinicId={user.id} staffLabel={staffLabel} />
+                                    )}
                                     </div>
                                 ))
                             )}

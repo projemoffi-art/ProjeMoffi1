@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X, Phone, Navigation, Star, MapPin, Maximize,
@@ -171,8 +171,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
                     ...clinicData,
                     ...cData,
                     imageUrl: clinicData?.avatar_url || clinicData?.logo || res?.avatar_url || res?.logo || null,
-                    distance: 'Yakında',
-                    address: clinicData.name + ' Çevresi'
+                    distance: clinicData.distance
                 };
                 setClinic(finalClinic);
             }
@@ -398,7 +397,21 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
                                                             <Clock className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                                                             <div>
                                                                 <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest block">Çalışma Durumu</span>
-                                                                <span className={cn("text-[12px] font-bold", clinic.isOpenNow ? "text-emerald-600" : "text-red-500")}>{clinic.isOpenNow ? "Şu an açık" : "Şu an kapalı"}</span>
+                                                                <span className={cn("text-[12px] font-bold", clinic.isOpenNow ? "text-emerald-600" : "text-red-500")}>
+                                                                    {clinic.isOpenNow
+                                                                        ? (clinic.closesAt ? `Şu an açık · ${clinic.closesAt}'e kadar` : "Şu an açık")
+                                                                        : (clinic.opensAt ? `Şu an kapalı · ${clinic.opensAt}'de açılıyor` : "Şu an kapalı")}
+                                                                </span>
+                                                                {clinic.weeklyHours?.length > 0 && (
+                                                                    <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 text-[11px]">
+                                                                        {clinic.weeklyHours.map((h: { day: string; text: string }) => (
+                                                                            <Fragment key={h.day}>
+                                                                                <span className="font-bold text-slate-400">{h.day}</span>
+                                                                                <span className={cn("font-bold tabular-nums", h.text === 'Kapalı' ? "text-slate-400" : "text-foreground")}>{h.text}</span>
+                                                                            </Fragment>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

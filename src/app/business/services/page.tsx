@@ -88,6 +88,10 @@ export default function BusinessServicesPage() {
         setServices(services.filter(s => s.id !== id));
     };
 
+    const updateService = (id: string, patch: Record<string, any>) => {
+        setServices(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
+    };
+
     const handleSave = async () => {
         if (!user?.id) return;
         setIsSaving(true);
@@ -106,7 +110,8 @@ export default function BusinessServicesPage() {
                 const toInsert = services.map(s => ({
                     clinic_id: user.id,
                     service_name: s.service_name,
-                    duration_minutes: s.duration_minutes,
+                    duration_minutes: Math.min(Math.max(parseInt(s.duration_minutes) || 30, 5), 480),
+                    price: s.price === '' || s.price == null ? null : Math.max(Number(s.price), 0),
                     is_custom: s.is_custom
                 }));
 
@@ -249,11 +254,37 @@ export default function BusinessServicesPage() {
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: "auto" }}
                                             exit={{ opacity: 0, height: 0 }}
-                                            className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50"
+                                            className="flex items-center justify-between gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50"
                                         >
-                                            <div>
-                                                <div className="font-bold text-sm text-foreground dark:text-white">{svc.service_name}</div>
-                                                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{svc.duration_minutes} Dk {svc.is_custom && " • Özel"}</div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-bold text-sm text-foreground dark:text-white truncate">{svc.service_name}{svc.is_custom && <span className="text-[10px] text-gray-500 font-bold"> · Özel</span>}</div>
+                                                <div className="flex items-center gap-2 mt-1.5">
+                                                    <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500">
+                                                        <input
+                                                            type="number"
+                                                            min={5}
+                                                            max={480}
+                                                            aria-label={`${svc.service_name} süresi (dakika)`}
+                                                            value={svc.duration_minutes ?? ''}
+                                                            onChange={e => updateService(svc.id, { duration_minutes: e.target.value })}
+                                                            className="w-14 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-xs font-bold text-foreground dark:text-white outline-none focus:border-indigo-500"
+                                                        />
+                                                        dk
+                                                    </label>
+                                                    <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500">
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            step="1"
+                                                            placeholder="Fiyat"
+                                                            aria-label={`${svc.service_name} fiyatı (TL)`}
+                                                            value={svc.price ?? ''}
+                                                            onChange={e => updateService(svc.id, { price: e.target.value })}
+                                                            className="w-20 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-xs font-bold text-foreground dark:text-white outline-none focus:border-indigo-500"
+                                                        />
+                                                        ₺
+                                                    </label>
+                                                </div>
                                             </div>
                                             <button onClick={() => handleRemove(svc.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">
                                                 <Trash2 className="w-4 h-4" />

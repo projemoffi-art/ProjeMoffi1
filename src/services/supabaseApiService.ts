@@ -1991,13 +1991,21 @@ export class SupabaseApiService implements IApiService {
 
         const { data, error } = await query;
 
-        if (error || !data) return this.mockApi.getNearbyClinics(province, district, lat, lng, businessType);
+        if (error || !data) {
+            console.error("Error fetching nearby businesses:", error);
+            return [];
+        }
+        if (data.length === 0) return [];
 
         const clinicIds = data.map((d: any) => d.id);
-        const { data: servicesData } = await supabase.from('clinic_services').select('clinic_id, service_name').in('clinic_id', clinicIds);
-        
-        // YENİ 1: Yorumları tüm klinikler için tek seferde (toplu) çek (N+1 engellendi)
-        const { data: reviewsData } = await supabase.from('clinic_reviews').select('clinic_id, rating').in('clinic_id', clinicIds);
+        const [{ data: servicesData }, { data: reviewsData }, { data: openData }] = await Promise.all([
+            supabase.from('clinic_services').select('clinic_id, service_name').in('clinic_id', clinicIds),
+            supabase.from('clinic_reviews').select('clinic_id, rating').in('clinic_id', clinicIds),
+            supabase.rpc('get_clinics_open_status', { p_clinic_ids: clinicIds })
+        ]);
+        const openMap = new Map<string, { is_open: boolean; closes_at: string | null; opens_at: string | null }>(
+            (openData || []).map((o: any) => [o.clinic_id, o])
+        );
         
         const servicesMap = new Map();
         if (servicesData) {
@@ -2047,7 +2055,9 @@ export class SupabaseApiService implements IApiService {
                 location: pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null,
                 is_premium: Boolean(profile.is_premium),
                 isVerified: profile.business_approved === true,
-                isOpenNow: true,
+                isOpenNow: openMap.get(profile.id)?.is_open === true,
+                closesAt: openMap.get(profile.id)?.closes_at || null,
+                opensAt: openMap.get(profile.id)?.opens_at || null,
                 features: cServices.length > 0 ? cServices : [],
                 phone: profile.phone || '',
                 distance: pLat !== null && pLng !== null && lat && lng ? `${distKm.toFixed(1)} km` : 'Konum Belirtilmemiş',
@@ -2086,24 +2096,34 @@ export class SupabaseApiService implements IApiService {
             imageUrl: d.photo_url,
         }));
 
+        const { data: openData } = await supabase.rpc('get_clinics_open_status', { p_clinic_ids: [clinicId] });
+        const openStatus = openData?.[0];
+        const dayOrder: [string, string][] = [
+            ['monday', 'Pazartesi'], ['tuesday', 'Salı'], ['wednesday', 'Çarşamba'], ['thursday', 'Perşembe'],
+            ['friday', 'Cuma'], ['saturday', 'Cumartesi'], ['sunday', 'Pazar']
+        ];
+        const weeklyHours = data.working_hours
+            ? dayOrder.map(([key, label]) => {
+                const day = data.working_hours[key];
+                const closed = !day || day.closed === true;
+                return { day: label, text: closed ? 'Kapalı' : `${day.open || '09:00'} – ${day.close || '18:00'}` };
+            })
+            : [];
+
         return {
             id: data.id,
-            name: data.business_name || data.full_name || 'Veteriner Kliniği',
+            name: data.business_name || data.full_name || 'İşletme',
             imageUrl: data.avatar_url || null,
             rating: reviewsRes.averageRating ? parseFloat(reviewsRes.averageRating.toFixed(1)) : 0,
             reviewCount: reviewsRes.reviews.length || 0,
-            about: 'Klinik detay bilgisi',
             address: data.address || 'Adres bilgisi girilmedi',
             location: pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null,
             phone: data.phone || '',
-            email: 'iletisim@moffi.com', // Profiles table doesn't have email natively
-            website: 'www.moffi.com',
             type: data.business_type || "vet",
-            isOpenNow: true,
-            workingHours: {
-                weekdays: '09:00 - 18:00',
-                weekend: '10:00 - 15:00'
-            },
+            isOpenNow: openStatus?.is_open === true,
+            closesAt: openStatus?.closes_at || null,
+            opensAt: openStatus?.opens_at || null,
+            weeklyHours,
             services: services,
             veterinarians: [],
             gallery: [data.avatar_url].filter(Boolean),
@@ -2145,11 +2165,22 @@ export class SupabaseApiService implements IApiService {
         return data;
     }
 
-    async getClinicBusySlots(clinicId: string, from: string, to: string): Promise<{ appointment_date: string; duration_minutes: number; doctor_id: string | null }[]> {
-        const { data, error } = await supabase.rpc('get_clinic_busy_slots', {
+    async getAvailableSlots(clinicId: string, date: string, durationMinutes: number | null, doctorId: string | null): Promise<{ slot_time: string; available: boolean }[]> {
+        const { data, error } = await supabase.rpc('get_available_slots', {
             p_clinic_id: clinicId,
-            p_from: from,
-            p_to: to
+            p_date: date,
+            p_minutes: durationMinutes,
+            p_doctor_id: doctorId
+        });
+        if (error) throw error;
+        return data || [];
+    }
+
+    async getClinicCalendar(clinicId: string, fromDate: string, days: number): Promise<{ day: string; is_open: boolean }[]> {
+        const { data, error } = await supabase.rpc('get_clinic_calendar', {
+            p_clinic_id: clinicId,
+            p_from: fromDate,
+            p_days: days
         });
         if (error) throw error;
         return data || [];

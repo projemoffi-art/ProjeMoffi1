@@ -756,7 +756,10 @@ export class MockApiService implements IApiService {
     async getAppointments(userId: string): Promise<any[]> { return []; }
     async cancelAppointment(id: string): Promise<void> { }
     async getClinicAppointments(clinicId: string): Promise<any[]> { return []; }
-    async getClinicBusySlots(clinicId: string, from: string, to: string): Promise<{ appointment_date: string; duration_minutes: number; doctor_id: string | null }[]> { return []; }
+    async getAvailableSlots(clinicId: string, date: string, durationMinutes: number | null, doctorId: string | null): Promise<{ slot_time: string; available: boolean }[]> {
+        return ['09:00', '09:30', '10:00', '10:30', '11:00', '14:00', '14:30', '15:00'].map(slot_time => ({ slot_time, available: true }));
+    }
+    async getClinicCalendar(clinicId: string, fromDate: string, days: number): Promise<{ day: string; is_open: boolean }[]> { return []; }
     async getClinicServices(clinicId: string): Promise<any[]> { return []; }
     async getClinicDoctors(clinicId: string): Promise<any[]> { return []; }
     async getAllClinicDoctors(clinicId: string): Promise<any[]> { return []; }
