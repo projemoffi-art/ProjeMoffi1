@@ -216,7 +216,7 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                     </h3>
                     <p className="text-secondary text-sm mt-2 leading-relaxed max-w-xs">
                         {activeTab === 'active' 
-                            ? 'Klinik Keşfet sekmesinden çevrenizdeki veterinerleri bulup hemen randevu oluşturabilirsiniz.'
+                            ? 'İşletme Keşfet sekmesinden çevrendeki hizmet sağlayıcıları bulup randevu talebi oluşturabilirsin.'
                             : 'Tamamlanan veya iptal edilen randevularınız burada listelenir.'}
                     </p>
                 </motion.div>

@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiService } from "@/services/apiService";
 import { VetClinic, VetAppointment } from "@/types/domain";
+import type { BusinessType } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -14,7 +15,12 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
     return R * c;
 }
 
-export function useVet() {
+export function useVet(businessType: BusinessType = 'vet') {
+    const businessTypeRef = useRef(businessType);
+    const previousBusinessTypeRef = useRef(businessType);
+    const loadRequestRef = useRef(0);
+    businessTypeRef.current = businessType;
+
     const [featuredClinics, setFeaturedClinics] = useState<any[]>([]);
     const [allLocations, setAllLocations] = useState<any[]>([]);
     const [activeCategory, setActiveCategory] = useState<'all' | 'clinic' | 'food' | 'toy' | 'care'>('all');
@@ -49,22 +55,30 @@ export function useVet() {
                 const savedDist = localStorage.getItem('moffi_user_district') || '';
                 setUserProvince(savedProv);
                 setUserDistrict(savedDist);
-                init('all', savedProv, savedDist, initialLat, initialLng);
+                init('all', savedProv, savedDist, initialLat, initialLng, businessTypeRef.current);
             } else {
-                init('all');
+                init('all', undefined, undefined, undefined, undefined, businessTypeRef.current);
             }
         };
         
         loadInitialData();
     }, []);
 
+    useEffect(() => {
+        if (previousBusinessTypeRef.current === businessType) return;
+        previousBusinessTypeRef.current = businessType;
+        init('all');
+    }, [businessType]);
+
     const init = async (
         category: any = 'all', 
         overrideProv?: string, 
         overrideDist?: string,
         overrideLat?: number | null,
-        overrideLng?: number | null
+        overrideLng?: number | null,
+        requestedBusinessType: BusinessType = businessType
     ) => {
+        const requestId = ++loadRequestRef.current;
         setIsLoading(true);
         setActiveCategory(category);
         
@@ -79,16 +93,16 @@ export function useVet() {
             // In that case, we should return an empty array if they haven't selected a province, unless we want to load all.
             // The user requested: "Eğer boşsa liste boş gösterilip uyarı çıkarılacak."
             if (!prov || !dist) {
-                setAllLocations([]);
-                setFeaturedClinics([]);
-                setIsLoading(false);
+                if (requestId === loadRequestRef.current) {
+                    setAllLocations([]);
+                    setFeaturedClinics([]);
+                    setIsLoading(false);
+                }
                 return;
             }
 
-            // Faz 1 (işletme türü mimarisi) — /vet SADECE gerçek veteriner klinikleri
-            // göstermeli; daha önce business_type hiç filtrelenmiyordu, yani onaylı
-            // her işletme (kuaför, petshop vb.) veteriner gibi listeleniyordu.
-            const rawClinics = await apiService.getNearbyClinics(prov, dist, lat, lng, 'vet');
+            const rawClinics = await apiService.getNearbyClinics(prov, dist, lat, lng, requestedBusinessType);
+            if (requestId !== loadRequestRef.current) return;
 
             const enrich = (list: any[]) => list.map(c => {
                 if (!c.location || lat === null || lng === null) return { ...c, _distVal: 999999, distance: c.distance || 'Konum Belirtilmemiş' };
@@ -113,9 +127,9 @@ export function useVet() {
             setFeaturedClinics(filtered.filter(c => c.is_premium || c.rating >= 4.8));
             setAllLocations(filtered);
         } catch (err) {
-            console.error(err);
+            if (requestId === loadRequestRef.current) console.error(err);
         } finally {
-            setIsLoading(false);
+            if (requestId === loadRequestRef.current) setIsLoading(false);
         }
     };
 

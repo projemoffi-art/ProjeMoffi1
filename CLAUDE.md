@@ -2375,14 +2375,10 @@ tekrarlamıyor.
   buton, form etiketi, boş durum mesajı, başarı mesajı) artık
   `staffLabel`/`staffLabelPlural`'dan geliyor.
 
-**Bilinçli olarak DOKUNULMAYAN (Faz 2/3'ün orijinal notunda zaten belirtilmişti,
-tekrar teyit edildi):** `appointments/page.tsx`'teki muayene-tamamlama akışı
-(aşı/ilaç/tıbbi kayıt yazma, `hasMedicalRecords` alanı config'te zaten hazır
-ama bağlanmadı) — 2400 satırlık, kritik/hassas bir dosya, kredi/zaman kısıtı
-gereği bu turda riske atılmadı. Müşteri tarafındaki "Doktor" kelimesi de
-BİLEREK değiştirilmedi — `/vet` zaten SADECE `business_type='vet'` gösteriyor
-(bkz. 8.31), yani müşteri tarafında "Doktor" demek hâlâ her zaman doğru;
-bu ancak Faz 5'te (müşteri tarafının genellenmesi) gündeme gelir.
+**Tarihsel not:** Bu Faz 2/3 turunda `appointments/page.tsx` muayene-tamamlama
+akışına ve müşteri tarafı işletme türü ayrımına henüz dokunulmamıştı. Muayene
+akışı 8.33'te türe göre ayrıldı; müşteri tarafı işletme keşfi 8.34'te
+genellendi.
 
 **Doğrulama — gerçek DB'de tür değiştirilerek canlı test edildi:** test
 işletmesi (`MoffiPet`) geçici olarak `business_type='grooming'` yapıldı,
@@ -2448,6 +2444,58 @@ Formu" hiç değişmeden, tanı/aşı/reçete alanlarıyla aynen çalışıyor.
 typecheck: `appointments/page.tsx`'te değişiklik öncesi/sonrası BİREBİR
 AYNI 19 pre-existing hata (satır numaraları kaydı, içerik aynı) — sıfır
 yeni hata.
+
+### 8.34 Müşteri tarafı işletme keşfi işletme türlerine göre genellendi (2026-09-25)
+
+Önceden müşteri keşfi yalnızca `/vet` içinde çalışıyor ve hook aramayı sabit
+olarak `business_type='vet'` ile sınırlıyordu. Artık aynı gerçek işletme
+kayıtları ve randevu altyapısı tür bazında kullanılabiliyor:
+
+- `/vet` veteriner akışını korur; aynı ekrandaki tür seçiciden Kuaför, Eğitmen
+  ve Barınak seçilince `/vet?type=grooming|trainer|shelter` açılır ve Supabase
+  sorgusu tam olarak seçilen `business_type` ile filtrelenir.
+- `primaryFlow='order'` olan Pet Shop seçimi mevcut `/petshop` ürün/sipariş
+  akışına yönlenir; yeni, paralel bir petshop sipariş sistemi oluşturulmadı.
+- Müşteri başlıkları, arama metni, hizmet kısayolları, Google Maps arama terimi,
+  personel etiketi ve randevu talebi metinleri `BUSINESS_TYPE_CONFIG`'ten gelir.
+  `useVet(businessType)` tür değişiminde GPS iznini tekrar istemez; eski
+  asenkron sonuçlar yeni türün listesini ezmesin diye istek sırası korunur.
+- `ClinicDetailDrawer` ve randevu formu tür adlarını/personel etiketlerini
+  kullanır. Veteriner dışındaki türlerde tıbbi veri paylaşım paneli ve
+  veteriner sağlık modalları gösterilmez; aşı, sağlık notu, yaş/kilo ve iletişim
+  bilgileri için artık sahte örnek değerler oluşturulmaz. Paylaşım kaydı sadece
+  gerçekten mevcut olan alanları kaydeder.
+- Mock servis de istenen türe göre filtreler; veteriner mock kayıtları kuaför,
+  eğitmen veya barınak sonuçları gibi gösterilmez. Gerçek işletme
+  `business_approved` durumu müşteri kartındaki "Moffi Onaylı" filtresine
+  bağlandı; `is_premium` ayrı kalır.
+
+**Sınır:** Pet Shop seçimi, mevcut genel `/petshop` kataloğuna gider; bu turda
+belirli bir kayıtlı petshop işletmesinin envanterine özel mağaza/checkout
+bağlantısı kurulmadı. Ayrıca doğrulama için yerel tarayıcı oturumu giriş
+ekranına yönlendi (Supabase isteği 402 döndü), bu yüzden gerçek kullanıcıyla
+Playwright uçtan uca testi yapılamadı.
+
+**Doğrulama:** `npm run build` başarılı oldu (Next build tür doğrulamasını
+atlıyor). Ayrı `npx tsc --noEmit` çalıştırmasında dokunulan dosyalarda yalnızca
+önceden var olan `setLoadingExceptions` ve `ClinicDetailDrawer`'daki
+`uploadMedia` imza hataları kaldı; yeni tür kayıt defteri, hook ve müşteri
+sayfasından yeni TypeScript hatası çıkmadı. Değişen dosyalar için baseline
+lint kuralları hariç tutularak ESLint ve `git diff --check` geçti.
+
+### 8.35 Faz 4 — İşletme ilk kurulum sihirbazı (2026-09-27)
+
+`profiles.onboarding_completed` (gerçek DB kolonu, localStorage değil) +
+`src/components/business/OnboardingWizard.tsx` (`business/layout.tsx` içinde,
+`BusinessTypeProvider` altında). İlk girişte türün `defaultServices` listesinden
+seçilenleri `clinic_services`'e yazar, sonra bayrağı true yapar. Zaten hizmeti
+olan işletmelerde sihirbaz gösterilmez, bayrak sessizce true yapılır.
+Doğrulanan: sessiz atlama yolu (MoffiPet). Modalın tam akışı henüz gerçek
+yeni bir işletme hesabıyla test edilmedi.
+
+**Not (8.34):** `getNearbyClinics` zaten `business_approved=true` filtrelediği
+için `isVerified` her kartta true — "Moffi Onaylı" çipi şu an filtre etkisi
+yaratmıyor. Anlamlı olması için ayrı bir doğrulama kriteri gerekir.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 

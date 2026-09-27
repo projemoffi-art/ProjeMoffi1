@@ -14,6 +14,8 @@ import { VetClinic } from "@/types/domain";
 import { supabase } from "@/lib/supabase";
 import { haptics } from "@/lib/haptics";
 import { FilterChips } from "@/components/vet/find/FilterChips";
+import { getBusinessTypeConfig } from "@/config/businessTypes";
+import type { BusinessType } from "@/context/AuthContext";
 
 // Faz 25 — Ekran 4 (bkz. design-reference/vet-final/README.md). Baran'ın
 // "kaba" bulgusu bu bileşenle ilgiliydi — ama veri katmanı tamamen gerçekti
@@ -28,6 +30,7 @@ import { FilterChips } from "@/components/vet/find/FilterChips";
 interface ClinicDetailDrawerProps {
     clinicId: string | null;
     clinicData?: any;
+    businessType?: BusinessType;
     onClose: () => void;
     onBookAppointment: (clinic: VetClinic) => void;
     defaultOpenReviewForm?: boolean;
@@ -42,8 +45,9 @@ const TABS: { key: 'info' | 'doctors' | 'reviews'; label: string; icon: any }[] 
     { key: 'reviews', label: 'Yorumlar', icon: Star },
 ];
 
-export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppointment, defaultOpenReviewForm, defaultReviewAppointmentId }: ClinicDetailDrawerProps) {
+export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet', onClose, onBookAppointment, defaultOpenReviewForm, defaultReviewAppointmentId }: ClinicDetailDrawerProps) {
     const { activePet } = usePet();
+    const businessConfig = getBusinessTypeConfig(businessType);
     const [clinic, setClinic] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'info' | 'doctors' | 'reviews'>('info');
@@ -440,7 +444,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                     {(!clinic.doctors || clinic.doctors.length === 0) && (
                                                         <div className="text-center py-16 px-6">
                                                             <Users className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-                                                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Hekim bilgisi bulunmuyor</p>
+                                                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{businessConfig.staffLabel} bilgisi bulunmuyor</p>
                                                         </div>
                                                     )}
                                                 </motion.div>
@@ -516,7 +520,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                                         {review.comment && <p className="text-[11px] font-medium text-slate-500 leading-relaxed">"{review.comment}"</p>}
                                                                         {review.clinic_reply && (
                                                                             <div className="mt-2 p-3 bg-gray-50 dark:bg-white/5 rounded-xl ml-2.5">
-                                                                                <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest block mb-1">Klinik Yanıtı</span>
+                                                                                <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest block mb-1">İşletme yanıtı</span>
                                                                                 <p className="text-[10.5px] font-medium text-slate-500 leading-relaxed">{review.clinic_reply}</p>
                                                                             </div>
                                                                         )}
@@ -540,7 +544,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                             onClick={() => { haptics.tap(); onBookAppointment(clinic); }}
                                             className="w-full h-12 rounded-full bg-orange-500 text-white font-black text-[12px] uppercase tracking-widest flex items-center justify-center gap-2"
                                         >
-                                            <Calendar className="w-4 h-4" /> Randevu Al
+                                            <Calendar className="w-4 h-4" /> {businessConfig.customerBookingLabel}
                                         </button>
                                     </div>
                                 </>

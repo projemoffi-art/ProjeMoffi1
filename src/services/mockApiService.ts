@@ -708,6 +708,8 @@ export class MockApiService implements IApiService {
             {
                 id: 'vet-1',
                 name: 'Moda Veteriner Polikliniği',
+                type: 'vet',
+                isVerified: true,
                 imageUrl: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?q=80&w=400',
                 rating: 4.9,
                 reviewCount: 128,
@@ -717,6 +719,8 @@ export class MockApiService implements IApiService {
             {
                 id: 'vet-3',
                 name: 'Moffi Health Acil Vet',
+                type: 'vet',
+                isVerified: true,
                 imageUrl: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?q=80&w=400',
                 rating: 5.0,
                 reviewCount: 89,
@@ -728,7 +732,7 @@ export class MockApiService implements IApiService {
                 phone: '02165556677'
             }
         ];
-        return clinics;
+        return businessType ? clinics.filter(clinic => clinic.type === businessType) : clinics;
     }
 
     async getClinicDetails(clinicId: string): Promise<any> {

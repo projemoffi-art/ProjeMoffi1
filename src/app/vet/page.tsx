@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
     Search, MapPin, Star, Calendar, CreditCard,
-    ShieldAlert, ChevronRight, Syringe, Utensils, Clock, Pill,
+    ChevronRight, Syringe, Utensils, Clock, Pill,
     CheckCircle2, ChevronLeft, X, Filter, Activity, History,
-    ShieldCheck, Bell, Stethoscope, Smile
+    ShieldCheck, Bell, Stethoscope
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
 import { MyAppointmentsPanel } from "@/components/vet/MyAppointmentsPanel";
+import { BUSINESS_TYPE_ORDER, getBusinessTypeConfig, isBusinessType } from "@/config/businessTypes";
+import type { BusinessType } from "@/context/AuthContext";
 import turkeyCities from "@/data/turkey_cities.json";
 
 function validateLuhn(cardNumber: string): boolean {
@@ -58,6 +60,14 @@ function VetPageContent() {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const { user } = useAuth();
+    const businessTypeParam = searchParams.get('type');
+    const selectedBusinessType: BusinessType = isBusinessType(businessTypeParam) ? businessTypeParam : 'vet';
+    const businessConfig = getBusinessTypeConfig(selectedBusinessType);
+    const isVeterinary = selectedBusinessType === 'vet';
+
+    useEffect(() => {
+        if (businessConfig.primaryFlow === 'order') router.replace('/petshop');
+    }, [businessConfig.primaryFlow, router]);
 
     useEffect(() => {
         if (user?.id) {
@@ -75,7 +85,7 @@ function VetPageContent() {
         featuredClinics, allClinics, userLocation, isLoading,
         bookAppointment,
         userProvince, userDistrict, setLocationFilter
-    } = useVet();
+    } = useVet(selectedBusinessType);
 
     // UI States
     const [searchQuery, setSearchQuery] = useState("");
@@ -94,12 +104,15 @@ function VetPageContent() {
     const [activeQuickFilter, setActiveQuickFilter] = useState<'all' | 'nearby' | 'verified' | 'open'>('all');
     const mapBoxRef = useRef<HTMLDivElement>(null);
 
-    const SERVICE_SHORTCUTS = [
-        { key: 'muayene', label: 'Genel Muayene', icon: Stethoscope, keywords: ['muayene', 'genel'], bg: 'bg-emerald-100 dark:bg-emerald-500/15', color: 'text-emerald-600 dark:text-emerald-400' },
-        { key: 'acil', label: 'Acil Servis', icon: ShieldAlert, keywords: ['acil'], bg: 'bg-red-100 dark:bg-red-500/15', color: 'text-red-500 dark:text-red-400' },
-        { key: 'asi', label: 'Aşı', icon: Syringe, keywords: ['aşı', 'asi'], bg: 'bg-sky-100 dark:bg-sky-500/15', color: 'text-sky-600 dark:text-sky-400' },
-        { key: 'dis', label: 'Diş Sağlığı', icon: Smile, keywords: ['diş', 'dis'], bg: 'bg-violet-100 dark:bg-violet-500/15', color: 'text-violet-600 dark:text-violet-400' },
-    ] as const;
+    const SERVICE_SHORTCUTS = businessConfig.customerShortcuts;
+
+    useEffect(() => {
+        setSearchQuery("");
+        setActiveServiceFilter(null);
+        setActiveQuickFilter('all');
+        setFilterSortBy(null);
+        setFilterOpenNow(false);
+    }, [selectedBusinessType]);
 
     const applyQuickFilter = (key: typeof activeQuickFilter) => {
         setActiveQuickFilter(key);
@@ -130,7 +143,7 @@ function VetPageContent() {
         }
 
         if (activeQuickFilter === 'verified') {
-            result = result.filter(c => c.isPremium);
+            result = result.filter(c => c.isVerified);
         }
 
         if (filterOpenNow) {
@@ -251,7 +264,7 @@ function VetPageContent() {
                     if (!localStorage.getItem(storageKey)) {
                         const clinic = allClinics.find(c => c.id === latest.clinic_id);
                         if (clinic) {
-                            setPendingReviewPrompt({ ...latest, clinicName: clinic.name || clinic.business_name || "Klinik" });
+                            setPendingReviewPrompt({ ...latest, clinicName: clinic.name || clinic.business_name || "İşletme" });
                         }
                     }
                 }
@@ -459,11 +472,11 @@ function VetPageContent() {
             const openModal = searchParams.get('open');
             const targetClinicId = searchParams.get('clinicId');
             
-            if (openModal === 'vaccine') {
+            if (openModal === 'vaccine' && isVeterinary) {
                 setActiveModal('vaccine');
             } else if (openModal === 'appointment') {
                 setActiveModal('clinicList');
-            } else if (openModal === 'nutrition') {
+            } else if (openModal === 'nutrition' && isVeterinary) {
                 setActiveNutritionModal(true);
             }
 
@@ -476,7 +489,7 @@ function VetPageContent() {
                 }
             }
         }
-    }, [isLoading, allClinics, searchParams]);
+    }, [isLoading, allClinics, searchParams, isVeterinary]);
 
     // Fast local event listener for instant modal opening without Next.js router latency
     useEffect(() => {
@@ -485,8 +498,10 @@ function VetPageContent() {
             if (customEvent.detail) {
                 if (customEvent.detail === 'appointment') {
                     setActiveModal('clinicList');
-                } else if (customEvent.detail === 'nutrition') {
+                } else if (customEvent.detail === 'nutrition' && isVeterinary) {
                     setActiveNutritionModal(true);
+                } else if (!isVeterinary && ['vaccine', 'dental', 'pharma', 'medication'].includes(customEvent.detail)) {
+                    return;
                 } else {
                     setActiveModal(customEvent.detail as any);
                 }
@@ -494,7 +509,7 @@ function VetPageContent() {
         };
         window.addEventListener('openVetModal', handleOpenModal);
         return () => window.removeEventListener('openVetModal', handleOpenModal);
-    }, []);
+    }, [isVeterinary]);
 
     // Appointment Form States
     const [selectedDate, setSelectedDate] = useState<string>("");
@@ -709,9 +724,11 @@ function VetPageContent() {
                 const diffMs = now.getTime() - birth.getTime();
                 const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
                 return diffYears.toFixed(1);
-            } catch (e) {}
+            } catch (error) {
+                console.error("Pet age could not be calculated:", error);
+            }
         }
-        return "2.1";
+        return undefined;
     };
 
     const handleCreateAppointment = async () => {
@@ -732,33 +749,28 @@ function VetPageContent() {
             } catch (e) {
                 console.error("Failed to load vaccines for sharing:", e);
             }
-            if (sharedVaccines.length === 0) {
-                sharedVaccines = [
-                    { name: "Karma Aşı", date: "2026-05-10", status: "completed", color: "text-green-500" },
-                    { name: "Kuduz Aşısı", date: "2026-06-01", status: "completed", color: "text-green-500" }
-                ];
-            }
         }
 
         const sharedHealthNotes = (shareNotes && bookingPet)
-            ? (bookingPet.health_notes || bookingPet.sos_settings?.critical_health_note || "Gluten Alerjisi, Hassas Sindirim")
+            ? (bookingPet.health_notes || bookingPet.sos_settings?.critical_health_note || null)
             : "";
 
-        const sharedPassport = {
+        const ownerInfo = shareOwner && user ? {
+            name: user.name || user.username || null,
+            phone: user.phone || null,
+            email: user.email || null
+        } : null;
+        const sharedPassport = isVeterinary ? {
             basic: shareBasic && bookingPet ? {
                 name: bookingPet.name,
-                breed: bookingPet.breed || "Tekir / Mix",
-                weight: bookingPet.weight ? `${bookingPet.weight} kg` : "6.2 kg",
+                breed: bookingPet.breed || null,
+                weight: bookingPet.weight ? `${bookingPet.weight} kg` : null,
                 age: calculatePetAge(bookingPet)
             } : null,
-            vaccines: shareVaccines ? sharedVaccines : null,
-            healthNotes: shareNotes ? sharedHealthNotes : null,
-            ownerInfo: shareOwner ? {
-                name: user?.name || user?.username || "Uveys",
-                phone: user?.phone || "+90 532 123 45 67",
-                email: user?.email || "owner@moffi.com"
-            } : null
-        };
+            vaccines: shareVaccines && sharedVaccines.length > 0 ? sharedVaccines : null,
+            healthNotes: shareNotes ? sharedHealthNotes || null : null,
+            ownerInfo: ownerInfo && Object.values(ownerInfo).some(Boolean) ? ownerInfo : null
+        } : null;
 
         const petInfo = bookingPet ? { id: bookingPet.id, name: bookingPet.name, image: bookingPet.image } : undefined;
 
@@ -773,32 +785,37 @@ function VetPageContent() {
             selectedDoctor?.id
         );
 
-        // Record Transparency Log
-        try {
-            const storedLogs = localStorage.getItem('moffi_transparency_logs');
-            const logsList = storedLogs ? JSON.parse(storedLogs) : [];
-            const newLog = {
-                id: 'log_' + Date.now(),
-                clinicName: selectedClinic.name,
-                petName: bookingPet ? bookingPet.name : 'Evcil Hayvan',
-                date: new Date().toLocaleString('tr-TR'),
-                sharedFields: [
-                    "Temel Bilgiler",
-                    shareVaccines ? "Aşı Takvimi Geçmişi" : null,
-                    shareNotes ? "Sağlık Notları & Alerjiler" : null,
-                    shareOwner ? "Sahip Bilgileri" : null
-                ].filter(Boolean)
-            };
-            logsList.unshift(newLog);
-            localStorage.setItem('moffi_transparency_logs', JSON.stringify(logsList));
-        } catch (e) {
-            console.error("Failed to save transparency log:", e);
+        if (isVeterinary && sharedPassport) {
+            try {
+                const storedLogs = localStorage.getItem('moffi_transparency_logs');
+                const logsList = storedLogs ? JSON.parse(storedLogs) : [];
+                const sharedFields = [
+                    sharedPassport.basic ? "Temel Bilgiler" : null,
+                    sharedPassport.vaccines ? "Aşı Takvimi Geçmişi" : null,
+                    sharedPassport.healthNotes ? "Sağlık Notları & Alerjiler" : null,
+                    sharedPassport.ownerInfo ? "Sahip Bilgileri" : null
+                ].filter(Boolean);
+                if (sharedFields.length > 0) {
+                    logsList.unshift({
+                        id: 'log_' + Date.now(),
+                        clinicName: selectedClinic.name,
+                        petName: bookingPet?.name || 'Evcil Hayvan',
+                        date: new Date().toLocaleString('tr-TR'),
+                        sharedFields
+                    });
+                    localStorage.setItem('moffi_transparency_logs', JSON.stringify(logsList));
+                }
+            } catch (error) {
+                console.error("Failed to save transparency log:", error);
+            }
         }
 
         if (selectedDoctor) {
-            setSuccessMessage(`Dr. ${selectedDoctor.name} ile Randevu Talebiniz İletildi ✨`);
+            setSuccessMessage(isVeterinary
+                ? `Dr. ${selectedDoctor.name} ile randevu talebin iletildi.`
+                : `${businessConfig.staffLabel} ${selectedDoctor.name} ile talebin iletildi.`);
         } else {
-            setSuccessMessage("Randevu Talebiniz İletildi ✨");
+            setSuccessMessage(isVeterinary ? "Randevu talebin iletildi." : "Talebin iletildi.");
         }
         setActiveModal('success');
         setDetailClinicId(null);
@@ -822,7 +839,7 @@ function VetPageContent() {
                         timeStr = apt.appointment_date.split('T')[1].substring(0, 5);
                     }
                 }
-                let type = 'Genel Muayene';
+                let type = businessConfig.customerFallbackService;
                 if (apt.reason && apt.reason.includes('Randevu tipi:')) {
                     type = apt.reason.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
                 } else if (apt.reason) {
@@ -834,7 +851,7 @@ function VetPageContent() {
                     petName: petName,
                     icon: '🏥',
                     type: type,
-                    clinicName: apt.clinic?.business_name || 'Klinik',
+                    clinicName: apt.clinic?.business_name || 'İşletme',
                     clinicId: apt.clinic_id,
                     realDoctorName: apt.doctor?.name || apt.doctor_name || null,
                     date: dateStr,
@@ -847,7 +864,7 @@ function VetPageContent() {
             allApts = [...allApts, ...mapped];
         });
         return allApts;
-    }, [appointments, pets]);
+    }, [appointments, pets, businessConfig.customerFallbackService]);
 
     return (
         <div className="theme-vet min-h-screen bg-background text-foreground pb-32 font-sans relative selection:bg-accent/30 transition-colors duration-300">
@@ -871,7 +888,7 @@ function VetPageContent() {
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
                             <h1 className="text-2xl font-black text-foreground tracking-tight leading-none transition-all truncate">
-                                Veteriner
+                                {businessConfig.customerLabel}
                             </h1>
                         </div>
                         <div className="relative shrink-0" ref={notifRef}>
@@ -935,7 +952,7 @@ function VetPageContent() {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
                         <input
                             type="text"
-                            placeholder="Veteriner, klinik veya hizmet ara..."
+                            placeholder={businessConfig.customerSearchPlaceholder}
                             className="w-full h-12 pl-11 pr-4 bg-card rounded-xl border border-card-border outline-none font-bold text-xs text-foreground placeholder:text-zinc-400 dark:placeholder:text-secondary/20 focus:border-accent transition-all text-left shadow-sm dark:shadow-none"
                             value={searchQuery}
                             onChange={(e) => {
@@ -982,6 +999,38 @@ function VetPageContent() {
                                 </motion.div>
                             )}
                         </AnimatePresence>
+                    </div>
+
+                    <div>
+                        <span className="block text-[9px] font-black uppercase tracking-wider text-secondary mb-2">İşletme türü</span>
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                            {BUSINESS_TYPE_ORDER.map(type => {
+                                const typeConfig = getBusinessTypeConfig(type);
+                                const isSelected = type === selectedBusinessType;
+                                return (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        aria-current={isSelected ? 'page' : undefined}
+                                        onClick={() => router.push(
+                                            typeConfig.primaryFlow === 'order'
+                                                ? '/petshop'
+                                                : type === 'vet'
+                                                    ? '/vet'
+                                                    : `/vet?type=${type}`
+                                        )}
+                                        className={cn(
+                                            "shrink-0 px-3.5 py-2 rounded-full border text-xs font-bold transition-colors",
+                                            isSelected
+                                                ? "bg-foreground text-background border-foreground"
+                                                : "bg-card text-secondary border-card-border hover:text-foreground"
+                                        )}
+                                    >
+                                        {typeConfig.customerLabel}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* Location Selector Banner */}
@@ -1041,7 +1090,7 @@ function VetPageContent() {
                             onClick={() => setViewMode('clinics')}
                             className={cn("flex-1 py-2 rounded-lg text-xs font-black transition-all", viewMode === 'clinics' ? "bg-card shadow-sm text-accent" : "text-zinc-500 dark:text-zinc-400")}
                         >
-                            Klinik Keşfet
+                            {isVeterinary ? 'Klinik Keşfet' : 'İşletme Keşfet'}
                         </button>
                         <button
                             onClick={() => setViewMode('appointments')}
@@ -1052,10 +1101,9 @@ function VetPageContent() {
                     </div>
 
                     {/* Hizmet kısayolları — referans Ekran 2 */}
-                    <div style={{ display: viewMode === 'clinics' ? 'grid' : 'none' }} className="grid grid-cols-4 gap-2">
+                    {SERVICE_SHORTCUTS.length > 0 && <div style={{ display: viewMode === 'clinics' ? 'grid' : 'none' }} className="grid grid-cols-4 gap-2">
                         {SERVICE_SHORTCUTS.map(cat => {
                             const isActive = activeServiceFilter === cat.key;
-                            const Icon = cat.icon;
                             return (
                                 <button
                                     key={cat.key}
@@ -1063,17 +1111,16 @@ function VetPageContent() {
                                     className="flex flex-col items-center gap-1.5"
                                 >
                                     <div className={cn(
-                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
-                                        cat.bg,
+                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-accent/10 text-accent text-xl",
                                         isActive && "ring-2 ring-accent ring-offset-2 ring-offset-background"
                                     )}>
-                                        <Icon className={cn("w-5 h-5", cat.color)} />
+                                        {cat.icon}
                                     </div>
                                     <span className="text-[9.5px] font-bold text-secondary text-center leading-tight">{cat.label}</span>
                                 </button>
                             );
                         })}
-                    </div>
+                    </div>}
 
                     {/* Hızlı filtreler — Tümü / Yakınımda / Moffi Onaylı / Açık Olanlar */}
                     <div
@@ -1125,15 +1172,15 @@ function VetPageContent() {
                 ) : (
                     <>
                 {/* Status Bar showing pet health state */}
-                {activePet && (
+                {isVeterinary && activePet && (
                     <div className="bg-card border border-card-border p-4 rounded-2xl flex items-center justify-between text-left shadow-sm dark:shadow-none transition-colors duration-300">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-accent/10 dark:bg-accent/10 flex items-center justify-center border border-accent/20 text-accent dark:text-accent">
                                 <Activity className="w-5 h-5" />
                             </div>
                             <div>
-                                <span className="text-[8px] font-black text-secondary uppercase tracking-widest block">Aktif Pet Durumu</span>
-                                <h4 className="text-xs font-black text-foreground mt-0.5">{activePet.name} • Sağlıklı ve Takipte</h4>
+                                <span className="text-[8px] font-black text-secondary uppercase tracking-widest block">Aktif evcil hayvan</span>
+                                <h4 className="text-xs font-black text-foreground mt-0.5">{activePet.name} için veteriner hizmetleri</h4>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -1156,30 +1203,30 @@ function VetPageContent() {
                         <MapPin className="w-6 h-6 text-accent" />
                     </div>
                     <div>
-                        <h3 className="font-black text-sm text-foreground mb-1">Yakındaki klinikleri keşfet</h3>
+                        <h3 className="font-black text-sm text-foreground mb-1">{businessConfig.customerTitle}</h3>
                         <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">
-                            Moffi üzerinden çevrenizdeki tüm onaylı veteriner kliniklerini ve nöbetçi hekimleri görebilirsiniz.
+                            Moffi üzerinden konumundaki onaylı {businessConfig.customerLabel.toLocaleLowerCase('tr-TR')} işletmelerini keşfedebilirsin.
                         </p>
                     </div>
                     <button 
                         onClick={() => {
                             if (userLocation) {
-                                window.open(`https://www.google.com/maps/search/veteriner/@${userLocation.lat},${userLocation.lng},14z`, '_blank');
+                                window.open(`https://www.google.com/maps/search/${encodeURIComponent(businessConfig.customerMapSearchQuery)}/@${userLocation[0]},${userLocation[1]},14z`, '_blank', 'noopener,noreferrer');
                             } else {
-                                window.open(`https://www.google.com/maps/search/veteriner`, '_blank');
+                                window.open(`https://www.google.com/maps/search/${encodeURIComponent(businessConfig.customerMapSearchQuery)}`, '_blank', 'noopener,noreferrer');
                             }
                         }}
                         className="w-full sm:w-auto bg-accent text-white px-6 py-3 rounded-xl text-xs font-black hover:bg-accent transition-all shadow-lg shadow-accent/20 flex items-center justify-center gap-2 cursor-pointer"
                     >
                         <MapPin className="w-4 h-4" />
-                        Google Haritalar'da Aç
+                        Google Haritalar&apos;da Aç
                     </button>
                 </section>
 
                 {/* Clinics Section */}
                 <section>
                     <div className="flex items-center justify-between mb-4 px-1">
-                        <h2 className="text-base font-black text-foreground tracking-tight leading-none">Yakındaki veterinerler</h2>
+                        <h2 className="text-base font-black text-foreground tracking-tight leading-none">Yakındaki {businessConfig.customerLabel.toLocaleLowerCase('tr-TR')} işletmeleri</h2>
                         <div className="flex items-center gap-3 shrink-0">
                             <button
                                 onClick={() => mapBoxRef.current?.scrollIntoView({ behavior: 'smooth' })}
@@ -1226,7 +1273,7 @@ function VetPageContent() {
                                         <h3 className="font-black text-foreground text-sm tracking-tight leading-none truncate">
                                             {clinic.name}
                                         </h3>
-                                        {clinic.isPremium && <ShieldCheck className="w-3.5 h-3.5 text-cyan-500 shrink-0" />}
+                                        {clinic.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-accent shrink-0" />}
                                     </div>
                                     <div className="flex items-center gap-1 mt-1.5">
                                         <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -1357,7 +1404,7 @@ function VetPageContent() {
 
                             
                             <div className="flex justify-between items-center mb-6 mt-2 sm:mt-0">
-                                <h2 className="text-lg font-black tracking-tight">Randevu oluştur</h2>
+                                <h2 className="text-lg font-black tracking-tight">{businessConfig.customerRequestTitle}</h2>
                                 <button onClick={() => setActiveModal(null)} className="w-8 h-8 bg-card rounded-full flex items-center justify-center border border-card-border hover:bg-card-border/80 text-foreground transition-all"><X className="w-4 h-4" /></button>
                             </div>
 
@@ -1416,12 +1463,12 @@ function VetPageContent() {
                                         <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-2.5 block px-1">Hizmet seçimi</label>
                                         {clinicServices.length === 0 ? (
                                             <div className="bg-card border border-card-border rounded-2xl p-6 text-center">
-                                                <p className="text-sm font-bold text-secondary mb-4">Bu klinik henüz hizmetlerini eklemedi.</p>
+                                                <p className="text-sm font-bold text-secondary mb-4">Bu işletme henüz hizmet listesini eklemedi.</p>
                                                 <button
-                                                    onClick={() => setSelectedSvc({ service_name: 'Belirtilmedi', duration_minutes: 30 })}
+                                                    onClick={() => setSelectedSvc({ service_name: businessConfig.customerFallbackService, duration_minutes: 30 })}
                                                     className="px-6 py-2 bg-accent/10 text-accent text-xs font-black rounded-xl transition-colors hover:bg-accent/20 inline-block"
                                                 >
-                                                    Yine de randevu talep et
+                                                    {businessConfig.customerBookingLabel}
                                                 </button>
                                             </div>
                                         ) : (
@@ -1433,7 +1480,9 @@ function VetPageContent() {
                                                         className="w-full bg-card border border-card-border p-4 rounded-2xl flex items-center gap-3 group transition-all hover:border-accent/30 text-left"
                                                     >
                                                         <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-                                                            <Stethoscope className="w-4 h-4 text-accent" />
+                                                            {isVeterinary
+                                                                ? <Stethoscope className="w-4 h-4 text-accent" />
+                                                                : <CheckCircle2 className="w-4 h-4 text-accent" />}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="font-black text-foreground tracking-tight text-sm truncate">{svc.service_name}</div>
@@ -1463,7 +1512,7 @@ function VetPageContent() {
                                         {/* DOCTOR SELECTOR */}
                                         {clinicDoctors.length > 0 && (
                                             <div className="mt-4 mb-4">
-                                                <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-2.5 block px-1">Doktor seçimi (opsiyonel)</label>
+                                                <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-2.5 block px-1">{businessConfig.staffLabel} seçimi (opsiyonel)</label>
                                                 {!selectedDoctor ? (
                                                     <div className="space-y-2.5">
                                                         {clinicDoctors.map((doc: Doctor) => (
@@ -1562,7 +1611,7 @@ function VetPageContent() {
                                 </div>
 
                                 {/* DATA SHARING CONSENT PANEL */}
-                                <div className="bg-card border border-card-border rounded-2xl p-4 text-left">
+                                {isVeterinary && <div className="bg-card border border-card-border rounded-2xl p-4 text-left">
                                     <div className="text-[8px] font-black text-secondary uppercase tracking-widest mb-3.5 flex items-center gap-1.5">
                                         <Syringe className="w-3.5 h-3.5 text-accent" /> TIBBİ VERİ PAYLAŞIM TERCİHLERİ
                                     </div>
@@ -1641,7 +1690,7 @@ function VetPageContent() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div>}
                                     </>
                                 )}
                             </div>
@@ -1653,7 +1702,7 @@ function VetPageContent() {
                                     disabled={!selectedTime}
                                     className="w-full bg-accent text-white py-4 rounded-xl font-black text-sm shadow-lg shadow-accent/20 disabled:opacity-20 transition-all active:scale-95"
                                 >
-                                    Randevu talebini ilet
+                                    {businessConfig.customerSubmitLabel}
                                 </button>
                             </div>
                         </motion.div>
@@ -1666,7 +1715,7 @@ function VetPageContent() {
                     <motion.div key="rating-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[3100] bg-black/50 dark:bg-black/85 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
                         <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-card-border text-foreground relative">
                             <div className="flex flex-col items-center text-center p-4">
-                                <h3 className="font-black text-lg tracking-tight mb-2 text-foreground">Klinik değerlendir</h3>
+                                <h3 className="font-black text-lg tracking-tight mb-2 text-foreground">İşletmeyi değerlendir</h3>
                                 <p className="text-[11px] text-secondary font-semibold mb-6">Deneyiminizi diğer pati sahipleriyle paylaşın</p>
 
                                 <div className="flex gap-2 mb-6">
@@ -1704,8 +1753,10 @@ function VetPageContent() {
                 )}
 
                 {/* MODALS RENDERING */}
-                <DentalCareModal isOpen={activeModal === 'dental'} onClose={() => setActiveModal(null)} />
-                <PharmacyModal isOpen={activeModal === 'pharma'} onClose={() => setActiveModal(null)} />
+                {isVeterinary && <>
+                    <DentalCareModal isOpen={activeModal === 'dental'} onClose={() => setActiveModal(null)} />
+                    <PharmacyModal isOpen={activeModal === 'pharma'} onClose={() => setActiveModal(null)} />
+                </>}
                 <ClinicListModal 
                     isOpen={activeModal === 'clinicList'} 
                     onClose={() => setActiveModal(null)}
@@ -1825,6 +1876,7 @@ function VetPageContent() {
                 <ClinicDetailDrawer 
                     clinicId={detailClinicId}
                     clinicData={detailClinicData}
+                    businessType={selectedBusinessType}
                     defaultOpenReviewForm={drawerDefaultReview}
                     defaultReviewAppointmentId={drawerDefaultReviewAppointmentId}
                     onClose={() => { 
@@ -1843,11 +1895,11 @@ function VetPageContent() {
                 />
 
                 {/* 6. MEDICATION & NUTRITION MODALS */}
-                <MedicationModal 
+                {isVeterinary && <MedicationModal
                     isOpen={activeMedicationModal} 
                     onClose={() => setActiveMedicationModal(false)} 
                     petId={activePet?.id || ''} 
-                />
+                />}
         </div>
     );
 }

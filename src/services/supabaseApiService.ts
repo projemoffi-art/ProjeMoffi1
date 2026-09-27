@@ -2039,13 +2039,14 @@ export class SupabaseApiService implements IApiService {
 
             return {
                 id: profile.id,
-                name: profile.business_name || profile.full_name || 'Veteriner Kliniği',
+                name: profile.business_name || profile.full_name || 'İşletme',
                 imageUrl: profile.avatar_url || null,
                 rating: avgRating ? parseFloat(avgRating.toFixed(1)) : 0, // B14
                 reviewCount: rCount,
                 address: profile.address || 'Adres bilgisi girilmedi',
                 location: pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null,
-                is_premium: false,
+                is_premium: Boolean(profile.is_premium),
+                isVerified: profile.business_approved === true,
                 isOpenNow: true,
                 features: cServices.length > 0 ? cServices : [],
                 phone: profile.phone || '',

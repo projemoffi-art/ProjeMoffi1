@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { BusinessSidebar } from "@/components/business/Sidebar";
 import { BusinessHeader } from "@/components/business/Header";
 import { BusinessTypeProvider } from "@/context/BusinessTypeContext";
+import { OnboardingWizard } from "@/components/business/OnboardingWizard";
 
 export default function BusinessLayout({ children }: { children: React.ReactNode }) {
     const { user, isLoading, logout } = useAuth();
@@ -97,6 +98,7 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
 
     return (
         <BusinessTypeProvider>
+            <OnboardingWizard />
             <div className="flex bg-[#F8F9FC] dark:bg-[#0a0a0a] min-h-screen">
                 <BusinessSidebar
                     isMobileOpen={isMobileMenuOpen}
