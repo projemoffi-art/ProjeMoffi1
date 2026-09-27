@@ -175,18 +175,6 @@ export function useVet(businessType: BusinessType = 'vet') {
             };
 
             await apiService.createAppointment(appointmentPayload);
-
-            if (typeof window !== 'undefined') {
-                try {
-
-                    // Broadcast event for B2B Panel
-                    const channel = new BroadcastChannel('moffi_appointments_channel');
-                    channel.postMessage({ type: 'APPOINTMENT_CREATED', clinicId: clinic.id });
-                    channel.close();
-                } catch (e) {
-                    console.error("Failed to store pending appointment for business dashboard:", e);
-                }
-            }
         } catch (error) {
             console.error("Appointment booking failed:", error);
             throw error;

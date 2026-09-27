@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, showToast } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 import { DentalCareModal } from "@/components/vet/DentalCareModal";
 import { PharmacyModal } from "@/components/vet/PharmacyModal";
 import { ClinicListModal } from "@/components/vet/ClinicListModal";
@@ -295,9 +296,14 @@ function VetPageContent() {
         };
         fetchNotifications();
 
-        const intervalId = setInterval(fetchNotifications, 15000);
-        return () => clearInterval(intervalId);
-    }, [user]);
+        const channel = supabase
+            .channel(`vet-notifications-${user.id}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload: any) => {
+                if (payload.new?.type === 'appointment') fetchNotifications();
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [user?.id]);
 
     const handleNotificationClick = async (notifId: string) => {
         const notif = unreadNotifications.find(n => n.id === notifId);
@@ -401,19 +407,14 @@ function VetPageContent() {
         loadClinicServices();
         loadClinicDoctors();
         
-        // Listen for new appointments to refresh slots in real-time
-        const channel = new BroadcastChannel('moffi_appointments_channel');
-        const handleMessage = (event: MessageEvent) => {
-            const { type } = event.data;
-            if (type === 'APPOINTMENT_CREATED' || type === 'APPOINTMENT_ACTION') {
-                loadDbAppointments();
-            }
+        // Başkalarının randevuları RLS gereği canlı dinlenemez; sekmeye dönüşte dolu saatler tazelenir.
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') loadDbAppointments();
         };
-        channel.addEventListener('message', handleMessage);
+        document.addEventListener('visibilitychange', handleVisibility);
 
         return () => {
-            channel.removeEventListener('message', handleMessage);
-            channel.close();
+            document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, [selectedClinic?.id]);
 
@@ -716,6 +717,7 @@ function VetPageContent() {
         setSelectedDoctor(null);
         setSelectedSvc(null);
         setSelectedAppointmentPet(activePet || pets?.[0] || null);
+        if (isSupabaseEnabled && clinic?.id) refreshBusySlots(clinic.id);
     };
 
     const calculatePetAge = (pet: any) => {
@@ -792,7 +794,7 @@ function VetPageContent() {
         } catch (error: any) {
             showToast(error?.message || "Randevu oluşturulamadı, lütfen tekrar dene.", "AlertCircle", "text-red-500 font-bold");
             if (error?.code === 'SLOT_TAKEN') {
-                setSelectedTime("");
+                setSelectedTime(null);
                 refreshBusySlots(selectedClinic.id);
             }
             return;

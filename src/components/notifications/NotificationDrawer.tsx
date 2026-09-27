@@ -4,15 +4,12 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, Bell, Heart, UserPlus, ShieldAlert, 
-  ShoppingBag, Sparkles, Trash2, CheckCircle2 
+  ShoppingBag, Sparkles, Trash2, CheckCircle2, Calendar
 } from "lucide-react";
 import { useNotifications } from "@/context/NotificationContext";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/dateUtils";
 import { useTranslation } from "@/context/LanguageContext";
-
-import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/lib/supabase";
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -22,31 +19,11 @@ interface NotificationDrawerProps {
 export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, isLoading } = useNotifications();
   const { language } = useTranslation();
-  const { user } = useAuth();
-
-  const simulateNotification = async () => {
-    if (!user) return;
-    const types: any[] = ['like', 'follow', 'system', 'wellbeing', 'shop'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    
-    const mockNotif = {
-      user_id: user.id,
-      type,
-      title: type === 'like' ? 'Yeni Beğeni!' : type === 'follow' ? 'Yeni Takipçi!' : 'Sistem Mesajı',
-      content: type === 'like' ? 'Birisi patili dostunun fotoğrafını beğendi. 🐾' : 
-               type === 'follow' ? 'Yeni birisi senin Moffi dünyana katıldı!' : 
-               'Moffi Ekosistemi güncellendi, yeni özellikleri keşfet!',
-      is_read: false
-    };
-
-    const { error } = await supabase.from('notifications').insert([mockNotif]);
-    if (error) console.error("Sim error:", error);
-  };
-
   const getIcon = (type: string) => {
     switch (type) {
       case 'like': return <Heart className="w-4 h-4 text-pink-500" />;
       case 'follow': return <UserPlus className="w-4 h-4 text-cyan-500" />;
+      case 'appointment': return <Calendar className="w-4 h-4 text-orange-500" />;
       case 'system': return <Sparkles className="w-4 h-4 text-purple-500" />;
       case 'wellbeing': return <ShieldAlert className="w-4 h-4 text-orange-500" />;
       case 'shop': return <ShoppingBag className="w-4 h-4 text-green-500" />;
@@ -91,13 +68,6 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={simulateNotification}
-                  className="p-3 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl text-violet-400 hover:text-white transition-all active:scale-95 group"
-                  title="Test Bildirimi Gönder"
-                >
-                  <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                </button>
                 <button 
                   onClick={onClose}
                   className="p-3 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl text-gray-500 hover:text-white transition-all active:scale-95"

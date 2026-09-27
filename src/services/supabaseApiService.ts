@@ -3284,25 +3284,7 @@ export class SupabaseApiService implements IApiService {
 
         supabase.rpc('increment_followers', { target_user_id: targetId }).then(() => {}, () => {});
 
-        // Dynamic Notification creation
-        try {
-            const senderProfile = await this.getUserProfile(user.id);
-            const senderName = senderProfile?.username || user.email?.split('@')[0] || 'Bir kullanıcı';
-            await supabase.from('notifications').insert({
-                user_id: targetId,
-                type: 'follow',
-                title: 'Yeni Takipçi 🐾',
-                content: `@${senderName} seni takip etmeye başladı!`,
-                is_read: false,
-                meta: {
-                    sender_id: user.id,
-                    sender_name: senderProfile?.name || senderName,
-                    sender_avatar: senderProfile?.avatar || null
-                }
-            });
-        } catch (notifErr) {
-            console.error("Follow notification error:", notifErr);
-        }
+        // Takip bildirimi veritabanındaki on_follow_notify tetikleyicisiyle üretilir.
     }
 
     async unfollowUser(targetId: string): Promise<void> {
@@ -5179,9 +5161,10 @@ export class SupabaseApiService implements IApiService {
     // --- APPOINTMENT NOTIFICATIONS (FAZ 9) ---
     async getUnreadNotifications(recipientId: string): Promise<any[]> {
         const { data, error } = await supabase
-            .from('appointment_notifications')
-            .select('id, appointment_id, message, created_at')
-            .eq('recipient_id', recipientId)
+            .from('notifications')
+            .select('id, entity_id, title, content, created_at')
+            .eq('user_id', recipientId)
+            .eq('type', 'appointment')
             .eq('is_read', false)
             .order('created_at', { ascending: false });
 
@@ -5189,12 +5172,17 @@ export class SupabaseApiService implements IApiService {
             console.error("Error fetching unread notifications:", error);
             return [];
         }
-        return data || [];
+        return (data || []).map(n => ({
+            id: n.id,
+            appointment_id: n.entity_id,
+            message: n.content ? `${n.title}: ${n.content}` : n.title,
+            created_at: n.created_at
+        }));
     }
 
     async markNotificationRead(notificationId: string): Promise<boolean> {
         const { error } = await supabase
-            .from('appointment_notifications')
+            .from('notifications')
             .update({ is_read: true })
             .eq('id', notificationId);
 

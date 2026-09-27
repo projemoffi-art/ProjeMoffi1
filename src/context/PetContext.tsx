@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { apiService } from "../services/apiService";
 import { useAuth } from "./AuthContext";
+import { supabase } from "@/lib/supabase";
 
 // --- TYPES ---
 export interface Pet {
@@ -292,9 +293,18 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
         refreshAppointments();
 
         window.addEventListener('focus', refreshAppointments);
-        
+
+        // İşletme onay/red/tamamlama yaptığında liste anında güncellenir.
+        const channel = supabase
+            .channel(`user-appointments-${user.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `user_id=eq.${user.id}` }, () => {
+                refreshAppointments();
+            })
+            .subscribe();
+
         return () => {
             window.removeEventListener('focus', refreshAppointments);
+            supabase.removeChannel(channel);
         };
     }, [user?.id, refreshAppointments]);
 

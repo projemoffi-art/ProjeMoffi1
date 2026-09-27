@@ -162,8 +162,13 @@ export default function BusinessAppointmentsPage() {
         };
         fetchNotifications();
 
-        const intervalId = setInterval(fetchNotifications, 15000);
-        return () => clearInterval(intervalId);
+        const channel = supabase
+            .channel(`clinic-notifications-${user.id}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload: any) => {
+                if (payload.new?.type === 'appointment') fetchNotifications();
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
     }, [user?.id]);
 
     const handleNotificationClick = async (notifId: string) => {
@@ -573,47 +578,32 @@ export default function BusinessAppointmentsPage() {
         }
     }, [user?.id]);
 
-    // Fetch new appointments from Server (realtime / polling)
+    // Randevu değişiklikleri Supabase Realtime ile anında gelir (RLS: clinic_id = auth.uid()).
     useEffect(() => {
-        if (typeof window === 'undefined') return;
+        if (!isSupabaseEnabled || !user?.id) return;
 
-        const checkNew = () => {
-            if (isSupabaseEnabled) {
+        const channel = supabase
+            .channel(`clinic-appointments-${user.id}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${user.id}` }, () => {
                 fetchAppointmentsFromDb();
-                return;
-            }
-            try {
-                const stored = localStorage.getItem('moffi_pending_appointments');
-                if (stored) {
-                    const parsed = JSON.parse(stored);
-                    setPendingRequests(parsed);
-                }
-            } catch (e) {
-                console.error("Storage Error:", e);
-            }
-        };
+                showToast("Yeni randevu talebi geldi 🐾", "Bell", "text-orange-500 font-bold");
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${user.id}` }, () => {
+                fetchAppointmentsFromDb();
+            })
+            .subscribe();
 
-        // Poll every 3 seconds as a fallback
-        const interval = setInterval(checkNew, 3000);
-        checkNew(); // Initial check
-
-        // Listen for real-time created notifications via BroadcastChannel
-        const channel = new BroadcastChannel('moffi_appointments_channel');
-        const handleMessage = (event: MessageEvent) => {
-            const { type } = event.data;
-            if (type === 'APPOINTMENT_CREATED') {
-                checkNew();
-                showToast("Yeni Randevu Talebi! Bir pati sahibi randevu talebinde bulundu. 🐾", "Bell", "text-indigo-400 font-bold");
-            }
+        // Arka planda kopan bağlantıda kaçan olaylar için sekmeye dönüşte tazele.
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') fetchAppointmentsFromDb();
         };
-        channel.addEventListener('message', handleMessage);
+        document.addEventListener('visibilitychange', handleVisibility);
 
         return () => {
-            clearInterval(interval);
-            channel.removeEventListener('message', handleMessage);
-            channel.close();
+            document.removeEventListener('visibilitychange', handleVisibility);
+            supabase.removeChannel(channel);
         };
-    }, []);
+    }, [user?.id]);
 
     const saveAppointments = (updated: any[]) => {
         setAppointments(updated);
@@ -658,11 +648,6 @@ export default function BusinessAppointmentsPage() {
                     action === 'accept' ? "CheckCircle2" : "XCircle", 
                     action === 'accept' ? "text-emerald-400 font-bold" : "text-red-400 font-bold"
                 );
-                
-                // Broadcast event to pati sahibi
-                const channel = new BroadcastChannel('moffi_appointments_channel');
-                channel.postMessage({ type: 'APPOINTMENT_ACTION', appointmentId: id, action: action, petName: target.petName });
-                channel.close();
 
                 // --- B1: Send Appointment Confirmation Email ---
                 if (action === 'accept' && target.userId) {
@@ -699,19 +684,9 @@ export default function BusinessAppointmentsPage() {
 
             // Replace alert with premium showToast
             showToast(`Randevu Onaylandı! ${target.petName} için bildirim gönderildi. ✨`, "CheckCircle2", "text-emerald-400 font-bold");
-            
-            // Broadcast event to pati sahibi
-            const channel = new BroadcastChannel('moffi_appointments_channel');
-            channel.postMessage({ type: 'APPOINTMENT_ACTION', appointmentId: id, action: 'accept', petName: target.petName });
-            channel.close();
         } else if (action === 'reject') {
             // Replace alert with premium showToast
             showToast(`Randevu Reddedildi! ❌`, "XCircle", "text-red-400 font-bold");
-            
-            // Broadcast event to pati sahibi
-            const channel = new BroadcastChannel('moffi_appointments_channel');
-            channel.postMessage({ type: 'APPOINTMENT_ACTION', appointmentId: id, action: 'reject', petName: target.petName });
-            channel.close();
         }
 
         const updatedPending = pendingRequests.filter(r => r.id !== id);
@@ -893,15 +868,6 @@ export default function BusinessAppointmentsPage() {
                 : "Randevu başarıyla tamamlandı! ✅",
             "Sparkles", "text-emerald-400 font-bold"
         );
-        
-        // Broadcast completed consultation
-        const channel = new BroadcastChannel('moffi_appointments_channel');
-        channel.postMessage({ 
-            type: 'CONSULTATION_COMPLETED', 
-            petId: targetPetId, 
-            petName: selectedApt.petName 
-        });
-        channel.close();
 
         closeConsultation();
     };

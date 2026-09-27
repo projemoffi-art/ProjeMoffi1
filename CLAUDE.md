@@ -2535,6 +2535,37 @@ olmadan) gönderiliyor, Postgres bunu UTC kabul ediyor — "duvar saati UTC'de"
 tutuluyor. Tüm gösterimler buna göre çalışıyor ama gerçek bir saat dilimi
 düzeltmesi Faz C'de yapılmalı. `createOrder` gerçek serviste hâlâ yok (Faz F).
 
+### 8.37 Faz B — tek bildirim omurgası + anlık senkron (2026-09-28)
+
+🔴 **`notifications` tablosunda "Universal Access" (using true) kuralı vardı** —
+giriş yapmamış biri dahil herkes herkesin bildirimini okuyup silebiliyordu.
+Kaldırıldı. Artık: sahibi okur/siler, sadece `is_read` kolonunu güncelleyebilir
+(kolon GRANT'i), INSERT yetkisi yok. **Bildirimleri SADECE sunucu üretir:**
+`notify_user(...)` (dahili, istemciye kapalı) + tetikleyiciler:
+beğeni/yorum (`trigger_notify_post_*`, artık SECURITY DEFINER), takip
+(`on_follow_notify` — eski istemci eklemesi var olmayan `meta` kolonu yüzünden
+hiç çalışmamıştı), yeni randevu (`on_appointment_created_notify` → işletmeye),
+randevu durum/katılım değişimi (`transition_appointment`,
+`set_appointment_attendance` → `type='appointment'`, `entity_id`=randevu id).
+Beğeni/yorumda çift bildirim üreten eski `notify_on_like`/`notify_on_comment`
+tetikleyicileri silindi. İşletme adı `business_display_name()` ile profilden okunur.
+
+`appointment_notifications` ayrı sistemi kaldırıldı; eski satırlar
+`notifications`'a taşındı. `getUnreadNotifications` artık `notifications`
+(type='appointment') okur.
+
+**Anlık senkron:** işletme randevu sayfasında 3 sn yoklama + `BroadcastChannel`
+(sadece aynı tarayıcıda çalışıyordu) yerine `appointments` (clinic_id filtresi)
+ve `notifications` (user_id filtresi) Realtime abonelikleri. Müşteri tarafında
+`PetContext` kendi randevularına (user_id filtresi) abone. Müşteri başkalarının
+randevusunu RLS gereği dinleyemez; dolu saatler randevu ekranı açılınca ve
+sekmeye dönüşte tazelenir, çakışmayı zaten veritabanı kısıtı engeller.
+
+**Bilinen, dokunulmayan paralel yapı:** `NotificationContext` (global) ile
+`useRealtimeNotifications` (sadece community sayfası) aynı tabloyu ayrı ayrı
+dinliyor — birleştirilmeli (Faz G). Klinik sohbeti hâlâ 4–10 sn yoklamayla
+çalışıyor (`ClinicDetailDrawer`, işletme randevu sayfası) — Faz G.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
