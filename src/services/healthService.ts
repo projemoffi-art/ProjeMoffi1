@@ -101,7 +101,7 @@ async function mapRecords(rows: any[]): Promise<MedicalRecord[]> {
     const clinicIds = Array.from(new Set(rows.map(r => r.clinic_id).filter((id: string) => /^[0-9a-f-]{36}$/i.test(id || ''))));
     const clinics: Record<string, any> = {};
     if (clinicIds.length > 0) {
-        const { data } = await supabase.from('profiles')
+        const { data } = await supabase.from('profile_cards')
             .select('id, business_name, full_name, avatar_url, address, district, province')
             .in('id', clinicIds);
         (data || []).forEach((c: any) => { clinics[c.id] = c; });

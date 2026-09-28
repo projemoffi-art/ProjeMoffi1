@@ -2892,10 +2892,19 @@ Baran'dan 21 ekran görseli bekleniyor (Kayıp 8, Sahiplendirme 7, Keşfet 6).
 - **Kapatılan (migration `social_policy_hotfix`):** herkes herkesin gönderisini silebiliyordu
   (`using (true)` silme kuralı); başkası adına gönderi/hikâye eklenebiliyordu; şikâyetler herkese
   açıktı. Anon rolünden gereksiz yazma yetkileri alındı.
-- 🔴 **Açık bekleyen (Faz 0):** `profiles` herkese açık (telefon, adres, IBAN, vergi no, bakiye);
-  `adoption_pets.phone` herkese açık; `lost_pets` tam koordinat herkese açık; `pati_puan_balance`
-  ve seri kalkanı kullanıcı tarafından güncellenebiliyor (koruma tetikleyicisi bu alanları kapsamıyor;
-  `award_pati_puan` de aynı kimlikle çalıştığı için basit tetikleyici eklemek onu da bozar).
+- ✅ **Faz 0 tamamlandı (migration `profiles_private`, `missing_grants_announcements_stars_advices`):**
+  - `profiles` artık sadece sahibi + yönetici + randevusu olan klinik (müşterisi) + sipariş alan satıcı
+    (alıcısı) okur. 🔴 **KURAL:** başka bir kullanıcının profilini okurken `profile_cards` kullan
+    (ad, kullanıcı adı, foto, biyografi; işletmenin telefon/adresi; bireyin telefonu/adresi/IBAN asla).
+    `getUserProfile` kendi profili için `profiles`, başkası için `profile_cards` okur.
+  - PawCoin sıralaması `get_coin_leaderboard` / `get_my_coin_rank`, "aynı şehir" `get_same_city_user_ids` (sunucuda).
+  - `guard_profile_rewards` (SECURITY INVOKER tetikleyici): `current_user` authenticated/anon ise Moffi Puanı ve
+    seri kalkanı değişmez; SECURITY DEFINER fonksiyonlar (award_pati_puan vb.) içinde current_user sahibidir, geçer.
+  - `adoption_pets.phone` ve `lost_pets` tam koordinatı kolon yetkisiyle kapalı; kayıp ilanları
+    `lost_pet_cards` görünümünden (herkese ~300 m, sahibine tam konum). Bu tablolardan `select('*')` YAPMA.
+  - Duyurular, günün yıldızları, veteriner tavsiyelerinin hiç GRANT'i yoktu (hep örnek veriye düşüyordu); verildi.
+    `vet_advices` işletme sadece kendi tavsiyesini yazar. `getVetAdvices` embed hatası (PGRST200) giderildi.
+  - Günün yıldızlarını sadece yönetici seçer; seçim yoksa tarayıcıda uydurma şampiyon üretilmez.
 - **Taklitler:** kayıp "Sahibine mesaj at"/"Gördüm"/"5 km'ye bildirim", sahiplendirme başvurusu
   (`submitAdoptionApplication` boş) ve "AI denetiminden geçti" hiçbir şey yapmıyor.
 

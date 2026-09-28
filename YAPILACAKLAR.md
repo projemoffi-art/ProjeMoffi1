@@ -24,6 +24,9 @@ Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.m
 - [ ] **Kayıp merkezi (SOS) yeniden tasarım.** Eski koyu/neon tasarımda; sahte "Güvenli Arama" ve
   "Anonim Mesaj" anahtarları kaldırıldı, künye sayfası gerçek hale getirildi. Ekranın kendisi
   (sessiz saatler, ödül, yarıçap, otomatik ilan) ayrı bir inceleme istiyor.
+- [ ] **Oyun ödülündeki coin eklenmiyor olabilir.** Eski `protect_profile_security_fields` tetikleyicisi
+  `auth.role()`'e bakıyor; `add_game_reward` (SECURITY DEFINER) içinde bile rol "authenticated" göründüğü
+  için `coin_balance` artışı geri alınıyor. `guard_profile_rewards`'daki `current_user` yöntemiyle düzeltilmeli.
 - [ ] **Günün yıldızları (topluluk).** Yürüyüşü olmayan hayvana kimlik numarasından türetilmiş
   uydurma "Aura puanı" veriliyor ve seçim her kullanıcının tarayıcısında yapılıyor; sunucuda
   günde bir kez hesaplanmalı.

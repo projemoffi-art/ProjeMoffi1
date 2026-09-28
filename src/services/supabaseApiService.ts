@@ -85,8 +85,12 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getUserProfile(id: string): Promise<UserProfile | null> {
+        // Kendi profili: tüm alanlar (profiles). Başkasının: sadece herkese açık kart (profile_cards) —
+        // telefon, adres, IBAN gibi alanlar başkasına hiç gelmez.
+        const me = await this.getSessionUser();
+        const source = me?.id === id ? 'profiles' : 'profile_cards';
         const [profileRes, followersRes, followingRes] = await Promise.all([
-            supabase.from('profiles').select('*').eq('id', id).single(),
+            supabase.from(source).select('*').eq('id', id).single(),
             supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', id),
             supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', id)
         ]);
@@ -209,7 +213,7 @@ export class SupabaseApiService implements IApiService {
     async isUsernameAvailable(username: string): Promise<boolean> {
         if (!username) return false;
         const { data, error } = await supabase
-            .from('profiles')
+            .from('profile_cards')
             .select('username')
             .eq('username', username.toLowerCase())
             .single();
@@ -266,7 +270,7 @@ export class SupabaseApiService implements IApiService {
         let profileMap: Record<string, any> = {};
         if (userIds.length > 0) {
             const { data: profiles } = await supabase
-                .from('profiles')
+                .from('profile_cards')
                 .select('*')
                 .in('id', userIds);
             
@@ -719,7 +723,8 @@ export class SupabaseApiService implements IApiService {
     // --- MAP & RADAR (Community) ---
     async getLostPets(): Promise<LostPet[]> {
         const { data, error } = await supabase
-            .from('lost_pets')
+            // lost_pet_cards: herkese yaklaşık (~300 m) konum, ilan sahibine tam konum.
+            .from('lost_pet_cards')
             .select('*')
             .order('created_at', { ascending: false });
 
@@ -737,7 +742,7 @@ export class SupabaseApiService implements IApiService {
 
         if (userIds.length > 0) {
             const { data: profiles } = await supabase
-                .from('profiles')
+                .from('profile_cards')
                 .select('id, username, avatar_url')
                 .in('id', userIds);
             if (profiles) {
@@ -822,7 +827,7 @@ export class SupabaseApiService implements IApiService {
                 longitude: data.longitude,
                 pet_id: data.pet_id || null
             })
-            .select()
+            .select('id, user_id, pet_name, img_url, images, location_text, description, pet_type, created_at')
             .single();
 
         if (error) throw error;
@@ -837,8 +842,8 @@ export class SupabaseApiService implements IApiService {
             dist: '0 km',
             time: 'Şimdi',
             user_id: inserted.user_id,
-            latitude: inserted.latitude,
-            longitude: inserted.longitude,
+            latitude: data.latitude,
+            longitude: data.longitude,
             created_at: inserted.created_at,
             author_name: 'Siz'
         } as LostPet;
@@ -903,7 +908,7 @@ export class SupabaseApiService implements IApiService {
 
             if (item.reporter_id) {
                 const { data: profile } = await supabase
-                    .from('profiles')
+                    .from('profile_cards')
                     .select('username, avatar_url')
                     .eq('id', item.reporter_id)
                     .single();
@@ -952,8 +957,9 @@ export class SupabaseApiService implements IApiService {
 
     async getAdoptions(): Promise<AdoptionPet[]> {
         const { data, error } = await supabase
+            // Telefon kolonu herkese açık değil; iletişim uygulama içi mesajla.
             .from('adoption_pets')
-            .select('*')
+            .select('id, user_id, pet_name, img_url, images, location_text, owner_name, description, pet_type, pet_breed, pet_age, gender, status, created_at, moderation_result, moderation_passed, moderated_at')
             .eq('status', 'available')
             .order('created_at', { ascending: false });
 
@@ -977,7 +983,7 @@ export class SupabaseApiService implements IApiService {
             age: item.pet_age || '',
             gender: item.gender || '',
             owner: item.owner_name || 'Moffi Üyesi',
-            phone: item.phone || '',
+            phone: '',
             user_id: item.user_id,
             author_name: item.owner_name || 'Moffi Üyesi',
             created_at: item.created_at
@@ -1002,7 +1008,7 @@ export class SupabaseApiService implements IApiService {
                 gender: data.gender,
                 owner_name: data.owner
             })
-            .select()
+            .select('id, user_id, pet_name, img_url, images, location_text, owner_name, description, pet_type, pet_breed, pet_age, gender, status, created_at, moderation_result, moderation_passed, moderated_at')
             .single();
 
         if (error) throw error;
@@ -1687,7 +1693,7 @@ export class SupabaseApiService implements IApiService {
     async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null, businessType?: string): Promise<any[]> {
         // Since we are no longer using the clinics table, we fetch approved businesses from profiles
         let query = supabase
-            .from('profiles')
+            .from('profile_cards')
             .select('*')
             .eq('role', 'business')
             .eq('business_approved', true);
@@ -1789,7 +1795,7 @@ export class SupabaseApiService implements IApiService {
 
     async getClinicDetails(clinicId: string): Promise<any> {
         const { data, error } = await supabase
-            .from('profiles')
+            .from('profile_cards')
             .select('*')
             .eq('id', clinicId)
             .single();
@@ -1872,7 +1878,7 @@ export class SupabaseApiService implements IApiService {
     async getClinicsByIds(clinicIds: string[]): Promise<any[]> {
         if (clinicIds.length === 0) return [];
         const { data, error } = await supabase
-            .from('profiles')
+            .from('profile_cards')
             .select('*')
             .in('id', clinicIds)
             .eq('role', 'business')
@@ -1959,7 +1965,7 @@ export class SupabaseApiService implements IApiService {
             .limit(50);
         const clinicIds = [...new Set((data || []).map((a: any) => a.clinic_id))];
         const { data: clinics } = clinicIds.length
-            ? await supabase.from('profiles').select('id, business_name, full_name').in('id', clinicIds)
+            ? await supabase.from('profile_cards').select('id, business_name, full_name').in('id', clinicIds)
             : { data: [] as any[] };
         const names = new Map((clinics || []).map((c: any) => [c.id, c.business_name || c.full_name || 'İşletme']));
         return (data || []).map((a: any) => {
@@ -2086,7 +2092,7 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getCancellationNoticeHours(clinicId: string): Promise<number> {
-        const { data } = await supabase.from('profiles').select('cancellation_notice_hours').eq('id', clinicId).maybeSingle();
+        const { data } = await supabase.from('profile_cards').select('cancellation_notice_hours').eq('id', clinicId).maybeSingle();
         return data?.cancellation_notice_hours || 0;
     }
 
@@ -2124,7 +2130,6 @@ export class SupabaseApiService implements IApiService {
             .from('appointments')
             .select(`
                 *,
-                clinic:profiles!appointments_clinic_id_profiles_fkey(business_name, avatar_url, address, phone),
                 pet:pets(*),
                 doctor:doctors(name)
             `)
@@ -2135,7 +2140,20 @@ export class SupabaseApiService implements IApiService {
             console.error("Error in getAppointments:", error);
             return [];
         }
-        return data;
+        // Klinik bilgisi herkese açık işletme kartından (profiles artık sadece sahibine açık).
+        const clinicIds = Array.from(new Set((data || []).map((a: any) => a.clinic_id).filter(Boolean)));
+        const clinics: Record<string, any> = {};
+        if (clinicIds.length > 0) {
+            const { data: cards } = await supabase.from('profile_cards')
+                .select('id, business_name, avatar_url, address, phone').in('id', clinicIds);
+            (cards || []).forEach((c: any) => { clinics[c.id] = c; });
+        }
+        return (data || []).map((a: any) => ({
+            ...a,
+            clinic: clinics[a.clinic_id]
+                ? { business_name: clinics[a.clinic_id].business_name, avatar_url: clinics[a.clinic_id].avatar_url, address: clinics[a.clinic_id].address, phone: clinics[a.clinic_id].phone }
+                : null,
+        }));
     }
 
     async cancelAppointment(appointmentId: string): Promise<void> {
@@ -2350,7 +2368,7 @@ export class SupabaseApiService implements IApiService {
     async getClinicSettings(clinicId: string): Promise<any> {
         const [settingsRes, profileRes] = await Promise.all([
             supabase.from('clinic_settings').select('*').eq('clinic_id', clinicId).maybeSingle(),
-            supabase.from('profiles').select('working_hours').eq('id', clinicId).maybeSingle()
+            supabase.from('profile_cards').select('working_hours').eq('id', clinicId).maybeSingle()
         ]);
 
         if (settingsRes.error) {
@@ -2442,7 +2460,7 @@ export class SupabaseApiService implements IApiService {
         const userIds = [...new Set(reviews.map((r: any) => r.user_id))];
         let profilesMap: Record<string, any> = {};
         if (userIds.length > 0) {
-            const { data: profiles } = await supabase.from('profiles').select('id, full_name, username, avatar_url').in('id', userIds);
+            const { data: profiles } = await supabase.from('profile_cards').select('id, full_name, username, avatar_url').in('id', userIds);
             if (profiles) {
                 profiles.forEach((p: any) => { profilesMap[p.id] = p; });
             }
@@ -2522,7 +2540,7 @@ export class SupabaseApiService implements IApiService {
         
         // Enrich with clinic info
         const clinicIds = [...new Set(reviewable.map((a: any) => a.clinic_id))];
-        const { data: clinics } = await supabase.from('profiles').select('id, business_name, full_name, avatar_url').in('id', clinicIds);
+        const { data: clinics } = await supabase.from('profile_cards').select('id, business_name, full_name, avatar_url').in('id', clinicIds);
         const clinicMap: Record<string, any> = {};
         if (clinics) {
             clinics.forEach((c: any) => { clinicMap[c.id] = c; });
@@ -2960,16 +2978,27 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getVetAdvices(): Promise<any[]> {
+        // vet_advices.clinic_id'nin profiles'a yabancı anahtarı yok; eskiden bağlı sorgu (embed) her
+        // yüklemede PGRST200 veriyordu. Klinik adı herkese açık işletme kartından ayrı okunur.
         const { data, error } = await supabase
             .from('vet_advices')
-            .select(`*, profiles(full_name, business_name, avatar_url)`)
+            .select('*')
             .order('created_at', { ascending: false });
 
         if (error) {
             console.error("Error fetching vet advices:", error);
             return [];
         }
-        return data || [];
+        const ids = Array.from(new Set((data || []).map((a: any) => a.clinic_id).filter((v: string) => /^[0-9a-f-]{36}$/i.test(v || ''))));
+        const cards: Record<string, any> = {};
+        if (ids.length > 0) {
+            const { data: rows } = await supabase.from('profile_cards').select('id, full_name, business_name, avatar_url').in('id', ids);
+            (rows || []).forEach((r: any) => { cards[r.id] = r; });
+        }
+        return (data || []).map((a: any) => ({
+            ...a,
+            profiles: cards[a.clinic_id] ? { full_name: cards[a.clinic_id].full_name, business_name: cards[a.clinic_id].business_name, avatar_url: cards[a.clinic_id].avatar_url } : null,
+        }));
     }
 
     // --- FINANCE / TRANSACTIONS ---
@@ -3013,7 +3042,7 @@ export class SupabaseApiService implements IApiService {
         if (!data) return [];
 
         const userIds = [...new Set(data.map(s => s.user_id))];
-        const { data: profilesData } = await supabase.from('profiles').select('id, username, avatar_url').in('id', userIds);
+        const { data: profilesData } = await supabase.from('profile_cards').select('id, username, avatar_url').in('id', userIds);
         
         const profilesMap = new Map();
         if (profilesData) {
@@ -3083,7 +3112,7 @@ export class SupabaseApiService implements IApiService {
 
         const viewerIds = [...new Set(viewsData.map(v => v.viewer_id))];
         const { data: profilesData } = await supabase
-            .from('profiles')
+            .from('profile_cards')
             .select('id, full_name, username, avatar_url')
             .in('id', viewerIds);
         
@@ -3185,7 +3214,7 @@ export class SupabaseApiService implements IApiService {
             const userIds = likesData.map(l => l.user_id);
             
             const { data: profilesData, error: profilesError } = await supabase
-                .from('profiles')
+                .from('profile_cards')
                 .select('id, full_name, username, avatar_url')
                 .in('id', userIds);
                 
@@ -3305,7 +3334,7 @@ export class SupabaseApiService implements IApiService {
         const followerIds = followsData.map(f => f.follower_id);
 
         const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
+            .from('profile_cards')
             .select('*')
             .in('id', followerIds);
 
@@ -3334,7 +3363,7 @@ export class SupabaseApiService implements IApiService {
         const followingIds = followsData.map(f => f.following_id);
 
         const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
+            .from('profile_cards')
             .select('*')
             .in('id', followingIds);
 
@@ -3384,7 +3413,7 @@ export class SupabaseApiService implements IApiService {
             const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
 
             const { data: profile } = await supabase
-                .from('profiles')
+                .from('profile_cards')
                 .select('id, username, avatar_url')
                 .eq('id', otherUserId)
                 .single();
@@ -3635,7 +3664,7 @@ export class SupabaseApiService implements IApiService {
         if (!query || query.length < 2) return { profiles: [], posts: [], pets: [] };
 
         const [profilesRes, postsRes, petsRes] = await Promise.all([
-            supabase.from('profiles').select('*').or(`username.ilike.%${query}%,full_name.ilike.%${query}%`).limit(10),
+            supabase.from('profile_cards').select('*').or(`username.ilike.%${query}%,full_name.ilike.%${query}%`).limit(10),
             supabase.from('posts').select('*').ilike('content', `%${query}%`).limit(10),
             // Sadece herkese açık kart alanları (pet_cards); eskiden var olmayan pet_id kolonu yüzünden hep boş dönüyordu.
             supabase.from('pet_cards').select('id, name, type, breed, avatar_url, owner_id').ilike('name', `%${query}%`).limit(10)
@@ -4101,7 +4130,10 @@ export class SupabaseApiService implements IApiService {
             const cardOf = (id: string) => cards.find((c: any) => c.id === id);
 
             const results: any[] = [];
-            const candidates = await this.getDailyStarCandidates();
+            // Günün yıldızlarını sadece yönetici seçip kaydedebilir (daily_stars yazma kuralı). Diğer
+            // kullanıcılar sadece kayıtlı seçimi görür; seçim yoksa tarayıcıda uydurma şampiyon üretilmez.
+            const { data: myRole } = await supabase.rpc('get_my_role');
+            const candidates = myRole === 'admin' ? await this.getDailyStarCandidates() : [];
 
             for (let r = 1; r <= 5; r++) {
                 const found = (data || []).find((item: any) => item.rank === r);
@@ -4290,7 +4322,7 @@ export class SupabaseApiService implements IApiService {
         const ownerIds = Array.from(new Set((data || []).map((p: any) => p.owner_id).filter(Boolean)));
         const owners: Record<string, any> = {};
         if (ownerIds.length > 0) {
-            const { data: profs } = await supabase.from('profiles').select('id, full_name, username').in('id', ownerIds);
+            const { data: profs } = await supabase.from('profile_cards').select('id, full_name, username').in('id', ownerIds);
             (profs || []).forEach((o: any) => { owners[o.id] = o; });
         }
         return (data || []).map((p: any) => ({ ...p, profiles: owners[p.owner_id] || null }));
@@ -4368,23 +4400,18 @@ export class SupabaseApiService implements IApiService {
     // ekranı mesafe (km) bazlı, bkz. getDistanceLeaderboard() ve CLAUDE.md 8.8.
     async getLeaderboard(role: 'user' | 'business', limit: number = 50): Promise<any[]> {
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, avatar_url, coin_balance, role, pet_name')
-                .eq('role', role)
-                .order('coin_balance', { ascending: false, nullsFirst: false })
-                .limit(limit);
-
+            // Bakiyeler profiles'ta gizli; sıralama sunucu fonksiyonundan (sadece ad, fotoğraf, puan).
+            const { data, error } = await supabase.rpc('get_coin_leaderboard', { p_role: role, p_limit: limit });
             if (error) throw error;
 
-            return (data || []).map(p => ({
+            return (data || []).map((p: any) => ({
                 id: p.id,
                 name: p.full_name || 'Gizli Kullanıcı',
                 avatar: p.avatar_url,
-                score: p.coin_balance || 0,
+                score: Number(p.coin_balance) || 0,
                 country: 'TR',
                 pet: p.pet_name || (role === 'business' ? 'İşletme' : 'Moffi'),
-                change: 0 // Mocking daily change for now
+                change: 0
             }));
         } catch (err) {
             console.error("Supabase getLeaderboard failed:", err);
@@ -4392,28 +4419,12 @@ export class SupabaseApiService implements IApiService {
         }
     }
 
-    async getUserRank(userId: string): Promise<number> {
+    async getUserRank(_userId: string): Promise<number> {
+        // Sadece giriş yapan kişinin kendi sırası (başkasının bakiyesi okunamaz).
         try {
-            // Get user's score first
-            const { data: userProfile, error: userError } = await supabase
-                .from('profiles')
-                .select('coin_balance')
-                .eq('id', userId)
-                .single();
-
-            if (userError || !userProfile) return 0;
-            const score = userProfile.coin_balance || 0;
-
-            // Count how many users have a STRICTLY higher score
-            const { count, error } = await supabase
-                .from('profiles')
-                .select('id', { count: 'exact', head: true })
-                .gt('coin_balance', score);
-
+            const { data, error } = await supabase.rpc('get_my_coin_rank');
             if (error) throw error;
-
-            // Their rank is (number of people with higher score) + 1
-            return (count || 0) + 1;
+            return Number(data) || 0;
         } catch (err) {
             console.error("Supabase getUserRank failed:", err);
             return 0;
@@ -4450,7 +4461,7 @@ export class SupabaseApiService implements IApiService {
         if (ids.length === 0) return [];
         try {
             const { data, error } = await supabase
-                .from('profiles')
+                .from('profile_cards')
                 .select('id, full_name, avatar_url, pet_name')
                 .in('id', ids);
             if (error) throw error;
@@ -4645,7 +4656,7 @@ export class SupabaseApiService implements IApiService {
             const mutualIds = (mutualRows || []).map(r => r.follower_id);
             if (mutualIds.length === 0) return [];
 
-            const { data: profiles, error: e3 } = await supabase.from('profiles').select('id, full_name, username, avatar_url').in('id', mutualIds);
+            const { data: profiles, error: e3 } = await supabase.from('profile_cards').select('id, full_name, username, avatar_url').in('id', mutualIds);
             if (e3) throw e3;
             return (profiles || []).map(p => ({ id: p.id, name: p.full_name || p.username || 'Moffi Kullanıcısı', avatar: p.avatar_url || undefined }));
         } catch (err) {
@@ -4702,22 +4713,12 @@ export class SupabaseApiService implements IApiService {
     // diğer kullanıcılar. Gerçek bir yapılandırılmış "şehir" kolonu yok - şu an
     // hiçbir gerçek kullanıcı address girmediği için bu genelde boş dönecek,
     // sahte veri üretmek yerine dürüstçe boş liste dönüyor.
-    async getSameCityUserIds(userId: string): Promise<string[]> {
+    async getSameCityUserIds(_userId: string): Promise<string[]> {
+        // Adresler gizli; eşleştirme sunucuda yapılır, sadece kullanıcı kimlikleri döner.
         try {
-            const { data: me, error: meError } = await supabase
-                .from('profiles')
-                .select('address')
-                .eq('id', userId)
-                .single();
-            if (meError || !me?.address) return [];
-
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('role', 'user')
-                .eq('address', me.address);
+            const { data, error } = await supabase.rpc('get_same_city_user_ids');
             if (error) throw error;
-            return (data || []).map(p => p.id);
+            return (data || []).map((r: any) => (typeof r === 'string' ? r : r.get_same_city_user_ids ?? r.id)).filter(Boolean);
         } catch (err) {
             console.error("Supabase getSameCityUserIds failed:", err);
             return [];

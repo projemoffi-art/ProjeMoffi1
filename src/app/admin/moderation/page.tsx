@@ -47,14 +47,14 @@ export default function ModerationMatrix() {
         try {
             const { data: adsData, error: adsError } = await supabase
                 .from('adoption_pets')
-                .select('*')
+                .select('id, user_id, pet_name, img_url, images, location_text, owner_name, description, pet_type, pet_breed, pet_age, gender, status, created_at, moderation_result, moderation_passed, moderated_at')
                 .order('created_at', { ascending: false });
 
             if (adsError) throw adsError;
 
             const { data: reportsData, error: reportsError } = await supabase
                 .from('adoption_reports')
-                .select('*, adoption_pets(name, breed)')
+                .select('*, adoption_pets(pet_name, pet_breed)')
                 .order('created_at', { ascending: false });
 
             if (reportsError) console.error("Could not fetch adoption_reports:", reportsError);
@@ -69,12 +69,12 @@ export default function ModerationMatrix() {
             // Map data to UI expectations if necessary
             const realAds = (adsData || []).map(ad => ({
                 id: ad.id,
-                name: ad.name,
-                breed: ad.breed,
+                name: ad.pet_name,
+                breed: ad.pet_breed,
                 status: ad.status || 'pending',
                 author_name: ad.user_id ? 'User' : 'Unknown', // Ideally join users table, mock for now
                 created_at: ad.created_at,
-                location: ad.location || 'Bilinmiyor',
+                location: ad.location_text || 'Bilinmiyor',
                 desc: ad.description || ''
             }));
 
@@ -83,7 +83,7 @@ export default function ModerationMatrix() {
                 sourceTable: 'adoption_reports',
                 targetType: 'post',
                 targetId: r.ad_id,
-                content: `İlan: ${(r as any).adoption_pets?.name || 'Bilinmiyor'} (${(r as any).adoption_pets?.breed || 'Bilinmiyor'})`,
+                content: `İlan: ${(r as any).adoption_pets?.pet_name || 'Bilinmiyor'} (${(r as any).adoption_pets?.pet_breed || 'Bilinmiyor'})`,
                 authorName: 'System', 
                 reportedBy: r.reported_by || 'Anonim',
                 reason: r.reason,
