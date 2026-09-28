@@ -2783,6 +2783,61 @@ Denetim raporu: https://claude.ai/artifact/5uFyBB7KYvs3M3vGk5mkSM. Denetim önce
   yüklendi; profil kaydı gerçek istemciyle yazıldı (veri değişmeden). `CalendarPlus` ikonu
   Turbopack/OneDrive çökmesine yol açtı (bkz. 5.6), `Calendar`/`CheckCircle2` ile değiştirildi.
 
+### 8.44 Sağlık Merkezi / Sağlık Karnesi: tek sağlık kaydı + kapılar (2026-09-28)
+
+Rapor ve plan: https://claude.ai/code/artifact/c5575b56-d083-44c3-b6d5-6f02ca82c0ed. Kilitli
+tasarım: `design-reference/health-final/` (Bölüm 11). İlke: **veri tek kayıtta, ekranlar
+gerektiği yerde o kaydı okur**. Sağlık = evcil hayvanın bilgisi; Veteriner (`/vet`) = hizmet.
+
+- **Tek yol:** `src/services/healthService.ts` (okuma/yazma), `src/lib/health/derive.ts` (tüm durum
+  hesapları: aşı/parazit durumu, yaklaşanlar, genel durum, kilo değişimi, zaman çizelgesi, yaş),
+  `src/types/health.ts`. Ekranlar `/health/*` (`HealthProvider` aktif hayvanın karnesini bir kez
+  yükler). `/health` dışı ekranlar `usePetHealthBundle(pet)` + aynı derive fonksiyonlarını kullanır.
+  **KURAL:** yeni bir ekran sağlık bilgisi gösterecekse kendi hesabını yazmaz, bunları kullanır.
+- **Şema (migration'lar 20260928100000…100600):** `vaccine_definitions` (kedi/köpek ayrı; eskiden
+  kodda 3 ayrı ve sadece köpek listesi vardı → kedilere köpek takvimi öneriliyordu),
+  `vaccines` (+definition_id/source/clinic_id/batch_no), `parasite_treatments` (önceden
+  `sos_settings` içinde ve "aşı" gibi), `pet_weight_logs` (+`pets.weight` bunun aynası, iki yönlü
+  tetikleyici), `pet_health_profile` (acil bilgiler + kayıp/QR paylaşım anahtarları),
+  `medications` (+end_date/dose_times/…; istemciye hiç GRANT yoktu, özellik hiç çalışmamıştı),
+  `medication_doses`, `pet_documents` (özel `medical-documents` alanı, yalnızca sahibi okur),
+  `medical_records` (+source/visit_date/external_clinic_name/vaccines: sahip dış ziyaret ekleyebilir).
+  Yetki yardımcıları `owns_pet`, `owns_pet_folder`.
+- 🔴 **İşletme muayenesi `record_consultation()` ile atomik:** önceden istemci aşı/ilacı doğrudan
+  sahibe ait tablolara yazmaya çalışıyordu (RLS reddediyordu); EMR yazılıp aşı/ilaç düşünce randevu
+  "zaten kayıt var" hatasıyla sonsuza kadar takılıyordu. Artık kayıt + aşı (türe göre, sonraki doz
+  otomatik) + reçete + kilo + randevu tamamlama tek işlemde. İşletme formuna kilo/sıcaklık eklendi.
+  İşletme `medical_records`'a doğrudan yazamaz.
+- 🔴 **Depolama:** tüm alanlara `using (true)` okuma veren "Public Viewing" kuralı vardı; özel tıbbi
+  belge alanı fiilen herkese açıktı. Kaldırıldı (genel alanlar zaten public URL ile servis ediliyor).
+- **Hatırlatmalar:** `enqueue_health_due_reminders` (günlük 09:00, aşı/parazit: 14/3/0 gün, 7 gün
+  gecikme; bildirim + e-posta) ve `enqueue_medication_dose_reminders` (5 dk, doz saati; sadece
+  bildirim). `notify_user` 'health' türünü e-postaya düşürür. Tekrar önleme `health_reminder_log`.
+  Eski `vaccine-reminders` push cron'u kapatıldı (sadece "planlanmış" aşılara bakıyordu).
+- **Acil bilgiler dışarıda:** `get_public_emergency_info(pet, 'lost'|'qr')` — sadece sahip açtıysa;
+  `/id/[petId]` (kayıp modunda) ve `/verify/[petId]` `EmergencyInfoCard` ile gösterir. Doğrulama
+  sayfasının "aşıları güncel" hesabı düzeltildi (sadece planlanmış aşılara bakıyordu).
+- **Kapılar:** ana sayfa "Aşı Takvimi" → "Sağlık Merkezi"; ana sayfa Hatırlatmalar ortak hesaptan
+  (parazit dahil, gecikenler kırmızı, satırlar tıklanabilir); `open-care-hub` sağlık → `/health`;
+  alt menü "carehub" → `/health` (yarım saniyelik bekleme yaması kaldırıldı); profil "Randevular"
+  (hep boş liste gösteriyordu) → Sağlık Merkezi, `?view=appointments` → `/vet?view=appointments`;
+  bildirime dokununca ilgili hayvanın karnesi açılır (`/health?pet=`).
+- **Silinen/değişen sahte içerik:** Pasaport'taki "Seyahate uygun (AB)" rozeti, 4,5 sn sahte
+  "oluşturuluyor" + Türkçe harf silen PDF, parazit kutusu, elle "Sağlık: İyi" (ayarlar, yeni hayvan
+  ekleme, ana sayfa kartı → artık türetilmiş durum); menüdeki hayvan kimliğinden uydurulan "Nabız"
+  ve sabit "12.4 kg"; ana sayfadaki sabit "%80 aşılama", "7/24 canlı veteriner" (sadece alert),
+  herkese aynı alerji/diyet metni; `subscriptions` (kaldırılmış özellik) sayfayı çökertiyordu.
+  Silinen dosyalar: VaccineModal (petId'siz çağrılıyordu, hep boştu), MedicationModal, DentalCareModal,
+  AddVaccineModal, PublicPassportTab, PETIDModal, AppointmentsTab, useVaccineSchedule,
+  useMedicalHistory, vet/find/FilterChips, eski servis metotları. Global beslenme penceresi
+  `petId` verilmeden açılıyordu, düzeltildi.
+- **Bilinçli sınırlar:** "Güncel/Dikkat/Gecikmiş" durumu tıbbi sağlık iddiası değil, takvim durumudur
+  (referanstaki "Sağlıklı" yerine). PDF, Türkçe karakterler için tarayıcının "PDF olarak kaydet"
+  özelliğiyle üretilir. Beslenme (S5: `/food` sadeleştirme + `pet_daily_stats`) henüz yapılmadı.
+- **Doğrulama:** değişen dosyalarda tip hatası yok, `npm run build` başarılı; `record_consultation`
+  ve hatırlatmalar geri alınan SQL işlemlerinde, tüm ekranlar ve işletme muayene formu Playwright
+  ile gerçek hesapla denendi (test verisi temizlendi).
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
@@ -2926,3 +2981,7 @@ Antigravity. Karışıklığı önlemek için şu iş bölümü kuruldu:
   diye kalıcı olarak buraya kaydedildi (walk-final'ın bir kez kaybolup Faz 12/13'ün
   görselsiz inşa edilmesi hatasının tekrarlanmaması için). **Herhangi bir ajan
   `/vet/*` altında UI değişikliği yapmadan önce bu klasörü okumalı.**
+- 🔴 **Kilitli Sağlık Merkezi / Sağlık Karnesi tasarımı** (2026-09-28)
+  `design-reference/health-final/`: `health-karne-reference.jpg` (asıl referans, Baran'ın rapordaki
+  brife göre hazırladığı) + `health-center-inspiration.jpg` (sadece ilham) + `README.md`.
+  **`/health/*` ya da sağlık bilgisi gösteren herhangi bir ekranda UI değişikliğinden önce okunmalı.**

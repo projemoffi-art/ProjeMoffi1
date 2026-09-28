@@ -10,6 +10,8 @@ import { cn } from '../../lib/utils';
 import { useHubData } from '@/hooks/useHubData';
 import { PetSwitcher } from '../common/PetSwitcher';
 import { usePet } from '@/context/PetContext';
+import { ageText, daysLeftText } from '@/lib/health/derive';
+import { todayKey } from '@/lib/appointmentTime';
 
 interface ActionHubDrawerProps {
     isOpen: boolean;
@@ -25,42 +27,14 @@ export function ActionHubDrawer({
     const { activePet } = usePet();
     const { isPro, nextHealthAlert } = useHubData();
 
-    // Health Logic (Duplicate from Hub to ensure consistency in Kimliğim portal)
-    const getPetPulse = (petId: any) => {
-        if (!petId) return 78;
-        const idStr = String(petId);
-        const seed = idStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        return 70 + (seed % 20);
-    };
-
-    const getPetAge = (pet: any) => {
-        if (!pet) return "1.2";
-        if (pet.birthday) {
-            try {
-                const months: Record<string, string> = {
-                    'ocak': '01', 'subat': '02', 'mart': '03', 'nisan': '04', 'mayis': '05', 'haziran': '06',
-                    'temmuz': '07', 'agustos': '08', 'eylul': '09', 'ekim': '10', 'kasim': '11', 'aralik': '12'
-                };
-                let bStr = pet.birthday.toLowerCase()
-                    .replace('ı', 'i').replace('ş', 's').replace('ç', 'c').replace('ö', 'o').replace('ü', 'u').replace('ğ', 'g');
-                let datePart = bStr;
-                Object.keys(months).forEach(m => {
-                    if (bStr.includes(m)) datePart = bStr.replace(m, months[m]);
-                });
-                const parts = datePart.match(/\d+/g);
-                if (parts && parts.length === 3) {
-                    const birth = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-                    if (!isNaN(birth.getTime())) {
-                        return Math.abs((new Date().getTime() - birth.getTime()) / (1000 * 3600 * 24 * 365.25)).toFixed(1);
-                    }
-                }
-            } catch (e) { console.error(e); }
-        }
-        return pet.age || (String(pet.id || "").length % 5 + 0.8).toFixed(1);
-    };
+    const weightNumber = (() => {
+        const n = parseFloat(String(activePet?.weight ?? '').replace(',', '.'));
+        return Number.isFinite(n) && n > 0 ? n.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : null;
+    })();
+    const petAge = activePet ? ageText(activePet.birthday, activePet.age, todayKey()) : null;
 
     const identityActions = [
-        { id: 'appointments', icon: HeartPulse, label: 'Sağlık & Takvim', sub: 'Aşı ve Randevular', color: 'text-red-400', bg: 'bg-red-500/10' },
+        { id: 'carehub', icon: HeartPulse, label: 'Sağlık Merkezi', sub: 'Aşı, ilaç, kilo ve belgeler', color: 'text-red-400', bg: 'bg-red-500/10' },
         { id: 'wallet', icon: Wallet, label: 'Moffi Pay Cüzdanım', sub: 'Bakiye ve Harcamalar', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
         { id: 'family', icon: Users, label: 'Aile ve Paylaşım', sub: 'Ortak Hesap Yönetimi', color: 'text-purple-400', bg: 'bg-purple-500/10' },
         { id: 'orders', icon: Package, label: 'Market Siparişlerim', sub: 'Kargo Takibi', color: 'text-amber-400', bg: 'bg-amber-500/10' },
@@ -153,31 +127,33 @@ export function ActionHubDrawer({
                                         </div>
                                     </div>
                                     {nextHealthAlert ? (
-                                        <div className="px-2.5 py-1 bg-red-500/20 rounded-full border border-red-500/30 animate-pulse">
-                                            <span className="text-[7px] sm:text-[8px] font-black text-red-400 uppercase">{nextHealthAlert.daysLeft} GÜN</span>
+                                        <div className={`px-2.5 py-1 rounded-full border ${nextHealthAlert.daysLeft < 0 ? 'bg-red-500/20 border-red-500/30' : 'bg-amber-500/15 border-amber-500/30'}`}>
+                                            <span className={`text-[8px] font-black ${nextHealthAlert.daysLeft < 0 ? 'text-red-400' : 'text-amber-500'}`}>{daysLeftText(nextHealthAlert.daysLeft)}</span>
                                         </div>
                                     ) : (
                                         <div className="px-2.5 py-1 bg-emerald-500/20 rounded-full border border-emerald-500/30">
-                                            <span className="text-[7px] sm:text-[8px] font-black text-emerald-400 uppercase">STABİL</span>
+                                            <span className="text-[8px] font-black text-emerald-500">Güncel</span>
                                         </div>
                                     )}
                                 </div>
+                                {/* Gerçek veriler: Sağlık Karnesi'ndeki son kilo, doğum tarihinden yaş, sıradaki sağlık işi. */}
                                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
                                     <div className="flex flex-col items-center p-2.5 sm:p-3 bg-foreground/5 rounded-xl sm:rounded-2xl border border-foreground/5">
                                         <Scale className="text-accent mb-1" size={14} />
-                                        <span className="text-xs sm:text-sm font-black text-foreground italic">{activePet?.weight?.toString().replace(/[^0-9.]/g, '') || "12.4"} <small className="text-[8px] not-italic opacity-50">kg</small></span>
-                                        <span className="text-[7px] font-bold text-secondary uppercase tracking-tighter mt-1">Kilo</span>
-                                    </div>
-                                    <div className="flex flex-col items-center p-2.5 sm:p-3 bg-foreground/5 rounded-xl sm:rounded-2xl border border-foreground/5">
-                                        <Activity className="text-red-400 mb-1" size={14} />
-                                        <span className="text-xs sm:text-sm font-black text-foreground italic">{activePet ? getPetPulse(activePet.id) : 82} <small className="text-[8px] not-italic opacity-50">bpm</small></span>
-                                        <span className="text-[7px] font-bold text-secondary uppercase tracking-tighter mt-1">Nabız</span>
+                                        <span className="text-xs sm:text-sm font-black text-foreground">{weightNumber ?? '—'} {weightNumber != null && <small className="text-[8px] opacity-50">kg</small>}</span>
+                                        <span className="text-[8px] font-bold text-secondary mt-1">Kilo</span>
                                     </div>
                                     <div className="flex flex-col items-center p-2.5 sm:p-3 bg-foreground/5 rounded-xl sm:rounded-2xl border border-foreground/5">
                                         <Sparkles className="text-yellow-400 mb-1" size={14} />
-                                        <span className="text-xs sm:text-sm font-black text-foreground italic">{getPetAge(activePet)} <small className="text-[8px] not-italic opacity-50">yıl</small></span>
-                                        <span className="text-[7px] font-bold text-secondary uppercase tracking-tighter mt-1">Yaş</span>
+                                        <span className="text-xs sm:text-sm font-black text-foreground text-center">{petAge || '—'}</span>
+                                        <span className="text-[8px] font-bold text-secondary mt-1">Yaş</span>
                                     </div>
+                                    <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'carehub' })); }}
+                                        className="flex flex-col items-center p-2.5 sm:p-3 bg-foreground/5 rounded-xl sm:rounded-2xl border border-foreground/5">
+                                        <Activity className="text-red-400 mb-1" size={14} />
+                                        <span className="text-[10px] font-black text-foreground text-center leading-tight line-clamp-2">{nextHealthAlert?.name || 'Sıradaki iş yok'}</span>
+                                        <span className="text-[8px] font-bold text-secondary mt-1">Sıradaki</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>

@@ -12,14 +12,10 @@ import {
     Smartphone, Radio, AlertOctagon, ShieldAlert,
     Settings
 } from "lucide-react";
-import { cn, showToast } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import QRCode from "qrcode";
-import { useVaccineSchedule } from "@/hooks/useVaccineSchedule";
-import { useMedicalHistory } from "@/hooks/useMedicalHistory";
 import { TagPairingModal } from "@/components/community/modals/TagPairingModal";
-import html2canvas from 'html2canvas';
-import { useShare } from '@/context/ShareContext';
 import { usePet } from "@/context/PetContext";
 import { PetSwitcher } from "../common/PetSwitcher";
 import { PetSettingsModal } from "./PetSettingsModal";
@@ -55,16 +51,10 @@ function MicrochipBarcode({ value }: { value: string }) {
 }
 
 export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }: PassportTabProps) {
-    const { activePet, isLoading: isPetLoading, updatePet, deletePet } = usePet();
-    const { openShare } = useShare();
+    const { activePet, updatePet, deletePet } = usePet();
     const currentPet = propPet || activePet;
-    const { schedule, isLoading } = useVaccineSchedule(currentPet?.id as string);
-    const { records: medicalHistory, isLoading: medicalLoading } = useMedicalHistory(currentPet?.id);
     const [isHovered, setIsHovered] = useState(false);
     const [isQRExpanded, setIsQRExpanded] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [generationStep, setGenerationStep] = useState(0);
-    const [showPreview, setShowPreview] = useState(false);
     const [isTagModalOpen, setIsTagModalOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
@@ -81,7 +71,6 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
         size: currentPet?.size || currentPet?.sos_settings?.size || "",
         character: currentPet?.character || currentPet?.sos_settings?.character || "",
         features: currentPet?.features || currentPet?.sos_settings?.features || "",
-        healthStatus: currentPet?.health || currentPet?.sos_settings?.health || "",
         healthNotes: currentPet?.health_notes || "",
         owner: {
             name: isPublic ? "Gizli Bilgi" : (currentPet?.owner?.name || currentPet?.ownerName || currentPet?.sos_settings?.owner?.name || "Bilinmiyor"),
@@ -89,349 +78,6 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
             address: isPublic ? "Bölge Gizli (Sadece Sahibi Görebilir)" : (currentPet?.owner?.address || currentPet?.ownerAddress || currentPet?.sos_settings?.owner?.address || "Adres Kayıtı Bulunamadı"),
         }
     };
-
-    const hasMicrochip = petData.microchip && petData.microchip !== "Kayıtlı Değil" && petData.microchip.trim() !== "";
-    const hasRabiesVaccine = schedule.some((v: any) => {
-        const nameLower = (v.definition?.name || "").toLowerCase();
-        const codeLower = (v.definition?.code || "").toLowerCase();
-        return (nameLower.includes("kuduz") || nameLower.includes("rabies") || codeLower.includes("rabies") || codeLower.includes("kuduz")) && !!v.dateAdministered;
-    });
-    const isTravelReady = hasMicrochip && hasRabiesVaccine;
-
-    const handleGenerate = async () => {
-        setIsGenerating(true);
-        setGenerationStep(1);
-        
-        await new Promise(r => setTimeout(r, 1500));
-        setGenerationStep(2);
-        
-        await new Promise(r => setTimeout(r, 1500));
-        setGenerationStep(3);
-        
-        await new Promise(r => setTimeout(r, 1500));
-        setIsGenerating(false);
-        setGenerationStep(0);
-        setShowPreview(true);
-    };
-
-    const handleShareProfile = () => {
-        try {
-            openShare({
-                title: 'Moffi Pasaportu',
-                text: `${petData.name} adlı dostumuzun pasaportunu incele!`,
-                url: typeof window !== 'undefined' ? `${window.location.origin}/share/pet/${petData.id}` : ''
-            });
-        } catch (error) {
-            console.error("Share error:", error);
-            alert("Paylaşım menüsü açılamadı.");
-        }
-    };
-
-    const downloadPDF = async () => {
-        try {
-            // Generate deterministic hash for verification
-            const contentToHash = JSON.stringify({
-                petId: petData.id,
-                petName: petData.name,
-                microchip: petData.microchip,
-                ownerName: petData.owner?.name,
-                vaccines: schedule.slice(0, 6).map((v: any) => ({ name: v.definition?.name, date: v.dateAdministered })),
-                generatedAt: new Date().toISOString().slice(0, 10),
-            });
-            const encoder = new TextEncoder();
-            const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(contentToHash));
-            const hashHex = Array.from(new Uint8Array(hashBuffer))
-                .map((b) => b.toString(16).padStart(2, '0'))
-                .join('')
-                .slice(0, 16)
-                .toUpperCase();
-
-            // Helper to clean Turkish chars for jsPDF default fonts
-            const tr = (text: string) => {
-                if (!text) return "";
-                return text.replace(/ı/g, 'i').replace(/I/g, 'I')
-                           .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
-                           .replace(/ü/g, 'u').replace(/Ü/g, 'U')
-                           .replace(/ş/g, 's').replace(/Ş/g, 'S')
-                           .replace(/ö/g, 'o').replace(/Ö/g, 'O')
-                           .replace(/ç/g, 'c').replace(/Ç/g, 'C');
-            };
-
-            const verificationUrl = window.location.origin + "/verify/" + petData.id;
-
-            // Generate QR Code as DataURL
-            const qrDataUrl = await QRCode.toDataURL(verificationUrl, {
-                margin: 1,
-                width: 64,
-                color: {
-                    dark: '#111827',
-                    light: '#F3F4F6'
-                }
-            });
-
-            const { jsPDF } = await import("jspdf");
-            const doc = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4"
-            });
-            
-            // PAGE BACKGROUND (Light Gray)
-            doc.setFillColor(248, 249, 250);
-            doc.rect(0, 0, 210, 297, "F");
-
-            // HEADER (Dark)
-            doc.setFillColor(11, 11, 14);
-            doc.rect(0, 0, 210, 50, "F");
-
-            // Brand & Title
-            doc.setTextColor(16, 185, 129); // Emerald
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
-            doc.text("MOFFI PASSPORT SYSTEM", 15, 18);
-
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(22);
-            doc.text("DIJITAL PASAPORT OZETI", 15, 30);
-
-            doc.setTextColor(156, 163, 175); // Gray 400
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            doc.text("Kisisel Saglik & Kimlik Takip Karti", 15, 38);
-
-            // Emerald bottom border of header
-            doc.setFillColor(16, 185, 129);
-            doc.rect(0, 50, 210, 2, "F");
-
-            // CONTENT CARD (White container)
-            doc.setFillColor(255, 255, 255);
-            doc.roundedRect(10, 60, 190, 200, 5, 5, "F");
-            // Card border
-            doc.setDrawColor(229, 231, 235);
-            doc.setLineWidth(0.5);
-            doc.roundedRect(10, 60, 190, 200, 5, 5, "S");
-
-            let y = 75;
-
-            // SECTION 1: IDENTITY
-            doc.setTextColor(16, 185, 129);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(12);
-            doc.text("KIMLIK BILGILERI / PET IDENTIFICATION", 20, y);
-            
-            doc.setDrawColor(229, 231, 235);
-            doc.line(20, y+3, 190, y+3);
-            
-            y += 12;
-            doc.setFontSize(9);
-            
-            // Left Column
-            doc.setTextColor(107, 114, 128);
-            doc.setFont("helvetica", "normal");
-            doc.text("Pet Adi:", 20, y);
-            doc.setTextColor(17, 24, 39);
-            doc.setFont("helvetica", "bold");
-            doc.text(tr(petData.name) || "-", 50, y);
-
-            doc.setTextColor(107, 114, 128);
-            doc.setFont("helvetica", "normal");
-            doc.text("Turu:", 20, y+8);
-            doc.setTextColor(17, 24, 39);
-            doc.setFont("helvetica", "bold");
-            doc.text(tr(petData.type) || "-", 50, y+8);
-
-            doc.setTextColor(107, 114, 128);
-            doc.setFont("helvetica", "normal");
-            doc.text("Irki:", 20, y+16);
-            doc.setTextColor(17, 24, 39);
-            doc.setFont("helvetica", "bold");
-            doc.text(tr(petData.breed) || "-", 50, y+16);
-
-            // Right Column
-            doc.setTextColor(107, 114, 128);
-            doc.setFont("helvetica", "normal");
-            doc.text("Cip (ID):", 110, y);
-            doc.setTextColor(17, 24, 39);
-            doc.setFont("helvetica", "bold");
-            doc.text(tr(petData.microchip) || "Kayitli Degil", 140, y);
-
-            doc.setTextColor(107, 114, 128);
-            doc.setFont("helvetica", "normal");
-            doc.text("Cinsiyet:", 110, y+8);
-            doc.setTextColor(17, 24, 39);
-            doc.setFont("helvetica", "bold");
-            doc.text(tr(petData.gender) || "-", 140, y+8);
-
-            doc.setTextColor(107, 114, 128);
-            doc.setFont("helvetica", "normal");
-            doc.text("Dogum:", 110, y+16);
-            doc.setTextColor(17, 24, 39);
-            doc.setFont("helvetica", "bold");
-            doc.text(petData.birthday || "Bilinmiyor", 140, y+16);
-
-            y += 35;
-
-            // SECTION 2: OWNER
-            doc.setTextColor(16, 185, 129);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(12);
-            doc.text("SAHIP BILGILERI / OWNER INFORMATION", 20, y);
-            doc.setDrawColor(229, 231, 235);
-            doc.line(20, y+3, 190, y+3);
-
-            y += 12;
-            doc.setFontSize(9);
-            doc.setTextColor(107, 114, 128);
-            doc.setFont("helvetica", "normal");
-            doc.text("Sahip Adi:", 20, y);
-            doc.setTextColor(17, 24, 39);
-            doc.setFont("helvetica", "bold");
-            doc.text(tr(petData.owner?.name) || "Bilinmiyor", 50, y);
-
-            doc.setTextColor(107, 114, 128);
-            doc.setFont("helvetica", "normal");
-            doc.text("Iletisim:", 110, y);
-            doc.setTextColor(17, 24, 39);
-            doc.setFont("helvetica", "bold");
-            const phone = petData.owner?.phone ? petData.owner.phone.substring(0, 4) + " *** ** **" : "Bilinmiyor";
-            doc.text(phone, 140, y);
-
-            y += 25;
-
-            // SECTION 3: VACCINES
-            doc.setTextColor(16, 185, 129);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(12);
-            doc.text("SON UYGULANAN ASILAR / RECENT VACCINES", 20, y);
-            doc.setDrawColor(229, 231, 235);
-            doc.line(20, y+3, 190, y+3);
-
-            y += 10;
-            if (schedule.length > 0) {
-                schedule.slice(0, 5).forEach((v: any, index: number) => {
-                    y += 8;
-                    const date = v.dateAdministered ? new Date(v.dateAdministered).toLocaleDateString('tr-TR') : (v.dueDate ? new Date(v.dueDate).toLocaleDateString('tr-TR') : "-");
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(9);
-                    doc.setTextColor(31, 41, 55);
-                    doc.text(tr(v.definition?.name) || "Asi", 20, y);
-                    
-                    doc.setFont("helvetica", "normal");
-                    doc.setTextColor(107, 114, 128);
-                    doc.text(date, 170, y);
-                });
-            } else {
-                y += 10;
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(9);
-                doc.setTextColor(156, 163, 175);
-                doc.text("Sistemde kayitli asi gecmisi bulunmamaktadir.", 20, y);
-            }
-
-            
-            // SECTION 4: MUAYENE GECMISI
-            y += 15;
-            doc.setTextColor(16, 185, 129);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(12);
-            doc.text("MUAYENE VE TESHIS GECMISI / MEDICAL RECORDS", 20, y);
-            doc.setDrawColor(229, 231, 235);
-            doc.line(20, y+3, 190, y+3);
-
-            y += 10;
-            if (medicalHistory.length > 0) {
-                medicalHistory.slice(0, 4).forEach((rec: any, index: number) => {
-                    // Sayfa sonuna yaklasilirsa yeni sayfa ac
-                    if (y > 270) {
-                        doc.addPage();
-                        y = 20;
-                    }
-                    y += 8;
-                    const date = new Date(rec.created_at).toLocaleDateString('tr-TR');
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(9);
-                    doc.setTextColor(31, 41, 55);
-                    const cleanDiagnosis = tr(rec.diagnosis) || "Muayene";
-                    doc.text(cleanDiagnosis.substring(0, 40), 20, y);
-                    
-                    doc.setFont("helvetica", "normal");
-                    doc.setTextColor(107, 114, 128);
-                    doc.text(date, 170, y);
-                    
-                    if (rec.vet_name) {
-                        y += 4;
-                        doc.setFontSize(8);
-                        doc.text("Vet: " + tr(rec.vet_name), 20, y);
-                    }
-                    if (rec.critical_notes) {
-                        y += 4;
-                        doc.setTextColor(245, 158, 11);
-                        doc.text("! " + tr(rec.critical_notes).substring(0, 60), 20, y);
-                    }
-                    y += 2;
-                });
-            } else {
-                y += 10;
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(9);
-                doc.setTextColor(156, 163, 175);
-                doc.text("Sistemde kayitli muayene gecmisi bulunmamaktadir.", 20, y);
-            }
-
-            // SECTION 5: DIGITAL SEAL (Hash & QR)
-            y += 15;
-            
-            // Eger 5. bolum sayfa sonuna sigmayacaksa yeni sayfa ac
-            if (y > 240) {
-                doc.addPage();
-                y = 20;
-            } else {
-                // Eger ilk sayfada yer varsa ve eski tasarimla uyumlu olsun istiyorsak, min 230'a sabitleyebiliriz (opsiyonel)
-                // y = Math.max(y, 230); // Kapattim, dogrudan akisi takip etmesi daha saglikli
-            }
-
-            doc.setFillColor(243, 244, 246);
-            doc.roundedRect(20, y, 170, 22, 3, 3, "F");
-
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(8);
-            doc.setTextColor(75, 85, 99);
-            doc.text("DIJITAL MUHUR KODU (HASH):", 25, y + 8);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(16, 185, 129);
-            doc.text("0x" + hashHex, 75, y + 8);
-
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(75, 85, 99);
-            doc.text("DOGRULAMA LINKI:", 25, y + 16);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(59, 130, 246);
-            doc.text(verificationUrl, 75, y + 16);
-
-            // Draw the QR Code image
-            doc.addImage(qrDataUrl, "PNG", 168, y + 2, 18, 18);
-
-            // FOOTER WARNING (Her sayfanin en altina eklemek daha iyi olabilir ama simdilik son sayfaya ekliyoruz)
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(7);
-            doc.setTextColor(156, 163, 175);
-            const footerY = Math.max(y + 35, 275);
-            doc.text("Uyari: Bu belge resmi bir kimlik veya pasaport degildir. Sadece kisisel takip ve bilgilendirme amaclidir.", 105, footerY, { align: "center" });
-            doc.text("Resmi seyahatlerde veteriner hekim onayli fiziksel pasaportun gosterilmesi zorunludur.", 105, footerY + 4, { align: "center" });
-            
-            doc.save(`${tr(petData.name).replace(/\s+/g, '')}_Dijital_Pasaport.pdf`);
-        } catch (error) {
-            console.error("PDF generation error:", error);
-            alert("PDF oluşturulurken bir hata oluştu.");
-        }
-    };
-
-    if (isLoading) return (
-        <div className="flex flex-col items-center justify-center p-20 gap-4">
-            <div className="w-10 h-10 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-            <p className="text-sm font-black text-gray-500 uppercase tracking-widest animate-pulse">Sağlık Günlüğü Notları Yükleniyor...</p>
-        </div>
-    );
 
     return (
         <motion.div 
@@ -463,20 +109,6 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-500 rounded-full blur-[120px]" />
                     </div>
 
-                    {/* Travel Readiness Badge */}
-                    <div className="absolute top-6 sm:top-8 left-1/2 -translate-x-1/2 z-30">
-                        {isTravelReady ? (
-                            <div className="flex items-center gap-2 bg-emerald-950/80 backdrop-blur-2xl px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-emerald-500/30 shadow-2xl whitespace-nowrap">
-                                <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
-                                <span className="text-[9px] sm:text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Seyahate Uygun (AB)</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 bg-red-950/80 backdrop-blur-2xl px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-red-500/30 shadow-2xl whitespace-nowrap" title="AB seyahat kuralları gereği çip ve kuduz aşısı zorunludur.">
-                                <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-400" />
-                                <span className="text-[9px] sm:text-[10px] font-black text-red-400 uppercase tracking-[0.2em]">Seyahate Uygun Değil</span>
-                            </div>
-                        )}
-                    </div>
 
                     {/* Shimmer Effect */}
                     <motion.div 
@@ -560,35 +192,22 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                 </motion.div>
             </div>
 
-            {/* PDF Belgesi Oluştur Butonu */}
-            <div 
-                onClick={handleGenerate}
-                className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 hover:from-emerald-500/20 hover:to-cyan-500/20 border border-emerald-500/30 rounded-[2.5rem] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 cursor-pointer active:scale-[0.99] transition-all"
-            >
-                <div className="flex items-center gap-4 text-left">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-400 to-cyan-500 flex items-center justify-center text-black font-black">
-                        <FileText className="w-6 h-6 animate-pulse" />
+            {/* Sağlık bilgileri (aşı, parazit, ilaç, muayene, kilo, belgeler) tek yerde: Sağlık Karnesi. */}
+            {!isPublic && (
+                <Link
+                    href="/health/karne"
+                    className="mx-2 bg-card border border-card-border rounded-[2rem] p-5 flex items-center gap-4 hover:border-accent/30 transition-colors"
+                >
+                    <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                        <Stethoscope className="w-6 h-6" />
                     </div>
-                    <div>
-                        <h4 className="text-base font-black text-white uppercase tracking-tight italic">Dijital Pasaport Özeti (PDF)</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1">Kişisel aşı takibi ve kolay erişim amacıyla bilgilendirici PDF belgesi üret.</p>
+                    <div className="flex-1 text-left">
+                        <h4 className="text-base font-black text-foreground">Sağlık Karnesi</h4>
+                        <p className="text-xs text-secondary font-semibold mt-0.5">Aşılar, parazit, ilaçlar, muayeneler, kilo ve belgeler. Veterinere PDF olarak da paylaşabilirsin.</p>
                     </div>
-                </div>
-                <button className="bg-emerald-500 text-black px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 whitespace-nowrap">
-                    BELGE OLUŞTUR
-                </button>
-            </div>
-
-            {/* Bilgilendirme Not Defteri Uyarısı */}
-            <div className="mx-2 p-5 bg-amber-500/5 border border-amber-500/20 rounded-[2rem] flex items-start gap-4">
-                <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <div className="text-left">
-                    <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Dijital Sağlık Günlüğü & Not Defteri</h5>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-bold leading-relaxed mt-1">
-                        Bu panel, evcil hayvanınızın aşı, çip ve biyometrik bilgilerini düzenli tutabilmeniz için tasarlanmış <strong className="text-amber-500">kişisel bir not defteridir</strong>. Resmi veterinerlik pasaportu yerine geçmez ve resmi kurumlarda yasal/hukuki bir geçerliliği yoktur.
-                    </p>
-                </div>
-            </div>
+                    <ChevronRight className="w-5 h-5 text-secondary shrink-0" />
+                </Link>
+            )}
 
             {/* 2. OFFICIAL SECTIONS BENTO GRID */}
             <div className="grid grid-cols-2 gap-4 px-2">
@@ -645,17 +264,6 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             <span className="text-gray-500 font-bold uppercase tracking-tighter">Kilo</span>
                             <span className="text-white font-black">{petData.weight || "-"}</span>
                         </div>
-                        {petData.healthStatus && (
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-gray-500 font-bold uppercase tracking-tighter">Sağlık</span>
-                                <span className={`font-black text-xs px-2 py-0.5 rounded-full ${
-                                    petData.healthStatus === 'Mükemmel' ? 'text-emerald-400 bg-emerald-500/10' :
-                                    petData.healthStatus === 'Tedavide' ? 'text-red-400 bg-red-500/10' :
-                                    petData.healthStatus === 'Hassas' ? 'text-orange-400 bg-orange-500/10' :
-                                    'text-blue-400 bg-blue-500/10'
-                                }`}>{petData.healthStatus}</span>
-                            </div>
-                        )}
                         <div className="flex justify-between items-center text-xs border-t border-black/5 dark:border-white/5 pt-2.5 mt-2.5">
                             <span className="text-gray-500 font-bold uppercase tracking-tighter">PETVET No</span>
                             <span className="text-amber-400 font-black font-mono">{petData.petvet}</span>
@@ -729,59 +337,6 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     </div>
                 </div>
 
-                {/* Parazit Uygulamaları (Smart Widget) - Hide for Public */}
-                {!isPublic && (() => {
-                    const formatParasiteDate = (raw?: string) => {
-                        if (!raw) return null;
-                        const d = new Date(raw);
-                        if (isNaN(d.getTime())) return raw; // zaten okunabilir format
-                        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
-                    };
-                    const isOutdated = (raw?: string) => {
-                        if (!raw) return false;
-                        const d = new Date(raw);
-                        if (isNaN(d.getTime())) return false;
-                        return (Date.now() - d.getTime()) > 1000 * 60 * 60 * 24 * 180; // 6 ay
-                    };
-                    const internalDate = formatParasiteDate(petData.parasiteInternal || currentPet?.parasiteInternal || currentPet?.sos_settings?.parasiteInternal);
-                    const externalDate = formatParasiteDate(petData.parasiteExternal || currentPet?.parasiteExternal || currentPet?.sos_settings?.parasiteExternal);
-                    const internalOutdated = isOutdated(petData.parasiteInternal || currentPet?.parasiteInternal || currentPet?.sos_settings?.parasiteInternal);
-                    const externalOutdated = isOutdated(petData.parasiteExternal || currentPet?.parasiteExternal || currentPet?.sos_settings?.parasiteExternal);
-                    return (
-                        <div className="col-span-2 bg-[#12121A] border border-card-border rounded-[2.5rem] p-8 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.4em]">Parazit Kontrol Takibi</h4>
-                                <Stethoscope className="w-4 h-4 text-emerald-400 opacity-40" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-black/5 dark:bg-white/5 p-5 rounded-3xl border border-card-border flex flex-col items-center gap-2 group">
-                                    <Zap className="w-5 h-5 text-yellow-400 mb-1 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">İç Parazit</span>
-                                    <span className="text-xs font-black text-white">{internalDate || 'Kayıt Yok'}</span>
-                                    {internalDate ? (
-                                        <div className={`text-[8px] font-bold px-2 py-0.5 rounded-full mt-1 ${internalOutdated ? 'text-red-400 bg-red-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>
-                                            {internalOutdated ? 'SÜRE DOLMUŞ' : 'GÜNCEL'}
-                                        </div>
-                                    ) : (
-                                        <div className="text-[8px] font-bold text-gray-500 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full mt-1">GIRILMEDI</div>
-                                    )}
-                                </div>
-                                <div className="bg-black/5 dark:bg-white/5 p-5 rounded-3xl border border-card-border flex flex-col items-center gap-2 group">
-                                    <Zap className="w-5 h-5 text-orange-400 mb-1 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Dış Parazit</span>
-                                    <span className="text-xs font-black text-white">{externalDate || 'Kayıt Yok'}</span>
-                                    {externalDate ? (
-                                        <div className={`text-[8px] font-bold px-2 py-0.5 rounded-full mt-1 ${externalOutdated ? 'text-red-400 bg-red-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>
-                                            {externalOutdated ? 'SÜRE DOLMUŞ' : 'GÜNCEL'}
-                                        </div>
-                                    ) : (
-                                        <div className="text-[8px] font-bold text-gray-500 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full mt-1">GIRILMEDI</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })()}
             </div>
 
 
@@ -861,212 +416,6 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                 )}
             </AnimatePresence>
 
-            {/* GENERATING OVERLAY */}
-            <AnimatePresence>
-                {isGenerating && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[1100] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-8 text-center"
-                    >
-                        <div className="relative mb-12">
-                            <motion.div
-                                animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 4, repeat: Infinity }}
-                                className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-tr from-cyan-500 to-emerald-500 p-0.5"
-                            >
-                                <div className="w-full h-full rounded-[2.4rem] bg-white dark:bg-black flex items-center justify-center">
-                                    <ShieldCheck className="w-16 h-16 text-white" />
-                                </div>
-                            </motion.div>
-                            <motion.div 
-                                animate={{ scale: [1, 1.5, 1], opacity: [0.1, 0.3, 0.1] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                                className="absolute inset-0 bg-cyan-500 rounded-full blur-3xl -z-10" 
-                            />
-                        </div>
-
-                        <div className="space-y-4 max-w-xs">
-                            <h3 className="text-2xl font-black text-white tracking-tight italic uppercase">
-                                {generationStep === 1 && "Sağlık Verileri Günlüğe İşleniyor..."}
-                                {generationStep === 2 && "Kişisel Notlar Düzenleniyor..."}
-                                {generationStep === 3 && "Özet Belge Hazırlanıyor..."}
-                            </h3>
-                            <div className="w-full h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
-                                <motion.div 
-                                    initial={{ width: "0%" }}
-                                    animate={{ width: `${(generationStep / 3) * 100}%` }}
-                                    className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500"
-                                />
-                            </div>
-                            <p className="text-[10px] font-bold text-black/40 dark:text-white/30 uppercase tracking-[0.3em] font-mono">
-                                Not Defteri Eşleştirme Kodu: 0x{Math.random().toString(16).slice(2, 10).toUpperCase()}...
-                            </p>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* PASSPORT PREVIEW MODAL */}
-            <AnimatePresence>
-                {showPreview && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[1200] bg-black/95 backdrop-blur-3xl flex flex-col items-center overflow-y-auto py-24 px-6"
-                    >
-                        <div className="relative w-full max-w-md my-auto">
-                            {/* Close Button - Positioned Top Right just outside the box */}
-                            <button 
-                                onClick={() => setShowPreview(false)}
-                                className="absolute -top-12 -right-2 w-10 h-10 bg-black/10 dark:bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-card-border hover:bg-black/20 dark:bg-white/20 transition-all active:scale-90 z-[130]"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-
-                            <motion.div
-                                initial={{ scale: 0.9, y: 50 }}
-                                animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.9, y: 50 }}
-                                id="passport-card-element"
-                                className="w-full bg-card rounded-[4rem] p-6 flex flex-col shadow-2xl text-black relative cursor-default"
-                            >
-                                {/* iOS Style Grab Handle - Visual only now */}
-                                <div className="absolute top-6 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/10 rounded-full" />
-
-                                {/* Preview Header */}
-                                <div className="flex justify-between items-start mb-6 border-b-2 border-dashed border-card-border pb-6 pt-10">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className="w-5 h-5 bg-white dark:bg-black rounded flex items-center justify-center">
-                                                <div className="w-2 h-2 bg-card rounded-full" />
-                                            </div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">Moffi Passport System</span>
-                                        </div>
-                                        <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none">DİJİTAL PASAPORT ÖZETİ</h2>
-                                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Kişisel Sağlık & Kimlik Takip Kartı</p>
-                                        <div className="flex items-center gap-1.5 mt-2 text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 rounded-lg px-2 py-1 w-fit">
-                                            <ShieldCheck className="w-3 h-3" /> Bilgi Kartı Aktif
-                                        </div>
-                                    </div>
-                                    <div className="p-2 border-2 border-card-border rounded-2xl scale-90">
-                                        <QRCodeSVG value={`https://app.moffi.net/verify/${petData.id}`} size={48} />
-                                    </div>
-                                </div>
-                            {/* Kişisel Takip Bilgilendirme Notu */}
-                            <div className="mb-6 px-4 py-3 bg-amber-500/5 rounded-2xl border border-amber-500/20">
-                                <p className="text-[8px] font-bold text-amber-600 dark:text-amber-500 uppercase leading-relaxed">
-                                    ⓘ Bu belge resmi bir kimlik veya pasaport değildir. Sadece kişisel takip ve bilgilendirme amaçlıdır. Resmi seyahat ve gümrük kontrollerinde veteriner hekim onaylı fiziksel pasaportun gösterilmesi zorunludur.
-                                </p>
-                            </div>
-
-                            {/* Preview Content Area */}
-                            <div className="flex gap-4 mb-6">
-                                {petData.avatar ? (
-                                    <img src={petData.avatar} crossOrigin="anonymous" className="w-20 h-20 rounded-2xl object-cover grayscale-[0.5] contrast-125 shadow-lg" />
-                                ) : (
-                                    <div className="w-20 h-20 rounded-2xl bg-gray-200 border border-card-border flex items-center justify-center shadow-lg">
-                                        <span className="text-gray-500 dark:text-gray-400 text-2xl font-black select-none uppercase font-sans">
-                                            {petData.name ? petData.name[0] : '🐾'}
-                                        </span>
-                                    </div>
-                                )}
-                                <div className="space-y-3 flex-1">
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                        <div>
-                                            <p className="text-[7px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">Pet Adı</p>
-                                            <p className="text-xs font-black uppercase tracking-tight leading-none">{petData.name}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[7px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">Gömülü Çip</p>
-                                            <p className="text-xs font-black font-mono tracking-tighter leading-none">{petData.microchip?.slice(-8) || "985-00..."}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[7px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">Irk</p>
-                                            <p className="text-xs font-bold uppercase tracking-tight leading-none truncate">{petData.breed}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[7px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">Pet Sahibi</p>
-                                            <p className="text-xs font-bold uppercase tracking-tight leading-none truncate">{petData.owner?.name?.split(' ')[0] || "Bilinmiyor"}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Vaccine List Preview */}
-                            <div className="bg-gray-50 rounded-2xl p-4 space-y-3 mb-8">
-                                <h4 className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Son Uygulanan Aşılar</h4>
-                                {schedule.slice(0, 3).map((v) => (
-                                    <div key={v.id} className="flex justify-between items-center text-[11px]">
-                                        <span className="font-bold text-gray-600">{v.definition.name}</span>
-                                        <span className="font-black font-mono">{v.dateAdministered || "UYGUN"}</span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            
-                            {/* Tıbbi Kayıtlar / Teşhis Geçmişi */}
-                            <div className="bg-gray-50 rounded-2xl p-4 space-y-3 mb-8">
-                                <h4 className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-                                    Muayene & Teşhis Geçmişi
-                                </h4>
-                                {medicalLoading ? (
-                                    <p className="text-[11px] text-gray-400">Yükleniyor...</p>
-                                ) : medicalHistory.length === 0 ? (
-                                    <p className="text-[11px] text-gray-400">Henüz kayıtlı muayene bulunmuyor.</p>
-                                ) : (
-                                    medicalHistory.slice(0, 5).map((rec) => (
-                                        <div key={rec.id} className="border-b border-gray-200 last:border-0 pb-2 last:pb-0">
-                                            <div className="flex justify-between items-start">
-                                                <span className="font-bold text-gray-700 text-[11px]">{rec.diagnosis}</span>
-                                                <span className="font-mono text-[10px] text-gray-400">
-                                                    {new Date(rec.created_at).toLocaleDateString('tr-TR')}
-                                                </span>
-                                            </div>
-                                            <p className="text-[10px] text-gray-500">{rec.vet_name}</p>
-                                            {rec.critical_notes && (
-                                                <p className="text-[10px] text-amber-600 font-semibold mt-0.5">⚠ {rec.critical_notes}</p>
-                                            )}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                            
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 relative z-10">
-                                <button 
-                                    onClick={downloadPDF}
-                                    className="flex-1 bg-black text-white dark:bg-white dark:text-black py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-gray-900 dark:hover:bg-gray-200 transition-colors active:scale-95"
-                                >
-                                    <FileText className="w-4 h-4" /> PDF İndir
-                                </button>
-                                <button 
-                                    onClick={handleShareProfile}
-                                    className="w-14 h-14 bg-gray-100 text-black rounded-3xl flex items-center justify-center hover:bg-gray-200 transition-colors active:scale-95 shadow-inner"
-                                    title="Paylaşım Linki Kopyala"
-                                >
-                                    <Share2 className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            {/* Seal Overlay (Prominent Mühür) */}
-                            <div className="absolute bottom-12 right-6 rotate-[-20deg] opacity-[0.08] pointer-events-none group">
-                                <div className="relative">
-                                    <Award className="w-40 h-40 text-black" />
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <p className="text-[8px] font-black uppercase text-center leading-none tracking-widest">
-                                            MOFFI<br/>VERIFIED
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            </motion.div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             <TagPairingModal 
                 isOpen={isTagModalOpen}

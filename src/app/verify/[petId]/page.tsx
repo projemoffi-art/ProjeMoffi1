@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { ShieldCheck, ShieldAlert, PawPrint } from 'lucide-react';
+import { EmergencyInfoCard } from '@/components/health/EmergencyInfoCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ export default async function VerifyPetPage({ params }: { params: Promise<{ petI
                     <img src={d.avatar_url} className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4" />
                 )}
                 <h1 className="text-xl font-black">{d.pet_name}</h1>
-                <p className="text-xs text-gray-500 mb-4">{d.species} • {d.breed}</p>
+                <p className="text-xs text-gray-500 mb-4">{[({ cat: 'Kedi', dog: 'Köpek' } as Record<string, string>)[d.species] || null, d.breed].filter(Boolean).join(' • ')}</p>
 
                 {d.is_lost && (
                     <div className="bg-red-500 text-white rounded-2xl p-4 mb-4 text-center animate-pulse shadow-md">
@@ -73,6 +74,9 @@ export default async function VerifyPetPage({ params }: { params: Promise<{ petI
                 )}
 
                 <p className="text-[9px] text-gray-400 mt-6">Moffi tarafından doğrulanmış dijital kayıt</p>
+            </div>
+            <div className="w-full max-w-sm">
+                <EmergencyInfoCard petId={petId} context="qr" />
             </div>
         </div>
     );

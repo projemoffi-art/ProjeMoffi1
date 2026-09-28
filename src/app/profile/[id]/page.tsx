@@ -20,7 +20,6 @@ import { EditProfileModal } from "@/components/community/modals/EditProfileModal
 // ── Tab Imports ─────────────────────────────────────────────
 import { WalletTab } from "@/components/profile/WalletTab";
 import { OrdersTab } from "@/components/profile/OrdersTab";
-import { AppointmentsTab } from "@/components/profile/AppointmentsTab";
 import { RoutesTab } from "@/components/profile/RoutesTab";
 import { FamilyTab } from "@/components/profile/FamilyTab";
 import { PassportTab } from "@/components/profile/PassportTab";
@@ -77,7 +76,10 @@ export default function ProfilePage() {
 
     useEffect(() => {
         const view = searchParams.get('view');
-        if (view) {
+        // Eski "?view=appointments" bağlantıları tek randevu ekranına gider (profil kopyası kaldırıldı).
+        if (view === 'appointments') {
+            router.replace('/vet?view=appointments');
+        } else if (view) {
             setActiveTab(view);
         }
     }, [searchParams]);
@@ -723,14 +725,14 @@ export default function ProfilePage() {
                                     <Heart className="w-3 h-3 text-rose-400" /> Sağlık & Bakım
                                 </h3>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('appointments')} className="col-span-2 p-5 rounded-[1.5rem] bg-gradient-to-br from-rose-500/10 to-pink-500/5 border border-rose-500/20 hover:border-rose-500/40 transition-colors flex items-center justify-between">
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => router.push('/health')} className="col-span-2 p-5 rounded-[1.5rem] bg-gradient-to-br from-rose-500/10 to-pink-500/5 border border-rose-500/20 hover:border-rose-500/40 transition-colors flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-500">
                                                 <Calendar className="w-5 h-5" />
                                             </div>
                                             <div className="text-left">
-                                                <p className="text-sm font-black text-zinc-900 dark:text-white uppercase">Randevular</p>
-                                                <p className="text-[9px] font-bold text-rose-500/80 uppercase mt-0.5">Veteriner & Aşı Takvimi</p>
+                                                <p className="text-sm font-black text-zinc-900 dark:text-white">Sağlık Merkezi</p>
+                                                <p className="text-[9px] font-bold text-rose-500/80 mt-0.5">Aşı, ilaç, kilo, muayene ve randevular</p>
                                             </div>
                                         </div>
                                         <ChevronRight className="w-5 h-5 text-rose-400/50" />
@@ -829,13 +831,6 @@ export default function ProfilePage() {
                                 <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
                             </button>
                             <OrdersTab orders={[]} />
-                        </motion.div>
-                    ) : activeTab === 'appointments' && isOwnProfile ? (
-                        <motion.div key="appointments" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
-                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
-                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
-                            </button>
-                            <AppointmentsTab appointments={[]} />
                         </motion.div>
                     ) : activeTab === 'passport' && isOwnProfile ? (
                         <motion.div key="passport" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">

@@ -6,7 +6,7 @@ import {
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
-import { UserVaccineRecord, Doctor } from '@/types/domain';
+import { Doctor } from '@/types/domain';
 
 export class SupabaseApiService implements IApiService {
     // Session is managed internally by Supabase client very efficiently.
@@ -220,21 +220,6 @@ export class SupabaseApiService implements IApiService {
     }
 
     // --- COMMUNITY & FEED ---
-        async getPetMedicalRecords(petId: string) {
-        if (!petId) return [];
-        const { data, error } = await supabase
-            .from('medical_records')
-            .select('id, diagnosis, critical_notes, vet_name, medications, created_at, appointment_id')
-            .eq('pet_id', petId)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching medical records:', error);
-            return [];
-        }
-        return data || [];
-    }
-
     async getFeedContent(): Promise<any[]> {
         // Doğrudan ana posts tablosundan çekiyoruz (view ve eksik sütun bağımlılıklarını kökünden çözer)
         const { data, error } = await supabase
@@ -1693,185 +1678,6 @@ export class SupabaseApiService implements IApiService {
             .limit(limit);
         if (error || !data) return [];
         return data;
-    }
-
-    // --- DIGITAL PASSPORT (Health & Vaccines) ---
-    async getVaccineDefinitions(): Promise<any[]> {
-        const { RULES_TR } = await import('./mock/VaccineMockService').then(m => {
-            const TR_VACCINES = [
-                { id: 'mixed', name: 'Karma Aşı (DHPPi)', is_core: true, frequency_months: 12, min_age_weeks: 8 },
-                { id: 'rabies', name: 'Kuduz (Rabies)', is_core: true, frequency_months: 12, min_age_weeks: 12 },
-                { id: 'kc', name: 'Bronşin (Kennel Cough)', is_core: false, frequency_months: 12, min_age_weeks: 8 },
-                { id: 'internal', name: 'İç Parazit', is_core: true, frequency_months: 3, min_age_weeks: 4 },
-                { id: 'external', name: 'Dış Parazit', is_core: true, frequency_months: 2, min_age_weeks: 6 },
-            ];
-            return { RULES_TR: TR_VACCINES };
-        }).catch(() => {
-            return { RULES_TR: [
-                { id: 'mixed', name: 'Karma Aşı (DHPPi)', is_core: true, frequency_months: 12, min_age_weeks: 8 },
-                { id: 'rabies', name: 'Kuduz (Rabies)', is_core: true, frequency_months: 12, min_age_weeks: 12 }
-            ]};
-        });
-
-        return RULES_TR;
-    }
-
-    async getPetVaccines(petId: string): Promise<UserVaccineRecord[]> {
-        // Validate UUID to avoid Supabase 400 error
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(petId)) {
-            console.warn(`Invalid UUID for petId: ${petId}. Falling back to mock data.`);
-            return this.mockApi.getPetVaccines(petId);
-        }
-
-        const { data, error } = await supabase
-            .from('vaccines')
-            .select('*')
-            .eq('pet_id', petId)
-            .order('next_due_date', { ascending: true });
-
-        if (error) {
-            console.error('Error fetching vaccines:', error);
-            return [];
-        }
-
-
-        return data.map(item => ({
-            id: item.id,
-            vaccineId: item.name, // the db name column holds the definition ID
-            status: item.status,
-            dueDate: item.next_due_date,
-            dateAdministered: item.date_administered,
-            vetName: item.vet_name
-        }));
-    }
-
-    async markVaccineAsCompleted(recordId: string, date: string, vetName: string): Promise<void> {
-        const { error } = await supabase
-            .from('vaccines')
-            .update({
-                status: 'completed',
-                date_administered: date,
-                vet_name: vetName
-            })
-            .eq('id', recordId);
-
-        if (error) throw error;
-    }
-
-    async checkHealthNotifications(petId: string): Promise<void> {
-        // Client-side health check: computes overdue/upcoming vaccines
-        try {
-            const vaccines = await this.getPetVaccines(petId);
-            const now = new Date();
-            const soon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days ahead
-
-            const overdue = vaccines.filter((v: any) => v.status === 'pending' && new Date(v.dueDate) < now);
-            const upcoming = vaccines.filter((v: any) => v.status === 'pending' && new Date(v.dueDate) >= now && new Date(v.dueDate) <= soon);
-
-            if (overdue.length > 0) {
-                console.warn(`⚠️ [Sağlık] ${overdue.length} aşı gecikmiş! Pet ID: ${petId}`);
-            }
-            if (upcoming.length > 0) {
-                console.info(`ℹ️ [Sağlık] ${upcoming.length} aşı 7 gün içinde! Pet ID: ${petId}`);
-            }
-        } catch (err) {
-            console.error('Health notification check failed:', err);
-        }
-    }
-
-    
-    // --- MEDICATIONS ---
-    async getPetMedications(petId: string): Promise<any[]> {
-        const { data, error } = await supabase
-            .from('medications')
-            .select('*')
-            .eq('pet_id', petId)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
-
-        if (error) return [];
-
-        return data.map(m => ({
-            id: m.id,
-            petId: m.pet_id,
-            name: m.name,
-            dosage: m.dosage,
-            frequency: m.frequency,
-            instructions: m.instructions,
-            startDate: m.start_date,
-            lastLog: m.last_log,
-            isActive: m.is_active
-        }));
-    }
-
-    async addPetMedication(petIdOrMed: any, med?: any): Promise<any> {
-        const finalMed = med ? { ...med, petId: petIdOrMed } : petIdOrMed;
-        const { data, error } = await supabase
-            .from('medications')
-            .insert({
-                pet_id: finalMed.petId || finalMed.pet_id,
-                name: finalMed.name,
-                dosage: finalMed.dosage,
-                frequency: finalMed.frequency,
-                instructions: finalMed.instructions,
-                start_date: finalMed.startDate || finalMed.start_date || new Date().toISOString()
-            })
-            .select()
-            .single();
-            
-        if (error) throw error;
-        return {
-            id: data.id,
-            petId: data.pet_id,
-            name: data.name,
-            dosage: data.dosage,
-            frequency: data.frequency,
-            instructions: data.instructions,
-            startDate: data.start_date,
-            lastLog: data.last_log,
-            isActive: data.is_active
-        };
-    }
-
-    async addPetVaccine(petIdOrRecord: any, record?: any): Promise<any> {
-        const finalRecord = record ? { ...record, petId: petIdOrRecord } : petIdOrRecord;
-        const dbPayload = {
-            pet_id: finalRecord.petId || finalRecord.pet_id,
-            name: finalRecord.name || finalRecord.vaccineId || finalRecord.vaccine_id,
-            status: finalRecord.status || 'completed',
-            next_due_date: finalRecord.dueDate || finalRecord.next_due_date || finalRecord.nextDueDate || new Date().toISOString(),
-            date_administered: finalRecord.dateAdministered || finalRecord.date_administered || new Date().toISOString(),
-            vet_name: finalRecord.vetName || finalRecord.vet_name || ''
-        };
-
-        const { data, error } = await supabase
-            .from('vaccines')
-            .insert(dbPayload)
-            .select()
-            .single();
-
-        if (error) throw error;
-        
-        return {
-            id: data.id,
-            petId: data.pet_id,
-            vaccineId: data.name,
-            status: data.status,
-            dueDate: data.next_due_date,
-            dateAdministered: data.date_administered,
-            vetName: data.vet_name,
-            batchNumber: 'TR-' + Math.random().toString(36).substring(2, 8).toUpperCase()
-        };
-    }
-
-    async recordMedicationDose(medId: string): Promise<void> {
-        const { error } = await supabase
-            .from('medications')
-            .update({ last_log: new Date().toISOString() })
-            .eq('id', medId);
-            
-        if (error) throw error;
     }
 
     async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null, businessType?: string): Promise<any[]> {

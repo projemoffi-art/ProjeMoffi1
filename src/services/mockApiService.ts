@@ -217,10 +217,6 @@ export class MockApiService implements IApiService {
         await this.saveData('pets', filtered);
     }
 
-    // Community
-        async getPetMedicalRecords(petId: string) {
-        return [];
-    }
 
     async getFeedContent(): Promise<Post[]> {
         const saved = await this.loadData<Post[]>('feed_posts');
@@ -681,10 +677,6 @@ export class MockApiService implements IApiService {
     }
 
     // Health & Veterinary
-    async getVaccineDefinitions(): Promise<any[]> { return []; }
-    async getPetVaccines(petId: string): Promise<any[]> { return []; }
-    async markVaccineAsCompleted(recordId: string, date: string, vetName: string): Promise<void> { }
-    async checkHealthNotifications(petId: string): Promise<void> { }
     
     async getClinicDashboardStats(clinicId: string): Promise<any> {
         return { totalBalance: 0, totalPatients: 0, recentPatients: [], appointmentsCount: 0, completedCount: 0, averageRating: 0, reviewCount: 0 };
@@ -774,37 +766,6 @@ export class MockApiService implements IApiService {
     async getNoShowCount(userId: string): Promise<number> { return 0; }
     async getClinicSettings(clinicId: string): Promise<any> { return null; }
     async saveClinicSettings(clinicId: string, settings: any): Promise<void> { }
-
-    // Health Extension
-    async getPetMedications(petId: string): Promise<any[]> {
-        return await this.loadData<any[]>(`medications_${petId}`) || [];
-    }
-
-    async addPetMedication(petIdOrMed: any, med?: any): Promise<any> {
-        const finalMed = med ? { ...med, petId: petIdOrMed } : petIdOrMed;
-        const petId = finalMed.petId || finalMed.pet_id || 'pet-1';
-        const meds = await this.getPetMedications(petId);
-        const newMed = { id: `med-${Date.now()}`, ...finalMed, pet_id: petId };
-        await this.saveData(`medications_${petId}`, [...meds, newMed]);
-        return newMed;
-    }
-
-    async addPetVaccine(petIdOrRecord: any, record?: any): Promise<any> {
-        const finalRecord = record ? { ...record, petId: petIdOrRecord } : petIdOrRecord;
-        const petId = finalRecord.petId || finalRecord.pet_id || 'pet-1';
-        const newRecord = {
-            id: `vac-${Date.now()}`,
-            vaccineId: finalRecord.name || finalRecord.vaccineId || 'PUPPY-1',
-            status: finalRecord.status || 'completed',
-            dueDate: finalRecord.dueDate || finalRecord.next_due_date || new Date().toISOString(),
-            dateAdministered: finalRecord.dateAdministered || finalRecord.date_administered || new Date().toISOString(),
-            vetName: finalRecord.vetName || finalRecord.vet_name || 'Uzman Hekim',
-            batchNumber: 'TR-' + Math.random().toString(36).substring(2, 8).toUpperCase()
-        };
-        return newRecord;
-    }
-
-    async recordMedicationDose(medId: string): Promise<void> {}
 
     async getNutritionPlan(petId: string): Promise<any | null> {
         return await this.loadData(`nutrition_${petId}`);
@@ -1840,7 +1801,7 @@ export class MockApiService implements IApiService {
         return true;
     }
 
-    // Clinic Messages & Campaigns (Faz 8)
+    // Clinic Messages & Campaigns (Faz 8)
     async getClinicAppointments(clinicId: string): Promise<any[]> {
         return [];
     }

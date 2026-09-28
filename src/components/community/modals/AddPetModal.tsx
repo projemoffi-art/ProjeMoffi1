@@ -392,33 +392,6 @@ export function AddPetModal({
 
                                     <div className="bg-card/60 rounded-[28px] p-5 border border-card-border shadow-sm space-y-4">
                                         
-                                        {/* Sağlık Durumu - Segmented Buttons */}
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] text-secondary font-black uppercase tracking-wider block ml-1">Sağlık Durumu</label>
-                                            <div className="grid grid-cols-2 gap-2 bg-secondary p-1 rounded-2xl border border-card-border">
-                                                {[
-                                                    { value: 'Mükemmel', label: 'Mükemmel 🌟' },
-                                                    { value: 'İyi', label: 'İyi 👍' },
-                                                    { value: 'Hassas', label: 'Hassas ⚠️' },
-                                                    { value: 'Tedavide', label: 'Tedavide 🩺' }
-                                                ].map(h => (
-                                                    <button
-                                                        key={h.value}
-                                                        type="button"
-                                                        onClick={() => setNewPetHealthStatus(h.value)}
-                                                        className={cn(
-                                                            "py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
-                                                            newPetHealthStatus === h.value 
-                                                                ? "bg-card text-foreground shadow-sm scale-[1.01]" 
-                                                                : "text-secondary hover:text-gray-600"
-                                                        )}
-                                                    >
-                                                        {h.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] text-secondary font-black uppercase tracking-wider ml-1">Alerjiler & Kronik Hastalıklar</label>
                                             <textarea 

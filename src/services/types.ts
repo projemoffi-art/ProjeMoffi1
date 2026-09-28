@@ -352,10 +352,6 @@ export interface IApiService {
     useStreakShield(coveredDate: string): Promise<boolean>;
 
     // Health & Veterinary
-    getVaccineDefinitions(): Promise<any[]>;
-    getPetVaccines(petId: string): Promise<any[]>;
-    markVaccineAsCompleted(recordId: string, date: string, vetName: string): Promise<void>;
-    checkHealthNotifications(petId: string): Promise<void>;
     getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null, businessType?: string): Promise<any[]>;
     getClinicDetails(clinicId: string): Promise<any>;
     createAppointment(dto: any): Promise<any>;
@@ -393,10 +389,6 @@ export interface IApiService {
     saveClinicSettings(clinicId: string, settings: any): Promise<void>;
 
     // Health Extension (New)
-    getPetMedications(petId: string): Promise<any[]>;
-    addPetMedication(petIdOrMed: any, med?: any): Promise<any>;
-    addPetVaccine(petIdOrRecord: any, record?: any): Promise<any>;
-    recordMedicationDose(medId: string): Promise<void>;
     getNutritionPlan(petId: string): Promise<any | null>;
     updateNutritionPlan(petId: string, plan: any): Promise<void>;
     getPetDailyStats(petId: string, date: string): Promise<any | null>;

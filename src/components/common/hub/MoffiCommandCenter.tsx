@@ -200,7 +200,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                     {/* HEALTH REMINDER BANNER */}
                     {nextHealthAlert && (
                         <button 
-                            onClick={() => onNavigate('appointments')}
+                            onClick={() => onNavigate('carehub')}
                             className="mt-auto w-full p-6 bg-white/[0.03] border border-card-border rounded-[2.8rem] flex items-center justify-between group overflow-hidden"
                         >
                             <div className="flex items-center gap-5">

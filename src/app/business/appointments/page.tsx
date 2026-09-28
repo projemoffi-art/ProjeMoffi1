@@ -18,6 +18,8 @@ import { NoShowBadge } from "@/components/business/NoShowBadge";
 import { useBusinessType } from "@/context/BusinessTypeContext";
 import { wallParts, todayKey, addDaysKey } from "@/lib/appointmentTime";
 import { CHAT_MESSAGE_EVENT, type ChatMessageEventDetail } from "@/context/ChatContext";
+import { healthService } from "@/services/healthService";
+import type { VaccineDefinition } from "@/types/health";
 
 export default function BusinessAppointmentsPage() {
     const { customRecords, setCustomRecords, updatePet } = usePet();
@@ -69,7 +71,13 @@ export default function BusinessAppointmentsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [diagnosis, setDiagnosis] = useState("");
     
-    // Vaccine Form States
+    // Ölçümler (muayene kaydına ve hastanın kilo geçmişine yazılır)
+    const [weightKg, setWeightKg] = useState("");
+    const [temperatureC, setTemperatureC] = useState("");
+
+    // Vaccine Form States — liste hastanın türüne göre veritabanındaki aşı tanımlarından gelir
+    const [vaccineDefs, setVaccineDefs] = useState<VaccineDefinition[]>([]);
+    const [vaccineDefId, setVaccineDefId] = useState("");
     const [vaccineName, setVaccineName] = useState("");
     const [vaccineNextDate, setVaccineNextDate] = useState("");
     const [vaccineBatch, setVaccineBatch] = useState("");
@@ -281,6 +289,7 @@ export default function BusinessAppointmentsPage() {
                     status: item.status,
                     image: item.pet?.avatar_url || null,
                     petId: item.pet_id,
+                    petType: item.pet?.type || null,
                     sharedPassport: item.shared_passport || {
                         basic: (item.pet?.breed || item.pet?.weight || item.pet?.age) ? {
                             breed: item.pet?.breed || null,
@@ -596,15 +605,32 @@ export default function BusinessAppointmentsPage() {
     const startConsultation = (apt: any) => {
         setSelectedApt(apt);
         setIsModalOpen(true);
-        if (apt.status === 'completed' && apt.consultationData) {
-            // Prefill with read-only data
-            setDiagnosis(apt.consultationData.diagnosis || "");
-            setAddedVaccines(apt.consultationData.vaccines || []);
-            setAddedMeds(apt.consultationData.medications || []);
-            setCriticalNotes(apt.consultationData.criticalNotes || "");
+        if (apt.status === 'completed') {
+            // Tamamlanan muayene veritabanındaki kayıttan okunur (tarayıcıdaki kopyadan değil).
+            if (hasMedicalRecords) {
+                healthService.getRecordByAppointment(apt.id).then(rec => {
+                    if (!rec) return;
+                    const consultationData = {
+                        diagnosis: rec.diagnosis,
+                        criticalNotes: rec.criticalNotes,
+                        weightKg: rec.weightKg,
+                        temperatureC: rec.temperatureC,
+                        vaccines: rec.vaccines.map(v => ({ name: v.name, date: v.date, nextDate: v.next_date, batch: v.batch })),
+                        medications: rec.medications,
+                    };
+                    setSelectedApt((cur: any) => cur && cur.id === apt.id ? { ...cur, consultationData } : cur);
+                }).catch(e => showToast(e.message, "AlertCircle", "text-red-500 font-bold"));
+            }
         } else {
             // Reset form fields for new consultation
             setDiagnosis("");
+            setWeightKg("");
+            setTemperatureC("");
+            setVaccineDefId("");
+            setVaccineDefs([]);
+            if (hasMedicalRecords && (apt.petType === 'dog' || apt.petType === 'cat')) {
+                healthService.getVaccineDefinitions(apt.petType).then(setVaccineDefs).catch(() => setVaccineDefs([]));
+            }
             setVaccineName("");
             setVaccineNextDate("");
             setVaccineBatch("");
@@ -623,13 +649,17 @@ export default function BusinessAppointmentsPage() {
     };
 
     const handleAddVaccine = () => {
-        if (!vaccineName) return;
+        const def = vaccineDefs.find(d => d.id === vaccineDefId);
+        const name = def ? def.name : vaccineName.trim();
+        if (!name) return;
         setAddedVaccines(prev => [...prev, {
-            name: vaccineName,
-            date: new Date().toLocaleDateString('sv-SE'),
+            definitionId: def?.id || null,
+            name,
+            date: todayKey(),
             nextDate: vaccineNextDate,
             batch: vaccineBatch
         }]);
+        setVaccineDefId("");
         setVaccineName("");
         setVaccineNextDate("");
         setVaccineBatch("");
@@ -649,102 +679,51 @@ export default function BusinessAppointmentsPage() {
 
     const handleCompleteConsultation = async () => {
         if (!selectedApt) return;
-        if (hasMedicalRecords && !diagnosis) {
+        // Muayene kaydı (tanı/aşı/reçete) sadece tıbbi kayıt tutan türlerde ve Moffi'ye kayıtlı
+        // bir evcil hayvan varsa yazılır; misafir müşterinin randevusu kayıtsız tamamlanır (8.39).
+        const writesRecord = hasMedicalRecords && !!selectedApt.petId;
+        if (writesRecord && !diagnosis.trim()) {
             showToast("Lütfen tanı alanını doldurun.", "AlertCircle", "text-amber-500 font-bold");
             return;
         }
 
-        const targetPetId = selectedApt.petId;
-
-        // Faz 3.1 — EMR (tanı/aşı/reçete) yazımı SADECE hasMedicalRecords=true
-        // olan türlerde yapılır. Diğer türlerde randevu doğrudan 'completed'
-        // yapılır, pet-id UUID zorunluluğu da sadece EMR yazarken gerekli.
-        if (hasMedicalRecords) {
-            // Remove mock ID fallback completely as instructed.
-            // Use regex to strictly enforce UUID to block all mock IDs (e.g. 'pet-milo' or '349b...')
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!targetPetId || !uuidRegex.test(targetPetId)) {
-                showToast("Gerçek bir evcil hayvan ID'si bulunamadı (Mock Veri). Sadece gerçek hastalara tanı girilebilir.", "AlertCircle", "text-amber-500 font-bold");
-                return;
-            }
+        const parsedWeight = weightKg.trim() ? Number(weightKg.replace(',', '.')) : null;
+        const parsedTemp = temperatureC.trim() ? Number(temperatureC.replace(',', '.')) : null;
+        if ((parsedWeight !== null && !Number.isFinite(parsedWeight)) || (parsedTemp !== null && !Number.isFinite(parsedTemp))) {
+            showToast("Kilo ve sıcaklık sayı olmalı.", "AlertCircle", "text-amber-500 font-bold");
+            return;
         }
 
         const updatedApt = {
             ...selectedApt,
             status: 'completed',
-            consultationData: hasMedicalRecords ? {
+            consultationData: writesRecord ? {
                 diagnosis,
                 vaccines: addedVaccines,
                 medications: addedMeds,
-                criticalNotes
+                criticalNotes,
+                weightKg: parsedWeight,
+                temperatureC: parsedTemp
             } : { criticalNotes }
         };
 
-        // Live Supabase Integration (Atomik Sıralama)
         if (isSupabaseEnabled) {
             try {
-                // 0.0 Authorization & RLS Check - Kliniğin bu randevuya erişimi var mı?
-                const { data: authCheck, error: authErr } = await supabase
-                    .from('appointments')
-                    .select('id')
-                    .eq('id', selectedApt.id)
-                    .single();
-
-                if (authErr || !authCheck) {
-                    throw new Error("Yetkisiz işlem: Bu randevuya müdahale etme izniniz yok (RLS Engeli).");
-                }
-
-                if (hasMedicalRecords) {
-                    // 0. Idempotency check — bu randevu için zaten bir EMR kaydı var mı?
-                    const { data: existingRecord } = await supabase
-                        .from('medical_records')
-                        .select('id')
-                        .eq('appointment_id', selectedApt.id)
-                        .maybeSingle();
-
-                    if (existingRecord) {
-                        showToast("Bu randevu için muayene kaydı zaten oluşturulmuş.", "AlertCircle", "text-amber-500 font-bold");
-                        return;
-                    }
-
-                    // 1. ÖNCE EN KRİTİK VERİYİ YAZ (Teşhis / EMR)
-                    const { error: emrError } = await supabase.from('medical_records').insert({
-                        pet_id: targetPetId,
-                        appointment_id: selectedApt.id,
-                        clinic_id: user?.id,
-                        vet_name: selectedApt.realDoctorName || user?.businessName || user?.name || 'Klinik',
-                        diagnosis: diagnosis,
-                        critical_notes: criticalNotes,
+                if (writesRecord) {
+                    // Muayene kaydı, aşılar, reçete, kilo ve randevunun tamamlanması tek atomik
+                    // sunucu işleminde (record_consultation): biri başarısız olursa hiçbiri yazılmaz.
+                    await healthService.recordConsultation({
+                        appointmentId: selectedApt.id,
+                        diagnosis,
+                        criticalNotes,
+                        weightKg: parsedWeight,
+                        temperatureC: parsedTemp,
+                        vaccines: addedVaccines,
                         medications: addedMeds,
                     });
-
-                    if (emrError) throw emrError; // Teşhis yazılamazsa hemen çık!
-
-                    // 2. Aşıları kaydet
-                    for (const v of addedVaccines) {
-                        await apiService.addPetVaccine(targetPetId, {
-                            name: v.name,
-                            status: 'completed',
-                            dueDate: v.nextDate || new Date().toISOString(),
-                            dateAdministered: v.date || new Date().toISOString(),
-                            vetName: selectedApt.realDoctorName || user?.businessName || user?.name || 'Klinik'
-                        });
-                    }
-
-                    // 3. İlaçları kaydet
-                    for (const m of addedMeds) {
-                        await apiService.addPetMedication(targetPetId, {
-                            name: m.name,
-                            dosage: m.dose,
-                            instructions: `${m.duration} gün boyunca kullanılacak.`,
-                            startDate: new Date().toISOString()
-                        });
-                    }
+                } else {
+                    await apiService.updateAppointmentStatus(selectedApt.id.toString(), 'completed');
                 }
-
-                // EN SON Randevuyu 'completed' yap
-                await apiService.updateAppointmentStatus(selectedApt.id.toString(), 'completed');
-
             } catch (e: any) {
                 console.error("Failed to sync consultation details with Supabase:", e);
                 // Do NOT swallow the error
@@ -759,9 +738,9 @@ export default function BusinessAppointmentsPage() {
 
         // Show premium toast
         showToast(
-            hasMedicalRecords
-                ? "Muayene başarıyla tamamlandı ve evcil hayvan pasaportuna işlendi! 💉🩺"
-                : "Randevu başarıyla tamamlandı! ✅",
+            writesRecord
+                ? "Muayene kaydedildi ve hastanın sağlık karnesine işlendi."
+                : "Randevu tamamlandı.",
             "Sparkles", "text-emerald-400 font-bold"
         );
 
@@ -1909,6 +1888,23 @@ export default function BusinessAppointmentsPage() {
                                             </div>
                                         )}
 
+                                        {hasMedicalRecords && (selectedApt.consultationData?.weightKg != null || selectedApt.consultationData?.temperatureC != null) && (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {selectedApt.consultationData?.weightKg != null && (
+                                                    <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
+                                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1">Kilo</span>
+                                                        <p className="font-bold text-foreground">{String(selectedApt.consultationData.weightKg).replace('.', ',')} kg</p>
+                                                    </div>
+                                                )}
+                                                {selectedApt.consultationData?.temperatureC != null && (
+                                                    <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
+                                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1">Vücut sıcaklığı</span>
+                                                        <p className="font-bold text-foreground">{String(selectedApt.consultationData.temperatureC).replace('.', ',')} °C</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {hasMedicalRecords && selectedApt.consultationData?.vaccines?.length > 0 && (
                                             <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
                                                 <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">Uygulanan Aşılar</span>
@@ -1971,6 +1967,30 @@ export default function BusinessAppointmentsPage() {
                                             />
                                         </div>
 
+                                        {/* Ölçümler — kilo, hastanın kilo geçmişine de eklenir */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <label className="space-y-2 block">
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Kilo (kg)</span>
+                                                <input
+                                                    inputMode="decimal"
+                                                    value={weightKg}
+                                                    onChange={e => setWeightKg(e.target.value)}
+                                                    placeholder="Örn: 4,2"
+                                                    className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl px-4 py-3 text-sm focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
+                                                />
+                                            </label>
+                                            <label className="space-y-2 block">
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Vücut sıcaklığı (°C)</span>
+                                                <input
+                                                    inputMode="decimal"
+                                                    value={temperatureC}
+                                                    onChange={e => setTemperatureC(e.target.value)}
+                                                    placeholder="Örn: 38,5"
+                                                    className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl px-4 py-3 text-sm focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
+                                                />
+                                            </label>
+                                        </div>
+
                                         {/* Vaccine Form */}
                                         <div className="border border-zinc-200 dark:border-card-border rounded-3xl p-4 space-y-4 bg-zinc-50 dark:bg-white/5">
                                             <div className="flex justify-between items-center">
@@ -1979,26 +1999,30 @@ export default function BusinessAppointmentsPage() {
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                    <label className="text-[9px] font-bold text-gray-500">Aşı Adı</label>
-                                                    <input 
-                                                        list="vaccines-list"
-                                                        value={vaccineName}
-                                                        onChange={e => setVaccineName(e.target.value)}
-                                                        placeholder="Aşı seçin veya yazın..."
-                                                        className="w-full bg-white dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
-                                                    />
-                                                    <datalist id="vaccines-list">
-                                                        <option value="Karma Aşı (DHPPI)" />
-                                                        <option value="Kuduz Aşısı (Rabies)" />
-                                                        <option value="Mantar Aşısı" />
-                                                        <option value="Bronchine Aşı" />
-                                                        <option value="Corona Aşı" />
-                                                        <option value="İç Parazit Enjeksiyon" />
-                                                        <option value="Dış Parazit Damla" />
-                                                    </datalist>
+                                                    <label className="text-[9px] font-bold text-gray-500">Aşı</label>
+                                                    {vaccineDefs.length > 0 && (
+                                                        <select
+                                                            value={vaccineDefId}
+                                                            onChange={e => setVaccineDefId(e.target.value)}
+                                                            aria-label="Aşı seç"
+                                                            className="w-full bg-white dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
+                                                        >
+                                                            <option value="">Listeden seçin…</option>
+                                                            {vaccineDefs.map(d => <option key={d.id} value={d.id}>{d.name}{d.isCore ? '' : ' (isteğe bağlı)'}</option>)}
+                                                            <option value="__other">Listede yok, adını yazacağım</option>
+                                                        </select>
+                                                    )}
+                                                    {(vaccineDefs.length === 0 || vaccineDefId === '__other') && (
+                                                        <input
+                                                            value={vaccineName}
+                                                            onChange={e => setVaccineName(e.target.value)}
+                                                            placeholder="Aşının adı"
+                                                            className="w-full bg-white dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
+                                                        />
+                                                    )}
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[9px] font-bold text-gray-500">Gelecek Tekrar Tarihi</label>
+                                                    <label className="text-[9px] font-bold text-gray-500">Sonraki doz (boşsa aşı aralığına göre hesaplanır)</label>
                                                     <input 
                                                         type="date"
                                                         value={vaccineNextDate}
@@ -2033,7 +2057,7 @@ export default function BusinessAppointmentsPage() {
                                                     {addedVaccines.map((v, i) => (
                                                         <div key={i} className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                                                             <span>💉 {v.name} (Seri: {v.batch || 'Girilmedi'})</span>
-                                                            <span>Tekrar: {v.nextDate || 'Planlanmadı'}</span>
+                                                            <span>Tekrar: {v.nextDate || (v.definitionId ? 'aşı aralığına göre' : 'girilmedi')}</span>
                                                         </div>
                                                     ))}
                                                 </div>

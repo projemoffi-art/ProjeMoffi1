@@ -348,10 +348,7 @@ export function OverlaySystem({
                             router.push(`/post/${id}`);
                         }
                         
-                        if (id === 'vax') { 
-                            setActiveTab('profile');
-                            setProfileViewMode('appointments'); 
-                        }
+                        if (id === 'vax') router.push('/health/asilar');
                         if (id === 'vet') setIsVetQuickSheetOpen?.(true);
                         if (id === 'market') setIsMarketQuickSheetOpen?.(true);
                     }}

@@ -142,7 +142,6 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
         weight: pet?.weight ? String(pet.weight).replace(/[^\d.]/g, "") : "",
         neutered: pet?.neutered ?? pet?.is_neutered ?? false,
         // Sağlık & karakter
-        healthStatus: pet?.health || pet?.sos_settings?.health || "İyi",
         healthNotes: pet?.health_notes || "",
         character: pet?.character || pet?.personality || "",
         features: pet?.features || pet?.distinctive_features || "",
@@ -151,8 +150,6 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
         ownerPhone: pet?.ownerPhone || pet?.owner?.phone || pet?.sos_settings?.owner?.phone || "",
         ownerAddress: pet?.ownerAddress || pet?.owner?.address || pet?.sos_settings?.owner?.address || "",
         // Parazit takibi
-        parasiteInternal: pet?.parasiteInternal || pet?.sos_settings?.parasiteInternal || "",
-        parasiteExternal: pet?.parasiteExternal || pet?.sos_settings?.parasiteExternal || "",
         // Günlük hedefler
         activityTarget: pet?.ringProgress?.activity ?? pet?.activity_target ?? 70,
         waterTarget: pet?.ringProgress?.water ?? pet?.water_target ?? 1200,
@@ -182,7 +179,6 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                 weight: pet?.weight ? String(pet.weight).replace(/[^\d.]/g, "") : "",
                 neutered: pet?.neutered ?? pet?.is_neutered ?? false,
                 // Sağlık & karakter
-                healthStatus: pet?.health || pet?.sos_settings?.health || "İyi",
                 healthNotes: pet?.health_notes || "",
                 character: pet?.character || pet?.personality || "",
                 features: pet?.features || pet?.distinctive_features || "",
@@ -191,8 +187,6 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                 ownerPhone: pet?.ownerPhone || pet?.owner?.phone || pet?.sos_settings?.owner?.phone || "",
                 ownerAddress: pet?.ownerAddress || pet?.owner?.address || pet?.sos_settings?.owner?.address || "",
                 // Parazit takibi
-                parasiteInternal: pet?.parasiteInternal || pet?.sos_settings?.parasiteInternal || "",
-                parasiteExternal: pet?.parasiteExternal || pet?.sos_settings?.parasiteExternal || "",
                 // Günlük hedefler
                 activityTarget: pet?.ringProgress?.activity ?? pet?.activity_target ?? 70,
                 waterTarget: pet?.ringProgress?.water ?? pet?.water_target ?? 1200,
@@ -240,9 +234,6 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                 },
                 color: formData.color,
                 birthday: formData.birthday,
-                health: formData.healthStatus,
-                parasiteInternal: formData.parasiteInternal,
-                parasiteExternal: formData.parasiteExternal,
                 activity_target: formData.activityTarget,
                 water_target: formData.waterTarget,
                 food_target: formData.foodTarget,
@@ -279,7 +270,6 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
 
 
     const SIZE_OPTIONS = ["Mini", "Küçük", "Orta", "Büyük", "Dev"];
-    const HEALTH_OPTIONS = ["Mükemmel", "İyi", "Hassas", "Tedavide"];
 
     return (
         <AnimatePresence>
@@ -444,7 +434,6 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                             <div className="space-y-4">
                                 <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Sağlık & Karakter</h4>
                                 <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
-                                    <SettingRow icon={Heart} label="Sağlık Durumu" value={formData.healthStatus} onChange={(v:any) => setFormData(f => ({...f, healthStatus: v}))} type="select" options={HEALTH_OPTIONS} color="text-rose-400" />
                                     <SettingRow 
                                         icon={FileText} 
                                         label="Sağlık Notları" 
@@ -486,14 +475,12 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                                 </div>
                             </div>
 
-                            {/* ─── Parazit Takibi ─── */}
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Parazit Kontrol Tarihleri</h4>
-                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
-                                    <SettingRow icon={ShieldCheck} label="İç Parazit Uygulaması" value={formData.parasiteInternal} onChange={(v:any) => setFormData(f => ({...f, parasiteInternal: v}))} type="date" color="text-emerald-400" />
-                                    <SettingRow icon={ShieldCheck} label="Dış Parazit Uygulaması" value={formData.parasiteExternal} onChange={(v:any) => setFormData(f => ({...f, parasiteExternal: v}))} type="date" color="text-emerald-400" />
-                                </div>
-                            </div>
+                            {/* Aşı, parazit, ilaç ve kilo takibi Sağlık Karnesi'nde (tek kayıt, hatırlatmalı). */}
+                            <a href="/health" className="flex items-center gap-3 rounded-[2rem] border border-card-border bg-card px-5 py-4 mx-1">
+                                <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0" />
+                                <span className="flex-1 text-sm font-bold text-foreground">Aşı, parazit, ilaç ve kilo takibi Sağlık Merkezi'nde</span>
+                                <span className="text-xs font-black text-accent">Aç</span>
+                            </a>
 
                             {/* ─── Günlük Hedefler ─── */}
                             <div className="space-y-4">

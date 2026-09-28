@@ -246,17 +246,17 @@ export function DynamicNavigation() {
                 }
             }
 
-            const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks', 'identity'];
+            const profileViews = ['wallet', 'passport', 'family', 'orders', 'routes', 'bookmarks', 'identity'];
 
-            if (id === 'carehub' || id === 'nutrition') {
-                if (pathname !== '/home' && pathname !== '/community' && pathname !== '/vet') {
-                    router.push('/home');
-                    setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: id === 'nutrition' ? 'nutrition' : 'health' } }));
-                    }, 500);
-                } else {
-                    window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: id === 'nutrition' ? 'nutrition' : 'health' } }));
-                }
+            if (id === 'carehub') {
+                // Sağlığın tek adresi Sağlık Merkezi (design-reference/health-final).
+                router.push('/health');
+            } else if (id === 'nutrition') {
+                // Beslenme penceresi kök düzende (GlobalCareModals) her sayfada hazır.
+                window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }));
+            } else if (id === 'appointments') {
+                // Randevuların tek ekranı: Veteriner → Randevularım.
+                router.push('/vet?view=appointments');
             } else if (id === 'feed' || id === 'radar') {
                 router.push(`/community?tab=${id}`);
             } else if (id === 'profile') {

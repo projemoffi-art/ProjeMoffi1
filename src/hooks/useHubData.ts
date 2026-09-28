@@ -5,6 +5,9 @@ import { apiService } from '@/services/apiService';
 import { useAuth } from '@/context/AuthContext';
 import { usePet } from '@/context/PetContext';
 import { ShopOrder } from '@/services/types';
+import { healthService } from '@/services/healthService';
+import { speciesOf, upcomingItems } from '@/lib/health/derive';
+import { todayKey } from '@/lib/appointmentTime';
 
 export interface HubReminder {
     id: string;
@@ -61,21 +64,15 @@ export function useHubData() {
             const todayWalks = (Array.isArray(history) ? history : []).filter(w => w.start_time.startsWith(today));
             const todayDistance = todayWalks.reduce((sum, w) => sum + Number(w.distance_km || 0), 0);
             
-            // 3. Fetch Next Health Alert
-            let nextAlert = null;
+            // 3. Sıradaki sağlık işi — Sağlık Merkezi ile aynı kayıt ve aynı hesap (lib/health/derive).
+            let nextAlert: HubData['nextHealthAlert'] = null;
             if (activePet) {
-                const vaccines = await apiService.getPetVaccines(activePet.id);
-                const pendingVaccine = (Array.isArray(vaccines) ? vaccines : []).find(v => v.status === 'pending');
-                
-                if (pendingVaccine && pendingVaccine.dueDate) {
-                    const due = new Date(pendingVaccine.dueDate);
-                    const diff = Math.ceil((due.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+                const bundle = await healthService.getBundle(activePet.id, speciesOf(activePet));
+                const next = upcomingItems(bundle, [], todayKey()).find(i => i.kind !== 'appointment' && i.daysLeft <= 30);
+                if (next) {
                     nextAlert = {
-                        name: pendingVaccine.name,
-                        date: pendingVaccine.dueDate,
-                        type: 'vaccine' as const,
-                        daysLeft: diff,
-                        severity: diff < 3 ? 'high' : diff < 7 ? 'medium' : 'low'
+                        name: next.title, date: next.date, type: 'vaccine', daysLeft: next.daysLeft,
+                        severity: next.daysLeft < 3 ? 'high' : next.daysLeft < 7 ? 'medium' : 'low',
                     };
                 }
             }

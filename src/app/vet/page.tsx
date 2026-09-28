@@ -22,6 +22,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { healthService } from "@/services/healthService";
 import { MyAppointmentsPanel } from "@/components/vet/MyAppointmentsPanel";
 import { BUSINESS_TYPE_ORDER, getBusinessTypeConfig, isBusinessType } from "@/config/businessTypes";
 import type { BusinessType } from "@/context/AuthContext";
@@ -536,10 +537,11 @@ function VetPageContent() {
         let sharedVaccines: any[] = [];
         if (shareVaccines && bookingPet) {
             try {
-                const records = await apiService.getPetVaccines(bookingPet.id);
+                // Sağlık Karnesi'ndeki gerçek aşı kayıtları (yapılanlar + planlananlar).
+                const records = await healthService.getVaccines(bookingPet.id);
                 sharedVaccines = records.map(v => ({
-                    name: v.vaccineId,
-                    date: v.dateAdministered || v.dueDate,
+                    name: v.name,
+                    date: v.dateAdministered || v.nextDueDate,
                     status: v.status
                 }));
             } catch (e) {

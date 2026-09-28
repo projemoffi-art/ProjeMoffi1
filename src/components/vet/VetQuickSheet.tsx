@@ -28,15 +28,11 @@ export function VetQuickSheet({ isOpen, onClose }: VetQuickSheetProps) {
     }, [appointments]);
 
     const go = (path: string) => { router.push(path); onClose(); };
-    const openVaccines = () => {
-        window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }));
-        onClose();
-    };
 
     const actions: { label: string; hint: string; icon: React.ComponentType<{ className?: string }>; tone: string; onClick: () => void }[] = [
         { label: 'Veteriner bul', hint: 'Yakındaki klinikler', icon: Stethoscope, tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300', onClick: () => go('/vet') },
         { label: 'Acil veteriner', hint: 'Şu an açık olanlar', icon: ShieldAlert, tone: 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300', onClick: () => go('/vet/emergency') },
-        { label: 'Aşı karnesi', hint: 'Aşılar ve hatırlatmalar', icon: Syringe, tone: 'bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300', onClick: openVaccines },
+        { label: 'Sağlık karnesi', hint: 'Aşı, ilaç, kilo, belgeler', icon: Syringe, tone: 'bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-300', onClick: () => go('/health') },
         { label: 'Randevularım', hint: 'Yaklaşan ve geçmiş', icon: Calendar, tone: 'bg-accent/10 text-accent', onClick: () => go('/vet?view=appointments') },
         { label: 'Favorilerim', hint: 'Kaydettiğin klinikler', icon: Heart, tone: 'bg-accent/10 text-accent', onClick: () => go('/vet/favorites') },
         { label: 'Veteriner rehberi', hint: 'Faydalı bilgiler', icon: BookOpen, tone: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300', onClick: () => go('/vet/guide') },

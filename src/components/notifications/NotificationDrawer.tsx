@@ -10,6 +10,7 @@ import { useNotifications } from "@/context/NotificationContext";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/dateUtils";
 import { useTranslation } from "@/context/LanguageContext";
+import { useRouter } from "next/navigation";
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -19,11 +20,27 @@ interface NotificationDrawerProps {
 export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, isLoading } = useNotifications();
   const { language } = useTranslation();
+  const router = useRouter();
+
+  // Sağlık hatırlatması → ilgili evcil hayvanın Sağlık Merkezi; randevu → Randevularım.
+  const targetOf = (n: { type: string; entity_id?: string | null }) =>
+    n.type === 'health' ? `/health${n.entity_id ? `?pet=${n.entity_id}` : ''}`
+      : n.type === 'appointment' ? '/vet?view=appointments' : null;
+
+  const openNotification = (n: any) => {
+    const target = targetOf(n);
+    if (!target) return;
+    if (!n.is_read) markAsRead(n.id);
+    onClose();
+    router.push(target);
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'like': return <Heart className="w-4 h-4 text-pink-500" />;
       case 'follow': return <UserPlus className="w-4 h-4 text-cyan-500" />;
       case 'appointment': return <Calendar className="w-4 h-4 text-orange-500" />;
+      case 'health': return <Heart className="w-4 h-4 text-orange-500" />;
       case 'system': return <Sparkles className="w-4 h-4 text-purple-500" />;
       case 'wellbeing': return <ShieldAlert className="w-4 h-4 text-orange-500" />;
       case 'shop': return <ShoppingBag className="w-4 h-4 text-green-500" />;
@@ -114,8 +131,10 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                     layout
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
+                    onClick={() => openNotification(notif)}
                     className={cn(
                       "group p-5 rounded-3xl border transition-all relative overflow-hidden",
+                      targetOf(notif) && "cursor-pointer",
                       notif.is_read 
                         ? "bg-white/[0.02] border-card-border opacity-60" 
                         : "bg-white/[0.05] border-card-border shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
@@ -152,14 +171,14 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                         <div className="flex items-center gap-4 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
                           {!notif.is_read && (
                             <button 
-                              onClick={() => markAsRead(notif.id)}
+                              onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }}
                               className="text-[9px] font-black text-cyan-400 uppercase tracking-widest hover:text-cyan-300"
                             >
                               Okundu
                             </button>
                           )}
                           <button 
-                            onClick={() => deleteNotification(notif.id)}
+                            onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
                             className="text-[9px] font-black text-red-400/50 uppercase tracking-widest hover:text-red-400"
                           >
                             <Trash2 className="w-3 h-3" />

@@ -12,6 +12,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { getPetStatusById } from '@/services/petIdService';
 import { PetIDState } from '@/types/pet-id';
 import { apiService } from '@/services/apiService';
+import { EmergencyInfoCard } from '@/components/health/EmergencyInfoCard';
 
 export default function PetIDPage() {
     const router = useRouter();
@@ -285,6 +286,13 @@ export default function PetIDPage() {
                         )}
                     </motion.div>
                 </div>
+
+                {/* Sağlık Karnesi → Acil Bilgiler: sahip "kayıp ilanında göster"i açtıysa görünür */}
+                {isLost && (
+                    <div className="w-full max-w-sm mb-4">
+                        <EmergencyInfoCard petId={petId} context="lost" />
+                    </div>
+                )}
 
                 {/* ACTION BUTTONS (ONLY SHOW IF LOST) */}
                 {isLost && (

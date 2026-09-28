@@ -78,6 +78,8 @@ export interface VetClinic {
     imageUrl: string;
     isOpenNow?: boolean;
     distance?: string; // Calculated UI prop
+    /** Kullanıcı konumuna göre sunucu sorgusunda hesaplanan mesafe (km); konum yoksa tanımsız. */
+    calculated_distance?: number;
     doctors?: VetDoctor[];
     reviews?: VetReview[];
 }

@@ -35,7 +35,11 @@ import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
 import { useHubData } from "@/hooks/useHubData";
 import { usePetShop } from "@/hooks/usePetShop";
 import { useDragScroll } from '@/hooks/useDragScroll';
-import { useVaccineSchedule } from '@/hooks/useVaccineSchedule';
+import Link from 'next/link';
+import { Pill } from 'lucide-react';
+import { usePetHealthBundle } from '@/components/health/usePetHealthBundle';
+import { daysLeftText, isMedicationActive, medicationDaysLeft, overallStatus, upcomingItems } from '@/lib/health/derive';
+import { formatDateKeyTr, todayKey } from '@/lib/appointmentTime';
 
 // Kilitli tasarım referansı (design-reference/home-final): başlık fontu Baloo 2, gövde fontu Nunito
 const baloo2 = Baloo_2({ subsets: ['latin'], weight: ['600', '700', '800'] });
@@ -365,7 +369,7 @@ export default function LegendaryLightDashboard() {
     const { permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications(authUser?.id);
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading } = useWalk();
-    const { subscriptions, cart, cartCount, cartTotal, updateCartItem, addToCart, products, clearCart } = usePetShop();
+    const { cart, cartCount, cartTotal, updateCartItem, addToCart, products, clearCart } = usePetShop();
     const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm, todaySteps, dailyGoal } = useQuestEngine();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -414,18 +418,9 @@ export default function LegendaryLightDashboard() {
 
     const hasNoPets = !isPetLoading && userPets.length === 0;
 
-    // "Hatırlatmalar" bölümü için gerçek Supabase verisi — aynı hook/servis fonksiyonları
-    // VaccineModal.tsx (useVaccineSchedule) ve MedicationModal.tsx (apiService.getPetMedications) ile paylaşılıyor.
-    const { schedule: vaccineSchedule } = useVaccineSchedule(activePetObj?.id || '');
-    const [activeMedications, setActiveMedications] = useState<any[]>([]);
+    // "Hatırlatmalar" bölümü: Sağlık Merkezi ile AYNI kayıt ve AYNI hesap (src/lib/health/derive.ts).
+    const healthBundle = usePetHealthBundle(activePetObj as any);
     const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
-
-    useEffect(() => {
-        if (!activePetObj?.id) { setActiveMedications([]); return; }
-        apiService.getPetMedications(activePetObj.id)
-            .then(setActiveMedications)
-            .catch(() => setActiveMedications([]));
-    }, [activePetObj?.id]);
 
     useEffect(() => {
         if (!authUser?.id || !activePetObj?.id) { setUpcomingAppointments([]); return; }
@@ -442,56 +437,40 @@ export default function LegendaryLightDashboard() {
             .catch(() => setUpcomingAppointments([]));
     }, [authUser?.id, activePetObj?.id]);
 
-    const daysUntil = (dateStr: string) => Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    const healthStatus = useMemo(() => (healthBundle ? overallStatus(healthBundle, todayKey()) : null), [healthBundle]);
 
     const reminders = useMemo(() => {
-        const now = Date.now();
-        const items: { id: string, icon: any, iconBg: string, title: string, dateLabel: string, daysLeft: number, badgeBg: string, badgeText: string }[] = [];
+        if (!healthBundle) return [];
+        const today = todayKey();
+        const petName = activePetObj?.name || 'Dostum';
+        const style = {
+            vaccine:     { icon: Syringe,     bg: 'rgba(238,91,61,0.12)',  fg: '#EE5B3D' },
+            parasite:    { icon: ShieldCheck, bg: 'rgba(139,127,217,0.14)', fg: '#6E62C7' },
+            appointment: { icon: Stethoscope, bg: 'rgba(47,158,143,0.13)', fg: '#2F8C80' },
+            medication:  { icon: Pill,        bg: 'rgba(143,209,79,0.15)', fg: '#5C9B2E' },
+        };
+        const items: { id: string, icon: any, iconBg: string, title: string, dateLabel: string, daysLeft: number | null, badgeBg: string, badgeText: string, href: string }[] = [];
 
-        vaccineSchedule
-            .filter(v => v.status === 'pending' && new Date(v.dueDate).getTime() > now)
-            .slice(0, 3)
-            .forEach(v => {
-                items.push({
-                    id: `vaccine-${v.id}`,
-                    icon: Syringe,
-                    iconBg: 'rgba(238,91,61,0.12)',
-                    title: `${activePetObj?.name || 'Dostum'} — ${v.definition.name}`,
-                    dateLabel: new Date(v.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
-                    daysLeft: daysUntil(v.dueDate),
-                    badgeBg: 'rgba(238,91,61,0.12)',
-                    badgeText: '#EE5B3D',
-                });
-            });
-
-        upcomingAppointments.forEach(a => {
+        for (const i of upcomingItems(healthBundle, upcomingAppointments, today).filter(i => i.daysLeft <= 60).slice(0, 4)) {
+            const s = style[i.kind];
             items.push({
-                id: `appt-${a.id}`,
-                icon: Stethoscope,
-                iconBg: 'rgba(76,143,217,0.12)',
-                title: `${a.pet?.name || activePetObj?.name || 'Dostum'} — ${a.reason || a.clinic_name || 'Veteriner Randevusu'}`,
-                dateLabel: new Date(a.appointment_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
-                daysLeft: daysUntil(a.appointment_date),
-                badgeBg: 'rgba(76,143,217,0.12)',
-                badgeText: '#4C8FD9',
+                id: i.id, icon: s.icon, iconBg: s.bg, badgeBg: s.bg, badgeText: i.daysLeft < 0 ? '#D93025' : s.fg,
+                title: `${petName} — ${i.title}`,
+                dateLabel: formatDateKeyTr(i.date, { day: 'numeric', month: 'long', year: 'numeric' }),
+                daysLeft: i.daysLeft, href: i.href,
             });
-        });
-
-        activeMedications.forEach(m => {
+        }
+        for (const m of healthBundle.medications.filter(m => isMedicationActive(m, today))) {
+            const s = style.medication;
             items.push({
-                id: `med-${m.id}`,
-                icon: Bone,
-                iconBg: 'rgba(143,209,79,0.15)',
-                title: `${activePetObj?.name || 'Dostum'} — ${m.name}`,
+                id: `med-${m.id}`, icon: s.icon, iconBg: s.bg, badgeBg: s.bg, badgeText: s.fg,
+                title: `${petName} — ${m.name}`,
                 dateLabel: m.dosage || m.frequency || 'Aktif tedavi',
-                daysLeft: -1, // gün sayacı yok — tabloda "sonraki doz tarihi" alanı bulunmuyor
-                badgeBg: 'rgba(143,209,79,0.18)',
-                badgeText: '#5C9B2E',
+                daysLeft: medicationDaysLeft(m, today), href: '/health/ilaclar',
             });
-        });
-
-        return items.sort((a, b) => (a.daysLeft === -1 ? 1 : a.daysLeft) - (b.daysLeft === -1 ? 1 : b.daysLeft));
-    }, [vaccineSchedule, upcomingAppointments, activeMedications, activePetObj?.name]);
+        }
+        return items;
+    }, [healthBundle, upcomingAppointments, activePetObj?.name]);
 
     const suggestedProducts = useMemo(() => products.filter(p => p.inStock).slice(0, 6), [products]);
 
@@ -2062,7 +2041,7 @@ export default function LegendaryLightDashboard() {
                         <QuickAccessBtn icon={Home} title="Kayıp & Sahiplen" tint="#EE5B3D" delay={0.1} onClick={() => router.push('/community?tab=radar')} />
                         <QuickAccessBtn icon={ShoppingBag} title="Market Petshop" tint="#E5473D" delay={0.15} onClick={() => router.push('/petshop')} />
                         <QuickAccessBtn icon={Stethoscope} title="Veteriner" tint="#4C8FD9" delay={0.2} onClick={() => router.push('/vet')} />
-                        <QuickAccessBtn icon={Calendar} title="Aşı Takvimi" tint="#8B7FD9" delay={0.25} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
+                        <QuickAccessBtn icon={Heart} title="Sağlık Merkezi" tint="#8B7FD9" delay={0.25} onClick={() => router.push('/health')} />
                         <QuickAccessBtn icon={Bone} title="Beslenme & Su" tint="#8FD14F" delay={0.3} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} />
                     </div>
                 </section>
@@ -2272,7 +2251,9 @@ export default function LegendaryLightDashboard() {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-[8px] text-gray-500 dark:text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Sağlık</span>
-                                        <span className="text-[10px] font-black text-gray-800 dark:text-zinc-300">{pet.health}</span>
+                                        <span className="text-[10px] font-black text-gray-800 dark:text-zinc-300">
+                                            {healthStatus ? (healthStatus.tone === 'good' ? 'Güncel' : healthStatus.tone === 'attention' ? 'Yaklaşan iş var' : 'Gecikmiş iş var') : '—'}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">
@@ -2618,11 +2599,11 @@ export default function LegendaryLightDashboard() {
                                 <h3 className={`text-[15px] font-bold text-[#201B16] dark:text-foreground tracking-tight ${baloo2.className}`}>Hatırlatmalar</h3>
                                 <p className="text-[9px] text-[#9A9081] dark:text-gray-400 font-bold mt-0.5">Patinin sağlığı bizim için önemli ♡</p>
                             </div>
-                            <span className="text-[9.5px] font-black text-[#EE5B3D] shrink-0">Tümünü Gör →</span>
+                            <Link href="/health" className="text-[9.5px] font-black text-[#EE5B3D] shrink-0">Tümünü Gör →</Link>
                         </div>
                         <div className="flex flex-col gap-2">
                             {reminders.map((r) => (
-                                <div key={r.id} className="bg-white dark:bg-[#1a1b1e] border border-[#ECE6D9] dark:border-white/5 rounded-2xl px-3.5 py-2.5 flex items-center gap-2.5">
+                                <Link href={r.href} key={r.id} className="bg-white dark:bg-[#1a1b1e] border border-[#ECE6D9] dark:border-white/5 rounded-2xl px-3.5 py-2.5 flex items-center gap-2.5">
                                     <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: r.iconBg }}>
                                         <r.icon className="w-4 h-4" style={{ color: r.badgeText }} />
                                     </div>
@@ -2630,13 +2611,13 @@ export default function LegendaryLightDashboard() {
                                         <h4 className="text-[11px] font-black text-[#201B16] dark:text-foreground truncate">{r.title}</h4>
                                         <p className="text-[8.5px] text-[#9A9081] dark:text-gray-400 font-bold mt-0.5">📅 {r.dateLabel}</p>
                                     </div>
-                                    {r.daysLeft >= 0 && (
+                                    {r.daysLeft !== null && (
                                         <span className="text-[8.5px] font-black px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap" style={{ backgroundColor: r.badgeBg, color: r.badgeText }}>
-                                            {r.daysLeft === 0 ? 'Bugün' : `${r.daysLeft} gün kaldı`}
+                                            {daysLeftText(r.daysLeft)}
                                         </span>
                                     )}
                                     <ChevronRight className="w-3.5 h-3.5 text-[#C9C0AF] shrink-0" strokeWidth={2.5} />
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </section>
@@ -3220,102 +3201,36 @@ export default function LegendaryLightDashboard() {
                                             </div>
                                             */}
 
-                                            {/* 4. Smart Food & Service Subscriptions (Abonelikler) */}
+                                            {/* Sağlık özeti — Sağlık Karnesi'nin gerçek verisi (lib/health/derive), sabit metin yok. */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-secondary uppercase px-1">MAMA & HİZMET ABONELİKLERİM</span>
-                                                
+                                                <span className="text-[10px] font-black tracking-widest text-secondary uppercase px-1">SAĞLIK</span>
                                                 <div className="bg-card border border-card-border rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
-                                                    {subscriptions.length > 0 ? subscriptions.map((sub: any, idx: number) => (
-                                                        <div key={sub.id || idx} className={`flex justify-between items-center ${idx !== subscriptions.length - 1 ? 'pb-3 border-b border-card-border' : ''}`}>
-                                                            <div className="flex items-center gap-2.5">
-                                                                <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
-                                                                    <ShoppingBag className="w-5 h-5" />
-                                                                </div>
-                                                                <div>
-                                                                    <h4 className="text-[11.5px] font-black text-foreground">{sub.name}</h4>
-                                                                    <p className="text-[9.5px] text-secondary font-semibold mt-0.5">Aylık Düzenli Teslimat • %10 İndirimli</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <span className="text-[11.5px] font-black text-orange-600 block">{(sub.price * 0.9).toLocaleString('tr-TR')} TL</span>
-                                                                <span className="text-[8px] font-bold text-secondary block uppercase font-sans">Abonelik</span>
-                                                            </div>
-                                                        </div>
-                                                    )) : (
-                                                        <div className="text-center py-4 flex flex-col items-center">
-                                                            <p className="text-[10px] font-bold text-secondary mb-2.5">Henüz aktif bir aboneliğiniz bulunmuyor.</p>
-                                                            <button 
-                                                                onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
-                                                                className="text-[10px] font-black text-accent-secondary bg-accent-secondary/10 border border-accent-secondary/20 hover:bg-accent-secondary/20 px-4 py-2 rounded-xl transition-colors"
-                                                            >
-                                                                Marketi Keşfet
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* 5. Health & Vaccine Passport Center */}
-                                            <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-secondary uppercase px-1">MEDİKAL SAĞLIK & DİJİTAL PASAPORT</span>
-                                                
-                                                <div className="bg-card border border-card-border rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
-                                                    
-                                                    {/* Glowing Telehealth Consultation Banner */}
-                                                    <div className="flex justify-between items-center p-3.5 bg-gradient-to-r from-emerald-500/10 to-teal-500/5 border border-emerald-100 rounded-2xl relative overflow-hidden group">
-                                                        <div className="absolute right-[-10px] top-[-10px] w-20 h-20 bg-emerald-500/5 rounded-full blur-xl animate-pulse" />
-                                                        <div className="flex items-center gap-2.5 relative z-10">
-                                                            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-600 shrink-0">
+                                                    {healthStatus ? (
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${healthStatus.tone === 'good' ? 'bg-emerald-500/15 text-emerald-600' : healthStatus.tone === 'attention' ? 'bg-amber-500/15 text-amber-600' : 'bg-red-500/15 text-red-600'}`}>
                                                                 <Stethoscope className="w-5 h-5" />
                                                             </div>
-                                                            <div>
-                                                                <h4 className="text-[11.5px] font-black text-emerald-800 leading-tight">7/24 Canlı Veteriner Destek</h4>
-                                                                <p className="text-[9.5px] text-emerald-600 font-semibold mt-0.5">Gold Üye Ayrıcalıklı Canlı Konsültasyon</p>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="text-[12px] font-black text-foreground">{healthStatus.title}</h4>
+                                                                <p className="text-[10px] text-secondary font-semibold mt-0.5 truncate">
+                                                                    {reminders[0] ? `Sıradaki: ${reminders[0].title.split(' — ').pop()} · ${reminders[0].dateLabel}` : 'Yaklaşan bir sağlık işi yok'}
+                                                                </p>
                                                             </div>
                                                         </div>
-                                                        <button 
-                                                            onClick={() => alert('Çok Yakında!')}
-                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black px-3.5 py-2 rounded-xl shadow-sm cursor-pointer transition-colors relative z-10"
-                                                        >
-                                                            Bağlan
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Passport Detail Ring and upcoming vaccines */}
-                                                    <div className="flex justify-between items-center p-3.5 bg-secondary border border-card-border rounded-2xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="relative w-10 h-10 flex items-center justify-center">
-                                                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                                                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#E5E7EB" strokeWidth="3" />
-                                                                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10B981" strokeWidth="3" strokeDasharray="80, 100" />
-                                                                </svg>
-                                                                <span className="absolute text-[8.5px] font-black text-emerald-700">80%</span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[8.5px] font-black text-secondary block uppercase">AŞILAMA TAMAMLIK ORANI</span>
-                                                                <h5 className="text-[11.5px] font-black text-foreground mt-0.5">Karma ve Kuduz Aşısı Aktif</h5>
-                                                            </div>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => router.push(`/profile/${authUser?.id || 'me'}?view=passport`)}
-                                                            className="text-[9.5px] font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-100/50 px-2.5 py-1.5 rounded-xl cursor-pointer shrink-0"
-                                                        >
-                                                            Pasaportu Aç
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Allergy & Diet Information */}
-                                                    <div className="p-3.5 bg-amber-50/40 border border-amber-100 rounded-2xl flex flex-col gap-2">
-                                                        <div className="flex justify-between items-center">
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-[9px] font-black text-amber-700 uppercase tracking-widest">ALERJİ & BESLENME PROFİLİ</span>
-                                                            </div>
-                                                            <span className="text-[8px] font-black text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded">Hassas Diyet</span>
-                                                        </div>
-                                                        <p className="text-[9.5px] font-semibold text-foreground leading-relaxed">
-                                                            ❌ **Yasaklı Besinler:** Çikolata 🍫, Sarımsak 🧄, Üzüm 🍇. Tahılsız ve yüksek somon proteini diyeti aktif. Günlük kalori hedefi: **1,200 kcal**.
+                                                    ) : (
+                                                        <p className="text-[10px] font-bold text-secondary">Sağlık kaydı yükleniyor…</p>
+                                                    )}
+                                                    {healthBundle?.profile && healthBundle.profile.allergies.length > 0 && (
+                                                        <p className="text-[10px] font-semibold text-foreground">
+                                                            <span className="font-black text-amber-700">Alerjiler: </span>{healthBundle.profile.allergies.join(', ')}
                                                         </p>
-                                                    </div>
+                                                    )}
+                                                    <button
+                                                        onClick={() => router.push('/health')}
+                                                        className="text-[10px] font-black text-accent bg-accent/10 border border-accent/20 px-4 py-2 rounded-xl self-start"
+                                                    >
+                                                        Sağlık Merkezi'ni aç
+                                                    </button>
                                                 </div>
                                             </div>
 
@@ -3588,8 +3503,8 @@ export default function LegendaryLightDashboard() {
                                                                     {cart.map((item: any, idx: number) => {
                                                                         const product = products.find((p: any) => p.id === item.productId);
                                                                         if (!product) return null;
-                                                                        const isSubscribed = subscriptions.some((s: any) => s.id === product.id);
-                                                                        const price = isSubscribed ? product.price * 0.9 : product.price;
+                                                                        // Abonelik indirimi kaldırıldı (sahte özellikti, bkz. CLAUDE.md 8.41); fiyat ödemedeki gerçek fiyat.
+                                                                        const price = product.price;
 
                                                                         return (
                                                                             <div key={item.id} className={`flex justify-between items-center ${idx !== 0 ? 'pt-3 border-t border-card-border' : ''}`}>
@@ -3604,8 +3519,7 @@ export default function LegendaryLightDashboard() {
                                                                                     <div className="max-w-[120px]">
                                                                                         <h5 className="text-[11px] font-black text-foreground truncate">{product.name}</h5>
                                                                                         <span className="text-[9.5px] font-black text-orange-600 block mt-0.5">
-                                                                                            {(price * item.quantity).toLocaleString('tr-TR')} TL 
-                                                                                            {isSubscribed && <span className="text-[8px] text-secondary line-through ml-1">{(product.price * item.quantity).toLocaleString('tr-TR')} TL</span>}
+                                                                                            {(price * item.quantity).toLocaleString('tr-TR')} TL
                                                                                         </span>
                                                                                     </div>
                                                                                 </div>
