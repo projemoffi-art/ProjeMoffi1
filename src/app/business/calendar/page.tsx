@@ -27,6 +27,7 @@ type CalAppointment = {
     service: string;
     isGuest: boolean;
     createdBy: string;
+    rescheduleTo: { dateKey: string; time: string } | null;
 };
 
 const SLOT_PX = 44; // 30 dakika
@@ -87,6 +88,7 @@ export default function BusinessCalendarPage() {
                     service: parseService(a.reason),
                     isGuest: !a.user_id,
                     createdBy: a.created_by || 'customer',
+                    rescheduleTo: a.reschedule_requested_start ? wallParts(a.reschedule_requested_start) : null,
                 };
             }));
         setLoading(false);
@@ -140,6 +142,7 @@ export default function BusinessCalendarPage() {
     const today = todayKey();
     const todays = items.filter(a => a.dateKey === today && a.status !== 'completed');
     const pending = items.filter(a => a.status === 'pending').sort((a, b) => (a.dateKey + a.time).localeCompare(b.dateKey + b.time));
+    const rescheduleRequests = items.filter(a => a.status === 'confirmed' && a.rescheduleTo);
     const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
     const next = todays.filter(a => a.status === 'confirmed' && a.startMin >= nowMin).sort((a, b) => a.startMin - b.startMin)[0];
 
@@ -197,6 +200,22 @@ export default function BusinessCalendarPage() {
                             <button key={p.id} onClick={() => { setSelected(p); setAnchor(p.dateKey); }} className="shrink-0 text-left bg-white dark:bg-black/20 border border-amber-200 dark:border-amber-500/30 rounded-xl px-3 py-2">
                                 <div className="text-xs font-black text-foreground dark:text-white">{p.ownerName}{p.petName && ` · ${p.petName}`}</div>
                                 <div className="text-[11px] font-semibold text-gray-500 tabular-nums">{formatDateKeyTr(p.dateKey, { day: 'numeric', month: 'short' })} {p.time} · {p.service}</div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {rescheduleRequests.length > 0 && (
+                <div className="border border-card-border dark:border-[#27272a] rounded-2xl p-4">
+                    <h2 className="text-sm font-black text-foreground dark:text-white mb-3">Erteleme talepleri ({rescheduleRequests.length})</h2>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                        {rescheduleRequests.map(p => (
+                            <button key={p.id} onClick={() => { setSelected(p); setAnchor(p.dateKey); }} className="shrink-0 text-left bg-zinc-50 dark:bg-white/5 border border-card-border dark:border-[#27272a] rounded-xl px-3 py-2">
+                                <div className="text-xs font-black text-foreground dark:text-white">{p.ownerName}{p.petName && ` · ${p.petName}`}</div>
+                                <div className="text-[11px] font-semibold text-gray-500 tabular-nums">
+                                    {formatDateKeyTr(p.dateKey, { day: 'numeric', month: 'short' })} {p.time} → {p.rescheduleTo && `${formatDateKeyTr(p.rescheduleTo.dateKey, { day: 'numeric', month: 'short' })} ${p.rescheduleTo.time}`}
+                                </div>
                             </button>
                         ))}
                     </div>
@@ -287,6 +306,18 @@ export default function BusinessCalendarPage() {
                             <dt className="text-gray-500 font-semibold">Kaynak</dt>
                             <dd className="font-bold text-foreground dark:text-white">{selected.createdBy === 'business' ? 'İşletme tarafından girildi' : 'Müşteri talebi'}</dd>
                         </dl>
+
+                        {selected.rescheduleTo && selected.status === 'confirmed' && (
+                            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-3 space-y-2">
+                                <p className="text-xs font-bold text-amber-900 dark:text-amber-100">
+                                    Müşteri randevuyu {formatDateKeyTr(selected.rescheduleTo.dateKey, { day: 'numeric', month: 'long', weekday: 'short' })} {selected.rescheduleTo.time} saatine almak istiyor.
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button disabled={busy} onClick={() => act(() => apiService.respondReschedule(selected.id, true), 'Erteleme kabul edildi, müşteri bilgilendirildi')} className="py-2 rounded-lg bg-amber-500 text-white text-xs font-black disabled:opacity-50">Kabul et</button>
+                                    <button disabled={busy} onClick={() => act(() => apiService.respondReschedule(selected.id, false), 'Erteleme reddedildi')} className="py-2 rounded-lg border border-amber-300 text-amber-800 dark:text-amber-200 text-xs font-black disabled:opacity-50">Reddet</button>
+                                </div>
+                            </div>
+                        )}
 
                         {(selected.status === 'pending' || selected.status === 'confirmed') && (
                             <div className="space-y-3">

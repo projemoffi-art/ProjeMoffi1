@@ -13,7 +13,6 @@ import { showToast, cn } from "@/lib/utils";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
 import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { supabase } from "@/lib/supabase";
-import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { NoShowBadge } from "@/components/business/NoShowBadge";
 import { useBusinessType } from "@/context/BusinessTypeContext";
@@ -637,21 +636,6 @@ export default function BusinessAppointmentsPage() {
                     action === 'accept' ? "text-emerald-400 font-bold" : "text-red-400 font-bold"
                 );
 
-                // --- B1: Send Appointment Confirmation Email ---
-                if (action === 'accept' && target.userId) {
-                    try {
-                        await sendAppointmentConfirmationEmail({
-                            userId: target.userId,
-                            clinicName: user?.user_metadata?.business_name || user?.email || "Moffi Kliniği",
-                            date: target.date || "Belirtilmedi",
-                            time: target.time || "Belirtilmedi",
-                            petName: target.petName
-                        });
-                    } catch (emailErr) {
-                        console.error("Failed to send appointment confirmation email:", emailErr);
-                    }
-                }
-                // --- END B1 ---
 
                 await fetchAppointmentsFromDb();
                 return;

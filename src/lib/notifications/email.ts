@@ -94,27 +94,25 @@ export function getOrderConfirmationHtml(orderId: string, totalAmount: number, i
     `;
 }
 
-export function getAppointmentConfirmationHtml(clinicName: string, date: string, time: string, petName?: string) {
+function escapeHtml(value: string) {
+    return value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
+}
+
+// Randevu bildirimleri ve hatırlatmaları için ortak şablon (email_outbox'tan gelen metinler kullanıcı
+// adları içerebildiği için mutlaka kaçışlanır).
+export function getNotificationEmailHtml(heading: string, body: string, ctaUrl?: string | null) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.moffi.net';
+    const link = ctaUrl ? `${appUrl}${ctaUrl.startsWith('/') ? ctaUrl : `/${ctaUrl}`}` : appUrl;
     return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-        <div style="text-align: center; padding: 20px 0;">
-            <h1 style="color: #4F46E5;">Moffi</h1>
+    <div style="background:#F7F3EA;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#201B16;">
+        <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #ECE6D9;border-radius:16px;padding:32px;">
+            <div style="font-size:20px;font-weight:800;color:#EE5B3D;margin-bottom:24px;">Moffi</div>
+            <h1 style="font-size:20px;line-height:1.3;margin:0 0 12px;">${escapeHtml(heading)}</h1>
+            <p style="font-size:15px;line-height:1.6;color:#6F675B;margin:0 0 24px;">${escapeHtml(body)}</p>
+            <a href="${link}" style="display:inline-block;background:#EE5B3D;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:10px;">Moffi'de aç</a>
         </div>
-        <div style="background-color: #f9fafb; padding: 30px; border-radius: 10px;">
-            <h2 style="margin-top: 0;">Randevunuz Onaylandı! 📅</h2>
-            <p><strong>${clinicName}</strong> isimli klinikten aldığınız randevu talebi onaylanmıştır.</p>
-            
-            <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4F46E5;">
-                ${petName ? `<p style="margin: 5px 0;"><strong>Dostumuz:</strong> ${petName}</p>` : ''}
-                <p style="margin: 5px 0;"><strong>Tarih:</strong> ${date}</p>
-                <p style="margin: 5px 0;"><strong>Saat:</strong> ${time}</p>
-            </div>
-            
-            <p>Lütfen randevu saatinden en az 10 dakika önce klinikte olmaya özen gösterin.</p>
-        </div>
-        <div style="text-align: center; padding: 20px; font-size: 12px; color: #888;">
-            Bu e-posta Moffi platformu tarafından otomatik oluşturulmuştur.
-        </div>
-    </div>
-    `;
+        <p style="max-width:560px;margin:16px auto 0;font-size:12px;color:#6F675B;text-align:center;">
+            Bu e-posta Moffi hesabındaki randevu hareketleri nedeniyle gönderildi.
+        </p>
+    </div>`;
 }

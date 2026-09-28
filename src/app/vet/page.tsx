@@ -537,6 +537,38 @@ function VetPageContent() {
         setSelectedAppointmentPet(activePet || pets?.[0] || null);
     };
 
+    const rebookServiceRef = useRef<string | null>(null);
+    const handleRebook = async (clinicId: string, serviceName: string) => {
+        let clinic: any = allClinics.find(c => c.id === clinicId);
+        if (!clinic) {
+            try { clinic = await apiService.getClinicDetails(clinicId); } catch { clinic = null; }
+        }
+        if (!clinic) {
+            showToast("Bu işletmeye şu an ulaşılamıyor.", "AlertCircle", "text-red-500 font-bold");
+            return;
+        }
+        rebookServiceRef.current = serviceName;
+        openAppointment(clinic);
+        if (selectedClinic?.id === clinic.id && clinicServices.length > 0) {
+            const match = clinicServices.find((s: any) => s.service_name === serviceName);
+            rebookServiceRef.current = null;
+            if (match) setSelectedSvc(match);
+        }
+    };
+
+    const [cancelNoticeHours, setCancelNoticeHours] = useState(0);
+    useEffect(() => {
+        if (!selectedClinic?.id) return;
+        apiService.getCancellationNoticeHours(selectedClinic.id).then(setCancelNoticeHours).catch(() => setCancelNoticeHours(0));
+    }, [selectedClinic?.id]);
+
+    useEffect(() => {
+        if (!rebookServiceRef.current || clinicServices.length === 0) return;
+        const match = clinicServices.find((s: any) => s.service_name === rebookServiceRef.current);
+        rebookServiceRef.current = null;
+        if (match) setSelectedSvc(match);
+    }, [clinicServices]);
+
     const calculatePetAge = (pet: any) => {
         if (pet.age) return pet.age;
         const bDate = pet.birth_date || pet.birthday;
@@ -672,10 +704,11 @@ function VetPageContent() {
                     }
                 }
                 let type = businessConfig.customerFallbackService;
-                if (apt.reason && apt.reason.includes('Randevu tipi:')) {
-                    type = apt.reason.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
-                } else if (apt.reason) {
-                    type = apt.reason;
+                const firstReasonLine = (apt.reason || '').split('\n')[0];
+                if (firstReasonLine.includes('Randevu tipi:')) {
+                    type = firstReasonLine.split('Randevu tipi:')[1].trim() || businessConfig.customerFallbackService;
+                } else if (firstReasonLine) {
+                    type = firstReasonLine;
                 }
                 return {
                     id: apt.id,
@@ -689,6 +722,12 @@ function VetPageContent() {
                     date: dateStr,
                     time: timeStr,
                     status: apt.status || 'pending',
+                    durationMinutes: apt.duration_minutes || 30,
+                    statusReason: apt.status_reason || null,
+                    attendance: apt.attendance_status || null,
+                    rescheduleRequested: apt.reschedule_requested_start
+                        ? `${apt.reschedule_requested_start.split('T')[0]} ${apt.reschedule_requested_start.split('T')[1].substring(0, 5)}`
+                        : null,
                     _rawDate: apt.appointment_date ? new Date(apt.appointment_date).getTime() : 0,
                     _rawCreatedAt: apt.created_at ? new Date(apt.created_at).getTime() : 0
                 };
@@ -993,6 +1032,7 @@ function VetPageContent() {
                         appointments={mappedAppointments} 
                         activePetId={activePet?.id} 
                         reviewableAppointmentIds={reviewableAppointmentIds}
+                        onRebook={handleRebook}
                         onReviewClick={(clinicId, appointmentId) => {
                             const clinicData = allClinics.find(c => c.id === clinicId);
                             setDetailClinicId(clinicId);
@@ -1548,6 +1588,11 @@ function VetPageContent() {
 
                             {/* FIXED FOOTER CONTROLS */}
                             <div className="pt-4 border-t border-card-border mt-auto bg-card">
+                                {cancelNoticeHours > 0 && (
+                                    <p className="text-[11px] font-semibold text-secondary text-center mb-3">
+                                        Bu işletme randevudan en az {cancelNoticeHours} saat önce yapılan iptal ve ertelemeleri kabul ediyor.
+                                    </p>
+                                )}
                                 <button
                                     onClick={handleCreateAppointment}
                                     disabled={!selectedTime}

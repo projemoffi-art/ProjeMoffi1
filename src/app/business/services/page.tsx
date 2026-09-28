@@ -18,14 +18,33 @@ export default function BusinessServicesPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<boolean>(false);
 
+    const [noticeHours, setNoticeHours] = useState<number>(0);
+    const [noticeSaving, setNoticeSaving] = useState(false);
+    const [noticeSaved, setNoticeSaved] = useState(false);
     const [customName, setCustomName] = useState("");
     const [customDuration, setCustomDuration] = useState("30");
 
     useEffect(() => {
         if (user?.id) {
             fetchServices();
+            supabase.from('profiles').select('cancellation_notice_hours').eq('id', user.id).maybeSingle()
+                .then(({ data }) => setNoticeHours(data?.cancellation_notice_hours || 0));
         }
     }, [user?.id]);
+
+    const saveNotice = async () => {
+        if (!user?.id) return;
+        setNoticeSaving(true);
+        const { error } = await supabase.from('profiles').update({ cancellation_notice_hours: noticeHours }).eq('id', user.id);
+        setNoticeSaving(false);
+        if (error) {
+            setError("Randevu kuralı kaydedilemedi.");
+            setTimeout(() => setError(null), 3000);
+        } else {
+            setNoticeSaved(true);
+            setTimeout(() => setNoticeSaved(false), 2500);
+        }
+    };
 
     const fetchServices = async () => {
         try {
@@ -193,6 +212,25 @@ export default function BusinessServicesPage() {
                                     </button>
                                 );
                             })}
+                        </div>
+                    </div>
+
+                    <div className="bg-card dark:bg-[#121212] border border-card-border dark:border-[#27272a] rounded-[2rem] p-6 shadow-sm">
+                        <h2 className="text-lg font-black text-foreground dark:text-white mb-1">İptal ve erteleme kuralı</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-4">Müşteri onaylı bir randevuyu en geç kaç saat öncesine kadar uygulamadan iptal edebilsin veya erteleyebilsin? Bu kural müşteriye randevu alırken gösterilir.</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <select
+                                aria-label="İptal bildirimi süresi"
+                                value={noticeHours}
+                                onChange={e => setNoticeHours(parseInt(e.target.value))}
+                                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-semibold focus:border-indigo-500 outline-none dark:text-white"
+                            >
+                                <option value={0}>Kısıtlama yok</option>
+                                {[2, 4, 12, 24, 48].map(h => <option key={h} value={h}>En az {h} saat önce</option>)}
+                            </select>
+                            <button onClick={saveNotice} disabled={noticeSaving} className="h-11 px-5 bg-foreground dark:bg-white text-background dark:text-black rounded-xl font-bold text-sm disabled:opacity-50">
+                                {noticeSaving ? 'Kaydediliyor…' : noticeSaved ? 'Kaydedildi' : 'Kaydet'}
+                            </button>
                         </div>
                     </div>
 

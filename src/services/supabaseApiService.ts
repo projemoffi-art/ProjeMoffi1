@@ -2211,6 +2211,37 @@ export class SupabaseApiService implements IApiService {
         }
     }
 
+    async requestReschedule(appointmentId: string, newStart: string): Promise<void> {
+        const { error } = await supabase.rpc('request_reschedule', { p_appointment_id: appointmentId, p_new_start: newStart });
+        if (error) {
+            if (error.code === '23P01') throw Object.assign(new Error(error.message), { code: 'SLOT_TAKEN' });
+            throw new Error(error.message);
+        }
+    }
+
+    async respondReschedule(appointmentId: string, accept: boolean): Promise<void> {
+        const { error } = await supabase.rpc('respond_reschedule', { p_appointment_id: appointmentId, p_accept: accept });
+        if (error) throw new Error(error.message);
+    }
+
+    async getVisitSummary(appointmentId: string): Promise<any | null> {
+        const { data, error } = await supabase
+            .from('medical_records')
+            .select('id, vet_name, diagnosis, critical_notes, weight_kg, temperature_c, medications, cost, created_at')
+            .eq('appointment_id', appointmentId)
+            .maybeSingle();
+        if (error) {
+            console.error("Error fetching visit summary:", error);
+            return null;
+        }
+        return data;
+    }
+
+    async getCancellationNoticeHours(clinicId: string): Promise<number> {
+        const { data } = await supabase.from('profiles').select('cancellation_notice_hours').eq('id', clinicId).maybeSingle();
+        return data?.cancellation_notice_hours || 0;
+    }
+
     async getClinicClients(): Promise<ClinicClient[]> {
         const { data, error } = await supabase.rpc('get_clinic_clients');
         if (error) {

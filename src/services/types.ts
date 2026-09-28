@@ -353,6 +353,10 @@ export interface IApiService {
     createBusinessAppointment(input: BusinessAppointmentInput): Promise<string>;
     rescheduleAppointment(appointmentId: string, newStart: string, doctorId: string | null, ignoreHours: boolean): Promise<void>;
     getClinicClients(): Promise<ClinicClient[]>;
+    requestReschedule(appointmentId: string, newStart: string): Promise<void>;
+    respondReschedule(appointmentId: string, accept: boolean): Promise<void>;
+    getVisitSummary(appointmentId: string): Promise<any | null>;
+    getCancellationNoticeHours(clinicId: string): Promise<number>;
     saveClientNote(clinicId: string, clientKey: string, note: string): Promise<void>;
     getClinicServices(clinicId: string): Promise<any[]>;
     getClinicDoctors(clinicId: string): Promise<Doctor[]>;

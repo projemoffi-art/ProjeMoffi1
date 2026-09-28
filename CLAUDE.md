@@ -2633,6 +2633,40 @@ henüz yok; tüm aktif personel her hizmeti verebilir kabul ediliyor.
 **Kapsam dışı:** 2400 satırlık `business/appointments/page.tsx` bölünmedi; yeni özellikler
 ayrı bileşen/sayfa olarak yazıldı. Takvimde sürükle-bırak yok (yeniden planla paneli var).
 
+### 8.40 Faz E — müşteri deneyimi: e-posta altyapısı, hatırlatmalar, erteleme, ziyaret özeti (2026-09-28)
+
+Baran'ın kararı: hatırlatma kanalı **e-posta** (SMS değil).
+
+- **E-posta kuyruğu `email_outbox`** (istemciye tamamen kapalı). `notify_user` artık
+  `type='appointment'` bildirimlerini ayrıca kuyruğa yazar (müşteri ve işletme).
+  `enqueue_appointment_reminders()` onaylı randevular için ~24 saat ve ~2 saat önce
+  uygulama içi bildirim + e-posta üretir (`dedupe_key` ile tekrarsız).
+- **Gönderim:** pg_cron `appointment-reminders-and-emails` (her 5 dk) hatırlatmaları sıraya
+  alır, kuyrukta iş varsa `https://app.moffi.net/api/cron/email-outbox`'u pg_net ile çağırır.
+  Uç nokta `x-cron-secret` başlığını Vercel `EMAIL_CRON_SECRET` ile sabit-zamanlı karşılaştırır
+  (aynı değer Supabase vault'ta `email_cron_secret`), `claim_email_outbox` (skip locked) ile
+  iş alır, Resend ile gönderir. `RESEND_API_KEY` yoksa kuyruğa dokunmaz (503).
+- 🔴 **Kapatılan açık:** `src/actions/sendAppointmentEmail.ts` bir server action'dı (herkese
+  açık uç nokta) ve rastgele `userId` + klinik adıyla herhangi bir kullanıcıya "Randevunuz
+  onaylandı" e-postası attırılabiliyordu (oltalama). Silindi; onay e-postası artık kuyruktan.
+- 🔴 **Taşınan sır:** `vaccine-reminders-daily` cron komutunda service_role JWT düz metindi;
+  vault'a (`service_role_key`) taşındı, cron artık `vault.decrypted_secrets`'tan okur.
+  **KURAL:** cron/pg_net komutlarına asla düz metin anahtar yazma, vault kullan.
+- **İptal/erteleme politikası:** `profiles.cancellation_notice_hours` (0–168, işletme
+  Hizmetlerim sayfasından seçer). Onaylı randevuda süre dolmuşsa müşterinin iptal/erteleme
+  isteği sunucuda reddedilir; kural müşteriye randevu formunda ve erteleme penceresinde gösterilir.
+- **Erteleme:** `request_reschedule` (müşteri; bekleyen talep doğrudan taşınır, onaylı
+  randevuda `reschedule_requested_start` ile işletme onayına gider) → `respond_reschedule`
+  (işletme kabul/ret). Takvimde "Erteleme talepleri" alanı ve detay panelinde kabul/ret.
+- **Müşteri:** "Ziyaret özeti" (muayene kaydı: tanı, reçete, önemli not, kilo/ateş/ücret),
+  "Tekrar randevu al" (aynı işletme + hizmet ön seçili), iptal hatası artık gösteriliyor
+  (önceden sessizce yutuluyordu), red/iptal sebebi kartta görünüyor.
+
+**Açık iş (Baran'ın onayı gerekiyor):** Vercel'de `RESEND_API_KEY` ve `RESEND_FROM_EMAIL`
+yok → canlıda hiçbir e-posta gitmiyordu ve kuyruk bu anahtarlar eklenene kadar bekler.
+Resend'de `moffi.net` alan adı doğrulanmalı (yoksa `onboarding@resend.dev` sadece Resend
+hesabı sahibine gönderebilir).
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

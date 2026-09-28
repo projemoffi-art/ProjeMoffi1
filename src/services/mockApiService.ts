@@ -763,6 +763,10 @@ export class MockApiService implements IApiService {
     async createBusinessAppointment(input: any): Promise<string> { throw new Error('Demo modunda işletme randevusu oluşturulamaz.'); }
     async rescheduleAppointment(appointmentId: string, newStart: string, doctorId: string | null, ignoreHours: boolean): Promise<void> { throw new Error('Demo modunda yeniden planlama yapılamaz.'); }
     async getClinicClients(): Promise<any[]> { return []; }
+    async requestReschedule(appointmentId: string, newStart: string): Promise<void> { throw new Error('Demo modunda erteleme yapılamaz.'); }
+    async respondReschedule(appointmentId: string, accept: boolean): Promise<void> { throw new Error('Demo modunda erteleme yanıtlanamaz.'); }
+    async getVisitSummary(appointmentId: string): Promise<any | null> { return null; }
+    async getCancellationNoticeHours(clinicId: string): Promise<number> { return 0; }
     async saveClientNote(clinicId: string, clientKey: string, note: string): Promise<void> {}
     async getClinicServices(clinicId: string): Promise<any[]> { return []; }
     async getClinicDoctors(clinicId: string): Promise<any[]> { return []; }

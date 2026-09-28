@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, AlertCircle, X, CheckCircle2, Filter, ArrowDownUp, Check, ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, showToast } from '@/lib/utils';
+import { RescheduleRequestModal, VisitSummaryModal } from '@/components/vet/AppointmentActionModals';
 import { apiService } from '@/services/apiService';
 import { usePet } from '@/context/PetContext';
 import { useAuth } from '@/context/AuthContext';
@@ -13,6 +14,7 @@ interface MyAppointmentsPanelProps {
     activePetId?: string;
     reviewableAppointmentIds?: Set<string>;
     onReviewClick?: (clinicId: string, appointmentId: string) => void;
+    onRebook?: (clinicId: string, serviceName: string) => void;
 }
 
 
@@ -34,7 +36,9 @@ const getStatusBadge = (status: string) => {
     }
 };
 
-export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppointmentIds, onReviewClick }: MyAppointmentsPanelProps) {
+export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppointmentIds, onReviewClick, onRebook }: MyAppointmentsPanelProps) {
+    const [rescheduleAppt, setRescheduleAppt] = useState<any | null>(null);
+    const [summaryAppt, setSummaryAppt] = useState<any | null>(null);
     const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
     const [showAllPets, setShowAllPets] = useState(true);
     const [sortMode, setSortMode] = useState<'date' | 'created'>('date');
@@ -74,8 +78,9 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
         try {
             await apiService.cancelAppointment(cancelModalId);
             await refreshAppointments();
-        } catch (error) {
-            console.error("Failed to cancel appointment:", error);
+            showToast("Randevun iptal edildi.", "CheckCircle2", "text-emerald-500 font-bold");
+        } catch (error: any) {
+            showToast(error?.message || "Randevu iptal edilemedi.", "AlertCircle", "text-red-500 font-bold");
         } finally {
             setIsCancelling(false);
             setCancelModalId(null);
@@ -288,13 +293,45 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                                             <h4 className="text-foreground font-black text-sm leading-tight">{appt.type}</h4>
                                             {appt.realDoctorName && (
                                                 <p className="text-[10px] font-bold text-secondary mt-1 flex items-center gap-1">
-                                                    Dr. {appt.realDoctorName}
+                                                    {appt.realDoctorName}
                                                 </p>
+                                            )}
+                                            {appt.rescheduleRequested && (
+                                                <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1.5">
+                                                    Erteleme talebin işletme onayı bekliyor: {appt.rescheduleRequested}
+                                                </p>
+                                            )}
+                                            {appt.statusReason && ['rejected', 'cancelled'].includes(appt.status) && (
+                                                <p className="text-[10px] font-semibold text-secondary mt-1.5">Sebep: {appt.statusReason}</p>
                                             )}
                                         </div>
 
                                         {/* Action Buttons */}
-                                        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+                                        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+                                            {appt.status === 'completed' && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setSummaryAppt(appt); }}
+                                                    className="text-[10px] font-black text-foreground border border-card-border bg-card-border/30 hover:bg-card-border/60 transition-colors px-3 py-1.5 rounded-lg"
+                                                >
+                                                    Ziyaret özeti
+                                                </button>
+                                            )}
+                                            {activeTab === 'past' && onRebook && appt.clinicId && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onRebook(appt.clinicId, appt.type); }}
+                                                    className="text-[10px] font-black text-accent border border-accent/20 bg-accent/5 hover:bg-accent/10 transition-colors px-3 py-1.5 rounded-lg"
+                                                >
+                                                    Tekrar randevu al
+                                                </button>
+                                            )}
+                                            {activeTab === 'active' && ['pending', 'confirmed'].includes(appt.status) && !appt.rescheduleRequested && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setRescheduleAppt(appt); }}
+                                                    className="text-[10px] font-black text-foreground border border-card-border bg-card-border/30 hover:bg-card-border/60 transition-colors px-3 py-1.5 rounded-lg"
+                                                >
+                                                    Ertele
+                                                </button>
+                                            )}
                                             {reviewableAppointmentIds?.has(appt.id) && onReviewClick && appt.clinicId && (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); onReviewClick(appt.clinicId, appt.id); }}
@@ -330,14 +367,29 @@ export function MyAppointmentsPanel({ appointments, activePetId, reviewableAppoi
                 </div>
             )}
 
+            <RescheduleRequestModal
+                appointment={rescheduleAppt}
+                onClose={() => setRescheduleAppt(null)}
+                onDone={async (message) => {
+                    setRescheduleAppt(null);
+                    showToast(message, "CheckCircle2", "text-emerald-500 font-bold");
+                    await refreshAppointments();
+                }}
+            />
+            <VisitSummaryModal
+                appointment={summaryAppt}
+                onClose={() => setSummaryAppt(null)}
+                onRebook={onRebook && summaryAppt?.clinicId ? () => { const a = summaryAppt; setSummaryAppt(null); onRebook(a.clinicId, a.type); } : undefined}
+            />
+
             {/* Cancel Confirmation Modal */}
             <AnimatePresence>
                 {cancelModalId && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }} 
-                        className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[3100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
                     >
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
