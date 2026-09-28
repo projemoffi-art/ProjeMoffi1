@@ -2883,6 +2883,22 @@ alerji/hastalık/sağlık notu/acil iletişim → `/health/acil` (`pet_health_pr
   kapanıyor)/künye/profil/ana sayfa; anon REST ile `pets` erişimi reddi; künye haberi → bildirim +
   e-posta; klinik sadece kendi hastalarını görüyor. Test verisi temizlendi.
 
+### 8.46 Kayıp · Sahiplendirme · Sosyal denetimi (2026-09-28)
+
+Rapor ve yol haritası: https://claude.ai/code/artifact/4116c0d6-fa86-45b8-989c-06414ec73ed8
+Öneri: iki kapı — sade **Keşfet** (sadece sosyal) + kayıp ile sahiplendirmeyi birleştiren **Pati Yardım**.
+Baran'dan 21 ekran görseli bekleniyor (Kayıp 8, Sahiplendirme 7, Keşfet 6).
+
+- **Kapatılan (migration `social_policy_hotfix`):** herkes herkesin gönderisini silebiliyordu
+  (`using (true)` silme kuralı); başkası adına gönderi/hikâye eklenebiliyordu; şikâyetler herkese
+  açıktı. Anon rolünden gereksiz yazma yetkileri alındı.
+- 🔴 **Açık bekleyen (Faz 0):** `profiles` herkese açık (telefon, adres, IBAN, vergi no, bakiye);
+  `adoption_pets.phone` herkese açık; `lost_pets` tam koordinat herkese açık; `pati_puan_balance`
+  ve seri kalkanı kullanıcı tarafından güncellenebiliyor (koruma tetikleyicisi bu alanları kapsamıyor;
+  `award_pati_puan` de aynı kimlikle çalıştığı için basit tetikleyici eklemek onu da bozar).
+- **Taklitler:** kayıp "Sahibine mesaj at"/"Gördüm"/"5 km'ye bildirim", sahiplendirme başvurusu
+  (`submitAdoptionApplication` boş) ve "AI denetiminden geçti" hiçbir şey yapmıyor.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
