@@ -2,11 +2,10 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useHealth } from '@/components/health/HealthProvider';
 import { PetPicker } from '@/components/health/PetPicker';
-import { EmptyState, HealthCard, LoadingBlocks, MODULES, ModuleIcon, SectionTitle, type HealthModule } from '@/components/health/HealthUI';
+import { EmptyState, HealthCard, LoadingBlocks, MODULES, ModuleIcon, SectionTitle, useSmartBack, type HealthModule } from '@/components/health/HealthUI';
 import { daysLeftText, lastCheckupDate, overallStatus, upcomingItems } from '@/lib/health/derive';
 import { formatDateKeyTr } from '@/lib/appointmentTime';
 import { cn } from '@/lib/utils';
@@ -15,7 +14,7 @@ const TILES: HealthModule[] = ['pasaport', 'asilar', 'parazit', 'ilaclar', 'kilo
 
 // Referans Ekran 1 — Sağlık Merkezi.
 export default function HealthCenterPage() {
-    const router = useRouter();
+    const goBack = useSmartBack('/home');
     const { pet, bundle, appointments, today, loading, error } = useHealth();
     const [showAll, setShowAll] = useState(false);
 
@@ -35,7 +34,7 @@ export default function HealthCenterPage() {
     return (
         <main className="max-w-2xl mx-auto px-4 pt-[calc(12px+env(safe-area-inset-top,0px))] space-y-5">
             <div className="flex items-center gap-3">
-                <button onClick={() => router.back()} aria-label="Geri" className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center shrink-0">
+                <button onClick={goBack} aria-label="Geri" className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center shrink-0">
                     <ChevronLeft className="w-5 h-5" />
                 </button>
                 <PetPicker />

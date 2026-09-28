@@ -41,13 +41,27 @@ export function ModuleIcon({ module, size = 'md' }: { module: HealthModule; size
     );
 }
 
-export function HealthHeader({ title, backHref, action }: { title: string; backHref?: string; action?: React.ReactNode }) {
+/**
+ * Geri: kullanıcıyı GELDİĞİ yere götürür (profilden açtıysa profile, ana sayfadan açtıysa ana sayfaya).
+ * backHref sadece sayfa doğrudan açıldığında (bildirim/e-posta bağlantısı, yeni sekme) kullanılır.
+ * Önceden backHref'e router.push yapılıyordu: geçmişe yeni kayıt eklendiği için sayfalar arasında
+ * geri tuşu döngüye giriyordu.
+ */
+export function useSmartBack(fallback = '/home') {
     const router = useRouter();
+    return React.useCallback(() => {
+        if (typeof window !== 'undefined' && window.history.length > 1) router.back();
+        else router.replace(fallback);
+    }, [router, fallback]);
+}
+
+export function HealthHeader({ title, backHref, action }: { title: string; backHref?: string; action?: React.ReactNode }) {
+    const goBack = useSmartBack(backHref || '/health');
     return (
         <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md px-4 pt-[calc(12px+env(safe-area-inset-top,0px))] pb-3">
             <div className="max-w-2xl mx-auto grid grid-cols-[40px_1fr_auto] items-center gap-2">
                 <button
-                    onClick={() => (backHref ? router.push(backHref) : router.back())}
+                    onClick={goBack}
                     aria-label="Geri"
                     className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center"
                 >
