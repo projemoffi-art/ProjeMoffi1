@@ -2724,9 +2724,13 @@ kategoriye göre sabit yazılmış "faydalar" metinleri gerçek ürün verisi de
   kopyayla eziyordu (iki cihazda eski saatler görünüp geri kaydedilebiliyordu) → kaldırıldı.
 - 🔴 Community sayfası `sortPostsLocally`'yi hook'tan almadan çağırıyordu (gönderi varken
   ReferenceError) → düzeltildi.
-- **Karar bekleyen:** `src/integrations-pending/kombinle/node_modules` (git'te değil, yerelde
-  134 MB — kod aramalarını yavaşlatıyor), rolü `business` ama türü/adı boş iki eski hesap
-  (biri Baran'ın `12664c0f…` hesabı), `clinic_messages` tablosunun silinmesi.
+- **Baran'ın kararlarıyla (2026-09-28):** `src/integrations-pending/kombinle` tamamen silindi
+  (Giydirme Stüdyosu zaten `components/cosmetics`'e taşınmıştı), `clinic_messages` tablosu
+  silindi. Baran'ın `12664c0f…` hesabı bilinçli olarak **işletme** rolünde (tür: vet, ad: Baran);
+  aynı hesabı müşteri olarak da kullanıyor — ara katman işletme rolünü müşteri sayfalarından
+  engellemiyor, il/ilçe boş olduğu için müşteri keşif listelerinde görünmüyor.
+- **Ertelenen (Baran'ın kararı):** Resend anahtarı + `moffi.net` alan adı doğrulaması sonraya
+  kaldı (e-postalar kuyrukta bekler). Mağaza abonelik/kupon işi "mağaza bölümü" ele alınırken yapılacak.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
