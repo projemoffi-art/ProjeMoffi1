@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
 import { PET_TYPES, getPetTypeConfig } from "@/constants/petTypes";
+import { showToast } from "@/lib/utils";
 
 interface Deal {
     id: string;
@@ -27,11 +28,12 @@ export default function BusinessCampaignsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     const [formData, setFormData] = useState({
         title: "",
         description: "",
-        media_url: "https://images.unsplash.com/photo-1554818538-98e34543195f?q=80&w=600",
+        media_url: "",
         value: "%15",
         coupon_code: "",
         target_pet_type: "all",
@@ -68,7 +70,7 @@ export default function BusinessCampaignsPage() {
                 clinic_id: user.id,
                 title: formData.title,
                 description: formData.description,
-                media_url: formData.media_url,
+                media_url: formData.media_url || null,
                 discount_value: formData.value,
                 coupon_code: formData.coupon_code,
                 target_pet_type: formData.target_pet_type,
@@ -80,12 +82,12 @@ export default function BusinessCampaignsPage() {
             setIsCreating(false);
             fetchDeals();
             setFormData({
-                title: "", description: "", media_url: "https://images.unsplash.com/photo-1554818538-98e34543195f?q=80&w=600",
+                title: "", description: "", media_url: "",
                 value: "%15", coupon_code: "", target_pet_type: "all", hours_valid: 24, max_uses: ""
             });
         } catch (error) {
             console.error(error);
-            alert("Kampanya oluşturulurken bir hata oluştu.");
+            showToast("Kampanya oluşturulurken bir hata oluştu.", "AlertCircle", "text-red-500 font-bold");
         } finally {
             setIsSubmitting(false);
         }
@@ -119,8 +121,29 @@ export default function BusinessCampaignsPage() {
                                 <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500" placeholder="Örn: Hafta Sonu Kedi Maması İndirimi" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 mb-1">Görsel URL (Story Formatı 9:16)</label>
-                                <input required type="url" value={formData.media_url} onChange={e => setFormData({...formData, media_url: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500" placeholder="https://..." />
+                                <label className="block text-xs font-bold text-gray-500 mb-1">Görsel (isteğe bağlı)</label>
+                                <label className="flex items-center gap-3 w-full bg-zinc-50 dark:bg-white/5 border border-dashed border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 cursor-pointer">
+                                    {formData.media_url
+                                        ? <img src={formData.media_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                                        : <ImageIcon className="w-5 h-5 text-zinc-400" />}
+                                    <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                                        {isUploading ? 'Yükleniyor…' : formData.media_url ? 'Görseli değiştir' : 'Görsel seç'}
+                                    </span>
+                                    <input type="file" accept="image/*" hidden onChange={async e => {
+                                        const file = e.target.files?.[0];
+                                        e.target.value = '';
+                                        if (!file) return;
+                                        setIsUploading(true);
+                                        try {
+                                            const url = await apiService.uploadMedia(file, 'posts');
+                                            setFormData(f => ({ ...f, media_url: url }));
+                                        } catch (err: any) {
+                                            showToast(err?.message || 'Görsel yüklenemedi.', 'AlertCircle', 'text-red-500 font-bold');
+                                        } finally {
+                                            setIsUploading(false);
+                                        }
+                                    }} />
+                                </label>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 mb-1">İndirim Oranı/Değeri</label>
@@ -166,7 +189,9 @@ export default function BusinessCampaignsPage() {
                     {deals.map(deal => (
                         <div key={deal.id} className="bg-white dark:bg-[#0a0a0a] rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col">
                             <div className="h-48 relative bg-gray-100 dark:bg-zinc-800">
-                                <img src={deal.media_url} alt="kampanya" className="w-full h-full object-cover" />
+                                {deal.media_url
+                                    ? <img src={deal.media_url} alt="kampanya" className="w-full h-full object-cover" />
+                                    : <div className="w-full h-full flex items-center justify-center"><Megaphone className="w-10 h-10 text-zinc-300 dark:text-zinc-600" /></div>}
                                 <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded-lg text-xs font-bold">
                                     {deal.status === 'active' ? '🟢 Aktif' : '🔴 Pasif'}
                                 </div>

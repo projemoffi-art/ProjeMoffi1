@@ -2,7 +2,7 @@
 import {
     Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
-    SystemAnnouncement, SystemFeedback, SocialChallenge, BusinessAppointmentInput, ClinicClient
+    SystemAnnouncement, SystemFeedback, SocialChallenge, BusinessAppointmentInput, ClinicClient, BusinessProfileData
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
@@ -1491,8 +1491,8 @@ export class SupabaseApiService implements IApiService {
             }))
         }));
     }
-
-
+
+
 
     async togglePetSosStatus(petId: string, status: 'safe' | 'lost'): Promise<void> {
         const user = await this.getSessionUser();
@@ -1900,6 +1900,11 @@ export class SupabaseApiService implements IApiService {
         }
         if (data.length === 0) return [];
 
+        return this.mapClinicProfiles(data, lat ?? null, lng ?? null);
+    }
+
+    // Klinik kartı verisi (liste, harita, favoriler, acil) tek yerde üretilir.
+    private async mapClinicProfiles(data: any[], lat: number | null, lng: number | null): Promise<any[]> {
         const clinicIds = data.map((d: any) => d.id);
         const [{ data: servicesData }, { data: reviewsData }, { data: openData }] = await Promise.all([
             supabase.from('clinic_services').select('clinic_id, service_name').in('clinic_id', clinicIds),
@@ -1951,7 +1956,8 @@ export class SupabaseApiService implements IApiService {
             return {
                 id: profile.id,
                 name: profile.business_name || profile.full_name || 'İşletme',
-                imageUrl: profile.avatar_url || null,
+                imageUrl: profile.cover_url || profile.avatar_url || null,
+                logoUrl: profile.avatar_url || null,
                 rating: avgRating ? parseFloat(avgRating.toFixed(1)) : 0, // B14
                 reviewCount: rCount,
                 address: profile.address || 'Adres bilgisi girilmedi',
@@ -1978,7 +1984,7 @@ export class SupabaseApiService implements IApiService {
             .eq('id', clinicId)
             .single();
 
-        if (error || !data) return this.mockApi.getClinicDetails(clinicId);
+        if (error || !data) return null;
 
         const pLat = data.business_lat ? parseFloat(data.business_lat) : null;
         const pLng = data.business_lng ? parseFloat(data.business_lng) : null;
@@ -2028,10 +2034,139 @@ export class SupabaseApiService implements IApiService {
             opensAt: openStatus?.opens_at || null,
             weeklyHours,
             services: services,
-            veterinarians: [],
-            gallery: [data.avatar_url].filter(Boolean),
+            about: data.bio || null,
+            website: data.website || null,
+            coverUrl: data.cover_url || null,
+            isVerified: data.business_approved === true,
+            gallery: (data.gallery_urls || []).filter(Boolean),
             doctors: doctors,
         };
+    }
+
+    async getFavoriteClinicIds(): Promise<string[]> {
+        const user = await this.getSessionUser();
+        if (!user) return [];
+        const { data } = await supabase.from('favorite_clinics').select('clinic_id').eq('user_id', user.id);
+        return (data || []).map((r: any) => r.clinic_id);
+    }
+
+    async setFavoriteClinic(clinicId: string, favorite: boolean): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error('Favorilere eklemek için giriş yapmalısın.');
+        const { error } = favorite
+            ? await supabase.from('favorite_clinics').upsert({ user_id: user.id, clinic_id: clinicId })
+            : await supabase.from('favorite_clinics').delete().eq('user_id', user.id).eq('clinic_id', clinicId);
+        if (error) throw error;
+    }
+
+    async getClinicsByIds(clinicIds: string[]): Promise<any[]> {
+        if (clinicIds.length === 0) return [];
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', clinicIds)
+            .eq('role', 'business')
+            .eq('business_approved', true);
+        if (error || !data) return [];
+        return this.mapClinicProfiles(data, null, null);
+    }
+
+    async getReminderPrefs(): Promise<{ h24: boolean; h2: boolean; day: boolean }> {
+        const user = await this.getSessionUser();
+        const fallback = { h24: true, h2: true, day: true };
+        if (!user) return fallback;
+        const { data } = await supabase.from('profiles').select('reminder_prefs').eq('id', user.id).maybeSingle();
+        return { ...fallback, ...(data?.reminder_prefs || {}) };
+    }
+
+    async setReminderPrefs(prefs: { h24: boolean; h2: boolean; day: boolean }): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error('Giriş gerekli');
+        const { error } = await supabase.from('profiles').update({ reminder_prefs: prefs }).eq('id', user.id);
+        if (error) throw error;
+    }
+
+    async getBusinessProfile(): Promise<BusinessProfileData | null> {
+        const user = await this.getSessionUser();
+        if (!user) return null;
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('business_name, bio, phone, website, address, province, district, business_lat, business_lng, avatar_url, cover_url, gallery_urls')
+            .eq('id', user.id)
+            .maybeSingle();
+        if (error) throw error;
+        if (!data) return null;
+        return {
+            businessName: data.business_name || '',
+            about: data.bio || '',
+            phone: data.phone || '',
+            website: data.website || '',
+            address: data.address || '',
+            province: data.province || '',
+            district: data.district || '',
+            lat: data.business_lat != null ? Number(data.business_lat) : null,
+            lng: data.business_lng != null ? Number(data.business_lng) : null,
+            logoUrl: data.avatar_url || null,
+            coverUrl: data.cover_url || null,
+            gallery: data.gallery_urls || [],
+        };
+    }
+
+    async updateBusinessProfile(p: BusinessProfileData): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error('Giriş gerekli');
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({
+                business_name: p.businessName.trim() || null,
+                bio: p.about.trim() || null,
+                phone: p.phone.trim() || null,
+                website: p.website.trim() || null,
+                address: p.address.trim() || null,
+                province: p.province || null,
+                district: p.district || null,
+                business_lat: p.lat,
+                business_lng: p.lng,
+                avatar_url: p.logoUrl,
+                cover_url: p.coverUrl,
+                gallery_urls: p.gallery,
+            })
+            .eq('id', user.id)
+            .select('id');
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('Profil güncellenemedi.');
+    }
+
+    async getMySharedPassports(): Promise<{ id: string; clinicName: string; petName: string; date: string; sharedFields: string[] }[]> {
+        const user = await this.getSessionUser();
+        if (!user) return [];
+        const { data } = await supabase
+            .from('appointments')
+            .select('id, created_at, clinic_id, shared_passport, pet:pets(name)')
+            .eq('user_id', user.id)
+            .not('shared_passport', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(50);
+        const clinicIds = [...new Set((data || []).map((a: any) => a.clinic_id))];
+        const { data: clinics } = clinicIds.length
+            ? await supabase.from('profiles').select('id, business_name, full_name').in('id', clinicIds)
+            : { data: [] as any[] };
+        const names = new Map((clinics || []).map((c: any) => [c.id, c.business_name || c.full_name || 'İşletme']));
+        return (data || []).map((a: any) => {
+            const sp = a.shared_passport || {};
+            return {
+                id: a.id,
+                clinicName: names.get(a.clinic_id) || 'İşletme',
+                petName: a.pet?.name || 'Evcil hayvan',
+                date: new Date(a.created_at).toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }),
+                sharedFields: [
+                    sp.basic ? 'Temel bilgiler' : null,
+                    sp.vaccines ? 'Aşı geçmişi' : null,
+                    sp.healthNotes ? 'Sağlık notları' : null,
+                    sp.ownerInfo ? 'İletişim bilgileri' : null
+                ].filter(Boolean) as string[]
+            };
+        }).filter(l => l.sharedFields.length > 0);
     }
 
     async createAppointment(dto: any): Promise<any> {
@@ -4922,12 +5057,12 @@ export class SupabaseApiService implements IApiService {
             }))
         }));
     }
-    // --- CLINIC MESSAGES (FAZ 8) ---
-
-
-
-
-
+    // --- CLINIC MESSAGES (FAZ 8) ---
+
+
+
+
+
 
     // --- CAMPAIGNS (FAZ 8) ---
     async getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]> {

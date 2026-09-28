@@ -193,7 +193,7 @@ sağlayıcısı çalışmıyor (os error 362)" hatasıyla çökertiyor — dosya
 gerçekten var ama Turbopack'in dev-modu dosya okuyucusu OneDrive'ın sanal
 dosya sistemiyle (cloud file provider) bir şekilde çakışıyor. Şimdiye kadar
 karşılaşılanlar: `Soup` (`soup.js`), `HelpCircle` (`circle-question-mark.js`),
-`Swords` (`swords.js`, 2026-09-25, Faz 24'te bulundu — bir kez dev sunucusu
+`CalendarPlus` (`calendar-plus.js`, 2026-09-28), `Swords` (`swords.js`, 2026-09-25, Faz 24'te bulundu — bir kez dev sunucusu
 kilitlenip `.next/dev/lock`'u tutan eski bir process'i `taskkill` ile
 sonlandırıp sunucuyu yeniden başlatmak gerekti), ve `Siren`/`Pencil`
 (2026-09-25, Faz 25'te AYNI OTURUMDA ART ARDA iki farklı ikonla — `/vet`
@@ -2731,6 +2731,57 @@ kategoriye göre sabit yazılmış "faydalar" metinleri gerçek ürün verisi de
   engellemiyor, il/ilçe boş olduğu için müşteri keşif listelerinde görünmüyor.
 - **Ertelenen (Baran'ın kararı):** Resend anahtarı + `moffi.net` alan adı doğrulaması sonraya
   kaldı (e-postalar kuyrukta bekler). Mağaza abonelik/kupon işi "mağaza bölümü" ele alınırken yapılacak.
+
+### 8.43 Veteriner sistemi tam denetimi + referansın 14 ekranının tamamlanması (2026-09-28)
+
+Denetim raporu: https://claude.ai/artifact/5uFyBB7KYvs3M3vGk5mkSM. Denetim öncesi referansın
+(`design-reference/vet-final/`) 14 ekranından sadece 5'i tam uygulanmıştı.
+
+- **Veri modeli (migration `vet_reference_data_model`):** `favorite_clinics` (RLS + GRANT),
+  `profiles.website/cover_url/gallery_urls/reminder_prefs`, `clinic_services.description`.
+  `enqueue_appointment_reminders` artık kullanıcının tercihine göre 24 saat / 2 saat /
+  randevu günü sabahı aşamalarını atlıyor.
+- **Ortak parçalar tek kaynakta:** `components/vet/VetShared.tsx` (klinik kartı, favori hook'u,
+  mesafe "650 m · 8 dk yürüme", açık/kapalı metni, yol tarifi linki, filtre çipleri, kategori
+  kutucuğu). Ekran 2/3/11/12 aynı kartı kullanır — yeni bir klinik listesi yazarken buradan al.
+- **Yeni/yeniden yazılan ekranlar:** `/vet` ana ekranı (Ekran 2), `ClinicMapView` (3),
+  `ClinicDetailDrawer` 4 sekme + paylaş/favori (4, 8, 9, 10), `BookingConfirmation` + takvime
+  ekle .ics (6), `MyAppointmentsPanel` tarih bloklu kart + hatırlatma ayarları (7),
+  `/vet/favorites` (11), `/vet/emergency` (12), `VetFilterSheet` (13), `/vet/guide` +
+  `/vet/guide/[slug]` (14, içerik `src/data/vetGuide.ts`, "veterinerin yerini tutmaz" uyarılı).
+  `VetQuickSheet` sahte telefon/"Açık" etiketi olmadan gerçek sıradaki randevuyu gösterir.
+- **Randevu onayı dili:** talep işletme onayı beklediği için ekran "Randevu talebin alındı" der,
+  "onaylandı" demez.
+- **İşletme tarafı:** yeni `/business/profile` (tanıtım, telefon, web sitesi, il/ilçe/adres,
+  logo, kapak, 8 fotoğraflık galeri, haritaya dokunarak/sürükleyerek konum —
+  `components/business/LocationPicker.tsx`, API anahtarı gerektirmez). Menüye tüm türlerde
+  "İşletme profili" eklendi. Hizmetlere kısa açıklama alanı eklendi (müşterinin Hizmetler
+  sekmesinde görünür). Kampanya görseli URL yerine dosya yüklemeyle, stok Unsplash varsayılanı
+  yok. `alert()` çağrıları `showToast`'a çevrildi.
+- 🔴 **Finans sayfası tamamen sahteydi:** sabit aylık grafik, uydurma "+12%", var olmayan %10
+  komisyon, hiçbir şey yapmadan "Talep gönderildi" diyen ödeme talebi, boş `transactions`
+  tablosu. Artık "Gelir raporu": randevu işletmelerinde tamamlanan randevular × hizmet fiyatı
+  (açıkça "tahmini" diye belirtilir, fiyatsız randevular ayrıca uyarılır), mağazalarda ödenmiş
+  siparişlerdeki kendi ürünlerinin tutarı. `transactions` tablosu artık kullanılmıyor.
+- **Harita altlığı:** Carto artık API anahtarı istiyor ("API KEY REQUIRED" filigranı). Veteriner
+  haritası ve konum seçici `tile.openstreetmap.org`'a geçti. `LiveMap.tsx` (yürüyüş) hâlâ
+  Carto kullanıyor — ayrı ele alınmalı.
+- **Silinenler:** `PharmacyModal` (tamamen sahte eczane verisi, hiçbir yerden açılmıyordu),
+  `LocationSettings.tsx` (hiçbir yerde kullanılmayan, Google Places'e bağlı eski konum formu),
+  `common/SeniorDashboard.tsx` (render edilmiyordu, uydurma klinik adları + telefon numaraları
+  içeriyordu; "Kolay Mod" ayarının kendisi duruyor).
+- **Ayrıca düzeltilen:** `admin/platform-finance` `useState`/`useMemo` import'u olmadan açıldığı
+  anda çöküyordu. İşletme sohbetinde görsel yükleme `uploadMedia` imza hatası.
+- **Baran'a bırakılan:** `DentalCareModal` ve `MedicationModal` gerçek veri kullanıyor ama
+  hiçbir yerden açılmıyor (MedicationModal ayrıca `logMedicationDose` diye var olmayan bir servis
+  metodunu çağırıyor). Nereye bağlanacakları ürün kararı. Hiçbir işletmenin harita koordinatı
+  yok — MoffiPet dahil işletmeler "İşletme profili"nden konumlarını işaretleyene kadar haritada
+  pin görünmez (liste ve mesafe dışı her şey çalışır).
+- **Doğrulama:** değişen dosyalarda typecheck temiz, `npm run build` başarılı; Playwright ile
+  (Van/Tuşba, gerçek MoffiPet) liste, filtre, harita, çekmece, randevu formu, Randevularım +
+  hatırlatmalar, acil/favoriler/rehber ve işletme profili/gelir/hizmet/kampanya sayfaları
+  yüklendi; profil kaydı gerçek istemciyle yazıldı (veri değişmeden). `CalendarPlus` ikonu
+  Turbopack/OneDrive çökmesine yol açtı (bkz. 5.6), `Calendar`/`CheckCircle2` ile değiştirildi.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 

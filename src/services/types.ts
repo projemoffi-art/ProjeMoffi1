@@ -272,6 +272,22 @@ export interface SocialChallenge {
     createdAt: string;
 }
 
+// İşletmenin müşteriye görünen vitrini (klinik detay ekranı + harita pini).
+export interface BusinessProfileData {
+    businessName: string;
+    about: string;
+    phone: string;
+    website: string;
+    address: string;
+    province: string;
+    district: string;
+    lat: number | null;
+    lng: number | null;
+    logoUrl: string | null;
+    coverUrl: string | null;
+    gallery: string[];
+}
+
 export interface IApiService {
     // Auth & Profile
     getCurrentUser(): Promise<UserProfile | null>;
@@ -351,6 +367,15 @@ export interface IApiService {
     createBusinessAppointment(input: BusinessAppointmentInput): Promise<string>;
     rescheduleAppointment(appointmentId: string, newStart: string, doctorId: string | null, ignoreHours: boolean): Promise<void>;
     getClinicClients(): Promise<ClinicClient[]>;
+    getFavoriteClinicIds(): Promise<string[]>;
+    setFavoriteClinic(clinicId: string, favorite: boolean): Promise<void>;
+    getClinicsByIds(clinicIds: string[]): Promise<any[]>;
+    getReminderPrefs(): Promise<{ h24: boolean; h2: boolean; day: boolean }>;
+    setReminderPrefs(prefs: { h24: boolean; h2: boolean; day: boolean }): Promise<void>;
+    getBusinessProfile(): Promise<BusinessProfileData | null>;
+    updateBusinessProfile(p: BusinessProfileData): Promise<void>;
+    getClinicOrders(clinicId: string): Promise<ShopOrder[]>;
+    getMySharedPassports(): Promise<{ id: string; clinicName: string; petName: string; date: string; sharedFields: string[] }[]>;
     requestReschedule(appointmentId: string, newStart: string): Promise<void>;
     respondReschedule(appointmentId: string, accept: boolean): Promise<void>;
     getVisitSummary(appointmentId: string): Promise<any | null>;

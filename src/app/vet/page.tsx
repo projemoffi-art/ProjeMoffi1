@@ -4,19 +4,17 @@ import React, { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
-    Search, MapPin, Star, Calendar, CreditCard,
-    ChevronRight, Syringe, Utensils, Clock, Pill,
-    CheckCircle2, ChevronLeft, X, Filter, Activity, History,
-    ShieldCheck, Bell, Stethoscope
+    Search, MapPin, ChevronRight, Syringe, Stethoscope,
+    CheckCircle2, ChevronLeft, X, Filter, History, Bell, Heart, ShieldAlert, BookOpen, Map as MapIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, showToast } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { DentalCareModal } from "@/components/vet/DentalCareModal";
-import { PharmacyModal } from "@/components/vet/PharmacyModal";
 import { ClinicListModal } from "@/components/vet/ClinicListModal";
 import { ClinicDetailDrawer } from "@/components/vet/ClinicDetailDrawer";
-import { MedicationModal } from "@/components/vet/MedicationModal";
+import { ClinicCard, CategoryTile, useFavoriteClinics, formatDistance } from "@/components/vet/VetShared";
+import { VetFilterSheet, DEFAULT_VET_FILTERS, countActiveFilters, type VetFilters } from "@/components/vet/VetFilterSheet";
+import { BookingConfirmation, type BookingSummary } from "@/components/vet/BookingConfirmation";
 import { useVet } from "@/hooks/useVet";
 import { VetClinic, Doctor } from "@/types/domain";
 import { Pet, usePet } from "@/context/PetContext";
@@ -29,30 +27,7 @@ import { BUSINESS_TYPE_ORDER, getBusinessTypeConfig, isBusinessType } from "@/co
 import type { BusinessType } from "@/context/AuthContext";
 import turkeyCities from "@/data/turkey_cities.json";
 
-function validateLuhn(cardNumber: string): boolean {
-    const clean = cardNumber.replace(/\D/g, "");
-    // Allow standard test cards bypass
-    if (clean === "4242424242424242" || clean === "4312431243124312" || clean === "4111111111111111") {
-        return true;
-    }
-    // Allow custom testing card suffixes with standard test prefix
-    if ((clean.startsWith("4242") || clean.startsWith("4312") || clean.startsWith("4111")) && (clean.endsWith("9999") || clean.endsWith("1111") || clean.endsWith("4242") || clean.endsWith("4312") || clean.endsWith("4111"))) {
-        return true;
-    }
-    if (!clean || clean.length < 13 || clean.length > 19) return false;
-    let sum = 0;
-    let shouldDouble = false;
-    for (let i = clean.length - 1; i >= 0; i--) {
-        let digit = parseInt(clean.charAt(i));
-        if (shouldDouble) {
-            digit *= 2;
-            if (digit > 9) digit -= 9;
-        }
-        sum += digit;
-        shouldDouble = !shouldDouble;
-    }
-    return sum % 10 === 0;
-}
+const ClinicMapView = dynamic(() => import("@/components/vet/ClinicMapView"), { ssr: false });
 
 function VetPageContent() {
     const router = useRouter();
@@ -93,17 +68,18 @@ function VetPageContent() {
     const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-    const [filterSortBy, setFilterSortBy] = useState<'distance_asc' | 'distance_desc' | 'rating_desc' | null>(null);
-    const [filterOpenNow, setFilterOpenNow] = useState(false);
-    const [viewMode, setViewMode] = useState<'clinics' | 'appointments'>('clinics');
-    const [activeModal, setActiveModal] = useState<'appointment' | 'payment' | 'vaccine' | 'dental' | 'pharma' | 'sos' | 'success' | 'rating' | 'clinicList' | null>(null);
+    const [filters, setFilters] = useState<VetFilters>(DEFAULT_VET_FILTERS);
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'clinics' | 'appointments'>(searchParams.get('view') === 'appointments' ? 'appointments' : 'clinics');
+    const [activeModal, setActiveModal] = useState<'appointment' | 'clinicList' | null>(null);
+    const [bookingSummary, setBookingSummary] = useState<BookingSummary | null>(null);
+    const { isFavorite, toggleFavorite } = useFavoriteClinics();
     const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
     const [selectedProv, setSelectedProv] = useState("");
 
     // Ekran 2 referansı — 4 hizmet kısayolu + "Tümü/Yakınımda/Moffi Onaylı/Açık Olanlar" hızlı filtreleri
     const [activeServiceFilter, setActiveServiceFilter] = useState<string | null>(null);
     const [activeQuickFilter, setActiveQuickFilter] = useState<'all' | 'nearby' | 'verified' | 'open'>('all');
-    const mapBoxRef = useRef<HTMLDivElement>(null);
 
     const SERVICE_SHORTCUTS = businessConfig.customerShortcuts;
 
@@ -111,17 +87,14 @@ function VetPageContent() {
         setSearchQuery("");
         setActiveServiceFilter(null);
         setActiveQuickFilter('all');
-        setFilterSortBy(null);
-        setFilterOpenNow(false);
+        setFilters(DEFAULT_VET_FILTERS);
     }, [selectedBusinessType]);
 
     const applyQuickFilter = (key: typeof activeQuickFilter) => {
         setActiveQuickFilter(key);
-        setFilterSortBy(key === 'nearby' ? 'distance_asc' : null);
-        setFilterOpenNow(key === 'open');
+        setFilters(f => ({ ...f, sort: key === 'nearby' ? 'distance' : f.sort, openNow: key === 'open' }));
     };
 
-    // Payment Simulation States
     const activeClinics = useMemo(() => {
         let result = [...allClinics];
 
@@ -147,22 +120,39 @@ function VetPageContent() {
             result = result.filter(c => c.isVerified);
         }
 
-        if (filterOpenNow) {
+        if (filters.openNow) {
             result = result.filter(c => c.isOpenNow);
         }
 
-        if (filterSortBy === 'distance_asc') {
-            result.sort((a, b) => (a.calculated_distance || 0) - (b.calculated_distance || 0));
-        } else if (filterSortBy === 'distance_desc') {
-            result.sort((a, b) => (b.calculated_distance || 0) - (a.calculated_distance || 0));
-        } else if (filterSortBy === 'rating_desc') {
-            result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        if (filters.maxKm != null) {
+            result = result.filter(c => typeof c.calculated_distance === 'number' && c.calculated_distance <= filters.maxKm!);
+        }
+
+        if (filters.services.length > 0) {
+            const wanted = filters.services.map(s => s.toLocaleLowerCase('tr-TR'));
+            result = result.filter(c => (c.features || []).some((f: string) => wanted.includes(f.toLocaleLowerCase('tr-TR'))));
+        }
+
+        if (filters.sort === 'rating') {
+            result.sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.reviewCount || 0) - (a.reviewCount || 0));
+        } else {
+            result.sort((a, b) => (a.calculated_distance ?? 999999) - (b.calculated_distance ?? 999999));
         }
 
         return result;
-    }, [allClinics, searchQuery, filterOpenNow, filterSortBy, activeServiceFilter, activeQuickFilter]);
-    
-    const hasActiveFilters = filterSortBy !== null || filterOpenNow;
+    }, [allClinics, searchQuery, filters, activeServiceFilter, activeQuickFilter]);
+
+    const activeFilterCount = countActiveFilters(filters);
+    const serviceOptions = useMemo(() => {
+        const names = new Set<string>();
+        allClinics.forEach((c: any) => (c.features || []).forEach((f: string) => f && names.add(f)));
+        return [...names].sort((a, b) => a.localeCompare(b, 'tr'));
+    }, [allClinics]);
+
+    const openClinicDetail = (clinic: any) => {
+        setDetailClinicId(clinic.id);
+        setDetailClinicData(clinic);
+    };
 
     useEffect(() => {
         function handleSearchClickOutside(event: MouseEvent | TouchEvent) {
@@ -183,16 +173,6 @@ function VetPageContent() {
     // KENDİ seçicisi olması gerekti — hem referansa uyum hem gerçek bir işlev).
     const [selectedAppointmentPet, setSelectedAppointmentPet] = useState<Pet | null>(null);
 
-    const [tempAppointmentData, setTempAppointmentData] = useState<any>(null);
-    const [cardholderName, setCardholderName] = useState("");
-    const [cardNumber, setCardNumber] = useState("");
-    const [cardExpiry, setCardExpiry] = useState("");
-    const [cardCvc, setCardCvc] = useState("");
-    const [paymentError, setPaymentError] = useState("");
-    const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
-    const [otpCode, setOtpCode] = useState("");
-    const [otpError, setOtpError] = useState("");
-    const [isOtpProcessing, setIsOtpProcessing] = useState(false);
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
     const [detailClinicId, setDetailClinicId] = useState<string | null>(null);
     const [detailClinicData, setDetailClinicData] = useState<any>(null);
@@ -201,38 +181,10 @@ function VetPageContent() {
     const [reviewableAppointmentIds, setReviewableAppointmentIds] = useState<Set<string>>(new Set());
     const [pendingReviewPrompt, setPendingReviewPrompt] = useState<any>(null);
 
-    const [successMessage, setSuccessMessage] = useState("Randevu Oluşturuldu ✨");
-    const [userRating, setUserRating] = useState(0);
-    const [userComment, setUserComment] = useState("");
 
     // Notification State (Faz 9)
     const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
-
-    // Live validation helpers
-    const cleanCardNum = cardNumber.replace(/\D/g, "");
-    const isLuhnInvalid = cleanCardNum.length >= 13 && !validateLuhn(cleanCardNum);
-    const isExpiryInvalid = (() => {
-        if (!cardExpiry || cardExpiry.length < 5) return false;
-        const parts = cardExpiry.split("/");
-        if (parts.length !== 2) return true;
-        const month = parseInt(parts[0], 10);
-        const year = parseInt("20" + parts[1], 10);
-        if (isNaN(month) || isNaN(year) || month < 1 || month > 12) return true;
-        
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1; // 1-12
-        
-        if (year < currentYear) return true;
-        if (year === currentYear && month < currentMonth) return true;
-        
-        return false;
-    })();
-
-    // Secondary Modals States
-    const [activeMedicationModal, setActiveMedicationModal] = useState(false);
-    const [activeNutritionModal, setActiveNutritionModal] = useState(false);
 
     // Data Sharing Consent States
     const [shareBasic, setShareBasic] = useState(true);
@@ -385,16 +337,10 @@ function VetPageContent() {
         }
     }, []);
 
-    // Load transparency logs from localStorage
+    // Paylaşım geçmişi: randevularda işletmeyle paylaşılan veriler (appointments.shared_passport).
     useEffect(() => {
-        try {
-            const savedLogs = localStorage.getItem('moffi_transparency_logs');
-            if (savedLogs) {
-                setTransparencyLogs(JSON.parse(savedLogs));
-            }
-        } catch (e) {
-            console.error("Failed to load transparency logs:", e);
-        }
+        if (!isLogModalOpen) return;
+        apiService.getMySharedPassports().then(setTransparencyLogs).catch(() => setTransparencyLogs([]));
     }, [isLogModalOpen]);
 
     // Save preference helper
@@ -423,50 +369,37 @@ function VetPageContent() {
         } catch (e) {}
     };
 
-    // Deep Linking query parameter listener
+    // Bağlantıyla gelinen durumlar: ?open=vaccine|nutrition (genel sağlık pencereleri),
+    // ?open=appointment (klinik seçimi), ?clinic=<id> (paylaşılan klinik bağlantısı → detay).
+    const handledDeepLinkRef = useRef<string | null>(null);
     useEffect(() => {
-        if (searchParams && !isLoading) {
-            const openModal = searchParams.get('open');
-            const targetClinicId = searchParams.get('clinicId');
-            
-            if (openModal === 'vaccine' && isVeterinary) {
-                setActiveModal('vaccine');
-            } else if (openModal === 'appointment') {
-                setActiveModal('clinicList');
-            } else if (openModal === 'nutrition' && isVeterinary) {
-                setActiveNutritionModal(true);
-            }
+        const key = searchParams.toString();
+        if (handledDeepLinkRef.current === key) return;
+        const openModal = searchParams.get('open');
+        const targetClinicId = searchParams.get('clinic') || searchParams.get('clinicId');
 
-            // Only check for targetClinicId if clinics are loaded
-            if (targetClinicId && allClinics.length > 0) {
-                const found = allClinics.find(c => String(c.id) === String(targetClinicId));
-                if (found) {
-                    setSelectedClinic(found);
-                    setActiveModal('appointment');
-                }
-            }
+        if ((openModal === 'vaccine' || openModal === 'health') && isVeterinary) {
+            window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }));
+        } else if (openModal === 'nutrition' && isVeterinary) {
+            window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }));
+        } else if (openModal === 'appointment') {
+            setActiveModal('clinicList');
         }
-    }, [isLoading, allClinics, searchParams, isVeterinary]);
 
-    // Fast local event listener for instant modal opening without Next.js router latency
+        if (targetClinicId) {
+            const found = allClinics.find(c => String(c.id) === String(targetClinicId));
+            openClinicDetail(found || { id: targetClinicId });
+        }
+        handledDeepLinkRef.current = key;
+    }, [searchParams, allClinics.length, isVeterinary]);
+
     useEffect(() => {
         const handleOpenModal = (e: Event) => {
-            const customEvent = e as CustomEvent;
-            if (customEvent.detail) {
-                if (customEvent.detail === 'appointment') {
-                    setActiveModal('clinicList');
-                } else if (customEvent.detail === 'nutrition' && isVeterinary) {
-                    setActiveNutritionModal(true);
-                } else if (!isVeterinary && ['vaccine', 'dental', 'pharma', 'medication'].includes(customEvent.detail)) {
-                    return;
-                } else {
-                    setActiveModal(customEvent.detail as any);
-                }
-            }
+            if ((e as CustomEvent).detail === 'clinicList' || (e as CustomEvent).detail === 'appointment') setActiveModal('clinicList');
         };
         window.addEventListener('openVetModal', handleOpenModal);
         return () => window.removeEventListener('openVetModal', handleOpenModal);
-    }, [isVeterinary]);
+    }, []);
 
     // Appointment Form States
     const [selectedDate, setSelectedDate] = useState<string>("");
@@ -547,14 +480,20 @@ function VetPageContent() {
             showToast("Bu işletmeye şu an ulaşılamıyor.", "AlertCircle", "text-red-500 font-bold");
             return;
         }
-        rebookServiceRef.current = serviceName;
+        openAppointmentWithService(clinic, serviceName);
+    };
+
+    // Aynı klinik tekrar açıldığında hizmet listesi yeniden yüklenmez; bu durumda seçimi hemen yap,
+    // değilse clinicServices yüklenince aşağıdaki effect seçer.
+    function openAppointmentWithService(clinic: VetClinic, serviceName?: string) {
+        rebookServiceRef.current = serviceName || null;
         openAppointment(clinic);
-        if (selectedClinic?.id === clinic.id && clinicServices.length > 0) {
+        if (serviceName && selectedClinic?.id === clinic.id && clinicServices.length > 0) {
             const match = clinicServices.find((s: any) => s.service_name === serviceName);
             rebookServiceRef.current = null;
             if (match) setSelectedSvc(match);
         }
-    };
+    }
 
     const [cancelNoticeHours, setCancelNoticeHours] = useState(0);
     useEffect(() => {
@@ -651,41 +590,18 @@ function VetPageContent() {
             return;
         }
 
-        if (isVeterinary && sharedPassport) {
-            try {
-                const storedLogs = localStorage.getItem('moffi_transparency_logs');
-                const logsList = storedLogs ? JSON.parse(storedLogs) : [];
-                const sharedFields = [
-                    sharedPassport.basic ? "Temel Bilgiler" : null,
-                    sharedPassport.vaccines ? "Aşı Takvimi Geçmişi" : null,
-                    sharedPassport.healthNotes ? "Sağlık Notları & Alerjiler" : null,
-                    sharedPassport.ownerInfo ? "Sahip Bilgileri" : null
-                ].filter(Boolean);
-                if (sharedFields.length > 0) {
-                    logsList.unshift({
-                        id: 'log_' + Date.now(),
-                        clinicName: selectedClinic.name,
-                        petName: bookingPet?.name || 'Evcil Hayvan',
-                        date: new Date().toLocaleString('tr-TR'),
-                        sharedFields
-                    });
-                    localStorage.setItem('moffi_transparency_logs', JSON.stringify(logsList));
-                }
-            } catch (error) {
-                console.error("Failed to save transparency log:", error);
-            }
-        }
-
-        if (selectedDoctor) {
-            setSuccessMessage(isVeterinary
-                ? `Dr. ${selectedDoctor.name} ile randevu talebin iletildi.`
-                : `${businessConfig.staffLabel} ${selectedDoctor.name} ile talebin iletildi.`);
-        } else {
-            setSuccessMessage(isVeterinary ? "Randevu talebin iletildi." : "Talebin iletildi.");
-        }
-        setActiveModal('success');
+        setBookingSummary({
+            clinic: selectedClinic,
+            serviceName: selectedSvc?.service_name || businessConfig.customerFallbackService,
+            dateKey: selectedDate,
+            time: selectedTime,
+            durationMinutes: selectedSvc?.duration_minutes || 30,
+            petName: bookingPet?.name || null,
+            petImage: bookingPet?.image || null,
+            staffName: selectedDoctor?.name || null,
+        });
+        setActiveModal(null);
         setDetailClinicId(null);
-        setTimeout(() => setActiveModal(null), 3000);
     };
 
     const mappedAppointments = useMemo(() => {
@@ -718,8 +634,11 @@ function VetPageContent() {
                     petName: petName,
                     icon: '🏥',
                     type: type,
-                    clinicName: apt.clinic?.business_name || 'İşletme',
+                    clinicName: apt.clinic?.business_name || apt.clinic_name || 'İşletme',
+                    clinicImage: apt.clinic?.avatar_url || null,
+                    clinicAddress: apt.clinic?.address || null,
                     clinicId: apt.clinic_id,
+                    petImage: petInfo?.image || null,
                     realDoctorName: apt.doctor?.name || apt.doctor_name || null,
                     date: dateStr,
                     time: timeStr,
@@ -743,75 +662,49 @@ function VetPageContent() {
         <div className="theme-vet min-h-screen bg-background text-foreground pb-32 font-sans relative selection:bg-accent/30 transition-colors duration-300">
             {/* Minimal solid design - no cheap floating background blobs */}
 
-            {/* HEADER */}
-            <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-card-border pb-4 transition-colors duration-300">
-                <div className="px-6 pt-8 pb-2 flex flex-col gap-5">
+            {/* Referans Ekran 2 — Veteriner ana ekranı */}
+            <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-card-border">
+                <div className="px-5 pt-7 pb-4 flex flex-col gap-4">
                     <div className="flex justify-between items-center w-full min-w-0 gap-2">
                         <div className="flex items-center gap-3 min-w-0">
                             <button
-                                onClick={() => {
-                                    if (window.history.length > 2) {
-                                        router.back();
-                                    } else {
-                                        router.push('/home');
-                                    }
-                                }}
-                                className="w-10 h-10 rounded-xl bg-card border border-card-border flex items-center justify-center hover:bg-card-border/50 hover:scale-105 active:scale-95 transition-all text-foreground/80 shrink-0"
+                                onClick={() => (window.history.length > 2 ? router.back() : router.push('/home'))}
+                                aria-label="Geri"
+                                className="w-10 h-10 rounded-xl bg-card border border-card-border flex items-center justify-center text-foreground/80 shrink-0"
                             >
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
-                            <h1 className="text-2xl font-black text-foreground tracking-tight leading-none transition-all truncate">
-                                {businessConfig.customerLabel}
-                            </h1>
+                            <h1 className="text-2xl font-black text-foreground tracking-tight truncate">{businessConfig.customerLabel}</h1>
                         </div>
                         <div className="relative shrink-0" ref={notifRef}>
                             <button
                                 onClick={() => setShowNotifications(!showNotifications)}
-                                className="w-10 h-10 rounded-xl bg-card border border-card-border flex items-center justify-center hover:bg-card-border/50 active:scale-95 transition-all text-foreground/80 relative"
+                                aria-label={unreadCount > 0 ? `Bildirimler, ${unreadCount} okunmamış` : 'Bildirimler'}
+                                className="w-10 h-10 rounded-xl bg-card border border-card-border flex items-center justify-center text-foreground/80 relative"
                             >
                                 <Bell className="w-5 h-5" />
                                 {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-white text-[9px] font-black flex items-center justify-center">
-                                        {unreadCount}
-                                    </span>
+                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-white text-[9px] font-black flex items-center justify-center">{unreadCount}</span>
                                 )}
                             </button>
                             <AnimatePresence>
                                 {showNotifications && (
                                     <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
+                                        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                                         className="absolute top-full right-0 mt-2 w-72 bg-card border border-card-border rounded-xl shadow-xl overflow-hidden z-[170]"
                                     >
                                         <div className="max-h-64 overflow-y-auto">
                                             {unreadNotifications.length > 0 ? unreadNotifications.map(notif => (
-                                                <div
+                                                <button
                                                     key={notif.id}
                                                     onClick={() => handleNotificationClick(notif.id)}
-                                                    className={cn(
-                                                        "p-4 border-b border-card-border last:border-0 hover:bg-card-border/30 cursor-pointer transition-colors relative",
-                                                        notif.isReadLocally ? "opacity-50" : ""
-                                                    )}
+                                                    className={cn("w-full text-left p-4 border-b border-card-border last:border-0 hover:bg-card-border/30", notif.isReadLocally && "opacity-50")}
                                                 >
-                                                    <div className="flex justify-between items-start gap-2">
-                                                        <p className="text-xs font-bold text-foreground mb-1 leading-relaxed">
-                                                            {notif.message}
-                                                        </p>
-                                                        {notif.isReadLocally && (
-                                                            <span className="text-[10px] text-green-500 flex items-center gap-1 font-bold whitespace-nowrap">
-                                                                ✓ Okundu
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-[9px] font-bold text-secondary">
-                                                        {new Date(notif.created_at).toLocaleString('tr-TR')}
-                                                    </span>
-                                                </div>
+                                                    <p className="text-xs font-bold text-foreground mb-1 leading-relaxed">{notif.message}</p>
+                                                    <span className="text-[10px] font-semibold text-secondary">{new Date(notif.created_at).toLocaleString('tr-TR')}</span>
+                                                </button>
                                             )) : (
-                                                <div className="p-6 text-center">
-                                                    <p className="text-xs font-bold text-secondary">Henüz bildirim yok</p>
-                                                </div>
+                                                <p className="p-6 text-center text-xs font-bold text-secondary">Yeni randevu bildirimi yok</p>
                                             )}
                                         </div>
                                     </motion.div>
@@ -820,124 +713,34 @@ function VetPageContent() {
                         </div>
                     </div>
 
-                    {/* Minimalist Medical Search Input */}
-                    <div className="relative group z-[160]" ref={searchContainerRef}>
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
-                        <input
-                            type="text"
-                            placeholder={businessConfig.customerSearchPlaceholder}
-                            className="w-full h-12 pl-11 pr-4 bg-card rounded-xl border border-card-border outline-none font-bold text-xs text-foreground placeholder:text-zinc-400 dark:placeholder:text-secondary/20 focus:border-accent transition-all text-left shadow-sm dark:shadow-none"
-                            value={searchQuery}
-                            onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                setIsSearchPanelOpen(true);
-                            }}
-                            onFocus={() => setIsSearchPanelOpen(true)}
-                        />
-                        <AnimatePresence>
-                            {isSearchPanelOpen && (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: -5 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -5 }}
-                                    className="absolute top-[110%] left-0 right-0 bg-card border border-card-border rounded-xl shadow-2xl overflow-hidden"
-                                >
-                                    <div className="max-h-60 overflow-y-auto no-scrollbar py-2">
-                                        {activeClinics.length > 0 ? (
-                                            activeClinics.slice(0, 6).map((c) => (
-                                                <button 
-                                                    key={c.id}
-                                                    onClick={() => {
-                                                        setDetailClinicId(c.id);
-                                                        setDetailClinicData(c);
-                                                        setIsSearchPanelOpen(false);
-                                                        setSearchQuery("");
-                                                    }}
-                                                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors border-b border-card-border/50 last:border-0"
-                                                >
-                                                    <div className="flex flex-col text-left truncate pr-2">
-                                                        <span className="text-xs font-black text-foreground truncate">{c.name}</span>
-                                                        <span className="text-[9px] font-bold text-secondary">{c.distance || 'Konum Bilinmiyor'}</span>
-                                                    </div>
-                                                    <ChevronRight className="w-3 h-3 text-secondary shrink-0" />
-                                                </button>
-                                            ))
-                                        ) : (
-                                            <div className="px-4 py-8 text-center flex flex-col items-center justify-center">
-                                                <Search className="w-6 h-6 text-secondary/30 mb-2" />
-                                                <p className="text-xs font-bold text-secondary">Sonuç bulunamadı</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    <div>
-                        <span className="block text-[9px] font-black uppercase tracking-wider text-secondary mb-2">İşletme türü</span>
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                            {BUSINESS_TYPE_ORDER.map(type => {
-                                const typeConfig = getBusinessTypeConfig(type);
-                                const isSelected = type === selectedBusinessType;
-                                return (
-                                    <button
-                                        key={type}
-                                        type="button"
-                                        aria-current={isSelected ? 'page' : undefined}
-                                        onClick={() => router.push(
-                                            typeConfig.primaryFlow === 'order'
-                                                ? '/petshop'
-                                                : type === 'vet'
-                                                    ? '/vet'
-                                                    : `/vet?type=${type}`
-                                        )}
-                                        className={cn(
-                                            "shrink-0 px-3.5 py-2 rounded-full border text-xs font-bold transition-colors",
-                                            isSelected
-                                                ? "bg-foreground text-background border-foreground"
-                                                : "bg-card text-secondary border-card-border hover:text-foreground"
-                                        )}
-                                    >
-                                        {typeConfig.customerLabel}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Location Selector Banner */}
                     {(!userProvince || !userDistrict || isLocationSelectorOpen) ? (
-                        <div className="bg-card p-4 rounded-xl border border-card-border shadow-sm">
+                        <div className="bg-card p-4 rounded-xl border border-card-border">
                             <div className="flex items-center gap-2 mb-3">
                                 <MapPin className="w-4 h-4 text-accent" />
-                                <h3 className="text-xs font-black text-foreground">Konumunuzu seç</h3>
+                                <h3 className="text-sm font-black text-foreground">Konumunu seç</h3>
                             </div>
-                            <div className="flex gap-3">
-                                <select 
-                                    className="flex-1 h-10 px-3 rounded-lg border border-card-border bg-card-border/30 text-xs font-bold outline-none text-foreground"
+                            <div className="flex gap-2">
+                                <select
+                                    aria-label="İl"
+                                    className="flex-1 h-10 px-3 rounded-lg border border-card-border bg-background text-xs font-bold text-foreground"
                                     value={selectedProv || userProvince || ""}
-                                    onChange={(e) => {
-                                        setSelectedProv(e.target.value);
-                                    }}
+                                    onChange={(e) => setSelectedProv(e.target.value)}
                                 >
-                                    <option value="" disabled>İl Seçiniz</option>
-                                    {turkeyCities.map(c => (
-                                        <option key={c.name} value={c.name}>{c.name}</option>
-                                    ))}
+                                    <option value="" disabled>İl seç</option>
+                                    {turkeyCities.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                                 </select>
-                                <select 
-                                    className="flex-1 h-10 px-3 rounded-lg border border-card-border bg-card-border/30 text-xs font-bold outline-none text-foreground"
+                                <select
+                                    aria-label="İlçe"
+                                    className="flex-1 h-10 px-3 rounded-lg border border-card-border bg-background text-xs font-bold text-foreground disabled:opacity-50"
                                     value={(selectedProv && selectedProv !== userProvince) ? "" : (userDistrict || "")}
                                     onChange={(e) => {
-                                        const finalProv = selectedProv || userProvince;
-                                        setLocationFilter(finalProv, e.target.value);
+                                        setLocationFilter(selectedProv || userProvince, e.target.value);
                                         setIsLocationSelectorOpen(false);
-                                        setSelectedProv(""); // Reset local override
+                                        setSelectedProv("");
                                     }}
                                     disabled={!(selectedProv || userProvince)}
                                 >
-                                    <option value="" disabled>İlçe Seçiniz</option>
+                                    <option value="" disabled>İlçe seç</option>
                                     {turkeyCities.find(c => c.name === (selectedProv || userProvince))?.districts.map((d: any) => (
                                         <option key={d.name} value={d.name}>{d.name}</option>
                                     ))}
@@ -945,331 +748,248 @@ function VetPageContent() {
                             </div>
                         </div>
                     ) : (
-                        <button
-                            onClick={() => setIsLocationSelectorOpen(true)}
-                            className="flex items-center gap-2 text-left w-fit max-w-full"
-                        >
+                        <button onClick={() => setIsLocationSelectorOpen(true)} className="flex items-center gap-2 text-left w-full bg-card border border-card-border rounded-xl px-3.5 h-11">
                             <MapPin className="w-4 h-4 text-accent shrink-0" />
-                            <span className="text-[13px] font-bold text-foreground truncate">
-                                Konumun: <span className="text-secondary font-semibold">{userProvince}, {userDistrict}</span>
+                            <span className="text-[13px] font-bold text-foreground truncate flex-1">
+                                Konumun: <span className="text-secondary font-semibold">{userDistrict}, {userProvince}</span>
                             </span>
-                            <span className="text-[13px] text-secondary shrink-0">✎</span>
+                            <ChevronRight className="w-4 h-4 text-secondary shrink-0" />
                         </button>
                     )}
 
-                    {/* View Toggle */}
-                    <div className="flex bg-card-border/50 p-1 rounded-xl">
-                        <button
-                            onClick={() => setViewMode('clinics')}
-                            className={cn("flex-1 py-2 rounded-lg text-xs font-black transition-all", viewMode === 'clinics' ? "bg-card shadow-sm text-accent" : "text-zinc-500 dark:text-zinc-400")}
-                        >
-                            {isVeterinary ? 'Klinik Keşfet' : 'İşletme Keşfet'}
-                        </button>
-                        <button
-                            onClick={() => setViewMode('appointments')}
-                            className={cn("flex-1 py-2 rounded-lg text-xs font-black transition-all", viewMode === 'appointments' ? "bg-card shadow-sm text-accent" : "text-zinc-500 dark:text-zinc-400")}
-                        >
-                            Randevularım
-                        </button>
+                    <div className="relative z-[160]" ref={searchContainerRef}>
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
+                        <input
+                            type="search"
+                            aria-label="Ara"
+                            placeholder={businessConfig.customerSearchPlaceholder}
+                            className="w-full h-12 pl-11 pr-4 bg-card rounded-xl border border-card-border outline-none font-semibold text-[13px] text-foreground placeholder:text-secondary/70 focus:border-accent"
+                            value={searchQuery}
+                            onChange={(e) => { setSearchQuery(e.target.value); setIsSearchPanelOpen(true); }}
+                            onFocus={() => setIsSearchPanelOpen(true)}
+                        />
+                        <AnimatePresence>
+                            {isSearchPanelOpen && searchQuery.trim() && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
+                                    className="absolute top-[110%] left-0 right-0 bg-card border border-card-border rounded-xl shadow-2xl overflow-hidden"
+                                >
+                                    <div className="max-h-60 overflow-y-auto no-scrollbar py-1">
+                                        {activeClinics.length > 0 ? activeClinics.slice(0, 6).map((c) => (
+                                            <button
+                                                key={c.id}
+                                                onClick={() => { openClinicDetail(c); setIsSearchPanelOpen(false); setSearchQuery(""); }}
+                                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-card-border/30 border-b border-card-border/50 last:border-0"
+                                            >
+                                                <span className="text-[13px] font-bold text-foreground truncate text-left">{c.name}</span>
+                                                <ChevronRight className="w-3.5 h-3.5 text-secondary shrink-0" />
+                                            </button>
+                                        )) : (
+                                            <p className="px-4 py-6 text-center text-xs font-bold text-secondary">Sonuç bulunamadı</p>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
-                    {/* Hizmet kısayolları — referans Ekran 2 */}
-                    {SERVICE_SHORTCUTS.length > 0 && <div style={{ display: viewMode === 'clinics' ? 'grid' : 'none' }} className="grid grid-cols-4 gap-2">
-                        {SERVICE_SHORTCUTS.map(cat => {
-                            const isActive = activeServiceFilter === cat.key;
-                            return (
-                                <button
-                                    key={cat.key}
-                                    onClick={() => setActiveServiceFilter(isActive ? null : cat.key)}
-                                    className="flex flex-col items-center gap-1.5"
-                                >
-                                    <div className={cn(
-                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-accent/10 text-accent text-xl",
-                                        isActive && "ring-2 ring-accent ring-offset-2 ring-offset-background"
-                                    )}>
-                                        {cat.icon}
-                                    </div>
-                                    <span className="text-[9.5px] font-bold text-secondary text-center leading-tight">{cat.label}</span>
-                                </button>
-                            );
-                        })}
-                    </div>}
-
-                    {/* Hızlı filtreler — Tümü / Yakınımda / Moffi Onaylı / Açık Olanlar */}
-                    <div
-                        ref={categoryScroll.ref}
-                        style={{ display: viewMode === 'clinics' ? 'flex' : 'none' }}
-                        onMouseDown={categoryScroll.onMouseDown}
-                        onMouseLeave={categoryScroll.onMouseLeave}
-                        onMouseUp={categoryScroll.onMouseUp}
-                        onMouseMove={categoryScroll.onMouseMove}
-                        className="flex gap-2 overflow-x-auto no-scrollbar touch-pan-x pb-1 momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
-                    >
-                        {[
-                            { id: 'all' as const, label: 'Tümü' },
-                            { id: 'nearby' as const, label: 'Yakınımda' },
-                            { id: 'verified' as const, label: 'Moffi Onaylı' },
-                            { id: 'open' as const, label: 'Açık Olanlar' },
-                        ].map(f => (
+                    <div className="flex bg-card-border/50 p-1 rounded-xl">
+                        {([['clinics', isVeterinary ? 'Klinik keşfet' : 'İşletme keşfet'], ['appointments', 'Randevularım']] as const).map(([k, l]) => (
                             <button
-                                key={f.id}
-                                onClick={() => applyQuickFilter(f.id)}
-                                className={cn(
-                                    "px-4 py-2 rounded-full whitespace-nowrap transition-all font-bold text-xs shrink-0",
-                                    activeQuickFilter === f.id
-                                        ? "bg-foreground text-background"
-                                        : "bg-card text-secondary border border-card-border hover:text-foreground"
-                                )}
+                                key={k}
+                                onClick={() => setViewMode(k)}
+                                aria-pressed={viewMode === k}
+                                className={cn("flex-1 py-2 rounded-lg text-xs font-black transition-all", viewMode === k ? "bg-card shadow-sm text-foreground" : "text-secondary")}
                             >
-                                {f.label}
+                                {l}
                             </button>
                         ))}
                     </div>
                 </div>
             </header>
 
-            <main className="px-6 py-6 space-y-6">
+            <main className="px-5 py-5 space-y-6">
                 {viewMode === 'appointments' ? (
-                    <MyAppointmentsPanel 
-                        appointments={mappedAppointments} 
-                        activePetId={activePet?.id} 
-                        reviewableAppointmentIds={reviewableAppointmentIds}
-                        onRebook={handleRebook}
-                        onReviewClick={(clinicId, appointmentId) => {
-                            const clinicData = allClinics.find(c => c.id === clinicId);
-                            setDetailClinicId(clinicId);
-                            if (clinicData) setDetailClinicData(clinicData);
-                            setDrawerDefaultReviewAppointmentId(appointmentId);
-                            setDrawerDefaultReview(true);
-                        }}
-                    />
+                    <>
+                        <MyAppointmentsPanel
+                            appointments={mappedAppointments}
+                            activePetId={activePet?.id}
+                            reviewableAppointmentIds={reviewableAppointmentIds}
+                            onRebook={handleRebook}
+                            onReviewClick={(clinicId, appointmentId) => {
+                                const clinicData = allClinics.find(c => c.id === clinicId);
+                                openClinicDetail(clinicData || { id: clinicId });
+                                setDrawerDefaultReviewAppointmentId(appointmentId);
+                                setDrawerDefaultReview(true);
+                            }}
+                            onOpenClinic={(clinicId) => {
+                                const clinicData = allClinics.find(c => c.id === clinicId);
+                                openClinicDetail(clinicData || { id: clinicId });
+                            }}
+                        />
+                        {isVeterinary && (
+                            <button onClick={() => setIsLogModalOpen(true)} className="w-full flex items-center justify-center gap-2 h-11 rounded-xl border border-card-border bg-card text-xs font-bold text-secondary">
+                                <History className="w-4 h-4 text-accent" /> Veri paylaşım geçmişim
+                            </button>
+                        )}
+                    </>
                 ) : (
                     <>
-                {/* Status Bar showing pet health state */}
-                {isVeterinary && activePet && (
-                    <div className="bg-card border border-card-border p-4 rounded-2xl flex items-center justify-between text-left shadow-sm dark:shadow-none transition-colors duration-300">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-accent/10 dark:bg-accent/10 flex items-center justify-center border border-accent/20 text-accent dark:text-accent">
-                                <Activity className="w-5 h-5" />
+                        {SERVICE_SHORTCUTS.length > 0 && (
+                            <div className="grid grid-cols-4 gap-2">
+                                {SERVICE_SHORTCUTS.map(cat => (
+                                    <CategoryTile
+                                        key={cat.key}
+                                        shortcut={cat}
+                                        active={activeServiceFilter === cat.key}
+                                        onClick={() => setActiveServiceFilter(activeServiceFilter === cat.key ? null : cat.key)}
+                                    />
+                                ))}
                             </div>
-                            <div>
-                                <span className="text-[8px] font-black text-secondary uppercase tracking-widest block">Aktif evcil hayvan</span>
-                                <h4 className="text-xs font-black text-foreground mt-0.5">{activePet.name} için veteriner hizmetleri</h4>
+                        )}
+
+                        {isVeterinary && (
+                            <div className="grid grid-cols-3 gap-2">
+                                <button onClick={() => router.push('/vet/emergency')} className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/25 text-rose-600 dark:text-rose-300 text-[11px] font-black">
+                                    <ShieldAlert className="w-4 h-4" /> Acil
+                                </button>
+                                <button onClick={() => router.push('/vet/favorites')} className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-card border border-card-border text-[11px] font-black text-foreground">
+                                    <Heart className="w-4 h-4 text-accent" /> Favoriler
+                                </button>
+                                <button onClick={() => router.push('/vet/guide')} className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-card border border-card-border text-[11px] font-black text-foreground">
+                                    <BookOpen className="w-4 h-4 text-accent" /> Rehber
+                                </button>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button 
-                                onClick={() => setIsLogModalOpen(true)}
-                                className="bg-card border border-card-border hover:bg-card-border text-zinc-650 dark:text-zinc-300 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all text-[10px] font-bold cursor-pointer"
+                        )}
+
+                        <div className="flex items-center gap-2">
+                            <div
+                                ref={categoryScroll.ref}
+                                onMouseDown={categoryScroll.onMouseDown}
+                                onMouseLeave={categoryScroll.onMouseLeave}
+                                onMouseUp={categoryScroll.onMouseUp}
+                                onMouseMove={categoryScroll.onMouseMove}
+                                className="flex-1 flex gap-2 overflow-x-auto no-scrollbar select-none"
                             >
-                                <History className="w-3.5 h-3.5 text-accent" /> Paylaşım Logları
-                            </button>
-                            <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
-                        </div>
-                    </div>
-                )}
-
-
-
-                {/* Solid Map Box */}
-                <section ref={mapBoxRef} className="relative w-full rounded-2xl p-6 border border-card-border shadow-xl bg-card flex flex-col items-center justify-center text-center gap-4 transition-colors duration-300 scroll-mt-24">
-                    <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-                        <MapPin className="w-6 h-6 text-accent" />
-                    </div>
-                    <div>
-                        <h3 className="font-black text-sm text-foreground mb-1">{businessConfig.customerTitle}</h3>
-                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">
-                            Moffi üzerinden konumundaki onaylı {businessConfig.customerLabel.toLocaleLowerCase('tr-TR')} işletmelerini keşfedebilirsin.
-                        </p>
-                    </div>
-                    <button 
-                        onClick={() => {
-                            if (userLocation) {
-                                window.open(`https://www.google.com/maps/search/${encodeURIComponent(businessConfig.customerMapSearchQuery)}/@${userLocation[0]},${userLocation[1]},14z`, '_blank', 'noopener,noreferrer');
-                            } else {
-                                window.open(`https://www.google.com/maps/search/${encodeURIComponent(businessConfig.customerMapSearchQuery)}`, '_blank', 'noopener,noreferrer');
-                            }
-                        }}
-                        className="w-full sm:w-auto bg-accent text-white px-6 py-3 rounded-xl text-xs font-black hover:bg-accent transition-all shadow-lg shadow-accent/20 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                        <MapPin className="w-4 h-4" />
-                        Google Haritalar&apos;da Aç
-                    </button>
-                </section>
-
-                {/* Clinics Section */}
-                <section>
-                    <div className="flex items-center justify-between mb-4 px-1">
-                        <h2 className="text-base font-black text-foreground tracking-tight leading-none">Yakındaki {businessConfig.customerLabel.toLocaleLowerCase('tr-TR')} işletmeleri</h2>
-                        <div className="flex items-center gap-3 shrink-0">
-                            <button
-                                onClick={() => mapBoxRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                                className="text-[11px] font-bold text-accent flex items-center gap-0.5 hover:opacity-80 transition-opacity"
-                            >
-                                Haritada gör <ChevronRight className="w-3 h-3" />
-                            </button>
+                                {([
+                                    { id: 'all' as const, label: 'Tümü' },
+                                    { id: 'nearby' as const, label: 'Yakınımda' },
+                                    { id: 'verified' as const, label: 'Moffi onaylı' },
+                                    { id: 'open' as const, label: 'Açık olanlar' },
+                                ]).map(f => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => applyQuickFilter(f.id)}
+                                        aria-pressed={activeQuickFilter === f.id}
+                                        className={cn(
+                                            "px-4 py-2 rounded-full whitespace-nowrap font-bold text-xs shrink-0",
+                                            activeQuickFilter === f.id ? "bg-foreground text-background" : "bg-card text-secondary border border-card-border"
+                                        )}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
                             <button
                                 onClick={() => setIsFilterPanelOpen(true)}
-                                className="relative bg-card border border-card-border w-7 h-7 rounded-lg flex items-center justify-center text-secondary hover:text-foreground transition-all"
+                                aria-label="Filtreler"
+                                className="relative bg-card border border-card-border w-9 h-9 rounded-xl flex items-center justify-center text-secondary shrink-0"
                             >
-                                <Filter className="w-3.5 h-3.5" />
-                                {hasActiveFilters && (
-                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />
+                                <Filter className="w-4 h-4" />
+                                {activeFilterCount > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-accent text-white rounded-full text-[9px] font-black flex items-center justify-center">{activeFilterCount}</span>
                                 )}
                             </button>
                         </div>
-                    </div>
 
-                    <div className="space-y-3">
-                        {activeClinics.map((clinic, index) => (
-                            <motion.div
-                                initial={{ opacity: 0, y: 15 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: index * 0.05 }}
-                                whileTap={{ scale: 0.98 }}
-                                key={clinic.id || `clinic-${index}`}
-                                onClick={() => { setDetailClinicId(clinic.id); setDetailClinicData(clinic); }}
-                                className="bg-card rounded-2xl p-3 border border-card-border shadow-sm dark:shadow-none flex items-center gap-3 cursor-pointer transition-colors hover:border-accent/30"
-                            >
-                                <div className="w-16 h-16 rounded-xl overflow-hidden border border-card-border shrink-0 relative">
-                                    {clinic.imageUrl ? (
-                                        <img src={clinic.imageUrl} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center">
-                                            <span className="text-xl font-black text-zinc-500 dark:text-white/40">{(clinic.name || 'C')[0]}</span>
-                                        </div>
-                                    )}
-                                </div>
+                        <section>
+                            <div className="flex items-center justify-between mb-3 px-1">
+                                <h2 className="text-base font-black text-foreground tracking-tight">
+                                    {isVeterinary ? 'Yakındaki veterinerler' : `Yakındaki ${businessConfig.customerLabel.toLocaleLowerCase('tr-TR')} işletmeleri`}
+                                </h2>
+                                <button onClick={() => setIsMapOpen(true)} disabled={activeClinics.length === 0} className="text-[12px] font-bold text-accent flex items-center gap-1 disabled:opacity-40">
+                                    <MapIcon className="w-3.5 h-3.5" /> Haritada gör
+                                </button>
+                            </div>
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <h3 className="font-black text-foreground text-sm tracking-tight leading-none truncate">
-                                            {clinic.name}
-                                        </h3>
-                                        {clinic.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-accent shrink-0" />}
-                                    </div>
-                                    <div className="flex items-center gap-1 mt-1.5">
-                                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                        <span className="text-[11px] font-black text-foreground">{clinic.rating}</span>
-                                        {typeof clinic.reviewCount === 'number' && (
-                                            <span className="text-[11px] font-semibold text-secondary">({clinic.reviewCount})</span>
+                            <div className="space-y-3">
+                                {isLoading && activeClinics.length === 0 && [0, 1, 2].map(i => (
+                                    <div key={i} className="h-[96px] rounded-2xl bg-card border border-card-border animate-pulse" />
+                                ))}
+                                {activeClinics.map((clinic, index) => (
+                                    <ClinicCard
+                                        key={clinic.id}
+                                        clinic={clinic}
+                                        index={index}
+                                        onOpen={() => openClinicDetail(clinic)}
+                                        isFavorite={isFavorite(clinic.id)}
+                                        onToggleFavorite={() => toggleFavorite(clinic.id)}
+                                    />
+                                ))}
+                                {!isLoading && activeClinics.length === 0 && userProvince && userDistrict && (
+                                    <div className="text-center py-10 px-6 bg-card border border-card-border rounded-2xl">
+                                        <p className="text-sm font-bold text-foreground">Bu bölgede eşleşen işletme yok</p>
+                                        <p className="text-xs font-semibold text-secondary mt-1">
+                                            {allClinics.length > 0 ? 'Filtreleri gevşetmeyi dene.' : 'Konumunu değiştirerek yakın bir ilçeye bakabilirsin.'}
+                                        </p>
+                                        {allClinics.length > 0 && (
+                                            <button
+                                                onClick={() => { setFilters(DEFAULT_VET_FILTERS); setActiveQuickFilter('all'); setActiveServiceFilter(null); setSearchQuery(""); }}
+                                                className="mt-3 px-4 py-2 rounded-xl bg-accent/10 text-accent text-xs font-black"
+                                            >
+                                                Filtreleri temizle
+                                            </button>
                                         )}
-                                        <span className="text-secondary mx-0.5">•</span>
-                                        <span className="text-[11px] font-semibold text-secondary truncate">{clinic.distance}</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 mt-1">
-                                        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", clinic.isOpenNow ? "bg-accent-secondary" : "bg-secondary/40")} />
-                                        <span className={cn("text-[11px] font-semibold", clinic.isOpenNow ? "text-accent-secondary" : "text-secondary")}>
-                                            {clinic.isOpenNow
-                                                ? (clinic.closesAt ? `Açık · ${clinic.closesAt}'e kadar` : "Açık")
-                                                : (clinic.opensAt ? `Kapalı · ${clinic.opensAt}'de açılıyor` : "Kapalı")}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <ChevronRight className="w-4 h-4 text-secondary shrink-0" />
-                            </motion.div>
-                        ))}
-                        {activeClinics.length === 0 && !isLoading && (
-                            <div className="text-center py-10">
-                                <p className="text-xs font-bold text-secondary">Bu bölgede henüz eşleşen klinik yok.</p>
+                                )}
                             </div>
+                        </section>
+
+                        {BUSINESS_TYPE_ORDER.length > 1 && (
+                            <section className="pt-2">
+                                <h3 className="text-[12px] font-bold text-secondary mb-2 px-1">Diğer hizmetler</h3>
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                                    {BUSINESS_TYPE_ORDER.filter(t => t !== selectedBusinessType).map(type => {
+                                        const typeConfig = getBusinessTypeConfig(type);
+                                        return (
+                                            <button
+                                                key={type}
+                                                onClick={() => router.push(typeConfig.primaryFlow === 'order' ? '/petshop' : type === 'vet' ? '/vet' : `/vet?type=${type}`)}
+                                                className="shrink-0 px-3.5 py-2 rounded-full border border-card-border bg-card text-xs font-bold text-secondary"
+                                            >
+                                                {typeConfig.customerLabel}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </section>
                         )}
-                    </div>
-                </section>
                     </>
                 )}
-            
-            {/* FILTER PANEL */}
-            <AnimatePresence>
-                {isFilterPanelOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsFilterPanelOpen(false)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]"
-                        />
-                        <motion.div
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed bottom-0 left-0 right-0 z-[201] bg-card rounded-t-3xl border-t border-card-border overflow-hidden pb-safe"
-                        >
-                            <div className="p-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-lg font-black text-foreground tracking-tight">Sıralama ve filtre</h3>
-                                    <button onClick={() => setIsFilterPanelOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-                                        <X className="w-4 h-4 text-foreground" />
-                                    </button>
-                                </div>
-                                
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="text-[10px] font-black text-secondary tracking-widest uppercase mb-3 block">Sıralama Ölçütü</label>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            <button 
-                                                onClick={() => setFilterSortBy('distance_asc')}
-                                                className={cn("flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all", filterSortBy === 'distance_asc' ? "bg-accent/10 border-accent text-accent" : "bg-card border-card-border text-foreground")}
-                                            >
-                                                Mesafeye Göre (Yakından Uzağa)
-                                                {filterSortBy === 'distance_asc' && <CheckCircle2 className="w-4 h-4" />}
-                                            </button>
-                                            <button 
-                                                onClick={() => setFilterSortBy('distance_desc')}
-                                                className={cn("flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all", filterSortBy === 'distance_desc' ? "bg-accent/10 border-accent text-accent" : "bg-card border-card-border text-foreground")}
-                                            >
-                                                Mesafeye Göre (Uzaktan Yakına)
-                                                {filterSortBy === 'distance_desc' && <CheckCircle2 className="w-4 h-4" />}
-                                            </button>
-                                            <button 
-                                                onClick={() => setFilterSortBy('rating_desc')}
-                                                className={cn("flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all", filterSortBy === 'rating_desc' ? "bg-accent/10 border-accent text-accent" : "bg-card border-card-border text-foreground")}
-                                            >
-                                                Puana Göre (En Yüksek)
-                                                {filterSortBy === 'rating_desc' && <CheckCircle2 className="w-4 h-4" />}
-                                            </button>
-                                        </div>
-                                    </div>
+            </main>
 
-                                    <div>
-                                        <label className="text-[10px] font-black text-secondary tracking-widest uppercase mb-3 block">Filtreler</label>
-                                        <button 
-                                            onClick={() => setFilterOpenNow(!filterOpenNow)}
-                                            className={cn("w-full flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all", filterOpenNow ? "bg-accent/10 border-accent text-accent" : "bg-card border-card-border text-foreground")}
-                                        >
-                                            Sadece Şu An Açık Olanlar
-                                            <div className={cn("w-10 h-6 rounded-full flex items-center px-1 transition-all", filterOpenNow ? "bg-accent justify-end" : "bg-black/10 dark:bg-white/10 justify-start")}>
-                                                <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
-                                            </div>
-                                        </button>
-                                    </div>
+            <VetFilterSheet
+                isOpen={isFilterPanelOpen}
+                onClose={() => setIsFilterPanelOpen(false)}
+                value={filters}
+                onApply={(f) => { setFilters(f); setActiveQuickFilter(f.openNow ? 'open' : 'all'); }}
+                serviceOptions={serviceOptions}
+                province={userProvince}
+                district={userDistrict}
+                onLocationChange={setLocationFilter}
+                hasGps={!!userLocation}
+            />
 
-                                    <div className="pt-2 space-y-2">
-                                        <button
-                                            onClick={() => setIsFilterPanelOpen(false)}
-                                            className="w-full h-12 bg-accent text-white font-black text-sm rounded-xl hover:bg-accent/90 transition-all active:scale-95 shadow-lg shadow-accent/20"
-                                        >
-                                            Sonuçları göster
-                                        </button>
-                                        <button
-                                            onClick={() => { setFilterSortBy(null); setFilterOpenNow(false); setIsFilterPanelOpen(false); }}
-                                            className="w-full h-12 bg-transparent text-secondary font-bold text-sm rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all"
-                                        >
-                                            Filtreleri temizle
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
-        </main>
+            {isMapOpen && (
+                <ClinicMapView
+                    clinics={activeClinics}
+                    userLocation={userLocation}
+                    onClose={() => setIsMapOpen(false)}
+                    onOpenClinic={(c) => { setIsMapOpen(false); openClinicDetail(c); }}
+                    isFavorite={isFavorite}
+                    onToggleFavorite={toggleFavorite}
+                />
+            )}
 
             {/* --- MODALS & DRAWERS --- */}
             <AnimatePresence>
@@ -1296,8 +1016,9 @@ function VetPageContent() {
                                     )}
                                     <div className="text-left">
                                         <div className="font-black text-sm text-foreground leading-snug mb-0.5">{selectedClinic.name}</div>
-                                        <div className="text-[9px] text-secondary font-bold uppercase tracking-wider flex items-center gap-1">
-                                            <MapPin className="w-3.5 h-3.5 text-accent" /> {selectedClinic.distance} mesafede
+                                        <div className="text-[11px] text-secondary font-semibold flex items-center gap-1">
+                                            <MapPin className="w-3.5 h-3.5 text-accent shrink-0" />
+                                            <span className="line-clamp-2">{formatDistance(selectedClinic.calculated_distance) || selectedClinic.address}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1608,53 +1329,6 @@ function VetPageContent() {
                 )}
 
 
-                {/* 2. REVIEWS / RATING MODAL */}
-                {activeModal === 'rating' && (
-                    <motion.div key="rating-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[3100] bg-black/50 dark:bg-black/85 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-card-border text-foreground relative">
-                            <div className="flex flex-col items-center text-center p-4">
-                                <h3 className="font-black text-lg tracking-tight mb-2 text-foreground">İşletmeyi değerlendir</h3>
-                                <p className="text-[11px] text-secondary font-semibold mb-6">Deneyiminizi diğer pati sahipleriyle paylaşın</p>
-
-                                <div className="flex gap-2 mb-6">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button 
-                                            key={star} 
-                                            onClick={() => setUserRating(star)}
-                                            className="transition-all active:scale-90"
-                                        >
-                                            <Star className={cn("w-8 h-8 transition-colors", userRating >= star ? "text-yellow-500 fill-current" : "text-card-border")} />
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <textarea
-                                    placeholder="Görüşleriniz..."
-                                    value={userComment}
-                                    onChange={(e) => setUserComment(e.target.value)}
-                                    className="w-full bg-card border border-card-border rounded-xl p-4 text-xs font-bold text-foreground placeholder:text-secondary/50 outline-none focus:border-yellow-500 transition-all resize-none h-24 mb-6"
-                                />
-
-                                <div className="w-full flex flex-col gap-2">
-                                    <button
-                                        onClick={() => { setSuccessMessage("Değerlendirildi ✨"); setActiveModal('success'); setTimeout(() => setActiveModal(null), 2000); }}
-                                        disabled={userRating === 0}
-                                        className="w-full bg-foreground text-background py-3.5 rounded-xl font-black text-xs uppercase tracking-wider disabled:opacity-20 transition-all active:scale-95 duration-200"
-                                    >
-                                        Gönder ve Kapat
-                                    </button>
-                                    <button onClick={() => setActiveModal(null)} className="text-[9px] font-black text-secondary hover:text-foreground uppercase tracking-wider py-2">İptal</button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-
-                {/* MODALS RENDERING */}
-                {isVeterinary && <>
-                    <DentalCareModal isOpen={activeModal === 'dental'} onClose={() => setActiveModal(null)} />
-                    <PharmacyModal isOpen={activeModal === 'pharma'} onClose={() => setActiveModal(null)} />
-                </>}
                 <ClinicListModal 
                     isOpen={activeModal === 'clinicList'} 
                     onClose={() => setActiveModal(null)}
@@ -1662,15 +1336,6 @@ function VetPageContent() {
                     onSelectClinic={(clinic) => openAppointment(clinic)}
                     isLoading={isLoading}
                 />
-
-                {/* SUCCESS TOAST */}
-                {activeModal === 'success' && (
-                    <motion.div key="success-toast" initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-8 inset-x-0 flex justify-center z-[300] pointer-events-none">
-                        <div className="bg-card text-foreground px-6 py-3 rounded-full shadow-2xl font-black text-xs flex items-center gap-2 border border-zinc-200 dark:border-accent/30 transition-colors duration-300">
-                            <CheckCircle2 className="w-4 h-4 text-accent dark:text-accent" /> {successMessage}
-                        </div>
-                    </motion.div>
-                )}
 
                 {/* REVIEW PROMPT TOAST */}
                 {pendingReviewPrompt && (
@@ -1681,11 +1346,11 @@ function VetPageContent() {
                         exit={{ y: 50, opacity: 0 }} 
                         className="fixed bottom-24 inset-x-4 md:inset-x-auto md:right-8 md:bottom-24 flex justify-center md:justify-end z-[250]"
                     >
-                        <div className="bg-card text-foreground p-4 rounded-2xl shadow-2xl border border-zinc-200 dark:border-accent/30 flex items-center justify-between gap-4 w-full md:w-auto max-w-sm">
-                            <div className="flex flex-col gap-1">
-                                <span className="font-black text-xs text-accent uppercase tracking-widest">DEĞERLENDİRME</span>
-                                <span className="text-xs font-bold leading-snug">
-                                    {pendingReviewPrompt.clinicName} ile randevunuz nasıldı? Yorum bırakın <Star className="inline w-3 h-3 text-yellow-500 fill-current mb-0.5"/>
+                        <div className="bg-card text-foreground p-4 rounded-2xl shadow-2xl border border-card-border flex items-center justify-between gap-3 w-full md:w-auto max-w-sm">
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="font-black text-sm">Ziyaretin nasıldı?</span>
+                                <span className="text-xs font-semibold text-secondary leading-snug">
+                                    {pendingReviewPrompt.clinicName} için kısa bir değerlendirme bırak.
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1698,7 +1363,7 @@ function VetPageContent() {
                                         setDrawerDefaultReview(true);
                                         setPendingReviewPrompt(null);
                                     }}
-                                    className="bg-accent text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:bg-accent transition-colors cursor-pointer"
+                                    className="bg-accent text-white px-3.5 h-9 rounded-xl text-xs font-black whitespace-nowrap cursor-pointer"
                                 >
                                     Değerlendir
                                 </button>
@@ -1707,7 +1372,8 @@ function VetPageContent() {
                                         localStorage.setItem(`moffi_review_prompt_shown_${pendingReviewPrompt.id}`, "true");
                                         setPendingReviewPrompt(null);
                                     }}
-                                    className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
+                                    aria-label="Kapat"
+                                    className="p-2 text-secondary hover:text-foreground transition-colors cursor-pointer"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -1743,7 +1409,7 @@ function VetPageContent() {
                                                 <span className="text-[9px] text-zinc-400 font-bold">{log.date}</span>
                                             </div>
                                             <p className="text-[10.5px] text-secondary font-medium leading-relaxed">
-                                                Hekim, <strong>{log.petName}</strong> isimli evcil hayvanınızın şu paylaşılan verilerine erişim sağladı:
+                                                Bu randevuda <strong>{log.petName}</strong> için işletmeyle şu bilgileri paylaştın:
                                             </p>
                                             <div className="flex flex-wrap gap-1.5 pt-1">
                                                 {log.sharedFields.map((field: string, fIdx: number) => {
@@ -1777,27 +1443,32 @@ function VetPageContent() {
                     businessType={selectedBusinessType}
                     defaultOpenReviewForm={drawerDefaultReview}
                     defaultReviewAppointmentId={drawerDefaultReviewAppointmentId}
-                    onClose={() => { 
-                        setDetailClinicId(null); 
-                        setDetailClinicData(null); 
-                        setDrawerDefaultReview(false);
-                        setDrawerDefaultReviewAppointmentId(null);
-                    }}
-                    onBookAppointment={(clinic) => {
+                    isFavorite={detailClinicId ? isFavorite(detailClinicId) : false}
+                    onToggleFavorite={detailClinicId ? () => toggleFavorite(detailClinicId) : undefined}
+                    onClose={() => {
                         setDetailClinicId(null);
                         setDetailClinicData(null);
                         setDrawerDefaultReview(false);
                         setDrawerDefaultReviewAppointmentId(null);
-                        openAppointment(clinic);
+                    }}
+                    onBookAppointment={(clinic, serviceName) => {
+                        setDetailClinicId(null);
+                        setDetailClinicData(null);
+                        setDrawerDefaultReview(false);
+                        setDrawerDefaultReviewAppointmentId(null);
+                        openAppointmentWithService(clinic, serviceName);
                     }}
                 />
 
-                {/* 6. MEDICATION & NUTRITION MODALS */}
-                {isVeterinary && <MedicationModal
-                    isOpen={activeMedicationModal} 
-                    onClose={() => setActiveMedicationModal(false)} 
-                    petId={activePet?.id || ''} 
-                />}
+                <AnimatePresence>
+                    {bookingSummary && (
+                        <BookingConfirmation
+                            summary={bookingSummary}
+                            onClose={() => setBookingSummary(null)}
+                            onViewAppointments={() => { setBookingSummary(null); setViewMode('appointments'); window.scrollTo({ top: 0 }); }}
+                        />
+                    )}
+                </AnimatePresence>
         </div>
     );
 }

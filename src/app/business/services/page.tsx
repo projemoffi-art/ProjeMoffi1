@@ -131,7 +131,8 @@ export default function BusinessServicesPage() {
                     service_name: s.service_name,
                     duration_minutes: Math.min(Math.max(parseInt(s.duration_minutes) || 30, 5), 480),
                     price: s.price === '' || s.price == null ? null : Math.max(Number(s.price), 0),
-                    is_custom: s.is_custom
+                    is_custom: s.is_custom,
+                    description: (s.description || '').trim() || null
                 }));
 
                 const { error: insError } = await supabase
@@ -292,7 +293,7 @@ export default function BusinessServicesPage() {
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: "auto" }}
                                             exit={{ opacity: 0, height: 0 }}
-                                            className="flex items-center justify-between gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50"
+                                            className="flex items-start justify-between gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50"
                                         >
                                             <div className="min-w-0 flex-1">
                                                 <div className="font-bold text-sm text-foreground dark:text-white truncate">{svc.service_name}{svc.is_custom && <span className="text-[10px] text-gray-500 font-bold"> · Özel</span>}</div>
@@ -323,6 +324,15 @@ export default function BusinessServicesPage() {
                                                         ₺
                                                     </label>
                                                 </div>
+                                                <input
+                                                    type="text"
+                                                    maxLength={160}
+                                                    placeholder="Kısa açıklama (müşteriye gösterilir)"
+                                                    aria-label={`${svc.service_name} açıklaması`}
+                                                    value={svc.description ?? ''}
+                                                    onChange={e => updateService(svc.id, { description: e.target.value })}
+                                                    className="mt-2 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground dark:text-white outline-none focus:border-indigo-500"
+                                                />
                                             </div>
                                             <button onClick={() => handleRemove(svc.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">
                                                 <Trash2 className="w-4 h-4" />

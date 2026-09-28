@@ -459,11 +459,11 @@ export default function BusinessAppointmentsPage() {
                 setEditingReplyId(null);
                 await loadReviews();
             } else {
-                alert("Yanıt gönderilemedi.");
+                showToast("Yanıt gönderilemedi.", "AlertCircle", "text-red-500 font-bold");
             }
         } catch (error) {
             console.error("Yanıt hatası:", error);
-            alert("Beklenmeyen bir hata oluştu.");
+            showToast("Beklenmeyen bir hata oluştu.", "AlertCircle", "text-red-500 font-bold");
         } finally {
             setIsSubmittingReply(prev => ({ ...prev, [reviewId]: false }));
         }
@@ -1748,7 +1748,9 @@ export default function BusinessAppointmentsPage() {
                                         )}
                                     >
                                         <div className="flex items-center gap-3 overflow-hidden">
-                                            <img src={conv.avatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
+                                            {conv.avatar
+                                            ? <img src={conv.avatar} alt="" className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
+                                            : <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-black text-sm flex items-center justify-center shrink-0">{(conv.partnerName || '?').charAt(0).toLocaleUpperCase('tr-TR')}</div>}
                                             <div className="overflow-hidden">
                                                 <div className="font-bold text-sm truncate dark:text-white text-zinc-800">{conv.partnerName}</div>
                                                 <div className={cn("text-xs truncate", conv.unread ? "font-bold text-indigo-500" : "text-zinc-500")}>
@@ -1782,7 +1784,9 @@ export default function BusinessAppointmentsPage() {
                                         >
                                             <ChevronLeft className="w-5 h-5" />
                                         </button>
-                                        <img src={selectedConv.avatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
+                                        {selectedConv.avatar
+                                            ? <img src={selectedConv.avatar} alt="" className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
+                                            : <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-black text-sm flex items-center justify-center shrink-0">{(selectedConv.partnerName || '?').charAt(0).toLocaleUpperCase('tr-TR')}</div>}
                                         <h3 className="font-black text-sm uppercase dark:text-white text-zinc-800">{selectedConv.partnerName}</h3>
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -1796,7 +1800,7 @@ export default function BusinessAppointmentsPage() {
                                     <div className="p-4 border-t border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-[#18181b]">
                                         <ChatComposer
                                             onSend={handleSendMessage}
-                                            uploadImage={(file) => apiService.uploadMedia(file)}
+                                            uploadImage={(file) => apiService.uploadMedia(file, 'posts')}
                                             sending={isSendingMessage}
                                         />
                                     </div>

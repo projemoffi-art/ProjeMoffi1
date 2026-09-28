@@ -518,8 +518,8 @@ export class MockApiService implements IApiService {
     async getOrders(): Promise<ShopOrder[]> {
         return await this.loadData<ShopOrder[]>('orders') || [];
     }
-
-
+
+
 
     async togglePetSosStatus(petId: string, status: 'safe' | 'lost'): Promise<void> {
         const pets = await this.getPets();
@@ -750,6 +750,15 @@ export class MockApiService implements IApiService {
     async createBusinessAppointment(input: any): Promise<string> { throw new Error('Demo modunda işletme randevusu oluşturulamaz.'); }
     async rescheduleAppointment(appointmentId: string, newStart: string, doctorId: string | null, ignoreHours: boolean): Promise<void> { throw new Error('Demo modunda yeniden planlama yapılamaz.'); }
     async getClinicClients(): Promise<any[]> { return []; }
+    async getFavoriteClinicIds(): Promise<string[]> { return []; }
+    async setFavoriteClinic(clinicId: string, favorite: boolean): Promise<void> {}
+    async getClinicsByIds(clinicIds: string[]): Promise<any[]> { return []; }
+    async getReminderPrefs() { return { h24: true, h2: true, day: true }; }
+    async setReminderPrefs(prefs: { h24: boolean; h2: boolean; day: boolean }): Promise<void> {}
+    async getBusinessProfile(): Promise<any> { return null; }
+    async updateBusinessProfile(p: any): Promise<void> {}
+    async getClinicOrders(clinicId: string): Promise<ShopOrder[]> { return []; }
+    async getMySharedPassports(): Promise<any[]> { return []; }
     async requestReschedule(appointmentId: string, newStart: string): Promise<void> { throw new Error('Demo modunda erteleme yapılamaz.'); }
     async respondReschedule(appointmentId: string, accept: boolean): Promise<void> { throw new Error('Demo modunda erteleme yanıtlanamaz.'); }
     async getVisitSummary(appointmentId: string): Promise<any | null> { return null; }
@@ -1831,7 +1840,7 @@ export class MockApiService implements IApiService {
         return true;
     }
 
-    // Clinic Messages & Campaigns (Faz 8)
+    // Clinic Messages & Campaigns (Faz 8)
     async getClinicAppointments(clinicId: string): Promise<any[]> {
         return [];
     }

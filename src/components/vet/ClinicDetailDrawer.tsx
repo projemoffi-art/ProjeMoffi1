@@ -1,61 +1,54 @@
 "use client";
 
-import { Fragment, useState, useEffect, useRef } from "react";
+import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    X, Phone, Navigation, Star, MapPin, Maximize,
-    Calendar, Clock, ShieldCheck, ChevronRight, ChevronLeft,
-    Users, MessageSquare, Info, Megaphone, Tag
+    X, Phone, Navigation, Star, MapPin, Calendar, Clock, ShieldCheck, ChevronRight, ChevronLeft,
+    Users, MessageSquare, Megaphone, Tag, Heart, Share2, Globe, CheckCircle2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, showToast } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { VetClinic } from "@/types/domain";
 import { supabase } from "@/lib/supabase";
 import { haptics } from "@/lib/haptics";
-import { FilterChips } from "@/components/vet/find/FilterChips";
 import { getBusinessTypeConfig } from "@/config/businessTypes";
 import { CHAT_MESSAGE_EVENT, type ChatMessageEventDetail } from "@/context/ChatContext";
 import type { BusinessType } from "@/context/AuthContext";
+import { usePet } from "@/context/PetContext";
+import { CategoryTile, FilterChips, directionsUrl, formatDistance, openStatusText } from "@/components/vet/VetShared";
 
-// Faz 25 — Ekran 4 (bkz. design-reference/vet-final/README.md). Baran'ın
-// "kaba" bulgusu bu bileşenle ilgiliydi — ama veri katmanı tamamen gerçekti
-// (getClinicDetails/getClinicReviews/getClinicCampaigns/gerçek sohbet/gerçek
-// yorum gönderme). Bu turda SADECE görsel dil yeniden inşa edildi, hiçbir
-// state/fetch/handler mantığı değişmedi. Referansın 4 sekmesi (Genel Bakış/
-// Hizmetler/Yorumlar/Ekip) yerine, GERÇEK veri modeliyle birebir örtüşen 3
-// sekme korundu (info/doctors/reviews) — "Hizmetler" içeriği zaten Genel
-// Bakış'taki gerçek `clinic.features` listesinde gösteriliyordu, ayrı bir
-// sekme açmak uydurma bir ayrım olurdu (README'nin "genel gözlem" notuna göre).
+// Referans Ekran 4 (klinik detayı) + 8 (yorumlar) + 9 (ekip) + 10 (hizmetler): design-reference/vet-final.
 
 interface ClinicDetailDrawerProps {
     clinicId: string | null;
     clinicData?: any;
     businessType?: BusinessType;
     onClose: () => void;
-    onBookAppointment: (clinic: VetClinic) => void;
+    onBookAppointment: (clinic: VetClinic, serviceName?: string) => void;
     defaultOpenReviewForm?: boolean;
     defaultReviewAppointmentId?: string | null;
+    isFavorite?: boolean;
+    onToggleFavorite?: () => void;
 }
 
-import { usePet } from "@/context/PetContext";
+type Tab = 'info' | 'services' | 'reviews' | 'team';
+type ReviewSort = 'all' | 'newest' | 'highest' | 'lowest';
 
-const TABS: { key: 'info' | 'doctors' | 'reviews'; label: string; icon: any }[] = [
-    { key: 'info', label: 'Genel Bakış', icon: Info },
-    { key: 'doctors', label: 'Ekip', icon: Users },
-    { key: 'reviews', label: 'Yorumlar', icon: Star },
-];
-
-export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet', onClose, onBookAppointment, defaultOpenReviewForm, defaultReviewAppointmentId }: ClinicDetailDrawerProps) {
+export function ClinicDetailDrawer({
+    clinicId, clinicData, businessType = 'vet', onClose, onBookAppointment,
+    defaultOpenReviewForm, defaultReviewAppointmentId, isFavorite, onToggleFavorite
+}: ClinicDetailDrawerProps) {
     const { activePet } = usePet();
     const businessConfig = getBusinessTypeConfig(businessType);
     const [clinic, setClinic] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'info' | 'doctors' | 'reviews'>('info');
+    const [activeTab, setActiveTab] = useState<Tab>('info');
     const drawerRef = useRef<HTMLDivElement>(null);
 
     const [reviews, setReviews] = useState<any[]>([]);
     const [averageRating, setAverageRating] = useState<number>(0);
+    const [reviewSort, setReviewSort] = useState<ReviewSort>('all');
     const [reviewableAppointments, setReviewableAppointments] = useState<any[]>([]);
     const [activeReviewAppointmentId, setActiveReviewAppointmentId] = useState<string | null>(null);
     const [rating, setRating] = useState(0);
@@ -64,16 +57,19 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [campaigns, setCampaigns] = useState<any[]>([]);
     const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
-    const [isPhotoLightboxOpen, setIsPhotoLightboxOpen] = useState(false);
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [chatMessages, setChatMessages] = useState<any[]>([]);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+    const targetId = clinicData ? clinicData.id : clinicId;
+
     const loadConversation = async () => {
-        if (!clinicId || !currentUser?.id) return;
-        const messages = await apiService.getChatMessages(clinicId, 'clinic');
+        if (!targetId || !currentUser?.id) return;
+        const messages = await apiService.getChatMessages(targetId, 'clinic');
         setChatMessages(messages);
-        await apiService.markChatAsRead(clinicId, 'clinic');
+        await apiService.markChatAsRead(targetId, 'clinic');
     };
 
     // Yeni mesaj/okundu bilgisi ChatContext'in tek Realtime kanalından gelir (yoklama yok).
@@ -82,28 +78,24 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
         loadConversation();
         const onChat = (e: Event) => {
             const { senderId, receiverId } = (e as CustomEvent<ChatMessageEventDetail>).detail;
-            if (senderId === clinicId || receiverId === clinicId) loadConversation();
+            if (senderId === targetId || receiverId === targetId) loadConversation();
         };
         window.addEventListener(CHAT_MESSAGE_EVENT, onChat);
         return () => window.removeEventListener(CHAT_MESSAGE_EVENT, onChat);
-    }, [isChatOpen, clinicId, currentUser]);
+    }, [isChatOpen, targetId, currentUser]);
 
     const handleSendMessage = async (text: string, attachmentUrl?: string) => {
-        if ((!text.trim() && !attachmentUrl) || !clinicId || !currentUser?.id || isSendingMessage) return;
+        if ((!text.trim() && !attachmentUrl) || !targetId || !currentUser?.id || isSendingMessage) return;
         setIsSendingMessage(true);
         try {
-            await apiService.sendChatMessage(clinicId, text.trim(), 'clinic', undefined, attachmentUrl);
+            await apiService.sendChatMessage(targetId, text.trim(), 'clinic', undefined, attachmentUrl);
             await loadConversation();
-        } catch (err) {
-            console.error("Error in handleSendMessage:", err);
-            throw err;
         } finally {
             setIsSendingMessage(false);
         }
     };
 
     const handleRecallMessage = async (messageId: string) => {
-        if (!window.confirm("Bu mesajı geri almak istediğine emin misin?")) return;
         try {
             await apiService.recallChatMessage(messageId);
             loadConversation();
@@ -115,77 +107,64 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
     useEffect(() => {
         if (clinicId) {
             fetchDetails();
-            if (defaultOpenReviewForm) {
-                setActiveTab('reviews');
-            } else {
-                setActiveTab('info');
-                setActiveReviewAppointmentId(null);
-            }
+            setIsChatOpen(false);
+            setActiveTab(defaultOpenReviewForm ? 'reviews' : 'info');
+            if (!defaultOpenReviewForm) setActiveReviewAppointmentId(null);
         } else {
             setClinic(null);
             setActiveTab('info');
             setActiveReviewAppointmentId(null);
         }
-    }, [clinicId, clinicData, defaultOpenReviewForm, activePet?.id]);
+    }, [clinicId, clinicData?.id, defaultOpenReviewForm, activePet?.id]);
 
     useEffect(() => {
         if (defaultOpenReviewForm && reviewableAppointments.length > 0 && !activeReviewAppointmentId) {
-            const targetId = (defaultReviewAppointmentId && reviewableAppointments.some(a => a.id === defaultReviewAppointmentId))
+            const target = (defaultReviewAppointmentId && reviewableAppointments.some(a => a.id === defaultReviewAppointmentId))
                 ? defaultReviewAppointmentId
                 : reviewableAppointments[0]?.id;
-            setActiveReviewAppointmentId(targetId);
+            setActiveReviewAppointmentId(target);
         }
     }, [reviewableAppointments, defaultOpenReviewForm, defaultReviewAppointmentId]);
+
+    const loadReviews = async () => {
+        const reviewsRes = await apiService.getClinicReviews(targetId!);
+        setReviews(reviewsRes.reviews);
+        setAverageRating(reviewsRes.averageRating);
+    };
+
+    const loadReviewable = async (userId: string) => {
+        const rAppts = await apiService.getReviewableAppointments(userId);
+        setReviewableAppointments(rAppts.filter((apt: any) => apt.clinic_id === targetId));
+    };
 
     const fetchDetails = async () => {
         setLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             setCurrentUser(user);
-
-            const targetId = clinicData ? clinicData.id : clinicId;
             const res = await apiService.getClinicDetails(targetId!);
+            if (!res) {
+                setClinic(null);
+                return;
+            }
+            setClinic({
+                ...(clinicData || {}),
+                ...res,
+                calculated_distance: clinicData?.calculated_distance,
+            });
 
-            const cData = { ...res, logo: res?.avatar_url || res?.logo || null };
-            setClinic(cData);
-
-            try {
-                const camps = await apiService.getClinicCampaigns(targetId!);
-                const activeCamps = camps.filter((c: any) => {
+            apiService.getClinicCampaigns(targetId!).then(camps => {
+                setCampaigns(camps.filter((c: any) => {
                     if (c.status && c.status !== 'active') return false;
                     const expirationStr = c.expires_at || c.ends_at;
                     if (expirationStr && new Date(expirationStr) <= new Date()) return false;
                     const campTarget = c.target_pet_type || 'all';
-                    if (campTarget !== 'all') {
-                        if (!activePet || !activePet.type) return false;
-                        if (campTarget !== activePet.type) return false;
-                    }
-                    return true;
-                });
-                setCampaigns(activeCamps);
-            } catch (err) {
-                console.error("Kampanyalar yüklenirken hata:", err);
-            }
+                    return campTarget === 'all' || (!!activePet?.type && campTarget === activePet.type);
+                }));
+            }).catch(err => console.error("Kampanyalar yüklenirken hata:", err));
 
-            if (clinicData) {
-                const finalClinic = {
-                    ...clinicData,
-                    ...cData,
-                    imageUrl: clinicData?.avatar_url || clinicData?.logo || res?.avatar_url || res?.logo || null,
-                    distance: clinicData.distance
-                };
-                setClinic(finalClinic);
-            }
-
-            const reviewsRes = await apiService.getClinicReviews(targetId!);
-            setReviews(reviewsRes.reviews);
-            setAverageRating(reviewsRes.averageRating);
-
-            if (user) {
-                const rAppts = await apiService.getReviewableAppointments(user.id);
-                const clinicReviewableAppts = rAppts.filter((apt: any) => apt.clinic_id === targetId);
-                setReviewableAppointments(clinicReviewableAppts);
-            }
+            await loadReviews();
+            if (user) await loadReviewable(user.id);
         } catch (err) {
             console.error(err);
         } finally {
@@ -197,36 +176,63 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
         if (!activeReviewAppointmentId || rating === 0) return;
         setIsSubmittingReview(true);
         try {
-            const targetId = clinicData ? clinicData.id : clinicId;
             const success = await apiService.submitReview(targetId!, activeReviewAppointmentId, rating, comment);
             if (success) {
                 haptics.success();
                 setRating(0);
                 setComment("");
                 setActiveReviewAppointmentId(null);
-                const reviewsRes = await apiService.getClinicReviews(targetId!);
-                setReviews(reviewsRes.reviews);
-                setAverageRating(reviewsRes.averageRating);
-                if (currentUser) {
-                    const rAppts = await apiService.getReviewableAppointments(currentUser.id);
-                    const clinicReviewableAppts = rAppts.filter((apt: any) => apt.clinic_id === targetId);
-                    setReviewableAppointments(clinicReviewableAppts);
-                }
+                await loadReviews();
+                if (currentUser) await loadReviewable(currentUser.id);
+                showToast("Değerlendirmen yayınlandı, teşekkürler!", "CheckCircle2", "text-emerald-500 font-bold");
             }
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            showToast(err?.message || "Değerlendirme gönderilemedi.", "AlertCircle", "text-red-500 font-bold");
         } finally {
             setIsSubmittingReview(false);
         }
     };
 
-    const clinicAvatarUrl = clinic?.avatar_url || clinic?.logo || clinic?.imageUrl || clinicData?.avatar_url || clinicData?.logo || clinicData?.imageUrl || null;
+    const handleShare = async () => {
+        const url = `${window.location.origin}/vet?${businessType !== 'vet' ? `type=${businessType}&` : ''}clinic=${targetId}`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: clinic?.name, url });
+                return;
+            }
+            await navigator.clipboard.writeText(url);
+            showToast("Bağlantı kopyalandı.", "CheckCircle2", "text-emerald-500 font-bold");
+        } catch {
+            // Kullanıcı paylaşım penceresini kapattı.
+        }
+    };
+
+    const offeredShortcuts = useMemo(() => {
+        const features: string[] = (clinic?.services || []).map((s: any) => (s.service_name || '').toLocaleLowerCase('tr-TR'));
+        return businessConfig.customerShortcuts.filter(sc => features.some(f => sc.keywords.some(k => f.includes(k))));
+    }, [clinic?.services, businessConfig]);
+
+    const distribution = useMemo(() => [5, 4, 3, 2, 1].map(star => ({
+        star,
+        count: reviews.filter(r => Math.round(r.rating) === star).length
+    })), [reviews]);
+
+    const sortedReviews = useMemo(() => {
+        const list = [...reviews];
+        if (reviewSort === 'newest') list.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+        if (reviewSort === 'highest') list.sort((a, b) => b.rating - a.rating);
+        if (reviewSort === 'lowest') list.sort((a, b) => a.rating - b.rating);
+        return list;
+    }, [reviews, reviewSort]);
+
+    const heroUrl = clinic?.coverUrl || clinic?.imageUrl || clinicData?.imageUrl || null;
+    const distance = formatDistance(clinic?.calculated_distance);
 
     return (
         <>
             <AnimatePresence>
                 {clinicId && (
-                    <div key="drawer-wrapper">
+                    <div key="drawer-wrapper" className="theme-vet">
                         <motion.div
                             key="backdrop"
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -239,24 +245,22 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
                             ref={drawerRef}
                             initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
                             transition={{ type: "spring", damping: 28, stiffness: 240 }}
-                            className="fixed top-0 right-0 z-[6200] w-full sm:w-[440px] h-full bg-background shadow-2xl border-l border-card-border flex flex-col overflow-y-auto no-scrollbar"
+                            className="fixed top-0 right-0 z-[6200] w-full sm:w-[440px] h-full bg-background text-foreground shadow-2xl border-l border-card-border flex flex-col overflow-y-auto no-scrollbar"
                         >
                             {isChatOpen ? (
                                 <div className="flex flex-col h-full bg-card">
                                     <div className="flex items-center gap-3 p-4 border-b border-card-border sticky top-0 bg-card z-10">
-                                        <button onClick={() => setIsChatOpen(false)} className="w-9 h-9 rounded-full bg-gray-50 dark:bg-white/5 flex items-center justify-center active:scale-90 transition-transform">
-                                            <ChevronLeft className="w-4.5 h-4.5 text-foreground" />
+                                        <button onClick={() => setIsChatOpen(false)} aria-label="Geri" className="w-9 h-9 rounded-full bg-card-border/40 flex items-center justify-center">
+                                            <ChevronLeft className="w-4 h-4" />
                                         </button>
-                                        {clinicAvatarUrl ? (
-                                            <img src={clinicAvatarUrl} className="w-10 h-10 rounded-full object-cover" alt="" />
-                                        ) : (
-                                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-                                                <span className="font-black text-slate-400">{(clinic?.name || clinicData?.name || 'K')[0]}</span>
-                                            </div>
-                                        )}
-                                        <div>
-                                            <h3 className="font-black text-[13px] text-foreground">{clinic?.name || clinicData?.name}</h3>
-                                            <p className="text-[10px] text-slate-400 font-bold">Sohbet</p>
+                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-card-border/40 flex items-center justify-center shrink-0">
+                                            {clinic?.logoUrl || clinic?.imageUrl
+                                                ? <img src={clinic.logoUrl || clinic.imageUrl} className="w-full h-full object-cover" alt="" />
+                                                : <span className="font-black text-secondary">{(clinic?.name || 'K').charAt(0)}</span>}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h3 className="font-black text-sm truncate">{clinic?.name}</h3>
+                                            <p className="text-[11px] text-secondary font-semibold">Mesajlar</p>
                                         </div>
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col no-scrollbar">
@@ -268,237 +272,238 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
                                         />
                                     </div>
                                     <div className="p-4 border-t border-card-border bg-card sticky bottom-0">
-                                        <ChatComposer onSend={handleSendMessage} uploadImage={(file) => apiService.uploadMedia(file)} sending={isSendingMessage} />
+                                        <ChatComposer onSend={handleSendMessage} uploadImage={(file) => apiService.uploadMedia(file, 'posts')} sending={isSendingMessage} />
                                     </div>
                                 </div>
-                            ) : loading ? (
+                            ) : loading && !clinic ? (
                                 <div className="flex-1 flex flex-col items-center justify-center gap-3">
-                                    <span className="text-2xl animate-bounce">🐾</span>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bilgiler getiriliyor...</p>
+                                    <span className="w-8 h-8 rounded-full border-4 border-accent border-t-transparent animate-spin" />
+                                    <p className="text-xs font-semibold text-secondary">Bilgiler yükleniyor…</p>
                                 </div>
-                            ) : clinic ? (
+                            ) : !clinic ? (
+                                <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+                                    <p className="text-sm font-bold text-secondary">Bu işletmenin bilgilerine şu an ulaşılamıyor.</p>
+                                    <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-card border border-card-border text-sm font-bold">Kapat</button>
+                                </div>
+                            ) : (
                                 <>
-                                    <div className="relative h-56 shrink-0">
-                                        {clinicAvatarUrl ? (
-                                            <img src={clinicAvatarUrl} className="w-full h-full object-cover" alt={clinic.name} />
+                                    <div className="relative h-56 shrink-0 bg-card-border/40">
+                                        {heroUrl ? (
+                                            <button onClick={() => setLightboxUrl(heroUrl)} className="w-full h-full" aria-label="Fotoğrafı büyüt">
+                                                <img src={heroUrl} className="w-full h-full object-cover" alt={clinic.name} />
+                                            </button>
                                         ) : (
-                                            <div className="w-full h-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-                                                <span className="text-5xl font-black text-slate-300">{(clinic?.name || 'K')[0]}</span>
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <span className="text-5xl font-black text-secondary/40">{(clinic.name || 'K').charAt(0)}</span>
                                             </div>
                                         )}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
-                                        <button onClick={onClose} className="absolute top-5 left-5 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center active:scale-90 transition-transform">
-                                            <X className="w-5 h-5 text-foreground" />
-                                        </button>
-                                        {clinicAvatarUrl && (
-                                            <button onClick={() => setIsPhotoLightboxOpen(true)} className="absolute top-5 right-5 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center active:scale-90 transition-transform">
-                                                <Maximize className="w-4.5 h-4.5 text-foreground" />
+                                        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-transparent pointer-events-none" />
+                                        <div className="absolute top-5 inset-x-5 flex items-center justify-between">
+                                            <button onClick={onClose} aria-label="Kapat" className="w-10 h-10 bg-white/90 text-zinc-900 rounded-full flex items-center justify-center">
+                                                <ChevronLeft className="w-5 h-5" />
                                             </button>
-                                        )}
+                                            <div className="flex gap-2">
+                                                <button onClick={handleShare} aria-label="Paylaş" className="w-10 h-10 bg-white/90 text-zinc-900 rounded-full flex items-center justify-center">
+                                                    <Share2 className="w-4 h-4" />
+                                                </button>
+                                                {onToggleFavorite && (
+                                                    <button onClick={onToggleFavorite} aria-label={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'} aria-pressed={isFavorite} className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
+                                                        <Heart className={cn("w-4 h-4", isFavorite ? "fill-accent text-accent" : "text-zinc-900")} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="px-6 pt-4">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h1 className="text-lg font-black text-foreground">{clinic.name}</h1>
-                                            {clinic.isPremium && (
-                                                <span className="flex items-center gap-1 text-[9px] font-black text-cyan-600 bg-cyan-50 dark:bg-cyan-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
-                                                    <ShieldCheck className="w-3 h-3" /> Moffi Onaylı
+                                    <div className="px-5 pt-5">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h1 className="text-xl font-black">{clinic.name}</h1>
+                                            {clinic.isVerified && (
+                                                <span className="flex items-center gap-1 text-[10px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                    <ShieldCheck className="w-3 h-3" /> Moffi onaylı
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-1.5 mb-4 flex-wrap">
+                                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[12px]">
                                             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                                            <span className="text-[12px] font-black text-foreground">{(averageRating === 0 && reviews.length === 0) ? '—' : averageRating.toFixed(1)}</span>
-                                            <span className="text-[12px] font-bold text-slate-400">({reviews.length} yorum)</span>
-                                            {clinic.distance && <><span className="text-slate-300 mx-0.5">·</span><span className="text-[11px] font-bold text-slate-400">{clinic.distance}</span></>}
-                                            <span className="text-slate-300 mx-0.5">·</span>
-                                            {clinic.isOpenNow ? (
-                                                <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Şu an açık</span>
-                                            ) : (
-                                                <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-slate-300" /> Şu an kapalı</span>
-                                            )}
+                                            <span className="font-black">{reviews.length > 0 ? averageRating.toFixed(1) : 'Yeni'}</span>
+                                            <span className="font-semibold text-secondary">({reviews.length} yorum)</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 mt-1 flex-wrap text-[12px] font-semibold text-secondary">
+                                            {distance && <><span>{distance}</span><span>·</span></>}
+                                            <span className={cn("flex items-center gap-1", clinic.isOpenNow ? "text-accent-secondary" : "")}>
+                                                <span className={cn("w-1.5 h-1.5 rounded-full", clinic.isOpenNow ? "bg-accent-secondary" : "bg-secondary/40")} />
+                                                {openStatusText(clinic)}
+                                            </span>
                                         </div>
 
-                                        <div className="grid grid-cols-3 gap-2.5 mb-5">
-                                            <button
-                                                onClick={() => { if (clinic.phone) { haptics.tap(); window.location.href = `tel:${clinic.phone}`; } }}
-                                                className={cn("flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-2xl transition-all active:scale-95", clinic.phone ? "bg-orange-500" : "bg-gray-100 dark:bg-white/5 opacity-50")}
-                                            >
-                                                <Phone className={cn("w-4.5 h-4.5", clinic.phone ? "text-white" : "text-slate-400")} />
-                                                <span className={cn("text-[9px] font-black uppercase tracking-wide", clinic.phone ? "text-white" : "text-slate-400")}>{clinic.phone ? "Şimdi Ara" : "Tel Yok"}</span>
-                                            </button>
-                                            <button
-                                                onClick={() => { haptics.tap(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(clinic.name + " " + clinic.address)}`, '_blank'); }}
-                                                className="flex flex-col items-center justify-center gap-1.5 py-3.5 bg-gray-50 dark:bg-white/5 rounded-2xl active:scale-95 transition-all"
-                                            >
-                                                <Navigation className="w-4.5 h-4.5 text-orange-500" />
-                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wide">Yol Tarifi</span>
-                                            </button>
-                                            <button
-                                                onClick={() => { haptics.tap(); setIsChatOpen(true); }}
-                                                className="flex flex-col items-center justify-center gap-1.5 py-3.5 bg-gray-50 dark:bg-white/5 rounded-2xl active:scale-95 transition-all"
-                                            >
-                                                <MessageSquare className="w-4.5 h-4.5 text-orange-500" />
-                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wide">Mesaj At</span>
+                                        {offeredShortcuts.length > 0 && (
+                                            <div className="grid grid-cols-4 gap-2 mt-5">
+                                                {offeredShortcuts.map(sc => (
+                                                    <CategoryTile key={sc.key} shortcut={sc} size="sm" onClick={() => { setActiveTab('services'); }} />
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-2.5 mt-5">
+                                            {clinic.phone ? (
+                                                <a href={`tel:${clinic.phone}`} className="flex items-center justify-center gap-2 h-11 rounded-xl bg-card border border-card-border text-sm font-bold">
+                                                    <Phone className="w-4 h-4 text-accent" /> Ara
+                                                </a>
+                                            ) : (
+                                                <span className="flex items-center justify-center gap-2 h-11 rounded-xl bg-card border border-card-border text-sm font-bold text-secondary/60">
+                                                    <Phone className="w-4 h-4" /> Telefon yok
+                                                </span>
+                                            )}
+                                            <button onClick={() => { haptics.tap(); setIsChatOpen(true); }} className="flex items-center justify-center gap-2 h-11 rounded-xl bg-card border border-card-border text-sm font-bold">
+                                                <MessageSquare className="w-4 h-4 text-accent" /> Mesaj gönder
                                             </button>
                                         </div>
 
                                         {campaigns.length > 0 && (
-                                            <div className="mb-5 rounded-2xl border border-orange-200 dark:border-orange-500/20 overflow-hidden">
+                                            <div className="mt-5 rounded-2xl border border-accent/20 overflow-hidden">
                                                 {campaigns.map((camp) => (
-                                                    <div key={camp.id} className="border-b border-orange-100 dark:border-orange-500/10 last:border-0 bg-orange-50/50 dark:bg-orange-500/5">
+                                                    <div key={camp.id} className="border-b border-accent/10 last:border-0 bg-accent/5">
                                                         <button onClick={() => setExpandedCampaignId(expandedCampaignId === camp.id ? null : camp.id)} className="w-full flex items-center justify-between p-3.5 text-left">
-                                                            <div className="flex items-center gap-2.5">
-                                                                <Megaphone className="w-4 h-4 text-orange-500 shrink-0" />
-                                                                <div>
-                                                                    <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest block">Özel Fırsat</span>
-                                                                    <span className="text-[12px] font-black text-foreground">{camp.title}</span>
+                                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                                <Megaphone className="w-4 h-4 text-accent shrink-0" />
+                                                                <div className="min-w-0">
+                                                                    <span className="text-[10px] font-black text-accent block">Özel fırsat</span>
+                                                                    <span className="text-[13px] font-black truncate block">{camp.title}</span>
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2 shrink-0">
-                                                                <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded-md">{camp.discount_value}</span>
-                                                                <ChevronRight className={cn("w-4 h-4 text-orange-500 transition-transform", expandedCampaignId === camp.id ? "rotate-90" : "")} />
+                                                                {camp.discount_value && <span className="bg-accent text-white text-[10px] font-black px-2 py-1 rounded-md">{camp.discount_value}</span>}
+                                                                <ChevronRight className={cn("w-4 h-4 text-accent transition-transform", expandedCampaignId === camp.id && "rotate-90")} />
                                                             </div>
                                                         </button>
-                                                        <AnimatePresence>
-                                                            {expandedCampaignId === camp.id && (
-                                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                                                    <div className="p-3.5 pt-0 text-[11px] text-slate-500">
-                                                                        {camp.media_url && <img src={camp.media_url} className="w-full rounded-xl mb-2.5 max-h-40 object-cover" alt="" />}
-                                                                        {camp.description && <p className="mb-2.5 font-medium">{camp.description}</p>}
-                                                                        {camp.coupon_code && (
-                                                                            <span className="inline-flex items-center gap-1.5 bg-white dark:bg-white/10 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-500/20">
-                                                                                <Tag className="w-3 h-3 text-orange-500" />
-                                                                                <span className="text-[11px] font-black text-orange-600">{camp.coupon_code}</span>
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </motion.div>
-                                                            )}
-                                                        </AnimatePresence>
+                                                        {expandedCampaignId === camp.id && (
+                                                            <div className="p-3.5 pt-0 text-[12px] text-secondary">
+                                                                {camp.media_url && <img src={camp.media_url} className="w-full rounded-xl mb-2.5 max-h-40 object-cover" alt="" />}
+                                                                {camp.description && <p className="mb-2.5 font-medium">{camp.description}</p>}
+                                                                {camp.coupon_code && (
+                                                                    <span className="inline-flex items-center gap-1.5 bg-card px-2.5 py-1 rounded-lg border border-accent/20">
+                                                                        <Tag className="w-3 h-3 text-accent" />
+                                                                        <span className="text-[12px] font-black text-accent select-all">{camp.coupon_code}</span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
 
-                                        <FilterChips options={TABS} value={activeTab} onChange={(k) => { setActiveTab(k); drawerRef.current?.scrollTo({ top: 0, behavior: 'instant' }); }} />
+                                        <div className="mt-6 border-b border-card-border flex gap-5 overflow-x-auto no-scrollbar" role="tablist">
+                                            {([['info', 'Genel bakış'], ['services', 'Hizmetler'], ['reviews', 'Yorumlar'], ['team', 'Ekip']] as [Tab, string][]).map(([key, label]) => (
+                                                <button
+                                                    key={key}
+                                                    role="tab"
+                                                    aria-selected={activeTab === key}
+                                                    onClick={() => setActiveTab(key)}
+                                                    className={cn("pb-2.5 text-[13px] font-bold whitespace-nowrap border-b-2 -mb-px transition-colors",
+                                                        activeTab === key ? "border-accent text-foreground" : "border-transparent text-secondary")}
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
 
-                                        <div className="py-5 pb-28">
+                                        <div className="py-5 pb-32">
                                             {activeTab === 'info' && (
-                                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-                                                    <div className="space-y-3">
-                                                        <div className="flex items-start gap-3">
-                                                            <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                                                            <div>
-                                                                <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest block">Adres</span>
-                                                                <span className="text-[12px] font-bold text-foreground">{clinic.address}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-start gap-3">
-                                                            <Clock className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                                                            <div>
-                                                                <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest block">Çalışma Durumu</span>
-                                                                <span className={cn("text-[12px] font-bold", clinic.isOpenNow ? "text-emerald-600" : "text-red-500")}>
-                                                                    {clinic.isOpenNow
-                                                                        ? (clinic.closesAt ? `Şu an açık · ${clinic.closesAt}'e kadar` : "Şu an açık")
-                                                                        : (clinic.opensAt ? `Şu an kapalı · ${clinic.opensAt}'de açılıyor` : "Şu an kapalı")}
-                                                                </span>
-                                                                {clinic.weeklyHours?.length > 0 && (
-                                                                    <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 text-[11px]">
-                                                                        {clinic.weeklyHours.map((h: { day: string; text: string }) => (
-                                                                            <Fragment key={h.day}>
-                                                                                <span className="font-bold text-slate-400">{h.day}</span>
-                                                                                <span className={cn("font-bold tabular-nums", h.text === 'Kapalı' ? "text-slate-400" : "text-foreground")}>{h.text}</span>
-                                                                            </Fragment>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {clinic.features?.filter(Boolean).length > 0 && (
-                                                        <div>
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2.5">Sunulan Hizmetler</span>
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                {clinic.features.filter(Boolean).map((feature: string, idx: number) => (
-                                                                    <div key={`${feature}-${idx}`} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-white/5 rounded-xl">
-                                                                        <ShieldCheck className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                                                                        <span className="text-[10.5px] font-black text-foreground">{feature}</span>
-                                                                    </div>
+                                                <div className="space-y-5">
+                                                    {clinic.about && <p className="text-[13px] leading-relaxed text-secondary font-medium whitespace-pre-line">{clinic.about}</p>}
+                                                    <InfoRow icon={MapPin} label="Adres">{clinic.address}</InfoRow>
+                                                    {clinic.phone && (
+                                                        <InfoRow icon={Phone} label="Telefon">
+                                                            <a href={`tel:${clinic.phone}`} className="text-accent">{clinic.phone}</a>
+                                                        </InfoRow>
+                                                    )}
+                                                    {clinic.website && (
+                                                        <InfoRow icon={Globe} label="Web sitesi">
+                                                            <a href={clinic.website.startsWith('http') ? clinic.website : `https://${clinic.website}`} target="_blank" rel="noopener noreferrer" className="text-accent break-all">{clinic.website.replace(/^https?:\/\//, '')}</a>
+                                                        </InfoRow>
+                                                    )}
+                                                    <InfoRow icon={Clock} label="Çalışma saatleri">
+                                                        <span className={clinic.isOpenNow ? "text-accent-secondary" : "text-secondary"}>{openStatusText(clinic)}</span>
+                                                        {clinic.weeklyHours?.length > 0 && (
+                                                            <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 text-[12px]">
+                                                                {clinic.weeklyHours.map((h: { day: string; text: string }) => (
+                                                                    <Fragment key={h.day}>
+                                                                        <span className="font-semibold text-secondary">{h.day}</span>
+                                                                        <span className={cn("font-bold tabular-nums", h.text === 'Kapalı' && "text-secondary")}>{h.text}</span>
+                                                                    </Fragment>
                                                                 ))}
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                </motion.div>
+                                                        )}
+                                                    </InfoRow>
+                                                </div>
                                             )}
 
-                                            {activeTab === 'doctors' && (
-                                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-                                                    {clinic.doctors?.map((doctor: any) => (
-                                                        <div key={doctor.id} className="bg-card rounded-2xl p-4 border border-card-border shadow-moffi-card">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-gray-100 dark:bg-white/5">
-                                                                    {doctor.imageUrl ? <img src={doctor.imageUrl} className="w-full h-full object-cover" alt="" /> : (
-                                                                        <div className="w-full h-full flex items-center justify-center"><span className="font-black text-slate-400">{(doctor.name || 'D')[0]}</span></div>
-                                                                    )}
+                                            {activeTab === 'services' && (
+                                                (clinic.services || []).length === 0 ? (
+                                                    <EmptyState icon={CheckCircle2} text="İşletme henüz hizmet listesini eklemedi." />
+                                                ) : (
+                                                    <div className="space-y-2.5">
+                                                        {clinic.services.map((svc: any) => (
+                                                            <button
+                                                                key={svc.id || svc.service_name}
+                                                                onClick={() => { haptics.tap(); onBookAppointment(clinic, svc.service_name); }}
+                                                                className="w-full bg-card border border-card-border rounded-2xl p-4 flex items-center gap-3 text-left hover:border-accent/30 transition-colors"
+                                                            >
+                                                                <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                                                                    <CheckCircle2 className="w-5 h-5" />
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <span className="text-[12px] font-black text-foreground block truncate">{doctor.name}</span>
-                                                                    <span className="text-[10px] font-bold text-slate-400">{doctor.specialization}</span>
+                                                                    <div className="text-sm font-black truncate">{svc.service_name}</div>
+                                                                    <div className="text-[11px] font-semibold text-secondary mt-0.5">
+                                                                        {svc.price != null && <>{Number(svc.price).toLocaleString('tr-TR')} ₺ · </>}~{svc.duration_minutes || 30} dk
+                                                                    </div>
+                                                                    {svc.description && <div className="text-[11px] text-secondary mt-1 line-clamp-2">{svc.description}</div>}
                                                                 </div>
-                                                            </div>
-                                                            {doctor.bio && <p className="text-[10.5px] font-medium text-slate-500 mt-3 leading-relaxed">{doctor.bio}</p>}
-                                                            {doctor.workingHours && (
-                                                                <div className="flex items-center gap-1.5 mt-2 text-[10px] font-bold text-slate-400">
-                                                                    <Clock className="w-3 h-3" /> {doctor.workingHours}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {(!clinic.doctors || clinic.doctors.length === 0) && (
-                                                        <div className="text-center py-16 px-6">
-                                                            <Users className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-                                                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{businessConfig.staffLabel} bilgisi bulunmuyor</p>
-                                                        </div>
-                                                    )}
-                                                </motion.div>
+                                                                <ChevronRight className="w-4 h-4 text-secondary shrink-0" />
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )
                                             )}
 
                                             {activeTab === 'reviews' && (
-                                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                                                <div>
                                                     {reviewableAppointments.length > 0 && (
-                                                        <div className="mb-5 space-y-3">
-                                                            {reviewableAppointments.map((apt: any, index: number) => (
-                                                                <div key={apt.id || apt.appointment_id || `apt-${index}`}>
+                                                        <div className="mb-6 space-y-3">
+                                                            {reviewableAppointments.map((apt: any) => (
+                                                                <div key={apt.id}>
                                                                     {activeReviewAppointmentId !== apt.id ? (
-                                                                        <button onClick={() => setActiveReviewAppointmentId(apt.id)} className="w-full bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-2xl py-3.5 flex flex-col items-center gap-0.5">
-                                                                            <span className="text-[9.5px] font-bold text-orange-500">{new Date(apt.appointment_date).toLocaleDateString('tr-TR')} tarihli randevun için</span>
-                                                                            <span className="text-[11px] font-black text-orange-600">Değerlendirme Yaz</span>
+                                                                        <button onClick={() => setActiveReviewAppointmentId(apt.id)} className="w-full bg-accent/5 border border-accent/20 rounded-2xl py-3.5 flex flex-col items-center gap-0.5">
+                                                                            <span className="text-[11px] font-semibold text-secondary">{new Date(apt.appointment_date).toLocaleDateString('tr-TR', { timeZone: 'UTC' })} tarihli randevun için</span>
+                                                                            <span className="text-[13px] font-black text-accent">Değerlendirme yaz</span>
                                                                         </button>
                                                                     ) : (
-                                                                        <div className="bg-card border border-card-border rounded-2xl p-4 space-y-3 shadow-moffi-card">
+                                                                        <div className="bg-card border border-card-border rounded-2xl p-4 space-y-3">
                                                                             <div className="flex justify-between items-center">
-                                                                                <span className="text-[11px] font-black text-foreground">Deneyimini puanla</span>
-                                                                                <button onClick={() => setActiveReviewAppointmentId(null)}><X className="w-4 h-4 text-slate-400" /></button>
+                                                                                <span className="text-[13px] font-black">Deneyimini puanla</span>
+                                                                                <button onClick={() => setActiveReviewAppointmentId(null)} aria-label="Kapat"><X className="w-4 h-4 text-secondary" /></button>
                                                                             </div>
                                                                             <div className="flex justify-center gap-1.5">
                                                                                 {[1, 2, 3, 4, 5].map((s) => (
-                                                                                    <button key={s} onClick={() => setRating(s)} className="active:scale-90 transition-transform">
-                                                                                        <Star className={cn("w-7 h-7", s <= rating ? "text-amber-400 fill-amber-400" : "text-slate-200")} />
+                                                                                    <button key={s} onClick={() => setRating(s)} aria-label={`${s} yıldız`}>
+                                                                                        <Star className={cn("w-8 h-8", s <= rating ? "text-amber-400 fill-amber-400" : "text-card-border")} />
                                                                                     </button>
                                                                                 ))}
                                                                             </div>
                                                                             <textarea
                                                                                 value={comment} onChange={(e) => setComment(e.target.value)}
-                                                                                placeholder="Deneyimini anlat... (isteğe bağlı)"
-                                                                                className="w-full bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-[11px] font-medium text-foreground placeholder:text-slate-400 outline-none resize-none min-h-[80px]"
+                                                                                placeholder="Deneyimini anlat (isteğe bağlı)"
+                                                                                aria-label="Yorum"
+                                                                                className="w-full bg-background border border-card-border rounded-xl p-3 text-[13px] font-medium outline-none focus:border-accent resize-none min-h-[80px]"
                                                                             />
                                                                             <button
                                                                                 onClick={handleSubmitReview}
                                                                                 disabled={rating === 0 || isSubmittingReview}
-                                                                                className="w-full h-11 rounded-xl bg-orange-500 text-white font-black text-[11px] uppercase tracking-widest disabled:opacity-50"
+                                                                                className="w-full h-11 rounded-xl bg-accent text-white font-black text-sm disabled:opacity-40"
                                                                             >
-                                                                                {isSubmittingReview ? 'Gönderiliyor...' : 'Gönder'}
+                                                                                {isSubmittingReview ? 'Gönderiliyor…' : 'Değerlendirmeyi gönder'}
                                                                             </button>
                                                                         </div>
                                                                     )}
@@ -509,33 +514,55 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
 
                                                     {reviews.length > 0 ? (
                                                         <>
-                                                            <div className="flex items-center gap-4 mb-5">
-                                                                <span className="text-3xl font-black text-foreground">{averageRating.toFixed(1)}</span>
-                                                                <div>
-                                                                    <div className="flex gap-0.5 mb-1">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-3.5 h-3.5", s <= Math.round(averageRating) ? "text-amber-400 fill-amber-400" : "text-slate-200")} />)}</div>
-                                                                    <span className="text-[10px] font-bold text-slate-400">{reviews.length} değerlendirme</span>
+                                                            <div className="flex items-center gap-5 mb-5">
+                                                                <div className="text-center shrink-0">
+                                                                    <div className="text-4xl font-black tabular-nums">{averageRating.toFixed(1)}</div>
+                                                                    <div className="flex gap-0.5 justify-center mt-1">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-3.5 h-3.5", s <= Math.round(averageRating) ? "text-amber-400 fill-amber-400" : "text-card-border")} />)}</div>
+                                                                    <div className="text-[11px] font-semibold text-secondary mt-1">{reviews.length} yorum</div>
+                                                                </div>
+                                                                <div className="flex-1 space-y-1">
+                                                                    {distribution.map(d => (
+                                                                        <div key={d.star} className="flex items-center gap-2 text-[11px] font-bold text-secondary">
+                                                                            <span className="w-2 tabular-nums">{d.star}</span>
+                                                                            <div className="flex-1 h-1.5 rounded-full bg-card-border/60 overflow-hidden">
+                                                                                <div className="h-full bg-accent rounded-full" style={{ width: `${reviews.length ? (d.count / reviews.length) * 100 : 0}%` }} />
+                                                                            </div>
+                                                                            <span className="w-5 text-right tabular-nums">{d.count}</span>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             </div>
-                                                            <div className="space-y-4">
-                                                                {reviews.map((review: any, index: number) => (
+                                                            <FilterChips<ReviewSort>
+                                                                className="mb-4"
+                                                                value={reviewSort}
+                                                                onChange={setReviewSort}
+                                                                options={[
+                                                                    { id: 'all', label: 'Tümü' },
+                                                                    { id: 'newest', label: 'En yeni' },
+                                                                    { id: 'highest', label: 'En yüksek' },
+                                                                    { id: 'lowest', label: 'En düşük' },
+                                                                ]}
+                                                            />
+                                                            <div className="space-y-5">
+                                                                {sortedReviews.map((review: any, index: number) => (
                                                                     <div key={review.id || `rev-${index}`}>
-                                                                        <div className="flex justify-between items-start mb-1.5">
-                                                                            <div className="flex items-center gap-2.5">
-                                                                                {review.user?.avatar ? <img src={review.user.avatar} className="w-8 h-8 rounded-full object-cover" alt="" /> : (
-                                                                                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center"><span className="text-[11px] font-black text-slate-400">{(review.user?.name || 'U')[0]}</span></div>
+                                                                        <div className="flex justify-between items-start mb-1.5 gap-3">
+                                                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                                                {review.user?.avatar ? <img src={review.user.avatar} className="w-9 h-9 rounded-full object-cover" alt="" /> : (
+                                                                                    <div className="w-9 h-9 rounded-full bg-card-border/60 flex items-center justify-center"><span className="text-[12px] font-black text-secondary">{(review.user?.name || 'K').charAt(0)}</span></div>
                                                                                 )}
-                                                                                <div>
-                                                                                    <span className="text-[11.5px] font-black text-foreground block">{review.user?.name}</span>
-                                                                                    <span className="text-[9.5px] font-bold text-slate-400">{new Date(review.created_at).toLocaleDateString('tr-TR')}</span>
+                                                                                <div className="min-w-0">
+                                                                                    <span className="text-[13px] font-black block truncate">{review.user?.name || 'Moffi kullanıcısı'}</span>
+                                                                                    <span className="text-[11px] font-semibold text-secondary">{new Date(review.created_at).toLocaleDateString('tr-TR')}</span>
                                                                                 </div>
                                                                             </div>
-                                                                            <div className="flex gap-0.5 shrink-0">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-2.5 h-2.5", s <= review.rating ? "text-amber-400 fill-amber-400" : "text-slate-200")} />)}</div>
+                                                                            <div className="flex gap-0.5 shrink-0 mt-1">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-3 h-3", s <= review.rating ? "text-amber-400 fill-amber-400" : "text-card-border")} />)}</div>
                                                                         </div>
-                                                                        {review.comment && <p className="text-[11px] font-medium text-slate-500 leading-relaxed">"{review.comment}"</p>}
+                                                                        {review.comment && <p className="text-[13px] font-medium text-secondary leading-relaxed">{review.comment}</p>}
                                                                         {review.clinic_reply && (
-                                                                            <div className="mt-2 p-3 bg-gray-50 dark:bg-white/5 rounded-xl ml-2.5">
-                                                                                <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest block mb-1">İşletme yanıtı</span>
-                                                                                <p className="text-[10.5px] font-medium text-slate-500 leading-relaxed">{review.clinic_reply}</p>
+                                                                            <div className="mt-2 p-3 bg-card border border-card-border rounded-xl ml-3">
+                                                                                <span className="text-[11px] font-black text-accent block mb-1">İşletmenin yanıtı</span>
+                                                                                <p className="text-[12px] font-medium text-secondary leading-relaxed">{review.clinic_reply}</p>
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -543,45 +570,108 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
                                                             </div>
                                                         </>
                                                     ) : (
-                                                        <div className="text-center py-16 px-6">
-                                                            <Star className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-                                                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Henüz değerlendirme yok</p>
+                                                        <EmptyState icon={Star} text="Henüz değerlendirme yok. İlk randevudan sonra yorumlar burada görünecek." />
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {activeTab === 'team' && (
+                                                <div className="space-y-6">
+                                                    {(clinic.doctors || []).length > 0 ? (
+                                                        <div className="space-y-2.5">
+                                                            {clinic.doctors.map((doctor: any) => (
+                                                                <div key={doctor.id} className="bg-card rounded-2xl p-3.5 border border-card-border flex items-center gap-3">
+                                                                    <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-card-border/50 flex items-center justify-center">
+                                                                        {doctor.imageUrl ? <img src={doctor.imageUrl} className="w-full h-full object-cover" alt="" /> : <span className="font-black text-secondary">{(doctor.name || 'D').charAt(0)}</span>}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <span className="text-[14px] font-black block truncate">{doctor.name}</span>
+                                                                        {doctor.specialization && <span className="text-[12px] font-semibold text-secondary">{doctor.specialization}</span>}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <EmptyState icon={Users} text={`${businessConfig.staffLabel} bilgisi henüz eklenmedi.`} />
+                                                    )}
+
+                                                    {(clinic.gallery || []).length > 0 && (
+                                                        <div>
+                                                            <h3 className="text-sm font-black mb-3">İşletmeden fotoğraflar</h3>
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                {clinic.gallery.map((url: string) => (
+                                                                    <button key={url} onClick={() => setLightboxUrl(url)} className="aspect-square rounded-xl overflow-hidden bg-card-border/40">
+                                                                        <img src={url} alt="" className="w-full h-full object-cover" />
+                                                                    </button>
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                     )}
-                                                </motion.div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="fixed bottom-0 right-0 w-full sm:w-[440px] z-30 p-4 bg-card border-t border-card-border">
+                                    <div className="fixed bottom-0 right-0 w-full sm:w-[440px] z-30 p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] bg-card border-t border-card-border grid grid-cols-[auto_1fr] gap-2.5">
+                                        <a
+                                            href={directionsUrl(clinic)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="h-12 px-5 rounded-xl border border-card-border bg-background font-black text-sm flex items-center justify-center gap-2"
+                                        >
+                                            <Navigation className="w-4 h-4 text-accent" /> Yol tarifi
+                                        </a>
                                         <button
                                             onClick={() => { haptics.tap(); onBookAppointment(clinic); }}
-                                            className="w-full h-12 rounded-full bg-orange-500 text-white font-black text-[12px] uppercase tracking-widest flex items-center justify-center gap-2"
+                                            className="h-12 rounded-xl bg-accent text-white font-black text-sm flex items-center justify-center gap-2"
                                         >
                                             <Calendar className="w-4 h-4" /> {businessConfig.customerBookingLabel}
                                         </button>
                                     </div>
                                 </>
-                            ) : null}
+                            )}
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
             <AnimatePresence>
-                {isPhotoLightboxOpen && clinicAvatarUrl && (
+                {lightboxUrl && (
                     <motion.div
                         key="photo-lightbox"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        onClick={() => setIsPhotoLightboxOpen(false)}
+                        onClick={() => setLightboxUrl(null)}
                         className="fixed inset-0 z-[6300] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
                     >
-                        <img src={clinicAvatarUrl} className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} alt="" />
-                        <button onClick={() => setIsPhotoLightboxOpen(false)} className="absolute top-6 right-6 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white active:scale-90 transition-transform">
+                        <img src={lightboxUrl} className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} alt="" />
+                        <button onClick={() => setLightboxUrl(null)} aria-label="Kapat" className="absolute top-6 right-6 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white">
                             <X className="w-5 h-5" />
                         </button>
                     </motion.div>
                 )}
             </AnimatePresence>
         </>
+    );
+}
+
+function InfoRow({ icon: Icon, label, children }: { icon: React.ComponentType<{ className?: string }>; label: string; children: React.ReactNode }) {
+    return (
+        <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-card border border-card-border flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-secondary" />
+            </div>
+            <div className="min-w-0 pt-0.5">
+                <span className="text-[11px] font-semibold text-secondary block">{label}</span>
+                <div className="text-[13px] font-bold">{children}</div>
+            </div>
+        </div>
+    );
+}
+
+function EmptyState({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>; text: string }) {
+    return (
+        <div className="text-center py-14 px-6">
+            <Icon className="w-8 h-8 text-secondary/40 mx-auto mb-3" />
+            <p className="text-secondary text-[13px] font-semibold">{text}</p>
+        </div>
     );
 }

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 
 import { useAuth } from "@/context/AuthContext";
 import { OrderStatus } from "@/types/business";
-import { cn } from "@/lib/utils";
+import { cn, showToast } from "@/lib/utils";
 import {
     ClipboardList, Search, Menu, X, Package, Truck, CheckCircle, XCircle,
     RotateCcw, Clock, Eye, ChevronRight, MapPin, User, ArrowRightLeft, Loader2
@@ -250,7 +250,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
             onStatusUpdate(nextStatus);
         } catch (err) {
             console.error("Durum güncellenirken hata:", err);
-            alert("Sipariş durumu güncellenemedi.");
+            showToast("Sipariş durumu güncellenemedi.", "AlertCircle", "text-red-500 font-bold");
         } finally {
             setUpdating(false);
         }
@@ -261,10 +261,10 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
         setSavingTracking(true);
         try {
             await apiService.updateOrderTracking(order.id, trackingNumber, carrier);
-            alert("Kargo bilgileri başarıyla kaydedildi!");
+            showToast("Kargo bilgileri kaydedildi.", "CheckCircle2", "text-emerald-500 font-bold");
         } catch (error) {
             console.error("Kargo bilgisi kaydedilemedi:", error);
-            alert("Kargo bilgisi kaydedilemedi.");
+            showToast("Kargo bilgisi kaydedilemedi.", "AlertCircle", "text-red-500 font-bold");
         } finally {
             setSavingTracking(false);
         }

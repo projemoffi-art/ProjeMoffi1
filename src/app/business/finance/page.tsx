@@ -1,318 +1,232 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { BusinessSidebar } from "@/components/business/Sidebar";
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { Loader2, TrendingUp, Wallet, Receipt, Calendar } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { FinanceTransaction, TransactionType } from "@/types/business";
-import { cn } from "@/lib/utils";
+import { useBusinessType } from "@/context/BusinessTypeContext";
 import { apiService } from "@/services/apiService";
-import {
-    Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-    Menu, DollarSign, BarChart3, CreditCard, Clock, CheckCircle,
-    Download, Calendar, Loader2, Banknote, PiggyBank, Receipt
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useDragScroll } from "@/hooks/useDragScroll";
+import { wallParts, todayKey } from "@/lib/appointmentTime";
+import { cn } from "@/lib/utils";
 
-const TYPE_CONFIG: Record<TransactionType, { label: string; color: string; icon: typeof DollarSign }> = {
-    sale: { label: 'Satış', color: 'text-green-600', icon: TrendingUp },
-    commission: { label: 'Komisyon', color: 'text-red-600', icon: Receipt },
-    payout: { label: 'Ödeme', color: 'text-blue-600', icon: Banknote },
-    refund: { label: 'İade', color: 'text-orange-600', icon: TrendingDown },
-};
+// Gelir raporu. Randevu ücretleri Moffi üzerinden tahsil edilmediği için randevu işletmelerinde tutarlar,
+// tamamlanan randevuların hizmet kataloğundaki fiyatlarıyla hesaplanan TAHMİNİ gelirdir; mağazalarda ise
+// ödemesi alınmış siparişlerdeki bu işletmeye ait ürünlerin gerçek tutarıdır.
+
+type Entry = { id: string; dateKey: string; label: string; sub: string; amount: number | null };
+
+const MONTHS = 6;
+const UNPAID_ORDER = ['awaiting_payment', 'pending', 'cancelled', 'failed'];
+const VOID_ITEM = ['cancelled', 'refunded'];
+const tl = (n: number) => `₺${n.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}`;
+
+function serviceNameOf(reason: string | null | undefined) {
+    const first = (reason || '').split('\n')[0];
+    return first.includes('Randevu tipi:') ? first.split('Randevu tipi:')[1].trim() : first.trim();
+}
 
 export default function BusinessFinancePage() {
     const { user } = useAuth();
-    const filterScroll = useDragScroll();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all');
-    const [showPayoutModal, setShowPayoutModal] = useState(false);
-    const [transactions, setTransactions] = useState<any[]>([]);
+    const typeConfig = useBusinessType();
+    const isOrderFlow = typeConfig.primaryFlow === 'order';
+    const [entries, setEntries] = useState<Entry[]>([]);
+    const [noShows, setNoShows] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchTransactions = async () => {
-            if (user?.id) {
-                try {
-                    const data = await apiService.getClinicTransactions(user.id);
-                    setTransactions(data);
-                } catch (e) {
-                    console.error("Failed to fetch transactions:", e);
-                } finally {
-                    setIsLoading(false);
+        if (!user?.id) { setIsLoading(false); return; }
+        const load = async () => {
+            try {
+                if (isOrderFlow) {
+                    const orders: any[] = await apiService.getClinicOrders(user.id);
+                    setEntries(orders
+                        .filter(o => !UNPAID_ORDER.includes(o.status))
+                        .map(o => {
+                            const items = (o.items || []).filter((i: any) => !VOID_ITEM.includes(i.status));
+                            const amount = items.reduce((s: number, i: any) => s + Number(i.price || 0) * Number(i.quantity || 1), 0);
+                            return {
+                                id: o.id,
+                                dateKey: String(o.date).slice(0, 10),
+                                label: items.map((i: any) => i.product?.name).filter(Boolean).join(', ') || 'Sipariş',
+                                sub: o.user?.full_name || 'Müşteri',
+                                amount,
+                            };
+                        })
+                        .filter(e => e.amount > 0));
+                } else {
+                    const [appts, services] = await Promise.all([
+                        apiService.getClinicAppointments(user.id),
+                        apiService.getClinicServices(user.id),
+                    ]);
+                    const priceByName = new Map<string, number>();
+                    services.forEach((s: any) => { if (s.price != null) priceByName.set(s.service_name, Number(s.price)); });
+                    setNoShows(appts.filter((a: any) => a.attendance_status === 'no_show').length);
+                    setEntries(appts
+                        .filter((a: any) => a.status === 'completed' && a.appointment_date)
+                        .map((a: any) => {
+                            const name = serviceNameOf(a.reason) || typeConfig.customerFallbackService;
+                            return {
+                                id: a.id,
+                                dateKey: wallParts(a.appointment_date).dateKey,
+                                label: name,
+                                sub: a.pet?.name || a.guest_pet_name || a.user?.full_name || a.guest_name || 'Müşteri',
+                                amount: priceByName.has(name) ? priceByName.get(name)! : null,
+                            };
+                        }));
                 }
-            } else {
+            } catch (e) {
+                console.error('Gelir verisi yüklenemedi:', e);
+            } finally {
                 setIsLoading(false);
             }
         };
-        fetchTransactions();
-    }, [user?.id]);
+        load();
+    }, [user?.id, isOrderFlow, typeConfig.customerFallbackService]);
 
-    const filteredTransactions = transactions;
+    const report = useMemo(() => {
+        const today = todayKey();
+        const [y, m] = today.split('-').map(Number);
+        const months = Array.from({ length: MONTHS }, (_, i) => {
+            const d = new Date(Date.UTC(y, m - 1 - (MONTHS - 1 - i), 1));
+            const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+            return { key, label: d.toLocaleDateString('tr-TR', { month: 'short', timeZone: 'UTC' }), total: 0, count: 0 };
+        });
+        const byKey = new Map(months.map(mo => [mo.key, mo]));
+        entries.forEach(e => {
+            const mo = byKey.get(e.dateKey.slice(0, 7));
+            if (mo) { mo.count += 1; mo.total += e.amount ?? 0; }
+        });
+        const thisMonth = months[months.length - 1];
+        const lastMonth = months[months.length - 2];
+        const priced = entries.filter(e => e.amount != null);
+        const unpriced = entries.length - priced.length;
+        const avg = priced.length ? priced.reduce((s, e) => s + (e.amount || 0), 0) / priced.length : 0;
 
-    const orders: any[] = []; // Phase 3: real orders will come later
+        const bySvc = new Map<string, { count: number; total: number }>();
+        entries.forEach(e => {
+            if (isOrderFlow) return;
+            const r = bySvc.get(e.label) || { count: 0, total: 0 };
+            r.count += 1; r.total += e.amount ?? 0;
+            bySvc.set(e.label, r);
+        });
+        const topServices = Array.from(bySvc.entries()).sort((a, b) => b[1].total - a[1].total || b[1].count - a[1].count).slice(0, 5);
+        const change = lastMonth.total > 0 ? Math.round(((thisMonth.total - lastMonth.total) / lastMonth.total) * 100) : null;
+        return { months, thisMonth, lastMonth, avg, unpriced, topServices, change, max: Math.max(1, ...months.map(mo => mo.total)) };
+    }, [entries, isOrderFlow]);
 
-    const filtered = useMemo(() => {
-        let result = [...filteredTransactions];
-        if (typeFilter !== 'all') result = result.filter(t => t.type === typeFilter);
-        return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [filteredTransactions, typeFilter]);
+    if (isLoading) {
+        return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
+    }
 
-    // Financial calculations
-    const summary = useMemo(() => {
-        const totalSales = filteredTransactions.filter(t => t.type === 'sale' && t.status === 'completed').reduce((s, t) => s + t.amount, 0);
-        const totalCommission = Math.abs(filteredTransactions.filter(t => t.type === 'commission').reduce((s, t) => s + t.amount, 0));
-        const totalPayouts = Math.abs(filteredTransactions.filter(t => t.type === 'payout' && t.status === 'completed').reduce((s, t) => s + t.amount, 0));
-        const totalRefunds = Math.abs(filteredTransactions.filter(t => t.type === 'refund').reduce((s, t) => s + t.amount, 0));
-        const pendingRevenue = filteredTransactions.filter(t => t.type === 'sale' && t.status === 'pending').reduce((s, t) => s + t.amount, 0);
-        const netEarnings = totalSales - totalCommission - totalRefunds;
-        const availableBalance = netEarnings - totalPayouts;
-
-        return { totalSales, totalCommission, totalPayouts, totalRefunds, pendingRevenue, netEarnings, availableBalance };
-    }, [filteredTransactions]);
-
-    // Monthly revenue chart data (simple bar chart)
-    const monthlyData = [
-        { month: 'Oca', amount: 2100 },
-        { month: 'Şub', amount: 3450 },
-        { month: 'Mar', amount: 1800 },
-        { month: 'Nis', amount: 4200 },
-        { month: 'May', amount: 3100 },
-        { month: 'Haz', amount: 2800 },
-    ];
-    const maxMonthly = Math.max(...monthlyData.map(d => d.amount));
+    const recent = [...entries].sort((a, b) => b.dateKey.localeCompare(a.dateKey)).slice(0, 20);
 
     return (
-        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
-            {/* Header */}
-            <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-                <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Finans</h1>
-                    <p className="text-sm text-gray-500">Gelir, komisyon ve ödeme takibi</p>
-                </div>
-                    <button
-                        onClick={() => setShowPayoutModal(true)}
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-green-200 hover:shadow-green-300 hover:-translate-y-0.5 transition-all flex items-center gap-2 self-start"
-                    >
-                        <Banknote className="w-4 h-4" /> Ödeme Talebi
-                    </button>
-                </header>
+        <div className="p-4 md:p-8 w-full max-w-5xl mx-auto space-y-6 pb-32">
+            <header>
+                <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Gelir raporu</h1>
+                <p className="text-sm text-zinc-500 mt-1">
+                    {isOrderFlow
+                        ? 'Ödemesi alınmış siparişlerdeki ürünlerinin tutarı.'
+                        : 'Randevu ücretleri işletmende tahsil edilir; tutarlar tamamlanan randevuların hizmet fiyatlarından hesaplanan tahmindir.'}
+                </p>
+            </header>
 
-                {/* Revenue Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <RevenueCard icon={TrendingUp} label="Toplam Satış" value={summary.totalSales} color="green" trend="+12%" />
-                    <RevenueCard icon={Receipt} label="Komisyon" value={summary.totalCommission} color="red" />
-                    <RevenueCard icon={PiggyBank} label="Net Kazanç" value={summary.netEarnings} color="indigo" highlight />
-                    <RevenueCard icon={Wallet} label="Çekilebilir" value={summary.availableBalance} color="emerald" highlight />
-                </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Stat icon={Wallet} label="Bu ay" value={tl(report.thisMonth.total)} hint={report.change != null ? `Geçen aya göre ${report.change > 0 ? '+' : ''}${report.change}%` : undefined} />
+                <Stat icon={Calendar} label={isOrderFlow ? 'Bu ay sipariş' : 'Bu ay tamamlanan'} value={String(report.thisMonth.count)} />
+                <Stat icon={Receipt} label={isOrderFlow ? 'Ortalama sipariş' : 'Ortalama ziyaret'} value={tl(report.avg)} />
+                {isOrderFlow
+                    ? <Stat icon={TrendingUp} label="Geçen ay" value={tl(report.lastMonth.total)} />
+                    : <Stat icon={TrendingUp} label="Gelmeyen randevu" value={String(noShows)} hint="Toplam" />}
+            </div>
 
-                {/* Charts + Pending */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    {/* Monthly Chart */}
-                    <div className="lg:col-span-2 bg-card rounded-2xl border border-card-border shadow-moffi-card p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="font-bold text-foreground">Aylık Gelir</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Son 6 ay</p>
+            {!isOrderFlow && report.unpriced > 0 && (
+                <div className="rounded-2xl border border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/10 p-4 text-sm font-semibold text-amber-800 dark:text-amber-200">
+                    {report.unpriced} tamamlanan randevunun hizmetinde fiyat yok; bu randevular tutara eklenmedi. Fiyatları Hizmetlerim sayfasından girebilirsin.
+                </div>
+            )}
+
+            <div className="bg-card rounded-2xl border border-card-border p-5">
+                <div className="flex items-center justify-between mb-5">
+                    <h3 className="font-black text-foreground">Aylık gelir</h3>
+                    <span className="text-xs font-bold text-zinc-500">Son {MONTHS} ay</span>
+                </div>
+                <div className="flex items-end gap-3 h-44">
+                    {report.months.map((mo, i) => (
+                        <div key={mo.key} className="flex-1 h-full flex flex-col items-center gap-2">
+                            <span className="text-[10px] font-bold text-zinc-500 tabular-nums">{mo.total > 0 ? tl(mo.total) : '–'}</span>
+                            <div className="w-full flex-1 bg-zinc-100 dark:bg-zinc-800/60 rounded-xl overflow-hidden flex items-end">
+                                <motion.div
+                                    initial={{ height: 0 }}
+                                    animate={{ height: `${(mo.total / report.max) * 100}%` }}
+                                    transition={{ delay: i * 0.06, duration: 0.4 }}
+                                    className={cn("w-full rounded-xl", i === report.months.length - 1 ? "bg-indigo-600" : "bg-indigo-300 dark:bg-indigo-500/50")}
+                                />
                             </div>
-                            <div className="bg-gray-50 dark:bg-[#0a0a0a] p-1 rounded-xl flex">
-                                <button className="px-3 py-1 bg-card rounded-lg text-xs font-bold text-foreground shadow-moffi-card border border-card-border/50">Aylık</button>
-                                <button className="px-3 py-1 text-xs font-bold text-gray-500 dark:text-gray-400">Haftalık</button>
-                            </div>
+                            <span className="text-[10px] font-bold text-zinc-500 capitalize">{mo.label}</span>
                         </div>
-                        <div className="flex items-end gap-3 h-40">
-                            {monthlyData.map((d, i) => (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">₺{(d.amount / 1000).toFixed(1)}K</span>
-                                    <div className="w-full bg-gray-100 rounded-xl overflow-hidden" style={{ height: '100%' }}>
-                                        <motion.div
-                                            initial={{ height: 0 }}
-                                            animate={{ height: `${(d.amount / maxMonthly) * 100}%` }}
-                                            transition={{ delay: i * 0.1, duration: 0.5 }}
-                                            className={cn("w-full rounded-xl bg-gradient-to-t mt-auto", i === monthlyData.length - 1 ? "from-indigo-600 to-purple-500" : "from-indigo-200 to-indigo-300")}
-                                            style={{ marginTop: 'auto' }}
-                                        />
+                    ))}
+                </div>
+            </div>
+
+            <div className={cn("grid gap-6", !isOrderFlow && "lg:grid-cols-3")}>
+                {!isOrderFlow && (
+                    <div className="bg-card rounded-2xl border border-card-border p-5">
+                        <h3 className="font-black text-foreground mb-3">En çok gelir getiren hizmetler</h3>
+                        {report.topServices.length === 0 ? (
+                            <p className="text-sm text-zinc-500">Henüz tamamlanan randevu yok.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {report.topServices.map(([name, r]) => (
+                                    <div key={name} className="flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <div className="text-sm font-bold text-foreground truncate">{name}</div>
+                                            <div className="text-xs text-zinc-500">{r.count} randevu</div>
+                                        </div>
+                                        <span className="text-sm font-black text-foreground tabular-nums">{tl(r.total)}</span>
                                     </div>
-                                    <span className="text-[10px] font-bold text-gray-500">{d.month}</span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className={cn("bg-card rounded-2xl border border-card-border overflow-hidden", !isOrderFlow && "lg:col-span-2")}>
+                    <div className="px-5 py-4 border-b border-card-border">
+                        <h3 className="font-black text-foreground">{isOrderFlow ? 'Son siparişler' : 'Son tamamlanan randevular'}</h3>
+                    </div>
+                    {recent.length === 0 ? (
+                        <div className="p-10 text-center text-sm text-zinc-500">Henüz kayıt yok.</div>
+                    ) : (
+                        <div className="divide-y divide-card-border">
+                            {recent.map(e => (
+                                <div key={e.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-bold text-foreground truncate">{e.label}</div>
+                                        <div className="text-xs text-zinc-500">{e.sub} · {new Date(`${e.dateKey}T00:00:00Z`).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</div>
+                                    </div>
+                                    <span className={cn("text-sm font-black tabular-nums shrink-0", e.amount == null ? "text-zinc-400" : "text-foreground")}>
+                                        {e.amount == null ? 'Fiyat yok' : tl(e.amount)}
+                                    </span>
                                 </div>
                             ))}
                         </div>
-                    </div>
-
-                    {/* Pending + Commissions */}
-                    <div className="space-y-4">
-                        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg">
-                            <Clock className="w-8 h-8 text-black/70 dark:text-white/70 mb-3" />
-                            <div className="text-2xl font-black">₺{summary.pendingRevenue.toLocaleString('tr-TR')}</div>
-                            <div className="text-xs text-black/80 dark:text-white/80 font-medium mt-1">Bekleyen Gelir</div>
-                            <p className="text-[10px] text-black/60 dark:text-white/60 mt-2">Teslim edilmemiş siparişlerden</p>
-                        </div>
-                        <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-5">
-                            <div className="flex items-center gap-2 mb-3">
-                                <BarChart3 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Komisyon Oranı</span>
-                            </div>
-                            <div className="text-3xl font-black text-foreground">%10</div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Platform standart oran</p>
-                            <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full w-[10%] bg-red-400 rounded-full" />
-                            </div>
-                        </div>
-                    </div>
+                    )}
                 </div>
-
-                {/* Transaction History */}
-                <div className="mb-8">
-                    <div 
-                        ref={filterScroll.ref}
-                        onMouseDown={filterScroll.onMouseDown}
-                        onMouseLeave={filterScroll.onMouseLeave}
-                        onMouseUp={filterScroll.onMouseUp}
-                        onMouseMove={filterScroll.onMouseMove}
-                        className="flex gap-2 overflow-x-auto pb-4 cursor-grab active:cursor-grabbing select-none mb-4"
-                    >
-                        {(['all', 'sale', 'commission', 'payout', 'refund'] as const).map(t => (
-                            <button
-                                key={t}
-                                onClick={() => setTypeFilter(t)}
-                                className={cn(
-                                    "px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition",
-                                    typeFilter === t ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-card border border-card-border text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800"
-                                )}
-                            >
-                                {t === 'all' ? 'Tümü' : TYPE_CONFIG[t].label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="bg-card dark:bg-[#121212] rounded-[2rem] border border-card-border shadow-moffi-card overflow-hidden">
-                        <div className="p-6 border-b border-card-border flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
-                            <h3 className="font-bold text-foreground">İşlem Geçmişi</h3>
-                        </div>
-
-                        <div className="divide-y divide-card-border">
-                            {isLoading ? (
-                                <div className="p-8 text-center text-gray-500">İşlemler yükleniyor...</div>
-                            ) : filtered.length === 0 ? (
-                                <div className="p-12 text-center text-gray-500">Bu kategoride işlem bulunamadı.</div>
-                            ) : (
-                                filtered.map(tx => {
-                                    const conf = TYPE_CONFIG[tx.type as TransactionType] || TYPE_CONFIG['sale'];
-                                    const Icon = conf.icon;
-                                    const isPositive = tx.type === 'sale' || tx.type === 'payout';
-                                    return (
-                                        <div key={tx.id} className="p-5 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors group">
-                                            <div className="flex items-center gap-4">
-                                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110",
-                                                    tx.type === 'sale' ? 'bg-green-100 text-green-600' :
-                                                    tx.type === 'commission' ? 'bg-red-100 text-red-600' :
-                                                    tx.type === 'refund' ? 'bg-orange-100 text-orange-600' :
-                                                    'bg-blue-100 text-blue-600'
-                                                )}>
-                                                    <Icon className="w-5 h-5" />
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold text-foreground text-sm">{tx.description}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">
-                                                        {new Date(tx.date).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right flex-shrink-0">
-                                                <div className={cn("font-black text-sm", isPositive ? "text-green-600" : "text-red-600")}>
-                                                    {isPositive ? '+' : '-'}₺{Math.abs(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                                                </div>
-                                                <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded",
-                                                    tx.status === 'completed' ? "text-green-600 bg-green-50 dark:bg-green-500/10 dark:text-green-400" :
-                                                    tx.status === 'pending' ? "text-amber-600 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400" : "text-gray-500 bg-gray-50 dark:bg-zinc-800 dark:text-gray-400"
-                                                )}>
-                                                    {tx.status === 'completed' ? 'Tamamlandı' : tx.status === 'pending' ? 'Bekliyor' : 'İptal'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-            {/* Payout Modal */}
-            <AnimatePresence>
-                {showPayoutModal && <PayoutModal available={summary.availableBalance} onClose={() => setShowPayoutModal(false)} />}
-            </AnimatePresence>
-        </div>
-    );
-}
-
-// ==================
-// Sub Components
-// ==================
-
-function RevenueCard({ icon: Icon, label, value, color, trend, highlight }: {
-    icon: typeof TrendingUp; label: string; value: number; color: string; trend?: string; highlight?: boolean
-}) {
-    const colors: Record<string, string> = {
-        green: 'bg-green-50 text-green-600',
-        red: 'bg-red-50 text-red-600',
-        indigo: 'bg-indigo-50 text-indigo-600',
-        emerald: 'bg-emerald-50 text-emerald-600',
-    };
-    return (
-        <div className={cn("rounded-2xl border p-5 transition-all", highlight ? "bg-card shadow-lg border-card-border" : "bg-card shadow-moffi-card border-card-border")}>
-            <div className="flex items-center justify-between mb-3">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", colors[color])}>
-                    <Icon className="w-4 h-4" />
-                </div>
-                {trend && (
-                    <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                        <ArrowUpRight className="w-3 h-3" />{trend}
-                    </span>
-                )}
             </div>
-            <div className={cn("text-xl font-black tracking-tight", highlight ? "text-foreground" : "text-foreground")}>₺{value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
-            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">{label}</div>
         </div>
     );
 }
 
-function PayoutModal({ available, onClose }: { available: number; onClose: () => void }) {
-    const [amount, setAmount] = useState(available.toFixed(2));
-    const [requesting, setRequesting] = useState(false);
-    const [done, setDone] = useState(false);
-
-    const handleRequest = () => {
-        setRequesting(true);
-        setTimeout(() => { setRequesting(false); setDone(true); setTimeout(onClose, 1500); }, 1500);
-    };
-
+function Stat({ icon: Icon, label, value, hint }: { icon: typeof Wallet; label: string; value: string; hint?: string }) {
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-card rounded-3xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-                {done ? (
-                    <div className="text-center py-8">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-8 h-8 text-green-600" /></div>
-                        <h3 className="text-lg font-black text-foreground">Talep Gönderildi!</h3>
-                        <p className="text-sm text-gray-500 mt-1">Admin onayından sonra hesabınıza aktarılacaktır.</p>
-                    </div>
-                ) : (
-                    <>
-                        <h2 className="text-lg font-black text-foreground mb-1">Ödeme Talebi</h2>
-                        <p className="text-sm text-gray-500 mb-6">Çekilebilir bakiyeniz: <strong className="text-green-600">₺{available.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</strong></p>
-                        <div className="mb-6">
-                            <label className="text-xs font-bold text-gray-500 mb-1.5 block">Çekmek İstediğiniz Tutar (₺)</label>
-                            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-gray-50 dark:bg-[#0a0a0a] border border-card-border rounded-xl px-4 py-3 text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-green-200" />
-                        </div>
-                        <div className="flex gap-3">
-                            <button onClick={onClose} className="flex-1 px-5 py-3 rounded-xl border border-card-border text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800">İptal</button>
-                            <button onClick={handleRequest} disabled={requesting || Number(amount) <= 0 || Number(amount) > available} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-lg shadow-green-200 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                                {requesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Banknote className="w-4 h-4" />}
-                                {requesting ? 'İşleniyor...' : 'Talep Gönder'}
-                            </button>
-                        </div>
-                    </>
-                )}
-            </motion.div>
-        </motion.div>
+        <div className="bg-card rounded-2xl border border-card-border p-4">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
+                <Icon className="w-4 h-4" />
+            </div>
+            <div className="text-xl font-black text-foreground tabular-nums">{value}</div>
+            <div className="text-xs font-bold text-zinc-500 mt-0.5">{label}</div>
+            {hint && <div className="text-[11px] font-semibold text-zinc-400 mt-1">{hint}</div>}
+        </div>
     );
 }

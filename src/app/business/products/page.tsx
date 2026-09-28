@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 
 import { useAuth } from "@/context/AuthContext";
 import { BusinessProduct, ProductStatus, ProductCategory } from "@/types/business";
-import { cn } from "@/lib/utils";
+import { cn, showToast } from "@/lib/utils";
 import {
     Package, Plus, Search, Filter, Edit3, Trash2, Eye, EyeOff,
     Menu, X, ChevronDown, AlertTriangle, TrendingUp, Archive, LayoutGrid, List,
@@ -298,7 +298,7 @@ function ProductModal({ product, businessId, onClose }: { product: any | null; b
             setTimeout(onClose, 800);
         } catch (err) {
             console.error(err);
-            alert("Ürün kaydedilemedi.");
+            showToast("Ürün kaydedilemedi.", "AlertCircle", "text-red-500 font-bold");
         } finally {
             setSaving(false);
         }

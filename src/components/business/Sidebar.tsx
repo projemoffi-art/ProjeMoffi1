@@ -19,7 +19,8 @@ import {
     FileSpreadsheet,
     Activity,
     Stethoscope,
-    Clock
+    Clock,
+    MapPin
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
         products: { name: t("business.sidebar.products"), path: "/business/products", icon: Store },
         campaigns: { name: "Günün Fırsatı", path: "/business/campaigns", icon: Gift },
         quests: { name: t("business.sidebar.quests"), path: "/business/quests", icon: Megaphone },
+        profile: { name: "İşletme profili", path: "/business/profile", icon: MapPin },
     };
 
     const menuItems = typeConfig.sidebar.map(key => ALL_MENU_ITEMS[key]);

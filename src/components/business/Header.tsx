@@ -33,6 +33,7 @@ export function BusinessHeader({ onMenuClick }: HeaderProps) {
         '/business/finance': 'Finans',
         '/business/orders': 'Siparişler',
         '/business/services': 'Hizmetlerim',
+        '/business/profile': 'İşletme profili',
         '/business/doctors': typeConfig.staffLabelPlural,
         '/business/products': 'Ürünler',
         '/business/campaigns': 'Kampanyalar',
