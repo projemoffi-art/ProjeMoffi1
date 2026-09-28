@@ -147,9 +147,7 @@ export default function PetShopPage() {
         products, cart, cartCount, cartTotal,
         isLoading, error,
         fetchProducts, searchProducts,
-        addToCart, updateCartItem, removeFromCart, clearCart,
-        validateDiscount, createOrder,
-        subscriptions, subscribeToProduct
+        addToCart, updateCartItem, removeFromCart, clearCart
     } = usePetShop();
 
     // PAYMENT & REDIRECT LISTENER FOR PAYTR
@@ -183,8 +181,6 @@ export default function PetShopPage() {
     const [showAdvisor, setShowAdvisor] = useState(false);
     const [favorites, setFavorites] = useState<Set<string>>(new Set());
     const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'price_high'>('popular');
-    const [discountCode, setDiscountCode] = useState('');
-    const [discountResult, setDiscountResult] = useState<{ valid: boolean; discountPercent?: number; message?: string } | null>(null);
     
     // PAYMENT & TRACKING STATES
     const [showCheckout, setShowCheckout] = useState(false);
@@ -340,12 +336,6 @@ export default function PetShopPage() {
             next.has(id) ? next.delete(id) : next.add(id);
             return next;
         });
-    };
-
-    const handleApplyDiscount = async () => {
-        if (!discountCode.trim()) return;
-        const result = await validateDiscount(discountCode);
-        setDiscountResult(result);
     };
 
     const handleCheckoutInit = () => {
@@ -616,38 +606,6 @@ export default function PetShopPage() {
                                         )}
                                     </div>
 
-                                    {/* Auto-Ship Toggle Visual */}
-                                    <div 
-                                        onClick={() => subscribeToProduct(product.id)}
-                                        className={cn(
-                                            "flex items-center gap-2 mb-3 p-2 rounded-xl border transition-all cursor-pointer",
-                                            subscriptions.find(s => s.id === product.id)
-                                                ? "bg-orange-500 border-orange-600 shadow-md scale-[1.02]"
-                                                : "bg-gray-50 dark:bg-white/5 border-card-border dark:border-card-border hover:bg-orange-50"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors",
-                                            subscriptions.find(s => s.id === product.id)
-                                                ? "border-white"
-                                                : "border-orange-500/30"
-                                        )}>
-                                            <div className={cn(
-                                                "w-2 h-2 rounded-full transition-all",
-                                                subscriptions.find(s => s.id === product.id)
-                                                    ? "bg-card scale-100"
-                                                    : "bg-orange-500 opacity-0 group-hover:opacity-100"
-                                            )} />
-                                        </div>
-                                        <span className={cn(
-                                            "text-[8px] font-black uppercase tracking-widest leading-none transition-colors",
-                                            subscriptions.find(s => s.id === product.id)
-                                                ? "text-white"
-                                                : "text-gray-500 dark:text-gray-400"
-                                        )}>
-                                            {subscriptions.find(s => s.id === product.id) ? 'Abone Olundu!' : 'Aylık Abone Ol (%10)'}
-                                        </span>
-                                    </div>
 
                                     <div className="flex items-center justify-between mt-auto">
                                         <div className="flex flex-col">
@@ -843,9 +801,7 @@ export default function PetShopPage() {
                                         {cart.map(item => {
                                             const product = products.find(p => p.id === item.productId);
                                             if (!product) return null;
-                                            const isSubscribed = subscriptions.some(s => s.id === product.id);
-                                            const unitPrice = isSubscribed ? product.price * 0.90 : product.price;
-                                            const itemTotal = unitPrice * item.quantity;
+                                            const itemTotal = product.price * item.quantity;
                                             return (
                                                 <div key={item.productId} className="flex items-center gap-5 bg-card dark:bg-white/5 rounded-[1.8rem] p-4 border border-card-border dark:border-card-border shadow-moffi-card">
                                                     <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-4xl overflow-hidden shrink-0">
@@ -872,13 +828,7 @@ export default function PetShopPage() {
                                                         <div className="flex flex-col gap-1 mt-1">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-base font-black text-orange-500 leading-none">₺{itemTotal.toLocaleString('tr-TR')}</span>
-                                                                {isSubscribed && (
-                                                                    <span className="text-[10px] text-gray-500 dark:text-gray-400 line-through">₺{(product.price * item.quantity).toLocaleString('tr-TR')}</span>
-                                                                )}
                                                             </div>
-                                                            {isSubscribed && (
-                                                                <span className="text-[8px] font-black bg-orange-500/10 text-orange-500 py-0.5 px-1.5 rounded-md uppercase tracking-wider w-fit">Abonelik -%10</span>
-                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-3 bg-gray-100 dark:bg-white/10 rounded-xl px-2 py-1.5">
@@ -894,16 +844,6 @@ export default function PetShopPage() {
                                                 </div>
                                             );
                                         })}
-                                        
-                                        <div className="flex gap-3 pt-4">
-                                            <input
-                                                value={discountCode}
-                                                onChange={e => { setDiscountCode(e.target.value); setDiscountResult(null); }}
-                                                placeholder="İndirim kodu..."
-                                                className="flex-1 h-12 px-5 bg-card dark:bg-white/5 rounded-2xl text-sm border-2 border-transparent focus:border-orange-500/20 outline-none"
-                                            />
-                                            <button onClick={handleApplyDiscount} className="px-6 h-12 bg-gray-950 dark:bg-card text-white dark:text-black text-[11px] font-black uppercase rounded-2xl">Uygula</button>
-                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1376,49 +1316,6 @@ export default function PetShopPage() {
                                                     </div>
                                                 )}
 
-                                                {/* Subscription Selector */}
-                                                <div className="space-y-2.5">
-                                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Satın Alma Tipi</span>
-                                                    <div className="grid grid-cols-2 gap-2.5">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (subscriptions.some(s => s.id === selectedProduct.id)) {
-                                                                    subscribeToProduct(selectedProduct.id);
-                                                                }
-                                                            }}
-                                                            className={cn(
-                                                                "p-3 rounded-2xl border text-left flex flex-col justify-between transition-all pointer-events-auto",
-                                                                !subscriptions.some(s => s.id === selectedProduct.id)
-                                                                    ? "bg-orange-500/10 border-orange-500 text-foreground dark:text-white"
-                                                                    : "bg-gray-50 dark:bg-white/5 border-card-border dark:border-card-border"
-                                                            )}
-                                                        >
-                                                            <span className="text-[8px] font-black uppercase tracking-wider">Tek Sefer</span>
-                                                            <span className="text-xs font-black mt-2">₺{selectedProduct.price.toLocaleString('tr-TR')}</span>
-                                                        </button>
-                                                        
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (!subscriptions.some(s => s.id === selectedProduct.id)) {
-                                                                    subscribeToProduct(selectedProduct.id);
-                                                                }
-                                                            }}
-                                                            className={cn(
-                                                                "p-3 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden pointer-events-auto",
-                                                                subscriptions.some(s => s.id === selectedProduct.id)
-                                                                    ? "bg-orange-500/10 border-orange-500 text-foreground dark:text-white"
-                                                                    : "bg-gray-50 dark:bg-white/5 border-card-border dark:border-card-border"
-                                                            )}
-                                                        >
-                                                            <span className="absolute top-0 right-0 bg-orange-500 text-white text-[6px] font-black px-1.5 py-0.5 rounded-bl-lg uppercase tracking-widest leading-none">-%10</span>
-                                                            <span className="text-[8px] font-black uppercase tracking-wider">Abonelik</span>
-                                                            <span className="text-xs font-black mt-2">₺{(selectedProduct.price * 0.9).toLocaleString('tr-TR')}</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-
                                                 {/* Frequently Bought Together */}
                                                 {(() => {
                                                     const compProd = getFrequentlyBoughtWith(selectedProduct, products);
@@ -1620,10 +1517,10 @@ export default function PetShopPage() {
                                                 <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Toplam Tutar</span>
                                                 <div className="flex items-center gap-2 mt-1 shrink-0">
                                                     <span className="text-base font-black text-foreground dark:text-white">
-                                                        ₺{((subscriptions.some(s => s.id === selectedProduct.id) ? selectedProduct.price * 0.9 : selectedProduct.price) * modalQty).toLocaleString('tr-TR')}
+                                                        ₺{(selectedProduct.price * modalQty).toLocaleString('tr-TR')}
                                                     </span>
                                                     <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-0.5">
-                                                        ✨ +{Math.round(((subscriptions.some(s => s.id === selectedProduct.id) ? selectedProduct.price * 0.9 : selectedProduct.price) * modalQty) / 10)} PatiPuan
+                                                        ✨ +{Math.round((selectedProduct.price * modalQty) / 10)} PatiPuan
                                                     </span>
                                                 </div>
                                             </div>
@@ -1780,8 +1677,7 @@ export default function PetShopPage() {
                                             ? Math.round(productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length) 
                                             : 5;
                                             
-                                        const hasDiscount = subscriptions.some(s => s.id === product.id);
-                                        const finalPrice = hasDiscount ? product.price * 0.9 : product.price;
+                                        const finalPrice = product.price;
 
                                         return (
                                             <div 
@@ -1835,11 +1731,6 @@ export default function PetShopPage() {
                                                             <span className="text-xs font-black text-foreground dark:text-white">
                                                                 ₺{finalPrice.toLocaleString('tr-TR')}
                                                             </span>
-                                                            {hasDiscount && (
-                                                                <span className="text-[8px] text-emerald-500 font-black uppercase tracking-wider leading-none mt-0.5">
-                                                                    %10 Abone İndirimi
-                                                                </span>
-                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-between items-center">
@@ -1942,12 +1833,10 @@ export default function PetShopPage() {
                                     {/* Row 2: Price */}
                                     <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">Fiyat & Puan</div>
                                     {comparisonList.map((product) => {
-                                        const hasDiscount = subscriptions.some(s => s.id === product.id);
-                                        const finalPrice = hasDiscount ? product.price * 0.9 : product.price;
+                                        const finalPrice = product.price;
                                         return (
                                             <div key={`price-${product.id}`} className="flex flex-col items-center justify-center border-b border-card-border/40 py-4 px-4 text-center">
                                                 <span className="text-sm font-black text-foreground dark:text-white">₺{finalPrice.toLocaleString('tr-TR')}</span>
-                                                {hasDiscount && <span className="text-[7.5px] text-emerald-500 font-black uppercase tracking-wider leading-none mt-0.5">%10 Abone İndirimi</span>}
                                                 <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-0.5 mt-1">
                                                     ✨ +{Math.round(finalPrice / 10)} Puan
                                                 </span>

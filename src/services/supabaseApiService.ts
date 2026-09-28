@@ -1546,50 +1546,8 @@ export class SupabaseApiService implements IApiService {
             }))
         }));
     }
-
-    async subscribeToProduct(productId: string): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error("Giriş gerekli");
-
-        const { error } = await supabase
-            .from('user_subscriptions')
-            .upsert({
-                user_id: user.id,
-                plan_type: 'prime',
-                status: 'active',
-                end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-            }, { onConflict: 'user_id' });
-
-        if (error) throw error;
-    }
-
-    async getSubscriptions(): Promise<ShopProduct[]> {
-        const user = await this.getSessionUser();
-        if (!user) return [];
-
-        const { data, error } = await supabase
-            .from('user_subscriptions')
-            .select(`
-                *,
-                product:products(*)
-            `)
-            .eq('user_id', user.id);
-
-        if (error) return [];
-        
-        return data.map((s: any) => ({
-            id: s.id,
-            name: 'Moffi Prime',
-            description: 'Aktif Abonelik',
-            price: 0,
-            image: '',
-            category: 'subscription' as ShopCategory,
-            
-            inStock: true,
-            rating: 5.0,
-            reviews: 0
-        }));
-    }
+
+
 
     async togglePetSosStatus(petId: string, status: 'safe' | 'lost'): Promise<void> {
         const user = await this.getSessionUser();

@@ -120,72 +120,23 @@ export async function POST(req: NextRequest) {
             }
         } else {
             // --- SHOP ORDER PROCESSING ---
+            // Stok düşümü, sepet temizliği, müşteri/satıcı bildirimi ve e-posta (kuyruk) tek
+            // transaction'da finalize_paid_order içinde; tekrarlanan webhook "duplicate" döner.
             if (status === "success") {
-                // Update order status to 'paid' in Supabase
-                const { data: order, error: orderErr } = await supabaseAdmin
-                    .from("orders")
-                    .update({ status: "paid" })
-                    .eq("id", merchant_oid)
-                    .select()
-                    .single();
-
-                if (orderErr) {
-                    console.error("[PAYTR WEBHOOK] Database update failed for order:", orderErr);
-                    return new Response("Fail: DB update failed", { status: 500 });
+                const { data: result, error: finalizeErr } = await supabaseAdmin.rpc("finalize_paid_order", {
+                    p_order_id: merchant_oid,
+                    p_amount_kurus: Number(total_amount)
+                });
+                if (finalizeErr) {
+                    console.error("[PAYTR WEBHOOK] Order finalize failed:", finalizeErr);
+                    return new Response("Fail: finalize failed", { status: 500 });
                 }
-
-                // Clear the shopping cart in DB for the user who owns this order
-                if (order && order.user_id) {
-                    const { error: cartErr } = await supabaseAdmin
-                        .from("cart_items")
-                        .delete()
-                        .eq("user_id", order.user_id);
-
-                    if (cartErr) {
-                        console.error("[PAYTR WEBHOOK] Failed to clear cart items for user:", order.user_id, cartErr);
-                    } else {
-                        console.log(`[PAYTR WEBHOOK] Successfully cleared cart items for user: ${order.user_id}`);
-                    }
-                }
-                
-                // --- B1: Send Order Confirmation Email ---
-                try {
-                    if (order && order.user_id) {
-                        const { sendEmail, getOrderConfirmationHtml } = await import("@/lib/notifications/email");
-                        const { data: userData, error: userErr } = await supabaseAdmin.auth.admin.getUserById(order.user_id);
-                        
-                        if (!userErr && userData?.user?.email) {
-                            const { data: items } = await supabaseAdmin.from("order_items").select("quantity, price_at_purchase, products(name)").eq("order_id", merchant_oid);
-                            const mappedItems = (items || []).map((i: any) => ({
-                                name: i.products?.name || "Ürün",
-                                quantity: i.quantity,
-                                price: Number(i.price_at_purchase)
-                            }));
-                            
-                            await sendEmail({
-                                to: userData.user.email,
-                                subject: "Moffi - Siparişiniz Onaylandı 🎉",
-                                html: getOrderConfirmationHtml(merchant_oid, Number(total_amount), mappedItems)
-                            });
-                        }
-                    }
-                } catch (emailErr) {
-                    console.error("[PAYTR WEBHOOK] Failed to send confirmation email:", emailErr);
-                }
-                // --- END B1 ---
-                
-                console.log(`[PAYTR WEBHOOK] Successfully processed order success: ${merchant_oid}`);
+                console.log(`[PAYTR WEBHOOK] Order ${merchant_oid}: ${result}`);
             } else {
-                // Update order status to 'failed'
                 const failed_reason_code = params.get("failed_reason_code") || "";
                 const failed_reason_msg = params.get("failed_reason_msg") || "Unknown error";
-                
                 console.warn(`[PAYTR WEBHOOK] Payment failed for order ${merchant_oid}: ${failed_reason_msg} (${failed_reason_code})`);
-                
-                await supabaseAdmin
-                    .from("orders")
-                    .update({ status: "cancelled" })
-                    .eq("id", merchant_oid);
+                await supabaseAdmin.rpc("mark_order_payment_failed", { p_order_id: merchant_oid });
             }
         }
 

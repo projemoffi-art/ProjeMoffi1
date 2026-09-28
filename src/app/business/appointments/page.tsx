@@ -138,64 +138,8 @@ export default function BusinessAppointmentsPage() {
     const [isSendingMessage, setIsSendingMessage] = useState(false);
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Notification State (Faz 9)
-    const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
-    const [showNotifications, setShowNotifications] = useState(false);
-    const notifRef = useRef<HTMLDivElement>(null);
-
     // Filter State
     const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
-
-    useEffect(() => {
-        if (!user?.id || !isSupabaseEnabled) return;
-        const fetchNotifications = async () => {
-            try {
-                const notifs = await apiService.getUnreadNotifications(user.id);
-                setUnreadNotifications(prev => {
-                    const locallyReadIds = new Set(prev.filter(p => p.isReadLocally).map(p => p.id));
-                    return (notifs || []).map(n => ({ 
-                        ...n, 
-                        isReadLocally: locallyReadIds.has(n.id) 
-                    }));
-                });
-            } catch (err) {
-                console.error("Error fetching notifications:", err);
-            }
-        };
-        fetchNotifications();
-
-        const channel = supabase
-            .channel(`clinic-notifications-${user.id}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload: any) => {
-                if (payload.new?.type === 'appointment') fetchNotifications();
-            })
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
-    }, [user?.id]);
-
-    const handleNotificationClick = async (notifId: string) => {
-        const notif = unreadNotifications.find(n => n.id === notifId);
-        if (notif?.isReadLocally) return;
-
-        apiService.markNotificationRead(notifId).catch(console.error);
-        setUnreadNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isReadLocally: true } : n));
-    };
-
-    const unreadCount = unreadNotifications.filter(n => !n.isReadLocally).length;
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
-                setShowNotifications(false);
-            }
-        };
-        if (showNotifications) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [showNotifications]);
 
     const exceptionsScrollProps = useDragScroll();
 
@@ -280,7 +224,7 @@ export default function BusinessAppointmentsPage() {
             await proceedSave(false);
         } catch (e) {
             console.error("Error saving exception:", e);
-            showToast("İstisna kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
+            showToast("İstisna kaydedilemedi! ❌", "AlertCircle", "text-red-500 font-bold");
         }
     };
 
@@ -293,7 +237,7 @@ export default function BusinessAppointmentsPage() {
             fetchExceptions();
         } catch (e) {
             console.error("Error deleting exception:", e);
-            showToast("İstisna silinemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
+            showToast("İstisna silinemedi! ❌", "AlertCircle", "text-red-500 font-bold");
         }
     };
 
@@ -641,7 +585,7 @@ export default function BusinessAppointmentsPage() {
                 return;
             } catch (e) {
                 console.error("Failed to update appointment status in Supabase:", e);
-                showToast("Randevu durumu güncellenemedi. ❌", "AlertTriangle", "text-red-400 font-bold");
+                showToast("Randevu durumu güncellenemedi. ❌", "AlertCircle", "text-red-400 font-bold");
                 return;
             }
         }
@@ -726,7 +670,7 @@ export default function BusinessAppointmentsPage() {
     const handleCompleteConsultation = async () => {
         if (!selectedApt) return;
         if (hasMedicalRecords && !diagnosis) {
-            showToast("Lütfen tanı alanını doldurun.", "AlertTriangle", "text-amber-500 font-bold");
+            showToast("Lütfen tanı alanını doldurun.", "AlertCircle", "text-amber-500 font-bold");
             return;
         }
 
@@ -740,7 +684,7 @@ export default function BusinessAppointmentsPage() {
             // Use regex to strictly enforce UUID to block all mock IDs (e.g. 'pet-milo' or '349b...')
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             if (!targetPetId || !uuidRegex.test(targetPetId)) {
-                showToast("Gerçek bir evcil hayvan ID'si bulunamadı (Mock Veri). Sadece gerçek hastalara tanı girilebilir.", "AlertTriangle", "text-amber-500 font-bold");
+                showToast("Gerçek bir evcil hayvan ID'si bulunamadı (Mock Veri). Sadece gerçek hastalara tanı girilebilir.", "AlertCircle", "text-amber-500 font-bold");
                 return;
             }
         }
@@ -779,7 +723,7 @@ export default function BusinessAppointmentsPage() {
                         .maybeSingle();
 
                     if (existingRecord) {
-                        showToast("Bu randevu için muayene kaydı zaten oluşturulmuş.", "AlertTriangle", "text-amber-500 font-bold");
+                        showToast("Bu randevu için muayene kaydı zaten oluşturulmuş.", "AlertCircle", "text-amber-500 font-bold");
                         return;
                     }
 
@@ -788,7 +732,7 @@ export default function BusinessAppointmentsPage() {
                         pet_id: targetPetId,
                         appointment_id: selectedApt.id,
                         clinic_id: user?.id,
-                        vet_name: user?.user_metadata?.business_name || user?.email || 'Moffi Kliniği',
+                        vet_name: selectedApt.realDoctorName || user?.businessName || user?.name || 'Klinik',
                         diagnosis: diagnosis,
                         critical_notes: criticalNotes,
                         medications: addedMeds,
@@ -803,7 +747,7 @@ export default function BusinessAppointmentsPage() {
                             status: 'completed',
                             dueDate: v.nextDate || new Date().toISOString(),
                             dateAdministered: v.date || new Date().toISOString(),
-                            vetName: user?.user_metadata?.business_name || user?.email || 'Moffi Kliniği'
+                            vetName: selectedApt.realDoctorName || user?.businessName || user?.name || 'Klinik'
                         });
                     }
 
@@ -824,7 +768,7 @@ export default function BusinessAppointmentsPage() {
             } catch (e: any) {
                 console.error("Failed to sync consultation details with Supabase:", e);
                 // Do NOT swallow the error
-                showToast("Veritabanı senkronizasyonu başarısız: " + (e.message || "Bilinmeyen Hata"), "AlertTriangle", "text-red-500 font-bold");
+                showToast("Veritabanı senkronizasyonu başarısız: " + (e.message || "Bilinmeyen Hata"), "AlertCircle", "text-red-500 font-bold");
                 return; // Stop execution, don't show success message and don't commit local state!
             }
         }
@@ -846,7 +790,7 @@ export default function BusinessAppointmentsPage() {
 
     const handleSaveSettings = async () => {
         if (!user?.id) {
-            showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertTriangle", "text-amber-500 font-bold");
+            showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertCircle", "text-amber-500 font-bold");
             return;
         }
 
@@ -905,7 +849,7 @@ export default function BusinessAppointmentsPage() {
                     setOriginalWorkingHours(workingHours);
                 } catch (e) {
                     console.error("Failed to save clinic settings to Supabase:", e);
-                    showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
+                    showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertCircle", "text-red-500 font-bold");
                     return;
                 }
             }
@@ -932,11 +876,11 @@ export default function BusinessAppointmentsPage() {
 
     const handleSaveAdvice = async () => {
         if (!user?.id) {
-            showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertTriangle", "text-amber-500 font-bold");
+            showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertCircle", "text-amber-500 font-bold");
             return;
         }
         if (!vetAdviceText.trim()) {
-            showToast("Lütfen bir tavsiye metni girin! ⚠️", "AlertTriangle", "text-amber-500 font-bold");
+            showToast("Lütfen bir tavsiye metni girin! ⚠️", "AlertCircle", "text-amber-500 font-bold");
             return;
         }
         setIsSavingAdvice(true);
@@ -957,11 +901,11 @@ export default function BusinessAppointmentsPage() {
                 console.error("Tab sync broadcast failed:", bErr);
             }
 
-            showToast("Günün sağlık tavsiyesi başarıyla hikayelerde yayınlandı! 🩺🚀", "Check", "text-green-500 font-bold");
+            showToast("Günün sağlık tavsiyesi başarıyla hikayelerde yayınlandı! 🩺🚀", "CheckCircle2", "text-green-500 font-bold");
         } catch (e: any) {
             console.error("Failed to save clinic advice:", e);
             const errStr = e.message || e.error_description || JSON.stringify(e);
-            showToast(`Tavsiye kaydedilemedi! ❌ Hata: ${errStr.slice(0, 80)}`, "AlertTriangle", "text-red-500 font-bold");
+            showToast(`Tavsiye kaydedilemedi! ❌ Hata: ${errStr.slice(0, 80)}`, "AlertCircle", "text-red-500 font-bold");
         } finally {
             setIsSavingAdvice(false);
         }
@@ -969,81 +913,9 @@ export default function BusinessAppointmentsPage() {
 
     return (
         <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
-            {/* HEADER */}
-            <div className="flex justify-between items-center mb-10">
-                <div>
-                    <h1 className="text-3xl font-black text-foreground dark:text-white mb-2">Randevu Yönetimi</h1>
-                    <p className="text-gray-500 font-medium">VetLife Global Clinic • 12 Aralık 2025</p>
-                </div>
-                    <div className="flex items-center gap-4">
-                        <div className="relative z-40" ref={notifRef}>
-                            <button 
-                                onClick={() => {
-                                    console.log('Bell button clicked! current showNotifications:', showNotifications);
-                                    setShowNotifications(!showNotifications);
-                                }}
-                                className="w-12 h-12 rounded-2xl bg-card dark:bg-white/5 border border-card-border dark:border-card-border flex items-center justify-center relative hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                            >
-                                <Bell className={cn("w-6 h-6 text-gray-600 dark:text-gray-300", unreadCount > 0 ? "animate-pulse" : "")} />
-                                {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white dark:border-black text-[10px] font-bold text-white flex items-center justify-center px-1">
-                                        {unreadCount}
-                                    </span>
-                                )}
-                            </button>
-                            <AnimatePresence>
-                                {showNotifications && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute top-[120%] right-0 w-80 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-xl shadow-2xl overflow-hidden"
-                                    >
-                                        <div className="p-3 border-b border-zinc-100 dark:border-[#27272a]">
-                                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-[#a1a1aa]">Bildirimler</h3>
-                                        </div>
-                                        <div className="max-h-80 overflow-y-auto">
-                                            {unreadNotifications.length === 0 ? (
-                                                <div className="p-4 text-center text-xs text-zinc-500 dark:text-[#a1a1aa] font-bold">
-                                                    Yeni bildirim yok
-                                                </div>
-                                            ) : (
-                                                unreadNotifications.map(notif => (
-                                                    <div 
-                                                        key={notif.id} 
-                                                        onClick={() => handleNotificationClick(notif.id)}
-                                                        className={cn(
-                                                            "p-4 border-b border-zinc-100 dark:border-[#27272a] last:border-0 hover:bg-zinc-50 dark:hover:bg-[#27272a]/50 cursor-pointer transition-all relative",
-                                                            notif.isReadLocally ? "opacity-50" : ""
-                                                        )}
-                                                    >
-                                                        <div className="flex justify-between items-start gap-2">
-                                                            <p className="text-xs font-bold text-zinc-800 dark:text-[#fafafa] mb-1 leading-relaxed">
-                                                                {notif.message}
-                                                            </p>
-                                                            {notif.isReadLocally && (
-                                                                <span className="text-[10px] text-green-500 flex items-center gap-1 font-bold whitespace-nowrap">
-                                                                    ✓ Okundu
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-[9px] font-bold text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider">
-                                                            {new Date(notif.created_at).toLocaleString('tr-TR')}
-                                                        </span>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                        <div className="hidden md:flex items-center gap-3 bg-card dark:bg-white/5 px-4 py-2 rounded-2xl border border-card-border dark:border-card-border">
-                            <img src={user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-8 h-8 rounded-full object-cover" />
-                            <span className="font-bold text-sm">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Klinik Yöneticisi"}</span>
-                        </div>
-                    </div>
-                </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-8">
+                Randevu taleplerini onayla, muayene/tamamlama kaydı gir ve çalışma saatlerini yönet. Günlük görünüm için Takvim sayfasını kullanabilirsin.
+            </p>
                 {/* TABS */}
                 <div className="flex gap-4 mb-8 border-b border-zinc-200 dark:border-[#27272a] pb-px">
                     <button 

@@ -5,7 +5,6 @@ import { ShopProduct, ShopCategory, ShopCartItem } from "@/services/types";
 export function usePetShop() {
     const [products, setProducts] = useState<ShopProduct[]>([]);
     const [cart, setCart] = useState<ShopCartItem[]>([]);
-    const [subscriptions, setSubscriptions] = useState<ShopProduct[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -90,126 +89,24 @@ export function usePetShop() {
         }
     }, []);
 
-    // Order
-    const createOrder = useCallback(async (shippingAddress: string, discountCode?: string) => {
-        setError(null);
-        try {
-            const cartItems = await apiService.getCart();
-            if (cartItems.length === 0) throw new Error('Sepet boş');
-
-            const allProducts = await apiService.getProducts();
-            const productDetails = cartItems.map(item => {
-                const product = allProducts.find(p => p.id === item.productId);
-                return { product: product!, quantity: item.quantity };
-            });
-
-            // Calculate base total with active product subscription discounts (10%)
-            let totalPrice = productDetails.reduce((s, i) => {
-                const isSubscribed = subscriptions.some(sub => sub.id === i.product.id);
-                const price = isSubscribed ? i.product.price * 0.90 : i.product.price;
-                return s + (price * i.quantity);
-            }, 0);
-            
-            let discountAmount = 0;
-
-            // Simple mock discount logic moved here for now
-            if (discountCode === 'MOFFI20') {
-               discountAmount = Math.round(totalPrice * 0.20);
-               totalPrice -= discountAmount;
-            } else if (discountCode === 'WELCOME10') {
-               discountAmount = Math.round(totalPrice * 0.10);
-               totalPrice -= discountAmount;
-            }
-
-            const order = await apiService.createOrder({
-                items: productDetails,
-                totalPrice,
-                discountCode,
-                discountAmount,
-                shippingAddress,
-            });
-
-            setCart([]);
-            return order;
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Sipariş oluşturulamadı');
-            return null;
-        }
-    }, [subscriptions]);
-
-    // Subscriptions (Product Auto-Ship integration synced with localStorage and backend)
-    const fetchSubscriptions = useCallback(async () => {
-        try {
-            // Triggers Prime check on backend if needed
-            await apiService.getSubscriptions();
-            
-            const saved = localStorage.getItem('moffi_product_subscriptions');
-            let localIds: string[] = [];
-            if (saved) {
-                try { localIds = JSON.parse(saved); } catch (e) {}
-            }
-            
-            const all = await apiService.getProducts();
-            const subscribedProducts = all.filter(p => localIds.includes(p.id));
-            setSubscriptions(subscribedProducts);
-        } catch (err) {
-            console.error('Subscriptions fetch error:', err);
-        }
-    }, []);
-
-    const subscribeToProduct = useCallback(async (productId: string) => {
-        setError(null);
-        try {
-            await apiService.subscribeToProduct(productId);
-            
-            const saved = localStorage.getItem('moffi_product_subscriptions');
-            let localIds: string[] = [];
-            if (saved) {
-                try { localIds = JSON.parse(saved); } catch (e) {}
-            }
-            
-            const nextIds = localIds.includes(productId)
-                ? localIds.filter(id => id !== productId)
-                : [...localIds, productId];
-            localStorage.setItem('moffi_product_subscriptions', JSON.stringify(nextIds));
-            
-            await fetchSubscriptions();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Abone olunamadı');
-        }
-    }, [fetchSubscriptions]);
-
-    // Discount validation
-    const validateDiscount = useCallback(async (code: string) => {
-        if (code === 'MOFFI20') return { valid: true, discountPercent: 20, message: '%20 indirim uygulandı!' };
-        if (code === 'WELCOME10') return { valid: true, discountPercent: 10, message: '%10 indirim uygulandı!' };
-        return { valid: false, message: 'Geçersiz kod' };
-    }, []);
-
-    // Initial load
+    // Sipariş ve ödeme sunucuda (/api/paytr/payment) oluşturulur; fiyat orada veritabanından
+    // hesaplanır. Sepet toplamı aynı fiyatı gösterir, istemci tarafı indirim uygulanmaz.
     useEffect(() => {
         fetchProducts();
         fetchCart();
-        fetchSubscriptions();
-    }, [fetchProducts, fetchCart, fetchSubscriptions]);
+    }, [fetchProducts, fetchCart]);
 
-    // Cart totals
     const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
-    const getCartTotal = useCallback(() => {
-        return cart.reduce((total, item) => {
-            const product = products.find(p => p.id === item.productId);
-            if (!product) return total;
-            const isSubscribed = subscriptions.some(s => s.id === product.id);
-            const price = isSubscribed ? product.price * 0.90 : product.price;
-            return total + (price * item.quantity);
-        }, 0);
-    }, [cart, products, subscriptions]);
+    const cartTotal = cart.reduce((total, item) => {
+        const product = products.find(p => p.id === item.productId);
+        return product ? total + product.price * item.quantity : total;
+    }, 0);
 
     return {
         products,
         cart,
         cartCount,
-        cartTotal: getCartTotal(),
+        cartTotal,
         isLoading,
         error,
         fetchProducts,
@@ -218,10 +115,5 @@ export function usePetShop() {
         updateCartItem,
         removeFromCart,
         clearCart,
-        validateDiscount,
-        createOrder,
-        subscriptions,
-        subscribeToProduct,
-        fetchSubscriptions,
     };
 }

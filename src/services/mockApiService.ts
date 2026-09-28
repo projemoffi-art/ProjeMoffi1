@@ -518,21 +518,8 @@ export class MockApiService implements IApiService {
     async getOrders(): Promise<ShopOrder[]> {
         return await this.loadData<ShopOrder[]>('orders') || [];
     }
-
-    async subscribeToProduct(productId: string): Promise<void> {
-        const subs = await this.getSubscriptions();
-        if (!subs.find(p => p.id === productId)) {
-            const products = await this.getProducts();
-            const product = products.find(p => p.id === productId);
-            if (product) {
-                await this.saveData('product_subscriptions', [...subs, product]);
-            }
-        }
-    }
-
-    async getSubscriptions(): Promise<ShopProduct[]> {
-        return await this.loadData<ShopProduct[]>('product_subscriptions') || [];
-    }
+
+
 
     async togglePetSosStatus(petId: string, status: 'safe' | 'lost'): Promise<void> {
         const pets = await this.getPets();

@@ -319,8 +319,6 @@ export interface IApiService {
     getOrders(): Promise<ShopOrder[]>;
 
     // Subscriptions & Advanced Features
-    subscribeToProduct(productId: string): Promise<void>;
-    getSubscriptions(): Promise<ShopProduct[]>;
     togglePetSosStatus(petId: string, status: 'safe' | 'lost'): Promise<void>;
     updatePetSosSettings(petId: string, settings: any): Promise<void>;
     upgradeSubscription(status: 'free' | 'plus' | 'pro'): Promise<void>;

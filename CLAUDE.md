@@ -2667,6 +2667,44 @@ yok → canlıda hiçbir e-posta gitmiyordu ve kuyruk bu anahtarlar eklenene kad
 Resend'de `moffi.net` alan adı doğrulanmalı (yoksa `onboarding@resend.dev` sadece Resend
 hesabı sahibine gönderebilir).
 
+### 8.41 Faz F — Pet Shop pazar yeri siparişleri + işletme paneli üst çubuğu (2026-09-28)
+
+**Rapor düzeltmesi:** 8.36'daki "createOrder yok → mağaza siparişi çalışmıyor" tespiti eksikti.
+Gerçek ödeme akışı `petshop/page.tsx` → `/api/paytr/payment` (fiyat ve stok sunucuda,
+bekleyen 15 dk rezervasyonlarla) → PayTR → `/api/paytr/webhook`. `usePetShop.createOrder`
+ölü koddu, silindi. Model: **pazar yeri** (`products.owner_id` = satıcı işletme,
+`order_items.business_id`, kalem bazlı durum).
+
+- 🔴 **Ödeme onayında stok hiç düşmüyordu** (ödenmiş sipariş rezervasyondan da çıktığı için
+  stok fiilen sınırsızdı). `finalize_paid_order(order, kuruş)` (yalnız service_role):
+  tutarı doğrular, tekrarlanan webhook'ta "duplicate" döner, stok düşer, kalemler
+  `preparing` olur, sepet temizlenir, müşteriye "Siparişin alındı" ve her satıcıya
+  "Yeni sipariş" bildirimi + e-posta. Ödeme başarısızsa `mark_order_payment_failed`.
+- Satıcı durum geçişleri `order_items_guard_status` ile kısıtlı (yalnız ileri:
+  hazırlanıyor → kargoda → teslim edildi, sadece ödenmiş siparişte). Kargoya verme/teslimde
+  `order_items_notify_status` (statement-level) müşteriye tek bildirim (+kargo firması/takip no).
+- `notify_user` artık `order` tipini de e-postaya düşürür.
+- Komisyon kaydı (`orders.commission_rate/amount`, `platform_settings.general.commissionRate`)
+  "geçici kapalı"ydı; açıldı.
+- **Kaldırılan sahte özellikler:** ürünlerdeki "Aylık Abone Ol (%10)" (var olmayan
+  `user_subscriptions` tablosuna "prime" yazmaya çalışıyordu — her seferinde hata veriyor,
+  indirim sepette görünüp tahsilatta uygulanmıyordu) ve işlevsiz indirim kodu kutusu
+  (MOFFI20/WELCOME10 istemciye gömülüydü, toplamı değiştirmiyordu). Gerçek "abone ol,
+  tasarruf et" ve gerçek kupon sistemi ayrı ürün kararı (Faz 14 kupon).
+- **İşletme üst çubuğu (`components/business/Header.tsx`):** canlıda işletmelere
+  "Business Panel (Global Header)" / "Global Header Alanı" iskelet yazısı görünüyordu.
+  Artık: sayfa adı, işletme adı + türü, tüm sayfalarda sabit bildirim zili
+  (`NotificationContext`, Realtime; randevu bildirimi → Takvim). Randevu sayfasındaki ikinci
+  zil + sahte "VetLife Global Clinic • 12 Aralık 2025" başlığı + stok profil fotoğrafı kaldırıldı.
+  Muayene kaydına veteriner adı olarak işletmenin e-posta adresi yazılıyordu; artık
+  randevunun personeli / işletme adı.
+
+**Not düşülen, dokunulmayan:** `petshop/page.tsx`'teki Stripe dalı tanımsız değişkenlere
+(`Elements`, `paymentClientSecret`) başvuruyor ama ödeme hep PayTR modunda açıldığı için
+hiç çalışmıyor (ölü kod). `ProCheckoutModal` ödeme almadan var olmayan
+`user_subscriptions` tablosuna "pro" yazmaya çalışıyor (her seferinde hata). Ürün detayındaki
+kategoriye göre sabit yazılmış "faydalar" metinleri gerçek ürün verisi değil.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

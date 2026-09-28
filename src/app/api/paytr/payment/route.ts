@@ -172,8 +172,8 @@ export async function POST(req: Request) {
                     total_amount: amount,
                     shipping_address: fullAddress,
                     status: "pending",
-                    // commission_rate: commissionRate,     // TEMPORARILY DISABLED (Claude's request)
-                    // commission_amount: commissionAmount, // TEMPORARILY DISABLED (Claude's request)
+                    commission_rate: commissionRate,
+                    commission_amount: commissionAmount,
                     expires_at: expiresAt
                 })
                 .select()
