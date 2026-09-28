@@ -2705,6 +2705,29 @@ hiç çalışmıyor (ölü kod). `ProCheckoutModal` ödeme almadan var olmayan
 `user_subscriptions` tablosuna "pro" yazmaya çalışıyor (her seferinde hata). Ürün detayındaki
 kategoriye göre sabit yazılmış "faydalar" metinleri gerçek ürün verisi değil.
 
+### 8.42 Faz G — temizlik: tek bildirim kaynağı, sohbette yoklama yok, ölü kod/tablolar (2026-09-28)
+
+- **Bildirim:** `NotificationContext` uygulamanın TEK bildirim kaynağı. Community sayfasındaki
+  `useRealtimeNotifications` hook'u (çektiği liste hiçbir yerde kullanılmıyordu, fazladan kanal
+  açıyordu) ve sayfanın boş fonksiyon çağıran üçüncü dinleyicisi silindi. `getNotifications`
+  (stok köpek fotoğraflı eski eşleme) silindi.
+- **Sohbet:** `ChatContext` tek `messages` Realtime kanalı; her ilgili mesaj/okundu değişiminde
+  `window` olayı `CHAT_MESSAGE_EVENT` yayınlar. `ClinicDetailDrawer` (4 sn) ve işletme randevu
+  sayfasındaki (10 sn + 4 sn) yoklamalar bu olayı dinleyen yapıya çevrildi. **Kural:** yeni bir
+  ekran mesaj dinleyecekse ayrı kanal/yoklama açma, bu olayı dinle.
+- **Ölü kod/tablo:** `clinics` tablosu (0 satır, referanssız) silindi. Eski `clinic_messages`
+  sistemine ait 6 servis fonksiyonu + `ClinicMessage` tipi silindi (hiçbiri çağrılmıyordu);
+  tablonun kendisi 14 eski mesaj içerdiği için Baran onayına kadar duruyor.
+- 🔴 **Senkron hataları:** müşteri randevu alırken veterinerle paylaşılan aşı geçmişi
+  `localStorage`'dan okunuyordu (başka cihazdan hep boş) → artık `getPetVaccines` (DB).
+  İşletme randevu sayfası çalışma saatlerini DB'den yükleyip ardından tarayıcıdaki eski
+  kopyayla eziyordu (iki cihazda eski saatler görünüp geri kaydedilebiliyordu) → kaldırıldı.
+- 🔴 Community sayfası `sortPostsLocally`'yi hook'tan almadan çağırıyordu (gönderi varken
+  ReferenceError) → düzeltildi.
+- **Karar bekleyen:** `src/integrations-pending/kombinle/node_modules` (git'te değil, yerelde
+  134 MB — kod aramalarını yavaşlatıyor), rolü `business` ama türü/adı boş iki eski hesap
+  (biri Baran'ın `12664c0f…` hesabı), `clinic_messages` tablosunun silinmesi.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

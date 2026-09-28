@@ -597,10 +597,12 @@ function VetPageContent() {
         let sharedVaccines: any[] = [];
         if (shareVaccines && bookingPet) {
             try {
-                const saved = localStorage.getItem(`moffi_vaccines_${bookingPet.id}`);
-                if (saved) {
-                    sharedVaccines = JSON.parse(saved);
-                }
+                const records = await apiService.getPetVaccines(bookingPet.id);
+                sharedVaccines = records.map(v => ({
+                    name: v.vaccineId,
+                    date: v.dateAdministered || v.dueDate,
+                    status: v.status
+                }));
             } catch (e) {
                 console.error("Failed to load vaccines for sharing:", e);
             }

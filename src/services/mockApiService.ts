@@ -1831,25 +1831,7 @@ export class MockApiService implements IApiService {
         return true;
     }
 
-    // Clinic Messages & Campaigns (Faz 8)
-    async getConversation(clinicId: string, userId: string): Promise<any[]> {
-        return [];
-    }
-    async getClinicConversations(clinicId: string): Promise<any[]> {
-        return [];
-    }
-    async getTotalClinicUnreadCount(clinicId: string): Promise<number> {
-        return 0;
-    }
-    async sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean> {
-        return true;
-    }
-    async markMessagesRead(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<boolean> {
-        return true;
-    }
-    async getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number> {
-        return 0;
-    }
+    // Clinic Messages & Campaigns (Faz 8)
     async getClinicAppointments(clinicId: string): Promise<any[]> {
         return [];
     }

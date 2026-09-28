@@ -76,7 +76,6 @@ import { AdoptionTab } from '@/components/community/AdoptionTab';
 import { MOCK_ADOPTIONS } from '@/lib/mockData';
 import Image from 'next/image';
 import { useChat } from '@/context/ChatContext';
-import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 const StoryProgressBar = ({ isActive, isCompleted, isPaused, onComplete, duration = 6000 }: { isActive: boolean, isCompleted: boolean, isPaused: boolean, onComplete: () => void, duration?: number }) => {
     const barRef = React.useRef<HTMLDivElement>(null);
@@ -172,7 +171,7 @@ export default function MoffiSocialMasterpiece() {
     const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
     
     // REALTIME FEED ENTEGRASYONU
-    const { posts, setPosts, isLoading: isLoadingPosts, refetchPosts: fetchPosts } = useRealtimeFeed(true);
+    const { posts, setPosts, isLoading: isLoadingPosts, refetchPosts: fetchPosts, sortPostsLocally } = useRealtimeFeed(true);
     
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPublishing, setIsPublishing] = useState(false);
@@ -181,7 +180,6 @@ export default function MoffiSocialMasterpiece() {
     const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const { notifications, unreadCount: notifUnreadCount, markAllRead } = useRealtimeNotifications(user?.id);
     const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
     const [profileViewMode, setProfileViewMode] = useState('grid');
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -928,15 +926,10 @@ export default function MoffiSocialMasterpiece() {
             fetchPosts();
             fetchLostPets();
             fetchAdoptionAds();
-            fetchNotifications();
             fetchInbox();
         };
         loadInitialData();
     }, []);
-
-    const fetchNotifications = async () => {
-        // Obsolete, handled by useRealtimeNotifications hook
-    };
 
     // REAL-TIME GLOBAL SYNC (Professional Event-Driven Architecture)
     useEffect(() => {
@@ -957,9 +950,6 @@ export default function MoffiSocialMasterpiece() {
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
                     fetchPosts(true);
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-                    fetchNotifications();
                 })
                 .subscribe();
         }
@@ -4649,7 +4639,6 @@ export default function MoffiSocialMasterpiece() {
                 setSelectedSharePost={setSelectedSharePost}
                 isNotificationsOpen={isNotificationsOpen}
                 setIsNotificationsOpen={setIsNotificationsOpen}
-                notificationsList={notifications}
                 setNotificationsList={() => {}}
                 isPetSettingsOpen={isPetSettingsOpen}
                 setIsPetSettingsOpen={setIsPetSettingsOpen}

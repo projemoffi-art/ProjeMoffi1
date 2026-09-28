@@ -31,6 +31,9 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
+export const CHAT_MESSAGE_EVENT = 'moffi-chat-message';
+export type ChatMessageEventDetail = { id: string; senderId: string; receiverId: string };
+
 export function ChatProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [isInboxOpen, setIsInboxOpen] = useState(false);
@@ -99,6 +102,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
     }, [fetchInbox]);
 
+    // Uygulamanın tek mesaj kanalı bu; klinik sohbeti gibi başka ekranlar ayrı yoklama/kanal açmak
+    // yerine bu olayı dinler.
+    const announceChatChange = (msg: any) => {
+        const me = userRef.current?.id;
+        if (!me || (msg.sender_id !== me && msg.receiver_id !== me)) return;
+        window.dispatchEvent(new CustomEvent(CHAT_MESSAGE_EVENT, {
+            detail: { id: msg.id, senderId: msg.sender_id, receiverId: msg.receiver_id }
+        }));
+    };
+
     // ONE-TIME initialization when user first becomes available
     useEffect(() => {
         if (!user || initializedRef.current) return;
@@ -121,6 +134,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     // sohbetin karşı tarafından gelen mesajı ekliyoruz — başka bir kullanıcının mesajı
                     // yanlışlıkla açık sohbete karışmasın diye.
                     const isFromActivePartner = !!activeChatUserIdRef.current && newMsg.sender_id === activeChatUserIdRef.current;
+                    announceChatChange(newMsg);
 
                     fetchInbox();
                     if (isFromActivePartner) {
@@ -146,6 +160,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     // UPDATE ile değişiyor — bu yüzden ayrı bir dinleyici gerekiyor. Bu olmadan,
                     // karşı taraf mesajı okusa/geri alsa bile sayfa yenilenmeden görünmüyordu.
                     const updated = payload.new as any;
+                    announceChatChange(updated);
                     const isMine = updated.sender_id === userRef.current?.id;
                     const isFromActivePartner = !!activeChatUserIdRef.current && updated.sender_id === activeChatUserIdRef.current;
                     if (!isMine && !isFromActivePartner) return;

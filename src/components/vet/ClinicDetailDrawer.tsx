@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { haptics } from "@/lib/haptics";
 import { FilterChips } from "@/components/vet/find/FilterChips";
 import { getBusinessTypeConfig } from "@/config/businessTypes";
+import { CHAT_MESSAGE_EVENT, type ChatMessageEventDetail } from "@/context/ChatContext";
 import type { BusinessType } from "@/context/AuthContext";
 
 // Faz 25 — Ekran 4 (bkz. design-reference/vet-final/README.md). Baran'ın
@@ -68,8 +69,6 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [chatMessages, setChatMessages] = useState<any[]>([]);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
-    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
     const loadConversation = async () => {
         if (!clinicId || !currentUser?.id) return;
         const messages = await apiService.getChatMessages(clinicId, 'clinic');
@@ -77,14 +76,16 @@ export function ClinicDetailDrawer({ clinicId, clinicData, businessType = 'vet',
         await apiService.markChatAsRead(clinicId, 'clinic');
     };
 
+    // Yeni mesaj/okundu bilgisi ChatContext'in tek Realtime kanalından gelir (yoklama yok).
     useEffect(() => {
-        if (isChatOpen) {
-            loadConversation();
-            pollingRef.current = setInterval(() => { loadConversation(); }, 4000);
-        } else {
-            if (pollingRef.current) clearInterval(pollingRef.current);
-        }
-        return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+        if (!isChatOpen) return;
+        loadConversation();
+        const onChat = (e: Event) => {
+            const { senderId, receiverId } = (e as CustomEvent<ChatMessageEventDetail>).detail;
+            if (senderId === clinicId || receiverId === clinicId) loadConversation();
+        };
+        window.addEventListener(CHAT_MESSAGE_EVENT, onChat);
+        return () => window.removeEventListener(CHAT_MESSAGE_EVENT, onChat);
     }, [isChatOpen, clinicId, currentUser]);
 
     const handleSendMessage = async (text: string, attachmentUrl?: string) => {

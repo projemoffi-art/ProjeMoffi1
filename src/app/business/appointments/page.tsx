@@ -17,6 +17,7 @@ import { useDragScroll } from "@/hooks/useDragScroll";
 import { NoShowBadge } from "@/components/business/NoShowBadge";
 import { useBusinessType } from "@/context/BusinessTypeContext";
 import { wallParts, todayKey, addDaysKey } from "@/lib/appointmentTime";
+import { CHAT_MESSAGE_EVENT, type ChatMessageEventDetail } from "@/context/ChatContext";
 
 export default function BusinessAppointmentsPage() {
     const { customRecords, setCustomRecords, updatePet } = usePet();
@@ -136,7 +137,6 @@ export default function BusinessAppointmentsPage() {
     const [selectedConv, setSelectedConv] = useState<any>(null);
     const [chatMessages, setChatMessages] = useState<any[]>([]);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
-    const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
     // Filter State
     const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
@@ -343,24 +343,6 @@ export default function BusinessAppointmentsPage() {
             }
 
             try {
-                const saved = localStorage.getItem('moffi_clinic_settings');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.workingHours) {
-                        setWorkingHours(parsed.workingHours);
-                        setOriginalWorkingHours(parsed.workingHours);
-                    }
-                    if (parsed.startTime) setStartTime(parsed.startTime);
-                    if (parsed.endTime) setEndTime(parsed.endTime);
-                    if (parsed.lunchStart) setLunchStart(parsed.lunchStart);
-                    if (parsed.lunchEnd) setLunchEnd(parsed.lunchEnd);
-                    if (parsed.slotDuration) setSlotDuration(Number(parsed.slotDuration));
-                }
-            } catch (e) {
-                console.error("Failed to load clinic settings:", e);
-            }
-
-            try {
                 const clinicId = user?.id;
                 if (!clinicId) return;
                 const { data: advices } = await supabase.from('vet_advices').select('*');
@@ -398,26 +380,24 @@ export default function BusinessAppointmentsPage() {
         } catch (e) { console.error(e); }
     };
 
+    // Mesajlar ChatContext'in tek Realtime kanalından gelen olayla tazelenir (yoklama yok).
     useEffect(() => {
-        if (user?.id && isSupabaseEnabled) {
-            loadConversations();
-            const poller = setInterval(loadConversations, 10000); // 10s polling for new messages
-            return () => clearInterval(poller);
-        }
+        if (!user?.id || !isSupabaseEnabled) return;
+        loadConversations();
+        const onChat = () => loadConversations();
+        window.addEventListener(CHAT_MESSAGE_EVENT, onChat);
+        return () => window.removeEventListener(CHAT_MESSAGE_EVENT, onChat);
     }, [user?.id]);
 
     useEffect(() => {
-        if (activeTab === 'messages' && selectedConv) {
-            loadChatHistory(selectedConv.userId);
-            pollingRef.current = setInterval(() => {
-                loadChatHistory(selectedConv.userId);
-            }, 4000);
-        } else {
-            if (pollingRef.current) clearInterval(pollingRef.current);
-        }
-        return () => {
-            if (pollingRef.current) clearInterval(pollingRef.current);
-        }
+        if (activeTab !== 'messages' || !selectedConv) return;
+        loadChatHistory(selectedConv.userId);
+        const onChat = (e: Event) => {
+            const { senderId, receiverId } = (e as CustomEvent<ChatMessageEventDetail>).detail;
+            if (senderId === selectedConv.userId || receiverId === selectedConv.userId) loadChatHistory(selectedConv.userId);
+        };
+        window.addEventListener(CHAT_MESSAGE_EVENT, onChat);
+        return () => window.removeEventListener(CHAT_MESSAGE_EVENT, onChat);
     }, [activeTab, selectedConv]);
 
     const handleSendMessage = async (text: string, attachmentUrl?: string) => {
@@ -868,10 +848,6 @@ export default function BusinessAppointmentsPage() {
         }
 
         await proceedSave(false);
-
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('moffi_clinic_settings', JSON.stringify(settings));
-        }
     };
 
     const handleSaveAdvice = async () => {

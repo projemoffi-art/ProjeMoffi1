@@ -43,57 +43,6 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
 // EMAIL TEMPLATES
 // ==========================================
 
-export interface OrderItemData {
-    name: string;
-    quantity: number;
-    price: number;
-}
-
-export function getOrderConfirmationHtml(orderId: string, totalAmount: number, items: OrderItemData[] = []) {
-    const itemsHtml = items.map(item => `
-        <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity} adet</td>
-            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price.toFixed(2)} TL</td>
-        </tr>
-    `).join('');
-
-    return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-        <div style="text-align: center; padding: 20px 0;">
-            <h1 style="color: #4F46E5;">Moffi</h1>
-        </div>
-        <div style="background-color: #f9fafb; padding: 30px; border-radius: 10px;">
-            <h2 style="margin-top: 0;">Siparişiniz Onaylandı! 🎉</h2>
-            <p>Sipariş numaranız: <strong>#${orderId.substring(0, 8).toUpperCase()}</strong></p>
-            <p>Siparişiniz başarıyla alındı ve ödemeniz onaylandı. Satıcılarımız ürünlerinizi hazırlamaya başladı.</p>
-            
-            ${items.length > 0 ? `
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden;">
-                <thead>
-                    <tr style="background-color: #f3f4f6;">
-                        <th style="padding: 10px; text-align: left;">Ürün</th>
-                        <th style="padding: 10px; text-align: center;">Adet</th>
-                        <th style="padding: 10px; text-align: right;">Fiyat</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsHtml}
-                </tbody>
-            </table>
-            ` : ''}
-            
-            <div style="text-align: right; font-size: 18px; margin-top: 20px;">
-                <strong>Toplam Tutar: ${totalAmount.toFixed(2)} TL</strong>
-            </div>
-        </div>
-        <div style="text-align: center; padding: 20px; font-size: 12px; color: #888;">
-            Bu e-posta Moffi platformu tarafından otomatik oluşturulmuştur.
-        </div>
-    </div>
-    `;
-}
-
 function escapeHtml(value: string) {
     return value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
 }

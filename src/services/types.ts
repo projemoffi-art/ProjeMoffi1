@@ -536,13 +536,7 @@ export interface IApiService {
     getReviewableAppointments(userId: string): Promise<any[]>;
     replyToReview(reviewId: string, clinicId: string, replyText: string): Promise<boolean>;
 
-    // Clinic Messages & Campaigns (Faz 8)
-    getConversation(clinicId: string, userId: string): Promise<ClinicMessage[]>;
-    getClinicConversations(clinicId: string): Promise<any[]>;
-    getTotalClinicUnreadCount(clinicId: string): Promise<number>;
-    sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean>;
-    markMessagesRead(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<boolean>;
-    getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number>;
+    // Clinic Campaigns
     getClinicDashboardStats(clinicId: string): Promise<any>;
     getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]>;
     createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean>;
@@ -552,16 +546,6 @@ export interface IApiService {
     // Appointment Notifications (Faz 9)
     getUnreadNotifications(recipientId: string): Promise<any[]>;
     markNotificationRead(notificationId: string): Promise<boolean>;
-}
-
-export interface ClinicMessage {
-    id: string;
-    clinic_id: string;
-    user_id: string;
-    sender_role: 'user' | 'clinic';
-    message: string;
-    is_read: boolean;
-    created_at: string;
 }
 
 export interface ClinicCampaign {

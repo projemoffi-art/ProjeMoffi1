@@ -42,7 +42,6 @@ interface OverlaySystemProps {
     
     isNotificationsOpen: boolean;
     setIsNotificationsOpen: (open: boolean) => void;
-    notificationsList: any[];
     setNotificationsList: (list: any[]) => void;
     
     isPetSettingsOpen: boolean;
@@ -93,7 +92,6 @@ export function OverlaySystem({
     
     isNotificationsOpen,
     setIsNotificationsOpen,
-    notificationsList,
     setNotificationsList,
     
     isPetSettingsOpen,
