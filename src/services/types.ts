@@ -50,7 +50,6 @@ export interface Pet {
     microchip_id?: string;
     is_neutered?: boolean;
     size?: 'small' | 'medium' | 'large';
-    health_notes?: string;
     species?: string;
     photo_url?: string;
     owner_id?: string;
@@ -62,7 +61,6 @@ export interface Pet {
         emergency_sms_number: string;
         reward_amount: number;
         reward_currency: string;
-        critical_health_note: string;
         last_seen_location?: string;
         finder_message: string;
         reward_enabled: boolean;
@@ -518,6 +516,8 @@ export interface IApiService {
     addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean>;
     getGameModules(): Promise<any[]>;
     getPetLeaderboard(limit?: number): Promise<any[]>;
+    /** Başka bir kullanıcının hayvanları: sadece herkese açık kart alanları. */
+    getPublicPetsByOwner(ownerId: string): Promise<{ id: string; name: string; type: string | null; breed: string | null; gender: string | null; image: string }[]>;
 
     // Feedbacks
     getFeedbacks(): Promise<SystemFeedback[]>;

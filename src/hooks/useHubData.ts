@@ -67,7 +67,7 @@ export function useHubData() {
             // 3. Sıradaki sağlık işi — Sağlık Merkezi ile aynı kayıt ve aynı hesap (lib/health/derive).
             let nextAlert: HubData['nextHealthAlert'] = null;
             if (activePet) {
-                const bundle = await healthService.getBundle(activePet.id, speciesOf(activePet));
+                const bundle = await healthService.loadBundle(activePet.id, speciesOf(activePet));
                 const next = upcomingItems(bundle, [], todayKey()).find(i => i.kind !== 'appointment' && i.daysLeft <= 30);
                 if (next) {
                     nextAlert = {

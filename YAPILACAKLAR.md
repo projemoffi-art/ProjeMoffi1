@@ -2,7 +2,7 @@
 
 Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.md'ye not düşülür.
 
-## Veteriner / sağlık
+## Veteriner / sağlık / pasaport
 
 - [ ] **İşletmelerin harita konumu yok.** Hiçbir işletmenin `business_lat/business_lng` değeri
   dolu değil (MoffiPet dahil), bu yüzden müşteri haritasında pin çıkmıyor ve mesafe
@@ -15,10 +15,18 @@ Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.m
 - [ ] **Push bildirimi tek kanaldan.** Eski `vaccine-reminders` edge fonksiyonunun cron'u kapatıldı
   (yanlış hesap yapıyordu). Telefona push, tüm bildirim türleri için `notifications` tablosundan
   tek bir yerden gönderilmeli; edge fonksiyonun kendisi hâlâ deploy'da duruyor, sonra silinmeli.
-- [ ] **`pets` tablosu herkese açık okunuyor** (`using (true)` birden fazla kural): sağlık notu, çip
-  numarası, `sos_settings` içindeki sahip telefonu/adresi dahil. Topluluk, başka profiller ve kayıp
-  ilanları bu tabloyu okuduğu için dikkatli bir inceleme gerekiyor (açık alanlar bir görünüme/fonksiyona
-  taşınmalı).
+- [ ] **"Zamanı geldi mi" kuralı iki yerde.** Aşı/parazit durumu ekranda `lib/health/derive.ts`,
+  hatırlatmada SQL (`enqueue_health_due_reminders`) ile ayrı hesaplanıyor. Bugün aynı sonucu veriyor;
+  tek bir SQL fonksiyonuna indirilmeli.
+- [ ] **Eski sağlık notu kolonunu sil.** `pets.health_notes` ve `sos_settings.critical_health_note`
+  artık okunmuyor (içerik `pet_health_profile.notes`'a taşındı, 2026-09-28). Canlı sürüm yeni kodla
+  birkaç gün sorunsuz çalıştıktan sonra silinebilir.
+- [ ] **Kayıp merkezi (SOS) yeniden tasarım.** Eski koyu/neon tasarımda; sahte "Güvenli Arama" ve
+  "Anonim Mesaj" anahtarları kaldırıldı, künye sayfası gerçek hale getirildi. Ekranın kendisi
+  (sessiz saatler, ödül, yarıçap, otomatik ilan) ayrı bir inceleme istiyor.
+- [ ] **Günün yıldızları (topluluk).** Yürüyüşü olmayan hayvana kimlik numarasından türetilmiş
+  uydurma "Aura puanı" veriliyor ve seçim her kullanıcının tarayıcısında yapılıyor; sunucuda
+  günde bir kez hesaplanmalı.
 - [ ] **Diş bakımı.** Eski diş bakımı penceresi (anket + fırçalama zamanlayıcısı) hiçbir yerden
   açılmadığı ve referansta olmadığı için silindi. Diş kontrolleri muayene kaydı olarak tutuluyor.
   İstenirse karneye "Diş" modülü eklenebilir.

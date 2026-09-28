@@ -12,6 +12,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
 import { apiService } from "@/services/apiService";
+import { healthService } from "@/services/healthService";
 import { usePet } from "@/context/PetContext";
 import { showToast } from "@/lib/utils";
 import { AddPetModal } from "@/components/community/modals/AddPetModal";
@@ -22,7 +23,8 @@ import { WalletTab } from "@/components/profile/WalletTab";
 import { OrdersTab } from "@/components/profile/OrdersTab";
 import { RoutesTab } from "@/components/profile/RoutesTab";
 import { FamilyTab } from "@/components/profile/FamilyTab";
-import { PassportTab } from "@/components/profile/PassportTab";
+import { HealthProvider } from "@/components/health/HealthProvider";
+import { PassportHome } from "@/components/passport/PassportHome";
 
 import { Wallet, Package, Calendar, Map, Users as UsersIcon, Bookmark, FileText, Activity } from "lucide-react";
 
@@ -63,9 +65,20 @@ export default function ProfilePage() {
     const searchParams = useSearchParams();
     const id = params.id as string;
     const { user: currentUser, updateProfile } = useAuth();
-    const { pets, activePet, switchPet } = usePet();
+    const { pets, activePet, switchPet, addPet } = usePet();
     const { openChat } = useChat();
     const isOwnProfile = !!(currentUser && (id === currentUser.id || id === 'me'));
+
+    // Başkasının profilinde o kişinin hayvanları (sadece herkese açık kart alanları).
+    // Önceden burada profile bakan kişinin kendi hayvanları gösteriliyordu.
+    const [ownerPets, setOwnerPets] = useState<{ id: string; name: string; breed: string | null; gender: string | null; image: string }[]>([]);
+    useEffect(() => {
+        if (isOwnProfile || !id || id === 'me') { setOwnerPets([]); return; }
+        let alive = true;
+        apiService.getPublicPetsByOwner(id).then(list => { if (alive) setOwnerPets(list); }).catch(() => {});
+        return () => { alive = false; };
+    }, [id, isOwnProfile]);
+    const profilePets = isOwnProfile ? pets : ownerPets;
 
     // ── State ──────────────────────────────────────────────
     const [loading, setLoading] = useState(true);
@@ -248,7 +261,6 @@ export default function ProfilePage() {
     const [newPetPhotos, setNewPetPhotos] = useState<any[]>([]);
     const [isSavingPet, setIsSavingPet] = useState(false);
     const [newPetWeight, setNewPetWeight] = useState('');
-    const [newPetHealthStatus, setNewPetHealthStatus] = useState('İyi');
     const [newPetActivityTarget, setNewPetActivityTarget] = useState('70');
     const [newPetWaterTarget, setNewPetWaterTarget] = useState('1200');
     const [newPetFoodTarget, setNewPetFoodTarget] = useState('1600');
@@ -395,15 +407,22 @@ export default function ProfilePage() {
                     imageUrl = '';
                 }
             }
-            await apiService.addPet({
+            const petData = {
                 name: newPetName, type: newPetType, breed: newPetBreed,
                 age: newPetAge, gender: newPetGender,
                 is_neutered: newPetNeutered === 'Evet',
-                size: newPetSize, health_notes: newPetHealth,
+                size: newPetSize,
                 character: newPetCharacter, microchip_id: newPetMicrochip,
                 show_phone: newPetShowPhone, image: imageUrl || '',
-                owner_id: currentUser?.id
-            } as any);
+            };
+            const saved = await apiService.addPet(petData as any);
+            // Eklerken yazılan alerji/hastalık bilgisi tek sağlık kaydına (Acil Bilgiler) gider.
+            if (newPetHealth.trim() && saved.id) {
+                try { await healthService.saveProfile(saved.id, { notes: newPetHealth }); }
+                catch (e) { console.warn('Sağlık notu kaydedilemedi:', e); }
+            }
+            // Uygulamanın geri kalanı (ana sayfa, pasaport) yeni hayvanı yenilemeden görsün.
+            addPet({ ...petData, id: saved.id, image: saved.image || imageUrl || '' } as any);
             setIsAddPetOpen(false);
             setAddPetStep(1); setNewPetName(''); setNewPetPhotos([]);
             showToast(`${newPetName} aileye hoş geldin! 🐾`, 'Sparkles', 'text-orange-400');
@@ -603,7 +622,7 @@ export default function ProfilePage() {
                 {/* Stats */}
                 <div className="flex items-center gap-6 mt-5 pb-5 border-b border-black/5 dark:border-white/5">
                     {[
-                        { value: pets.length || 0, label: 'Pati' },
+                        { value: profilePets.length || 0, label: 'Pati' },
                         { value: displayUser?.stats?.followers || displayUser?.stats?.pack || 0, label: 'Takipçi', type: 'followers' },
                         { value: displayUser?.stats?.following || 0, label: 'Takip', type: 'following' },
                     ].map(s => (
@@ -668,7 +687,7 @@ export default function ProfilePage() {
                         </motion.div>
                     ) : activeTab === 'pets' ? (
                         <motion.div key="pets" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6">
-                            {pets.length === 0 ? (
+                            {profilePets.length === 0 ? (
                                 <div className="text-center py-16 space-y-3">
                                     <div className="w-16 h-16 rounded-[1.5rem] bg-black/5 dark:bg-white/5 border border-white/8 flex items-center justify-center mx-auto mb-4">
                                         <PawPrint className="w-8 h-8 text-black/30 dark:text-white/20" />
@@ -691,8 +710,8 @@ export default function ProfilePage() {
                                         </div>
                                     )}
                                     <div className="space-y-3">
-                                        {pets.map(pet => (
-                                            <motion.div key={pet.id} whileTap={{ scale: 0.99 }} onClick={() => switchPet(pet.id)} className={`flex items-center gap-4 p-4 rounded-[1.5rem] transition-colors cursor-pointer ${activePet?.id === pet.id ? 'bg-emerald-500/10 border border-emerald-500/40' : 'bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}>
+                                        {profilePets.map(pet => (
+                                            <motion.div key={pet.id} whileTap={{ scale: 0.99 }} onClick={() => { if (isOwnProfile) switchPet(pet.id); }} className={`flex items-center gap-4 p-4 rounded-[1.5rem] transition-colors cursor-pointer ${activePet?.id === pet.id ? 'bg-emerald-500/10 border border-emerald-500/40' : 'bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}>
                                                 <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0">
                                                     {pet.image ? (
                                                         <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
@@ -838,7 +857,7 @@ export default function ProfilePage() {
                                 <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
                             </button>
                             {activePet ? (
-                                <PassportTab pet={activePet} />
+                                <HealthProvider><div className="theme-vet text-foreground"><PassportHome /></div></HealthProvider>
                             ) : (
                                 <div className="text-center py-20 opacity-40 font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em]">Lütfen bir pati seçin</div>
                             )}
@@ -887,7 +906,6 @@ export default function ProfilePage() {
                 newPetPhotos={newPetPhotos} setNewPetPhotos={setNewPetPhotos}
                 isSaving={isSavingPet} onSave={handleSavePet}
                 newPetWeight={newPetWeight} setNewPetWeight={setNewPetWeight}
-                newPetHealthStatus={newPetHealthStatus} setNewPetHealthStatus={setNewPetHealthStatus}
                 newPetActivityTarget={newPetActivityTarget} setNewPetActivityTarget={setNewPetActivityTarget}
                 newPetWaterTarget={newPetWaterTarget} setNewPetWaterTarget={setNewPetWaterTarget}
                 newPetFoodTarget={newPetFoodTarget} setNewPetFoodTarget={setNewPetFoodTarget}

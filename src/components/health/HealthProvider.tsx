@@ -38,11 +38,11 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     const species = speciesOf(activePet);
     const petId = activePet?.id || null;
 
-    const refresh = useCallback(async () => {
+    const load = useCallback(async (force: boolean) => {
         if (!petId) { setBundle(null); setLoading(false); return; }
         const req = ++requestRef.current;
         try {
-            const data = await healthService.getBundle(petId, species);
+            const data = await healthService.loadBundle(petId, species, force);
             if (req === requestRef.current) { setBundle(data); setError(null); }
         } catch (e: any) {
             if (req === requestRef.current) setError(e?.message || 'Sağlık kaydı yüklenemedi.');
@@ -50,6 +50,15 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
             if (req === requestRef.current) setLoading(false);
         }
     }, [petId, species]);
+
+    /** Yazma işleminden sonra: karneyi yeniden yükler, ortak hafızadaki kopyayı herkes için günceller. */
+    const refresh = useCallback(() => load(true), [load]);
+
+    // Aynı karneyi başka bir ekran tazelerse buradaki kopya da güncellenir.
+    useEffect(() => {
+        if (!petId) return;
+        return healthService.subscribeBundle(petId, b => { if (b) setBundle(b); });
+    }, [petId]);
 
     // Bildirimden gelen "?pet=<id>": o evcil hayvanın karnesini aç (bir kez).
     const deepLinkHandled = useRef(false);
@@ -62,10 +71,12 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         if (!isInitialized) return;
-        setLoading(true);
-        setBundle(null);
-        refresh();
-    }, [refresh, isInitialized]);
+        const cached = petId ? healthService.peekBundle(petId) : null;
+        setBundle(cached);
+        setLoading(!cached);
+        // Hafızada varsa hemen gösterilir, arkadan tazelenir (başka cihazdaki değişiklikler de gelsin).
+        load(!!cached);
+    }, [load, isInitialized, petId]);
 
     const run = useCallback(async (action: () => Promise<unknown>) => {
         try {

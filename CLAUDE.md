@@ -2838,6 +2838,51 @@ gerektiği yerde o kaydı okur**. Sağlık = evcil hayvanın bilgisi; Veteriner 
   ve hatırlatmalar geri alınan SQL işlemlerinde, tüm ekranlar ve işletme muayene formu Playwright
   ile gerçek hesapla denendi (test verisi temizlendi).
 
+### 8.45 Pet Pasaportu + eski yapıların eritilmesi + pets gizliliği (2026-09-28)
+
+Kilitli tasarım: `design-reference/passport-final/` (10 ekran, ekran → kod eşlemesi README'de).
+Baran'ın şartları: **pasaportta hiçbir şey varsayılan açık paylaşılmaz**, sürdürülebilir/gerçekçi olsun.
+
+🔴 **KURAL — bir bilgiyi sadece sahibi olan ekran yazar, diğerleri okur:**
+kimlik (ad, tür, ırk, cinsiyet, doğum, renk, kısırlaştırma, çip, PETVET) → `/pasaport/kimlik`;
+alerji/hastalık/sağlık notu/acil iletişim → `/health/acil` (`pet_health_profile`); aşı/ilaç/kilo/muayene →
+`/health/*`. Yeni bir form bu alanları ikinci kez düzenlemez, oraya bağlantı verir.
+
+- **Kimlik alanları gerçekten kaydedilmiyordu:** `pets`'te doğum tarihi/renk kolonu yoktu; ayarlar
+  penceresinin kaydı var olmayan `activity_target/water_target/food_target` kolonlarına yazdığı için
+  TÜM güncelleme reddediliyordu. Eklendi: `pets.birth_date/color/petvet_no/passport_no`
+  (`MOF-YYYY-000001`, sunucu verir, değişmez). Günlük hedefler `sos_settings` içinde.
+- **Üç ayrı sağlık notu → tek kayıt:** `pets.health_notes` + `sos_settings.critical_health_note`
+  kayıpsız `pet_health_profile.notes`'a taşındı (10 hayvan). Kod artık eskilerini okumaz/yazmaz;
+  kolonun silinmesi YAPILACAKLAR'da. Ekleme akışındaki alerji sorusu da `notes`'a yazar.
+- **Paylaşım:** `pet_share_links` (bölümler, en fazla 31 gün, kapatılabilir, görüntülenme sayısı) +
+  `get_shared_passport(token)` (anon; sadece seçilen bölümler) + `/p/[token]` + belgeler için
+  `/api/share/[token]/document/[id]` (service role, 5 dk imzalı adres). PDF ve bağlantı aynı
+  `components/health/HealthReport.tsx`'ten. `/health/paylas` → `/pasaport/paylas` yönlendirmesi.
+- **Künye (`/id/[petId]`) hiç çalışmıyordu:** giriş kapısı (`ClientAuthWrapper`) hesabı olmayan
+  bulanı giriş ekranına atıyordu; sayfa `getPets()` (giriş yapanın kendi hayvanları) ile doluyordu;
+  "gizli arama", "anonim mesaj", tarama bildirimi taklitti. Artık `get_pet_tag_info` (kayıp değilse
+  sadece ad/ırk/fotoğraf) + `submit_tag_report` (anon, 10 dk'da 5 sınırı → `pet_tag_reports` +
+  `notify_user(type 'sos')` + e-posta). `/id/`, `/p/`, `/verify/` giriş kapısında herkese açık.
+  Sahte `TagPairingModal`, `petIdService`, eski `PassportTab`, "Passport Editor" silindi.
+- 🔴 **`pets` herkese açıktı (5 ayrı `using (true)` kuralı, sahip telefonu/adresi dahil):** artık
+  sahibi + randevusu olan klinik + yönetici. Başkalarına gereken alanlar `pet_cards` görünümünden
+  (kayıp ilanı mesajı/ödülü sadece kayıp modunda). Kayıp ilanları, arama, liderlik, günün yıldızları
+  ona taşındı. Başkasının profilinde "Patiler" profile bakanın kendi hayvanlarını gösteriyordu → düzeltildi.
+- **Ortak hafıza:** `healthService.loadBundle/subscribeBundle` — karne uygulama genelinde tek kopya;
+  sağlık ekranındaki değişiklik ana sayfa/menüye anında yansır. **KURAL:** karne için
+  `getBundle`'ı doğrudan çağırma, `loadBundle`/`usePetHealthBundle` kullan.
+- **Sahte içerik kaldırıldı:** "Bugün senin için" (herkese aynı karma aşı, saate göre "güneşli hava",
+  sabit "1.2 km kayıp ilanı") → gerçek veriden; yapay zekâ aşı sorusuna veri almadan "yaklaşan aşı
+  yok" diyordu → karne özeti gönderiliyor; olmayan "VetLine" vaadi → veteriner bulma; kayıp
+  merkezindeki "Güvenli Arama/Anonim Mesaj" anahtarları (hep açık kaydediliyordu, telefon hiç görünmezdi).
+- Yüzen yapay zekâ düğmesi `/health`, `/pasaport` ve herkese açık sayfalarda gizli (kaydet
+  düğmelerinin üstüne biniyordu). `Copy` ikonu Turbopack/OneDrive çökmesi (bkz. 5.6) → `ClipboardList`.
+- **Doğrulama:** değişen dosyalarda yeni tip hatası yok, `npm run build` başarılı; Playwright ile
+  pasaport/kimlik (kalıcı kayıt)/özet/acil/paylaşım (anon açılış, seçilmeyen bölüm sızmıyor, kapatınca
+  kapanıyor)/künye/profil/ana sayfa; anon REST ile `pets` erişimi reddi; künye haberi → bildirim +
+  e-posta; klinik sadece kendi hastalarını görüyor. Test verisi temizlendi.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
@@ -2985,3 +3030,6 @@ Antigravity. Karışıklığı önlemek için şu iş bölümü kuruldu:
   `design-reference/health-final/`: `health-karne-reference.jpg` (asıl referans, Baran'ın rapordaki
   brife göre hazırladığı) + `health-center-inspiration.jpg` (sadece ilham) + `README.md`.
   **`/health/*` ya da sağlık bilgisi gösteren herhangi bir ekranda UI değişikliğinden önce okunmalı.**
+- 🔴 **Kilitli Pet Pasaportu tasarımı** (2026-09-28) `design-reference/passport-final/`: 10 ekranlık
+  referans + README (ekran → kod eşlemesi, bilinçli farklar). **`/pasaport/*`, künye (`/id`) ve
+  paylaşılan pasaport (`/p`) ekranlarında UI değişikliğinden önce okunmalı.**

@@ -38,6 +38,7 @@ import { useDragScroll } from '@/hooks/useDragScroll';
 import Link from 'next/link';
 import { Pill } from 'lucide-react';
 import { usePetHealthBundle } from '@/components/health/usePetHealthBundle';
+import { healthService } from '@/services/healthService';
 import { daysLeftText, isMedicationActive, medicationDaysLeft, overallStatus, upcomingItems } from '@/lib/health/derive';
 import { formatDateKeyTr, todayKey } from '@/lib/appointmentTime';
 
@@ -532,7 +533,6 @@ export default function LegendaryLightDashboard() {
 
     const [toastMsg, setToastMsg] = useState<string | null>(null);
     const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
-    const [vaccines, setVaccines] = useState<any[]>([]);
 
     const [goalsTrigger, setGoalsTrigger] = useState(0);
 
@@ -587,20 +587,6 @@ export default function LegendaryLightDashboard() {
     }, [foodCurrent, foodTarget]);
 
 
-    useEffect(() => {
-        if (!activePetObj?.id) return;
-        
-
-
-        // 3. Vaccines
-        const savedVaccines = localStorage.getItem(`moffi_vaccines_${activePetObj.id}`);
-        if (savedVaccines) {
-            setVaccines(JSON.parse(savedVaccines));
-        } else {
-            setVaccines([]);
-            localStorage.setItem(`moffi_vaccines_${activePetObj.id}`, JSON.stringify([]));
-        }
-    }, [activePetObj?.id, goalsTrigger]);
 
 
 
@@ -1118,76 +1104,17 @@ export default function LegendaryLightDashboard() {
     const [isSavingPet, setIsSavingPet] = useState(false);
 
     const [newPetWeight, setNewPetWeight] = useState("");
-    const [newPetHealthStatus, setNewPetHealthStatus] = useState("İyi");
     const [newPetActivityTarget, setNewPetActivityTarget] = useState("70");
     const [newPetWaterTarget, setNewPetWaterTarget] = useState("1200");
     const [newPetFoodTarget, setNewPetFoodTarget] = useState("1600");
     const isAnyModalOpen = !!expandedPanel || isPetSettingsOpen || isAddPetOpen;
 
-    const handleSavePetSettings = async (updatedFields: any) => {
-        try {
-            if (activePetObj && activePetObj.id) {
-                // Mevcut sos_settings ile birleştir, weight, sağlık, renk, veli bilgisi ve hedefleri ekle
-                const mergedSosSettings = {
-                    ...(activePetObj.sos_settings || {}),
-                    weight: updatedFields.weight ? `${updatedFields.weight} kg` : (activePetObj.sos_settings?.weight || ''),
-                    health: updatedFields.healthStatus || updatedFields.health || (activePetObj.sos_settings?.health || 'İyi'),
-                    color: updatedFields.color || (activePetObj.sos_settings?.color || ''),
-                    activity_target: typeof updatedFields.activityTarget !== 'undefined' ? Number(updatedFields.activityTarget) : (activePetObj.sos_settings?.activity_target ?? 70),
-                    water_target: typeof updatedFields.waterTarget !== 'undefined' ? Number(updatedFields.waterTarget) : (activePetObj.sos_settings?.water_target ?? 1200),
-                    food_target: typeof updatedFields.foodTarget !== 'undefined' ? Number(updatedFields.foodTarget) : (activePetObj.sos_settings?.food_target ?? 1600),
-                    // Parazit tarihleri sos_settings JSON'unda saklanıyor
-                    parasiteInternal: updatedFields.parasiteInternal || (activePetObj.sos_settings?.parasiteInternal || ''),
-                    parasiteExternal: updatedFields.parasiteExternal || (activePetObj.sos_settings?.parasiteExternal || ''),
-                    // Doğum tarihi
-                    birthday: updatedFields.birthday || (activePetObj.sos_settings?.birthday || ''),
-                    // Yeni alanlar
-                    size: updatedFields.size || (activePetObj.sos_settings?.size || ''),
-                    character: updatedFields.character || (activePetObj.sos_settings?.character || ''),
-                    features: updatedFields.features || (activePetObj.sos_settings?.features || ''),
-                    owner: {
-                        name: updatedFields.ownerName || '',
-                        phone: updatedFields.ownerPhone || '',
-                        address: updatedFields.ownerAddress || '',
-                    }
-                };
-
-                const petUpdates = {
-                    ...updatedFields,
-                    // Fotoğraf güncellemesi
-                    image: updatedFields.image || activePetObj.image || activePetObj.avatar || '',
-                    avatar: updatedFields.avatar || updatedFields.image || activePetObj.avatar || '',
-                    // Alan normalizasyonları
-                    microchip_id: updatedFields.microchip || updatedFields.microchip_id,
-                    microchip: updatedFields.microchip || updatedFields.microchip_id,
-                    is_neutered: updatedFields.neutered,
-                    // Yeni alanlar direkt yazılıyor
-                    type: updatedFields.type || activePetObj.type || '',
-                    size: updatedFields.size || '',
-                    health: mergedSosSettings.health,
-                    health_notes: updatedFields.healthNotes || '',
-                    character: updatedFields.character || '',
-                    color: mergedSosSettings.color,
-                    owner: mergedSosSettings.owner,
-                    activity_target: mergedSosSettings.activity_target,
-                    water_target: mergedSosSettings.water_target,
-                    food_target: mergedSosSettings.food_target,
-                    sos_settings: mergedSosSettings,
-                };
-
-                await apiService.updatePet(activePetObj.id, petUpdates);
-                updatePet(activePetObj.id, {
-                    ...petUpdates,
-                    weight: mergedSosSettings.weight,
-                    health: mergedSosSettings.health,
-                });
-                setToastMsg("Pasaport bilgileri Moffi Cloud'a mühürlendi! 🛡️");
-            }
-            setIsPetSettingsOpen(false);
-        } catch (err) {
-            console.error(err);
-            setToastMsg("Pati bilgileri güncellenirken bir hata oluştu.");
-        }
+    // Ayarlar penceresi sadece günlük hedefleri kaydeder (kimlik ve sağlık kendi ekranlarında).
+    const handleSavePetSettings = (updatedFields: any) => {
+        if (!activePetObj?.id) return;
+        updatePet(activePetObj.id, updatedFields);
+        setToastMsg('Günlük hedefler kaydedildi.');
+        setIsPetSettingsOpen(false);
     };
 
     const handleAddPetSave = async () => {
@@ -1213,7 +1140,6 @@ export default function LegendaryLightDashboard() {
                 gender: newPetGender,
                 is_neutered: newPetNeutered === 'Evet',
                 size: newPetSize,
-                health_notes: newPetHealth,
                 character: newPetCharacter,
                 microchip_id: newPetMicrochip,
                 show_phone: newPetShowPhone,
@@ -1223,7 +1149,6 @@ export default function LegendaryLightDashboard() {
                 themeColor: newPetType === '🐱' ? '#A78BFA' : newPetType === '🦜' ? '#34D399' : newPetType === '🐰' ? '#F472B6' : '#FBBF24',
                 
                 weight: newPetWeight ? `${newPetWeight} kg` : '',
-                health: newPetHealthStatus,
                 streak: 0,
                 activity_target: Number(newPetActivityTarget) || 70,
                 water_target: Number(newPetWaterTarget) || 1200,
@@ -1237,13 +1162,11 @@ export default function LegendaryLightDashboard() {
                     emergency_sms_number: "",
                     reward_amount: 0,
                     reward_currency: "TL",
-                    critical_health_note: newPetHealth,
                     finder_message: "",
                     reward_enabled: false,
                     header_sos_alert_enabled: true,
                     
                     weight: newPetWeight ? `${newPetWeight} kg` : '',
-                    health: newPetHealthStatus,
                     streak: 0,
                     activity_target: Number(newPetActivityTarget) || 70,
                     water_target: Number(newPetWaterTarget) || 1200,
@@ -1266,6 +1189,12 @@ export default function LegendaryLightDashboard() {
                 }
             }
             
+            // Eklerken yazılan alerji/hastalık bilgisi tek sağlık kaydına (Acil Bilgiler) gider.
+            if (newPetHealth.trim() && savedPet.id) {
+                try { await healthService.saveProfile(savedPet.id, { notes: newPetHealth }); }
+                catch (e) { console.warn('Sağlık notu kaydedilemedi:', e); }
+            }
+
             addPet({
                 ...newPetData,
                 id: savedPet.id,
@@ -1280,7 +1209,6 @@ export default function LegendaryLightDashboard() {
             setNewPetName("");
             setNewPetPhotos([]);
             setNewPetWeight("");
-            setNewPetHealthStatus("İyi");
             setNewPetActivityTarget("70");
             setNewPetWaterTarget("1200");
             setNewPetFoodTarget("1600");
@@ -2245,7 +2173,8 @@ export default function LegendaryLightDashboard() {
                             </div>
 
                             <div className="flex gap-4">
-                                <div className="flex items-center gap-1.5">
+                                {/* Sağlık durumu dokunulabilir: hayvanın Sağlık Özeti açılır. */}
+                                <button type="button" onClick={() => router.push('/health/karne')} aria-label="Sağlık özetini aç" className="flex items-center gap-1.5 text-left">
                                     <div className="w-7 h-7 rounded-full bg-green-50 dark:bg-green-950/50 flex items-center justify-center">
                                         <Heart className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="currentColor" />
                                     </div>
@@ -2255,7 +2184,7 @@ export default function LegendaryLightDashboard() {
                                             {healthStatus ? (healthStatus.tone === 'good' ? 'Güncel' : healthStatus.tone === 'attention' ? 'Yaklaşan iş var' : 'Gecikmiş iş var') : '—'}
                                         </span>
                                     </div>
-                                </div>
+                                </button>
                                 <div className="flex items-center gap-1.5">
                                     <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center">
                                         <span className="text-gray-500 dark:text-zinc-400 font-black text-[9px]">KG</span>
@@ -4053,8 +3982,6 @@ export default function LegendaryLightDashboard() {
                 onSave={handleAddPetSave}
                 newPetWeight={newPetWeight}
                 setNewPetWeight={setNewPetWeight}
-                newPetHealthStatus={newPetHealthStatus}
-                setNewPetHealthStatus={setNewPetHealthStatus}
                 newPetActivityTarget={newPetActivityTarget}
                 setNewPetActivityTarget={setNewPetActivityTarget}
                 newPetWaterTarget={newPetWaterTarget}

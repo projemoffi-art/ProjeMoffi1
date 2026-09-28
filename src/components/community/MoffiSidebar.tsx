@@ -288,7 +288,7 @@ export function MoffiSidebar() {
             } else if (lowerMsg.includes('mama') || lowerMsg.includes('yemek')) {
                 reply = "Premium mamalar ve yaş mama dengesi tüy sağlığı için çok önemlidir. Haftada 1-2 kez yaş mama verebilirsin. 🍖";
             } else if (lowerMsg.includes('aşı') || lowerMsg.includes('vet') || lowerMsg.includes('hasta')) {
-                reply = "Aşı takvimini ve randevularını ana sayfadaki 'Veteriner' kartından takip edebilirsin! 🩺";
+                reply = "Aşı takvimi ve sağlık kayıtları Sağlık Merkezi'nde, randevuların Veteriner bölümünde. 🩺";
             } else if (lowerMsg.includes('yürüyüş') || lowerMsg.includes('adım') || lowerMsg.includes('park')) {
                 reply = "Köpeğinle günde en az 30 dakika yürüyüş yapmak eklem sağlığına çok iyi gelir. 👣";
             } else if (lowerMsg.includes('kombin') || lowerMsg.includes('stüdyo') || lowerMsg.includes('kıyafet')) {

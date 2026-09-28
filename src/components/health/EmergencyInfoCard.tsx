@@ -1,12 +1,18 @@
 'use client';
 
-// Künye (/id) ve karne doğrulama (/verify) ekranlarında sahibin açtığı acil bilgiler.
+// Künye (/id) ve doğrulama (/verify) ekranlarında sahibin açtığı acil bilgiler.
 // Sahip "Acil Bilgiler" ekranında o yer için kapalı bıraktıysa hiçbir şey göstermez.
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-interface Info { allergies: string[]; chronic_conditions: string[]; medications: string[]; blood_type: string | null; vet_name: string | null; vet_phone: string | null }
+interface Info {
+    allergies: string[]; chronic_conditions: string[]; medications: string[]; blood_type: string | null;
+    vet_name: string | null; vet_phone: string | null; notes: string | null;
+    contact_name: string | null; contact_phone: string | null; alt_contact_name: string | null; alt_contact_phone: string | null;
+}
+
+const tel = (p: string) => `tel:${p.replace(/\s/g, '')}`;
 
 export function EmergencyInfoCard({ petId, context }: { petId: string; context: 'lost' | 'qr' }) {
     const [info, setInfo] = useState<Info | null>(null);
@@ -26,7 +32,12 @@ export function EmergencyInfoCard({ petId, context }: { petId: string; context: 
         info.blood_type ? ['Kan grubu', info.blood_type] : null,
         info.vet_name ? ['Veterineri', info.vet_name] : null,
     ].filter(Boolean) as [string, string][];
-    if (rows.length === 0 && !info.vet_phone) return null;
+    const calls = [
+        info.contact_phone ? { label: info.contact_name ? `${info.contact_name} ara` : 'Acil kişiyi ara', phone: info.contact_phone } : null,
+        info.alt_contact_phone ? { label: info.alt_contact_name ? `${info.alt_contact_name} ara` : 'Alternatif kişiyi ara', phone: info.alt_contact_phone } : null,
+        info.vet_phone ? { label: 'Veterinerini ara', phone: info.vet_phone } : null,
+    ].filter(Boolean) as { label: string; phone: string }[];
+    if (rows.length === 0 && !info.notes && calls.length === 0) return null;
 
     return (
         <div className="w-full rounded-3xl border border-red-200 bg-red-50 p-5 text-left">
@@ -39,10 +50,17 @@ export function EmergencyInfoCard({ petId, context }: { petId: string; context: 
                     </div>
                 ))}
             </dl>
-            {info.vet_phone && (
-                <a href={`tel:${info.vet_phone.replace(/\s/g, '')}`} className="mt-3 flex h-11 items-center justify-center rounded-2xl bg-red-600 text-white text-sm font-black">
-                    Veterinerini ara
-                </a>
+            {info.notes && <p className="mt-2 text-sm font-semibold text-red-900 whitespace-pre-wrap">{info.notes}</p>}
+            {calls.length > 0 && (
+                <div className="mt-3 space-y-2">
+                    {calls.map((c, i) => (
+                        <a key={c.phone + i} href={tel(c.phone)}
+                            className={i === 0 ? 'flex h-11 items-center justify-center rounded-2xl bg-red-600 text-white text-sm font-black'
+                                : 'flex h-11 items-center justify-center rounded-2xl border border-red-300 text-red-700 text-sm font-black'}>
+                            {c.label}
+                        </a>
+                    ))}
+                </div>
             )}
         </div>
     );

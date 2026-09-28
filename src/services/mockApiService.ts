@@ -292,9 +292,7 @@ export class MockApiService implements IApiService {
                 age: '2 Yaşında',
                 gender: 'Erkek',
                 size: 'medium',
-                health_notes: 'Kritik bir durum yok.',
-                personality: 'Uysal ve sevecen.',
-                critical_health_note: 'Herhangi bir alerji veya kronik rahatsızlığı yoktur.'
+                personality: 'Uysal ve sevecen.'
             } as any;
         });
     }
@@ -1615,6 +1613,10 @@ export class MockApiService implements IApiService {
         return [];
     }
 
+    async getPublicPetsByOwner(_ownerId: string): Promise<{ id: string; name: string; type: string | null; breed: string | null; gender: string | null; image: string }[]> {
+        return [];
+    }
+
     async getPetLeaderboard(limit?: number): Promise<any[]> {
         return [];
     }
@@ -1801,7 +1803,7 @@ export class MockApiService implements IApiService {
         return true;
     }
 
-    // Clinic Messages & Campaigns (Faz 8)
+    // Clinic Messages & Campaigns (Faz 8)
     async getClinicAppointments(clinicId: string): Promise<any[]> {
         return [];
     }

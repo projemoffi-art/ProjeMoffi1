@@ -7,6 +7,10 @@ import { useAuth } from "@/context/AuthContext";
 // Routes that do NOT require authentication
 const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbox-studio", "/terms", "/privacy", "/cookies"];
 
+// Uygulama dışındaki kişilere açık sayfalar: künye (/id), paylaşılan pasaport (/p), doğrulama kodu (/verify).
+// Künyeyi okutan kişinin Moffi hesabı olmayabilir; önceden bu sayfalar giriş ekranına atıyordu.
+const PUBLIC_PREFIXES = ["/id/", "/p/", "/verify/"];
+
 // Routes that require business role
 const BUSINESS_ROUTES_PREFIX = "/business";
 
@@ -23,7 +27,7 @@ export function ClientAuthWrapper({ children }: Props) {
     const router = useRouter();
 
     const isDemoRoute = pathname.startsWith("/demo");
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute;
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute || PUBLIC_PREFIXES.some(p => pathname.startsWith(p));
     const isBusinessRoute = pathname.startsWith(BUSINESS_ROUTES_PREFIX);
     const isAdminRoute = pathname.startsWith(ADMIN_ROUTES_PREFIX);
 

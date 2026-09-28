@@ -1,370 +1,157 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    PhoneCall, MapPin, MessageCircle, Heart, 
-    ShieldAlert, BadgeCheck, AlertTriangle, ArrowLeft, 
-    Send, PawPrint, Loader2, Coins, BellRing
-} from 'lucide-react';
-import { cn, showToast } from '@/lib/utils';
-import { useRouter, useParams } from 'next/navigation';
-import { getPetStatusById } from '@/services/petIdService';
-import { PetIDState } from '@/types/pet-id';
-import { apiService } from '@/services/apiService';
+// Künye sayfası: künyedeki QR/NFC'yi okutan kişi (giriş gerekmez) burayı görür.
+// Veri get_pet_tag_info'dan gelir; kayıp değilse sadece adı, ırkı ve fotoğrafı görünür.
+// Kayıpsa sahibin izin verdiği iletişim + acil sağlık bilgileri gösterilir, bulan kişi
+// mesaj/konum bırakabilir (submit_tag_report → sahibine bildirim ve e-posta).
+
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { CheckCircle2, MapPin, Phone, ShieldAlert } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { EmergencyInfoCard } from '@/components/health/EmergencyInfoCard';
+import { speciesLabel } from '@/lib/petIdentity';
 
-export default function PetIDPage() {
-    const router = useRouter();
+interface TagInfo {
+    pet_name: string; species: string | null; breed: string | null; gender: string | null; age: string | null;
+    avatar_url: string | null; is_lost: boolean; finder_message: string | null; reward_amount: number | null; owner_phone: string | null;
+}
+
+export default function PetTagPage() {
     const params = useParams();
-    const petId = params?.petId as string || "";
-
-    const [loading, setLoading] = useState(true);
-    const [petData, setPetData] = useState<PetIDState | null>(null);
-    const [showMessageBox, setShowMessageBox] = useState(false);
-    const [anonMessage, setAnonMessage] = useState("");
-    const [isSending, setIsSending] = useState(false);
-    const [showScanNotification, setShowScanNotification] = useState(false);
+    const petId = String(params?.petId || '');
+    const [info, setInfo] = useState<TagInfo | null>(null);
+    const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading');
 
     useEffect(() => {
-        const fetchData = async () => {
-            if (!petId) return;
-            setLoading(true);
-            try {
-                const data = await getPetStatusById(petId);
-                setPetData(data);
-                
-                // Real-time Scan Alert: Add to Owner's Inbox
-                if (data) {
-                    await apiService.addInboxMessage({
-                        type: 'scan',
-                        user: 'Moffi Güvenlik',
-                        isSystem: true,
-                        text: `${data.pet.name} dostunuzun Pet-ID künyesi az önce tarandı.`,
-                        pet_name: data.pet.name,
-                        avatar: data.pet.avatarUrl,
-                        read: false
-                    });
-                }
-
-                // Simulate "Owner Notified" scan event toast for the finder
-                if (data && data.status === 'lost') {
-                    setTimeout(() => setShowScanNotification(true), 2000);
-                }
-            } catch (error) {
-                console.error("Error fetching pet data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
+        if (!/^[0-9a-f-]{36}$/i.test(petId)) { setState('missing'); return; }
+        supabase.rpc('get_pet_tag_info', { p_pet_id: petId }).then(({ data, error }) => {
+            const row = (Array.isArray(data) ? data[0] : data) as TagInfo | undefined;
+            if (error || !row) { setState('missing'); return; }
+            setInfo(row);
+            setState('ready');
+        });
     }, [petId]);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-                <Loader2 className="w-10 h-10 text-cyan-500 animate-spin" />
-                <p className="text-black/50 dark:text-white/40 text-xs font-bold uppercase tracking-widest">Moffi Kimlik Bilgileri Alınıyor...</p>
-            </div>
-        );
-    }
-
-    if (!petData) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-                <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-                <h1 className="text-xl font-bold text-white mb-2">Pet ID Bulunamadı</h1>
-                <p className="text-black/50 dark:text-white/50 text-sm mb-6">Girdiğiniz kimlik numarası sistemimizde kayıtlı görünmüyor.</p>
-                <button onClick={() => router.push('/')} className="bg-black/10 dark:bg-white/10 text-white px-6 py-3 rounded-2xl font-bold">Anasayfaya Dön</button>
-            </div>
-        );
-    }
-
-    const { pet, status, sosConfig } = petData;
-    const isLost = status === 'lost';
-
-    // --- SOS ACTIONS ---
-    const handleCallOwner = () => {
-        if (!sosConfig.allowProxyCalls) return;
-        showToast(`Sahibine 'Moffi Güvenli Arama' üzerinden bağlanılıyor...`, "PhoneCall", "text-cyan-500");
-    };
-
-    const handleSendLocation = () => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const { latitude, longitude } = position.coords;
-                const googleMapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-                
-                await apiService.addInboxMessage({
-                    type: 'location',
-                    user: 'Moffi GPS',
-                    isSystem: true,
-                    text: `${petData.pet.name} için bir konum paylaşıldı! Bulunduğu yer işaretlendi.`,
-                    location_link: googleMapsLink,
-                    avatar: 'https://cdn-icons-png.flaticon.com/512/854/854878.png', // Map icon
-                    read: false
-                });
-
-                showToast("Konumunuz başarıyla sahibine iletildi. Yardımınız için teşekkürler! 🙏", "MapPin", "text-green-500");
-            }, (error) => {
-                console.error("GPS Error:", error);
-                showToast("Konum alınamadı. Lütfen tarayıcı izinlerini kontrol edin.", "ShieldAlert", "text-red-500");
-            });
-        } else {
-            showToast("Cihazınız konum özelliğini desteklemiyor.", "ShieldAlert", "text-red-500");
-        }
-    };
-
-    const handleSendMessage = () => {
-        if (!anonMessage.trim() || !sosConfig.allowAnonymousMessaging) return;
-        setIsSending(true);
-        setTimeout(() => {
-            setIsSending(false);
-            setAnonMessage("");
-            setShowMessageBox(false);
-            showToast("Mesajınız başarıyla ve anonim olarak sahibine iletildi!", "Send", "text-cyan-500");
-        }, 1500);
-    };
-
     return (
-        <div className="min-h-[100dvh] bg-white dark:bg-black text-white selection:bg-cyan-500/30 overflow-hidden relative">
+        <div className="theme-vet min-h-[100dvh] bg-background text-foreground">
+            <main className="max-w-md mx-auto px-5 py-8 space-y-5">
+                <div className="text-sm font-black text-accent">Moffi · Künye</div>
 
-            {/* SCAN NOTIFICATION TOAST (SIMULATION FOR FINDER TO SEE OWNER IS AWARE) */}
-            <AnimatePresence>
-                {showScanNotification && (
-                    <motion.div
-                        initial={{ y: -100, opacity: 0 }}
-                        animate={{ y: 20, opacity: 1 }}
-                        exit={{ y: -100, opacity: 0 }}
-                        className="fixed top-0 inset-x-0 z-[100] flex justify-center px-6 pointer-events-none"
-                    >
-                        <div className="bg-emerald-500 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-xl border border-card-border">
-                            <BellRing className="w-5 h-5 animate-ring" />
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-wider leading-none">Moffi Güvenlik</span>
-                                <span className="text-xs font-bold">Sahibine tarama bildirimi iletildi!</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                {state === 'loading' && <div className="h-64 rounded-3xl bg-card border border-card-border animate-pulse" />}
 
-            {/* GRADIENT BACKDROP */}
-            <div className="absolute inset-x-0 top-0 h-[60dvh] w-full pointer-events-none">
-                <img src={pet.avatarUrl} className="w-full h-full object-cover opacity-40 mix-blend-overlay" />
-                <div className={cn(
-                    "absolute inset-0 bg-gradient-to-b from-transparent via-black/80 to-black",
-                    isLost ? "from-red-900/40" : "from-cyan-900/40"
-                )} />
-            </div>
-
-            {/* HEADER */}
-            <header className="relative z-10 p-5 flex items-center justify-between">
-                <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-card-border cursor-pointer active:scale-90 transition-transform" onClick={() => router.push('/')}>
-                    <ArrowLeft className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-card-border shadow-lg">
-                    {isLost ? <ShieldAlert className="w-4 h-4 text-red-500" /> : <BadgeCheck className="w-4 h-4 text-cyan-400" />}
-                    <span className="text-xs font-bold text-white tracking-wide">Moffi Pet-ID</span>
-                </div>
-            </header>
-
-            {/* MAIN CONTENT PORTRAIT */}
-            <main className="relative z-10 flex flex-col items-center px-6 pt-2 pb-32">
-
-                {/* REWARD BADGE */}
-                {isLost && sosConfig.rewardAmount && (
-                    <motion.div
-                        initial={{ scale: 0, rotate: -10 }}
-                        animate={{ scale: 1, rotate: -5 }}
-                        className="bg-amber-400 text-black px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl mb-4 flex items-center gap-2 z-20"
-                    >
-                        <Coins className="w-3.5 h-3.5" />
-                        Ödüllü Kayıp: {sosConfig.rewardAmount} {sosConfig.rewardCurrency}
-                    </motion.div>
-                )}
-
-                {/* CRITICAL MEDICAL ALERT BANNER */}
-                {sosConfig.criticalHealthAlert && (
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ 
-                            y: 0, 
-                            opacity: 1,
-                            scale: [1, 1.02, 1],
-                        }}
-                        transition={{ 
-                            delay: 0.3,
-                            scale: { repeat: Infinity, duration: 2, ease: "easeInOut" }
-                        }}
-                        className="w-full max-w-sm mb-6 bg-red-600 rounded-3xl p-4 shadow-[0_0_40px_rgba(220,38,38,0.5)] border-2 border-black/30 dark:border-white/30 relative overflow-hidden"
-                    >
-                        <div className="absolute inset-0 bg-black/10 dark:bg-white/10 animate-shimmer" />
-                        <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-12 h-12 bg-card rounded-2xl flex items-center justify-center shadow-lg shrink-0">
-                                <ShieldAlert className="w-7 h-7 text-red-600" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-black/70 dark:text-white/70 uppercase tracking-widest leading-none mb-1">Kritik Tıbbi Uyarı</span>
-                                <span className="text-sm font-black text-white leading-tight uppercase tracking-tight italic">
-                                    {sosConfig.criticalHealthAlert}
-                                </span>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* PROFILE PICTURE */}
-                <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                    className="relative mb-6"
-                >
-                    <div className={cn(
-                        "w-40 h-40 rounded-[2rem] p-1.5 shadow-2xl relative z-10 overflow-hidden",
-                        isLost ? "bg-gradient-to-tr from-red-600 to-orange-500" : "bg-gradient-to-tr from-cyan-400 to-blue-600"
-                    )}>
-                        <img src={pet.avatarUrl} className="w-full h-full rounded-[1.6rem] object-cover" />
+                {state === 'missing' && (
+                    <div className="bg-card border border-card-border rounded-3xl p-6 text-center space-y-2">
+                        <h1 className="text-lg font-black">Künye bulunamadı</h1>
+                        <p className="text-sm font-semibold text-secondary">Bu kod Moffi'de kayıtlı bir evcil hayvana ait görünmüyor.</p>
                     </div>
-                    <div className={cn(
-                        "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full blur-[40px] -z-10",
-                        isLost ? "bg-red-500/50" : "bg-cyan-500/50"
-                    )} />
-                </motion.div>
+                )}
 
-                {/* NAME AND STATUS */}
-                <div className="text-center mb-8 w-full max-w-sm">
-                    <h1 className="text-4xl font-black mb-1 tracking-tight flex items-center justify-center gap-2">
-                        {pet.name}
-                    </h1>
-                    <p className="text-black/60 dark:text-white/60 text-sm font-medium mb-6 flex items-center justify-center gap-1.5 uppercase tracking-widest">
-                        {pet.breed} • {pet.age}
-                    </p>
+                {state === 'ready' && info && (
+                    <>
+                        <section className="text-center space-y-3">
+                            {info.avatar_url
+                                ? <img src={info.avatar_url} alt="" className="w-36 h-36 rounded-3xl object-cover mx-auto" />
+                                : <div className="w-36 h-36 rounded-3xl bg-accent/15 text-accent text-5xl font-black flex items-center justify-center mx-auto">{info.pet_name.charAt(0)}</div>}
+                            <div>
+                                <h1 className="text-3xl font-black">{info.pet_name}</h1>
+                                <p className="text-sm font-semibold text-secondary">{[speciesLabel(info.species), info.breed].filter(Boolean).join(' · ')}</p>
+                            </div>
+                        </section>
 
-                    {/* STATUS BANNER */}
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.1 }}
-                        className={cn(
-                            "w-full rounded-[2.5rem] p-6 shadow-xl backdrop-blur-xl border border-card-border relative overflow-hidden",
-                            isLost ? "bg-red-500/10" : "bg-black/5 dark:bg-white/5"
-                        )}
-                    >
-                        {isLost ? (
-                            <>
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-pulse" />
-                                <div className="flex flex-col items-center text-center gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center animate-bounce">
-                                        <AlertTriangle className="w-6 h-6" />
-                                    </div>
-                                    <h2 className="text-xl font-black text-red-400 uppercase tracking-widest">Kayıp Alarmı! 🚨</h2>
-                                    <p className="text-sm text-red-100/90 leading-relaxed font-medium">
-                                        {sosConfig.emergencyMessage}
-                                    </p>
-                                    {sosConfig.criticalHealthAlert && (
-                                        <div className="w-full bg-red-950/50 rounded-2xl p-3 border border-red-500/10 mt-2 flex flex-col items-start text-left">
-                                            <span className="text-xs uppercase font-bold text-red-400 mb-1">⚕️ Sağlık Uyarısı</span>
-                                            <p className="text-[13px] text-black/90 dark:text-white/90 leading-snug">{sosConfig.criticalHealthAlert}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </>
+                        {!info.is_lost ? (
+                            <section className="bg-card border border-card-border rounded-3xl p-5 text-center space-y-2">
+                                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                                <h2 className="text-lg font-black">Ben güvendeyim</h2>
+                                <p className="text-sm font-semibold text-secondary">Sahibim yanımda ya da evimdeyim. Beni kayıp gibi görürsen sahibim künyeyi kayıp moduna aldığında burada iletişim bilgileri çıkar.</p>
+                            </section>
                         ) : (
-                            <div className="flex flex-col items-center text-center gap-2">
-                                <div className="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-1">
-                                    <Heart className="w-5 h-5" fill="currentColor" />
-                                </div>
-                                <h2 className="text-lg font-bold text-white tracking-wide">Ben Güvendeyim!</h2>
-                                <p className="text-sm text-black/70 dark:text-white/70 leading-relaxed">
-                                    Sahibim yanımda veya evimdeyim. Benimle karşılaştıysan sadece başımı okşa ve iyi olduğumu bil! 🐾
-                                </p>
-                                <div className="w-full h-[1px] bg-black/10 dark:bg-white/10 my-2" />
-                                <p className="text-[13px] italic text-black/50 dark:text-white/50">"{pet.bio}"</p>
-                            </div>
+                            <>
+                                <section className="rounded-3xl bg-red-600 text-white p-5 space-y-2">
+                                    <div className="flex items-center gap-2 font-black"><ShieldAlert className="w-5 h-5" /> Kayıbım, ailemi arıyorum</div>
+                                    <p className="text-sm font-semibold text-white/90">
+                                        {info.finder_message || 'Beni gördüysen lütfen ani hareket yapmadan yaklaş ve sahibime haber ver.'}
+                                    </p>
+                                    {info.reward_amount ? <p className="text-sm font-black">Sahibim {info.reward_amount} TL ödül veriyor.</p> : null}
+                                </section>
+
+                                {info.owner_phone && (
+                                    <a href={`tel:${info.owner_phone.replace(/\s/g, '')}`}
+                                        className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-accent text-white font-black">
+                                        <Phone className="w-5 h-5" /> Sahibini ara
+                                    </a>
+                                )}
+
+                                <EmergencyInfoCard petId={petId} context="lost" />
+                                <ReportForm petId={petId} petName={info.pet_name} />
+                            </>
                         )}
-                    </motion.div>
-                </div>
-
-                {/* Sağlık Karnesi → Acil Bilgiler: sahip "kayıp ilanında göster"i açtıysa görünür */}
-                {isLost && (
-                    <div className="w-full max-w-sm mb-4">
-                        <EmergencyInfoCard petId={petId} context="lost" />
-                    </div>
-                )}
-
-                {/* ACTION BUTTONS (ONLY SHOW IF LOST) */}
-                {isLost && (
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="w-full max-w-sm flex flex-col gap-3"
-                    >
-                        {sosConfig.allowProxyCalls && (
-                             <button onClick={handleCallOwner} className="w-full bg-card text-black hover:bg-gray-100 transition-colors rounded-[20px] p-4 flex items-center justify-center gap-3 font-bold text-[15px] shadow-[0_0_30px_rgba(255,255,255,0.2)] active:scale-95">
-                                <PhoneCall className="w-5 h-5 text-emerald-600" />
-                                Sahibini Hemen Ara (Gizli Arama)
-                            </button>
-                        )}
-
-                        <div className="flex gap-3 w-full">
-                            <button onClick={handleSendLocation} className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
-                                <MapPin className="w-6 h-6" />
-                                <span className="font-semibold text-xs text-center leading-tight">Mevcut Konumumu Gönder</span>
-                            </button>
-
-                            {sosConfig.allowAnonymousMessaging && (
-                                <button onClick={() => setShowMessageBox(!showMessageBox)} className="flex-1 bg-black/10 dark:bg-white/10 hover:bg-white/15 border border-card-border text-white rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
-                                    <MessageCircle className="w-6 h-6" />
-                                    <span className="font-semibold text-xs text-center leading-tight">Anonim Mesaj Bırak</span>
-                                </button>
-                            )}
-                        </div>
-
-                        {/* ANONYMOUS MESSAGE BOX */}
-                        <AnimatePresence>
-                            {showMessageBox && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden"
-                                >
-                                    <div className="bg-card dark:bg-[#1C1C1E] rounded-3xl p-4 border border-card-border shadow-xl mt-2 flex flex-col gap-3">
-                                        <p className="text-xs text-black/50 dark:text-white/50 text-center uppercase tracking-wide font-bold">Uygulamasız - Güvenli Mesaj</p>
-                                        <textarea
-                                            value={anonMessage}
-                                            onChange={(e) => setAnonMessage(e.target.value)}
-                                            placeholder="Örn: Migros'un arkasında gördüm, mama veriyorum..."
-                                            className="w-full bg-black/50 border border-card-border rounded-2xl p-3 text-sm text-white outline-none focus:border-cyan-500/50 placeholder:text-black/40 dark:text-white/30 resize-none h-20"
-                                        />
-                                        <button
-                                            onClick={handleSendMessage}
-                                            disabled={isSending || !anonMessage.trim()}
-                                            className="w-full bg-cyan-500 disabled:opacity-50 disabled:bg-gray-700 text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95"
-                                        >
-                                            {isSending ? (
-                                                <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                                            ) : (
-                                                <> Gönder <Send className="w-4 h-4" /> </>
-                                            )}
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
+                    </>
                 )}
             </main>
-
-            {/* BRANDING BOTTOM */}
-            <div className="absolute bottom-6 inset-x-0 flex justify-center pointer-events-none opacity-40">
-                <span className="text-[10px] font-bold tracking-widest uppercase flex items-center gap-1">
-                    Powered by <PawPrint className="w-3 h-3" /> Moffi
-                </span>
-            </div>
         </div>
+    );
+}
+
+function ReportForm({ petId, petName }: { petId: string; petName: string }) {
+    const [message, setMessage] = useState('');
+    const [contact, setContact] = useState('');
+    const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [locating, setLocating] = useState(false);
+    const [sending, setSending] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [sent, setSent] = useState(false);
+
+    const locate = () => {
+        if (!navigator.geolocation) { setError('Cihazın konum paylaşmayı desteklemiyor.'); return; }
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            pos => { setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocating(false); setError(null); },
+            () => { setLocating(false); setError('Konum alınamadı. Tarayıcı izinlerini kontrol et.'); },
+            { enableHighAccuracy: true, timeout: 15000 },
+        );
+    };
+
+    const send = async () => {
+        setSending(true);
+        setError(null);
+        const { error: err } = await supabase.rpc('submit_tag_report', {
+            p_pet_id: petId, p_message: message, p_contact: contact, p_lat: coords?.lat ?? null, p_lng: coords?.lng ?? null,
+        });
+        setSending(false);
+        if (err) setError(err.message || 'Gönderilemedi, tekrar dene.');
+        else setSent(true);
+    };
+
+    if (sent) {
+        return (
+            <section className="bg-card border border-card-border rounded-3xl p-5 text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <h2 className="text-lg font-black">Teşekkürler, sahibine iletildi</h2>
+                <p className="text-sm font-semibold text-secondary">{petName}'in sahibine bildirim ve e-posta gönderildi.</p>
+            </section>
+        );
+    }
+
+    return (
+        <section className="bg-card border border-card-border rounded-3xl p-5 space-y-3">
+            <h2 className="text-base font-black">Sahibine haber ver</h2>
+            <textarea value={message} onChange={e => setMessage(e.target.value)} maxLength={500}
+                placeholder="Örn: Parkın girişinde gördüm, yanında bekliyorum."
+                className="w-full min-h-[88px] px-4 py-3 rounded-2xl bg-background border border-card-border text-sm font-semibold outline-none focus:border-accent" />
+            <input value={contact} onChange={e => setContact(e.target.value)} maxLength={100}
+                placeholder="Sana nasıl ulaşsın? (isteğe bağlı, telefon ya da ad)"
+                className="w-full h-12 px-4 rounded-2xl bg-background border border-card-border text-sm font-semibold outline-none focus:border-accent" />
+            <button onClick={locate} disabled={locating}
+                className="w-full h-11 rounded-2xl border border-card-border text-sm font-black flex items-center justify-center gap-2 disabled:opacity-50">
+                <MapPin className="w-4 h-4" /> {coords ? 'Konumun eklendi' : locating ? 'Konum alınıyor…' : 'Konumumu ekle'}
+            </button>
+            {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+            <button onClick={send} disabled={sending || (!message.trim() && !coords)}
+                className="w-full h-12 rounded-2xl bg-accent text-white font-black disabled:opacity-50">
+                {sending ? 'Gönderiliyor…' : 'Gönder'}
+            </button>
+            <p className="text-[11px] font-semibold text-secondary">Yazdıkların ve konumun sadece hayvanın sahibine gider.</p>
+        </section>
     );
 }

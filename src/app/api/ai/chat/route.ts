@@ -46,16 +46,23 @@ export async function POST(req: Request) {
             systemInstruction += ` The user is currently on the "${context}" page.`;
         }
 
+        const health = petData?.health || null;
         if (petData) {
-            systemInstruction += `\n\n[Active Pet Data Context]\n` +
-                `Name: ${petData.name}\n` +
-                `Breed: ${petData.breed}\n` +
-                `Weight: ${petData.weight}\n` +
-                `Gender: ${petData.gender}\n` +
-                `Daily Water Intake: ${petData.waterCurrent} ml (Target: ${petData.waterTarget} ml)\n` +
-                `Daily Calories Intake: ${petData.foodCurrent} kcal (Target: ${petData.foodTarget} kcal)\n` +
-                `Vaccines Schedule: ${JSON.stringify(petData.vaccines || [])}\n\n` +
-                `If the user asks questions about their pet, answer using this data. For example, if they ask if the pet drank enough water today, compare the daily water intake with the target. If they ask about vaccines, check the upcoming vaccine dates in the schedule. Answer naturally in Turkish.`;
+            systemInstruction += `\n\n[Aktif evcil hayvan]\nAd: ${petData.name}\nIrk: ${petData.breed}\n`;
+            if (health) {
+                systemInstruction += `[Sağlık Kaydı özeti — sahibin Moffi'deki kaydı]\n` +
+                    `Genel durum: ${health.status}\n` +
+                    `Yaklaşan/geciken işler: ${JSON.stringify(health.upcoming || [])}\n` +
+                    `Kullandığı ilaçlar: ${(health.activeMedications || []).join(', ') || 'yok'}\n` +
+                    `Alerjiler: ${(health.allergies || []).join(', ') || 'kayıtlı değil'}\n` +
+                    `Kronik hastalıklar: ${(health.chronicConditions || []).join(', ') || 'kayıtlı değil'}\n` +
+                    `Sağlık notu: ${health.notes || 'yok'}\n` +
+                    `Son kilo: ${health.latestWeightKg != null ? `${health.latestWeightKg} kg` : 'ölçüm yok'}\n\n` +
+                    `Evcil hayvanla ilgili sorularda sadece bu veriyi kullan; veride olmayan bir şeyi biliyormuş gibi söyleme. ` +
+                    `Tıbbi teşhis koyma; ciddi belirtilerde veterinere yönlendir.`;
+            } else {
+                systemInstruction += 'Bu hayvanın sağlık kaydına şu an ulaşılamıyor; aşı veya ilaç sorulursa Sağlık Merkezi ekranına bakmasını söyle.';
+            }
         }
 
         try {
@@ -92,35 +99,29 @@ export async function POST(req: Request) {
             const lastMessage = messages[messages.length - 1].content.toLowerCase();
             let fallbackResponse = "";
 
-            if (petData && (lastMessage.includes("su") || lastMessage.includes("içti mi") || lastMessage.includes("su miktarı"))) {
-                const diff = petData.waterTarget - petData.waterCurrent;
-                if (diff <= 0) {
-                    fallbackResponse = `${petData.name} bugün ${petData.waterCurrent} ml su içti. Günlük hedefine (${petData.waterTarget} ml) başarıyla ulaştı! Harika! 💧🎉`;
+            if (petData && (lastMessage.includes("aşı") || lastMessage.includes("parazit") || lastMessage.includes("ne zaman"))) {
+                const upcoming = health?.upcoming || [];
+                if (!health) {
+                    fallbackResponse = `${petData.name} için sağlık kaydına şu an ulaşamıyorum; Sağlık Merkezi'nden bakabilirsin. 💉`;
+                } else if (upcoming.length > 0) {
+                    fallbackResponse = `${petData.name} için sıradaki işler:\n` + upcoming.map((u: any) => `- ${u.title} (${u.when})`).join("\n") + " 💉";
                 } else {
-                    fallbackResponse = `${petData.name} bugün ${petData.waterCurrent} ml su içti. Günlük hedefine ulaşması için ${diff} ml daha su içmesi gerekiyor. 💧`;
+                    fallbackResponse = `${petData.name} için kayıtta yaklaşan ya da geciken bir aşı veya parazit uygulaması yok. 💉`;
                 }
-            } else if (petData && (lastMessage.includes("kalori") || lastMessage.includes("mama") || lastMessage.includes("öğün") || lastMessage.includes("yemek") || lastMessage.includes("yedi"))) {
-                const diff = petData.foodTarget - petData.foodCurrent;
-                if (diff <= 0) {
-                    fallbackResponse = `${petData.name} bugün ${petData.foodCurrent} kcal kalori aldı. Günlük hedefine (${petData.foodTarget} kcal) ulaştı! 🍖✨`;
-                } else {
-                    fallbackResponse = `${petData.name} bugün ${petData.foodCurrent} kcal kalori aldı. Günlük hedefe ulaşmak için ${diff} kcal daha beslenmesi gerekiyor. 🍖`;
-                }
-            } else if (petData && (lastMessage.includes("aşı") || lastMessage.includes("aşıları") || lastMessage.includes("aşı takvimi"))) {
-                const pendingVaccines = (petData.vaccines || []).filter((v: any) => v.status !== 'completed');
-                if (pendingVaccines.length > 0) {
-                    fallbackResponse = `${petData.name}'in yaklaşan aşıları:\n` + pendingVaccines.map((v: any) => `- ${v.name} (Tarih: ${v.dueDate})`).join("\n") + " 💉";
-                } else {
-                    fallbackResponse = `${petData.name}'in yaklaşan veya gecikmiş bir aşısı görünmüyor, harika! 💉✨`;
-                }
-            } else if (petData && (lastMessage.includes("kilo") || lastMessage.includes("ağırlık") || lastMessage.includes("kaç kilo"))) {
-                fallbackResponse = `${petData.name}'in güncel kilosu: ${petData.weight}. ⚖️`;
+            } else if (petData && (lastMessage.includes("ilaç") || lastMessage.includes("alerji"))) {
+                fallbackResponse = health
+                    ? `${petData.name} için kayıtlı ilaçlar: ${(health.activeMedications || []).join(', ') || 'yok'}. Alerjiler: ${(health.allergies || []).join(', ') || 'kayıtlı değil'}.`
+                    : `${petData.name} için sağlık kaydına şu an ulaşamıyorum; Sağlık Merkezi'nden bakabilirsin.`;
+            } else if (petData && (lastMessage.includes("kilo") || lastMessage.includes("ağırlık"))) {
+                fallbackResponse = health?.latestWeightKg != null
+                    ? `${petData.name} için son ölçülen kilo: ${health.latestWeightKg} kg. ⚖️`
+                    : `${petData.name} için kayıtlı bir kilo ölçümü yok. Sağlık Merkezi → Kilo'dan ekleyebilirsin. ⚖️`;
             } else if (lastMessage.includes("merhaba") || lastMessage.includes("selam")) {
-                fallbackResponse = `Merhaba! 😺 Ben Moffi AI. ${petData ? `${petData.name} hakkında sorularını sorabilirsin, verileri anlık takip ediyorum!` : 'Evcil hayvanının günlük hedeflerini ve aşılarını takip edebilirim.'}`;
+                fallbackResponse = `Merhaba! 😺 Ben Moffi AI. ${petData ? `${petData.name} hakkında sorularını sorabilirsin, verileri anlık takip ediyorum!` : 'Evcil hayvanının aşı, ilaç ve kilo kayıtları hakkında soru sorabilirsin.'}`;
             } else if (lastMessage.includes("nasılsın")) {
                 fallbackResponse = "Harikayım, teşekkürler! Patilerim kod yazmaktan biraz yoruldu ama sizin için buradayım. 😹";
             } else {
-                fallbackResponse = `Anladım. Şu an Gemini API çevrimdışı olduğundan genel sorularına cevap veremiyorum, ancak ${petData ? `${petData.name}'in su tüketimi (${petData.waterCurrent}/${petData.waterTarget} ml), kalori tüketimi (${petData.foodCurrent}/${petData.foodTarget} kcal) veya aşıları` : 'evcil hayvanının verileri'} hakkında bana soru sorabilirsin! 🐾`;
+                fallbackResponse = `Şu an genel sorulara cevap veremiyorum${petData ? `, ama ${petData.name}'in aşı, ilaç ve kilo kayıtlarını sorabilirsin` : ''}. 🐾`;
             }
 
             return NextResponse.json({

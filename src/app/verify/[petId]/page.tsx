@@ -54,12 +54,17 @@ export default async function VerifyPetPage({ params }: { params: Promise<{ petI
                     </div>
                 )}
 
-                <div className={`flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm ${
-                    d.is_vaccination_current ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                }`}>
-                    {d.is_vaccination_current ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
-                    {d.is_vaccination_current ? 'Aşıları Güncel' : 'Gecikmiş Aşı Var'}
-                </div>
+                {/* Aşı durumu sadece sahip Acil Bilgiler'de "Doğrulama kodunda"yı açtıysa gelir. */}
+                {d.is_vaccination_current === null || d.is_vaccination_current === undefined ? (
+                    !d.is_lost && <p className="text-xs font-semibold text-gray-500">Sahibi bu kodla sağlık bilgisi paylaşmıyor.</p>
+                ) : (
+                    <div className={`flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm ${
+                        d.is_vaccination_current ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                    }`}>
+                        {d.is_vaccination_current ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+                        {d.is_vaccination_current ? 'Aşıları Güncel' : 'Gecikmiş Aşı Var'}
+                    </div>
+                )}
 
                 {d.latest_vaccines?.length > 0 && (
                     <div className="mt-4 text-left space-y-1">
@@ -73,7 +78,7 @@ export default async function VerifyPetPage({ params }: { params: Promise<{ petI
                     </div>
                 )}
 
-                <p className="text-[9px] text-gray-400 mt-6">Moffi tarafından doğrulanmış dijital kayıt</p>
+                <p className="text-[9px] text-gray-400 mt-6">Bilgiler sahibinin Moffi'deki kaydından gelir</p>
             </div>
             <div className="w-full max-w-sm">
                 <EmergencyInfoCard petId={petId} context="qr" />

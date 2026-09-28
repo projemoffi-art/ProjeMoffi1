@@ -1,6 +1,8 @@
 'use client';
 
-// /health dışındaki ekranlar (ana sayfa gibi) için: bir evcil hayvanın Sağlık Kaydı'nı yükler.
+// /health dışındaki ekranlar (ana sayfa gibi) için: bir evcil hayvanın Sağlık Kaydı.
+// Karne ortak hafızadan gelir (healthService.loadBundle); sağlık ekranında bir değişiklik
+// yapıldığında bu hook'u kullanan her ekran yeni hâli anında alır.
 // Hesaplar src/lib/health/derive.ts'teki aynı fonksiyonlarla yapılır; ayrı bir sağlık hesabı tutulmaz.
 
 import { useEffect, useState } from 'react';
@@ -10,18 +12,17 @@ import type { Pet } from '@/context/PetContext';
 import { speciesOf } from '@/lib/health/derive';
 
 export function usePetHealthBundle(pet: Pet | null) {
-    const [bundle, setBundle] = useState<HealthBundle | null>(null);
     const petId = pet?.id || null;
     const species = speciesOf(pet);
+    const [bundle, setBundle] = useState<HealthBundle | null>(() => (petId ? healthService.peekBundle(petId) : null));
 
     useEffect(() => {
         let alive = true;
-        setBundle(null);
-        if (!petId) return;
-        healthService.getBundle(petId, species)
-            .then(b => { if (alive) setBundle(b); })
-            .catch(() => { if (alive) setBundle(null); });
-        return () => { alive = false; };
+        if (!petId) { setBundle(null); return; }
+        setBundle(healthService.peekBundle(petId));
+        const unsubscribe = healthService.subscribeBundle(petId, b => { if (alive) setBundle(b); });
+        healthService.loadBundle(petId, species).catch(() => { if (alive) setBundle(null); });
+        return () => { alive = false; unsubscribe(); };
     }, [petId, species]);
 
     return bundle;

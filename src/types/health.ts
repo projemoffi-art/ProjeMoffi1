@@ -123,8 +123,49 @@ export interface HealthProfile {
     primaryClinicId: string | null;
     primaryVetName: string | null;
     primaryVetPhone: string | null;
+    /** Serbest sağlık notu (alerji/hastalık listesine sığmayan her şey). */
+    notes: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
+    altContactName: string | null;
+    altContactPhone: string | null;
     showOnLost: boolean;
     showOnQr: boolean;
+}
+
+/** Pasaportun paylaşılabilen bölümleri (pet_share_links.sections ile aynı). */
+export type ShareSection = 'identity' | 'vaccines' | 'parasites' | 'medications' | 'visits' | 'weights' | 'emergency' | 'documents';
+
+export interface ShareLink {
+    id: string;
+    petId: string;
+    token: string;
+    sections: ShareSection[];
+    expiresAt: string;
+    revokedAt: string | null;
+    viewCount: number;
+    lastViewedAt: string | null;
+    createdAt: string;
+}
+
+/** Paylaşım bağlantısıyla açılan pasaport: sadece sahibin seçtiği bölümler dolu gelir. */
+export interface SharedPassport {
+    sections: ShareSection[];
+    expiresAt: string;
+    pet: { name: string; type: string | null; breed: string | null; avatarUrl: string | null; passportNo: string | null };
+    identity?: { gender: string | null; birthDate: string | null; age: string | null; color: string | null; microchipNo: string | null; petvetNo: string | null; isNeutered: boolean | null };
+    bundle: HealthBundle;
+    documents: { id: string; category: DocumentCategory; title: string; mimeType: string | null; sizeBytes: number | null; docDate: string }[];
+}
+
+export interface TagReport {
+    id: string;
+    petId: string;
+    message: string | null;
+    contact: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    createdAt: string;
 }
 
 export interface HealthBundle {

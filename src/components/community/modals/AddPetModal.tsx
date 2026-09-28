@@ -46,8 +46,6 @@ interface AddPetModalProps {
     // Props for dynamic goals, streak, health and weight inputs
     newPetWeight: string;
     setNewPetWeight: (val: string) => void;
-    newPetHealthStatus: string;
-    setNewPetHealthStatus: (val: string) => void;
     newPetActivityTarget: string;
     setNewPetActivityTarget: (val: string) => void;
     newPetWaterTarget: string;
@@ -92,8 +90,6 @@ export function AddPetModal({
     
     newPetWeight,
     setNewPetWeight,
-    newPetHealthStatus,
-    setNewPetHealthStatus,
     newPetActivityTarget,
     setNewPetActivityTarget,
     newPetWaterTarget,

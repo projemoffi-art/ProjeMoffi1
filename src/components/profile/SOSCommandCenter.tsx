@@ -38,9 +38,6 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
         status: pet?.is_lost ? 'lost' : 'safe',
         sosConfig: {
             showPhoneNumber: !pet?.sos_settings?.secure_proxy_only,
-            allowProxyCalls: pet?.sos_settings?.secure_proxy_only || true,
-            allowAnonymousMessaging: true,
-            criticalHealthAlert: pet?.sos_settings?.critical_health_note || "",
             emergencyMessage: pet?.sos_settings?.finder_message || "Lütfen bana yardım edin, ailemi bulamıyorum.",
             rewardAmount: pet?.sos_settings?.reward_amount || 0,
             rewardCurrency: pet?.sos_settings?.reward_currency || "TL",
@@ -65,9 +62,6 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                 status: pet.is_lost ? 'lost' : 'safe',
                 sosConfig: {
                     showPhoneNumber: !pet.sos_settings?.secure_proxy_only,
-                    allowProxyCalls: pet.sos_settings?.secure_proxy_only || true,
-                    allowAnonymousMessaging: true,
-                    criticalHealthAlert: pet.sos_settings?.critical_health_note || "",
                     emergencyMessage: pet.sos_settings?.finder_message || "Lütfen bana yardım edin, ailemi bulamıyorum.",
                     rewardAmount: pet.sos_settings?.reward_amount || 0,
                     rewardCurrency: pet.sos_settings?.reward_currency || "TL",
@@ -128,9 +122,9 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                 ...pet.sos_settings,
                 reward_amount: localSos.sosConfig.rewardAmount,
                 reward_currency: localSos.sosConfig.rewardCurrency,
-                critical_health_note: localSos.sosConfig.criticalHealthAlert,
                 finder_message: localSos.sosConfig.emergencyMessage,
-                secure_proxy_only: localSos.sosConfig.allowProxyCalls,
+                // Künye sayfası telefonu sadece bu kapalıysa gösterir (get_pet_tag_info).
+                secure_proxy_only: !localSos.sosConfig.showPhoneNumber,
                 sos_radius: localSos.sosConfig.sosRadius,
                 location_precision: localSos.sosConfig.locationPrecision,
                 auto_post_sos: localSos.sosConfig.autoPostSos,
@@ -440,15 +434,12 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                 </div>
                                             </div>
 
-                                            {/* Health Note Row */}
-                                            <div className="p-6 space-y-3">
-                                                <label className="text-[9px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest block ml-1">Kritik Sağlık Uyarısı</label>
-                                                <textarea 
-                                                    value={localSos.sosConfig.criticalHealthAlert}
-                                                    onChange={(e) => setLocalSos((prev: any) => ({...prev, sosConfig: {...prev.sosConfig, criticalHealthAlert: e.target.value}}))}
-                                                    className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl p-4 text-sm text-red-400 font-bold outline-none focus:border-red-500/50 h-20 resize-none"
-                                                    placeholder="Örn: Piliç alerjisi var! Sadece su verin..."
-                                                />
+                                            {/* Sağlık bilgisi tek kayıttan: Acil Bilgiler (künyede sahip açtıysa görünür). */}
+                                            <div className="p-6">
+                                                <a href="/health/acil" className="flex items-center justify-between gap-3 rounded-2xl border border-card-border p-4">
+                                                    <span className="text-[11px] font-bold text-black/80 dark:text-white/80">Künyede görünen alerji, ilaç ve sağlık notu Acil Bilgiler'den gelir</span>
+                                                    <span className="text-[11px] font-black text-accent shrink-0">Düzenle</span>
+                                                </a>
                                             </div>
 
                                             {/* SMS Number Row */}
@@ -550,9 +541,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                 {[
                                                     { id: 'autoPostSos', label: 'Topluluğa Otomatik İlan', icon: Zap, color: 'text-yellow-400' },
                                                     { id: 'headerSosAlertEnabled', label: 'Header SOS Uyarısı', icon: Bell, color: 'text-red-400' },
-                                                    { id: 'showPhoneNumber', label: 'Telefon Numaram Görünsün', icon: Phone, color: 'text-cyan-400' },
-                                                    { id: 'allowProxyCalls', label: 'Moffi Güvenli Arama', icon: PhoneCall, color: 'text-emerald-400' },
-                                                    { id: 'allowAnonymousMessaging', label: 'Anonim Mesajlaşma', icon: MessageCircle, color: 'text-purple-400' },
+                                                    { id: 'showPhoneNumber', label: 'Künyede telefon numaram görünsün', icon: Phone, color: 'text-cyan-400' },
                                                 ].map(item => (
                                                     <div key={item.id} className="flex items-center justify-between p-6">
                                                         <div className="flex items-center gap-4">

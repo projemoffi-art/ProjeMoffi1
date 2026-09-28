@@ -19,6 +19,9 @@ export function AIWidgetLoader() {
     // butonlarının üzerine binerek gerçek tıklama sorunlarına yol açtığı görüldü)
     const hidePaths = ['/', '/login', '/register', '/reset-password', '/walk/tracking', '/walk/summary'];
     if (hidePaths.includes(pathname) || pathname.startsWith('/game')) return null;
+    // Sağlık ve pasaport ekranları: yüzen düğme listelerin sağ tarafını ve alt sayfalardaki
+    // kaydet düğmelerini kapatıyordu. Paylaşım/künye sayfaları giriş yapmamış kişiye açılır.
+    if (['/health', '/pasaport', '/p/', '/id/', '/verify/'].some(p => pathname.startsWith(p))) return null;
 
     // Check user preference
     const widgetEnabled = user?.settings?.ai?.widgetEnabled ?? true;

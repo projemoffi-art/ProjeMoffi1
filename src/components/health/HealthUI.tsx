@@ -7,17 +7,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Activity, Bell, ChevronLeft, ClipboardList, FileText, Pill, Scale, ShieldAlert, ShieldCheck,
-    Stethoscope, Syringe, X,
+    Activity, Bell, ChevronLeft, ClipboardList, FileText, Fingerprint, Pill, Scale, ShieldAlert, ShieldCheck,
+    Stethoscope, Syringe, User, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DueStatus } from '@/lib/health/derive';
 
 export type HealthModule =
-    | 'karne' | 'asilar' | 'parazit' | 'ilaclar' | 'kilo' | 'muayeneler' | 'belgeler' | 'acil' | 'zaman';
+    | 'pasaport' | 'kimlik' | 'karne' | 'asilar' | 'parazit' | 'ilaclar' | 'kilo' | 'muayeneler' | 'belgeler' | 'acil' | 'zaman';
 
 export const MODULES: Record<HealthModule, { label: string; href: string; icon: React.ComponentType<{ className?: string }>; tone: string }> = {
-    karne:      { label: 'Sağlık Karnesi', href: '/health/karne',      icon: ClipboardList, tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
+    pasaport:   { label: 'Pasaport',       href: '/pasaport',          icon: Fingerprint,   tone: 'bg-stone-200 text-stone-700 dark:bg-stone-500/20 dark:text-stone-200' },
+    kimlik:     { label: 'Kimlik',         href: '/pasaport/kimlik',   icon: User,          tone: 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300' },
+    karne:      { label: 'Sağlık Özeti',   href: '/health/karne',      icon: ClipboardList, tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
     asilar:     { label: 'Aşılar',         href: '/health/asilar',     icon: Syringe,       tone: 'bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-300' },
     parazit:    { label: 'Parazit',        href: '/health/parazit',    icon: ShieldCheck,   tone: 'bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300' },
     ilaclar:    { label: 'İlaçlar',        href: '/health/ilaclar',    icon: Pill,          tone: 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300' },

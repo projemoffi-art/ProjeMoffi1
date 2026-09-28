@@ -10,6 +10,9 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { usePet } from '@/context/PetContext';
 import { cn } from '@/lib/utils';
+import { healthService } from '@/services/healthService';
+import { daysLeftText, isMedicationActive, overallStatus, speciesOf, upcomingItems, weightSummary } from '@/lib/health/derive';
+import { todayKey } from '@/lib/appointmentTime';
 import { useRouter, usePathname } from 'next/navigation';
 
 interface Message {
@@ -185,6 +188,20 @@ export function MoffiAssistant() {
         let petDataPayload: Record<string, unknown> | null = null;
         if (activePetObj) {
             petDataPayload = { name: activePetObj.name, breed: activePetObj.breed || activePetObj.species || 'Bilinmeyen Cins' };
+            // Sağlık Kaydı'nın özeti (sadece sahibin kendi asistanına gider): uydurma cevap yerine gerçek veri.
+            try {
+                const bundle = await healthService.loadBundle(activePetObj.id, speciesOf(activePetObj));
+                const t = todayKey();
+                petDataPayload.health = {
+                    status: overallStatus(bundle, t).title,
+                    upcoming: upcomingItems(bundle, [], t).slice(0, 6).map(i => ({ title: i.title, date: i.date, when: daysLeftText(i.daysLeft) })),
+                    activeMedications: bundle.medications.filter(m => isMedicationActive(m, t)).map(m => [m.name, m.dosage, m.frequency].filter(Boolean).join(' · ')),
+                    allergies: bundle.profile?.allergies || [],
+                    chronicConditions: bundle.profile?.chronicConditions || [],
+                    notes: bundle.profile?.notes || null,
+                    latestWeightKg: weightSummary(bundle.weights, t).latest?.weightKg ?? null,
+                };
+            } catch { /* sağlık özeti yüklenemezse asistan sadece ad/ırkla çalışır */ }
         }
 
         const lowerInput = textToSend.toLowerCase();
@@ -193,7 +210,7 @@ export function MoffiAssistant() {
         if (lowerInput.includes('kayıp') || lowerInput.includes('kayboldu')) {
             quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Çok geçmiş olsun! Radar & Acil Durum Merkezini açarak çevredeki kullanıcılara bildirim gönderebiliriz.', action: { type: 'sos', label: '🚨 Radarı Aç' }, isNew: true };
         } else if (lowerInput.includes('vetline') || lowerInput.includes('veteriner') || lowerInput.includes('hasta')) {
-            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Canlı VetLine hizmetimiz ile uzman veteriner hekimlerimizle anında görüntülü görüşebilirsin.', action: { type: 'vetline', label: "🩺 VetLine'a Bağlan" }, isNew: true };
+            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Yakınındaki veteriner kliniklerini bulup randevu alabilirsin. Acil bir durum varsa açık acil klinikleri de oradan görebilirsin.', action: { type: 'vetline', label: '🩺 Veteriner bul' }, isNew: true };
         } else if (lowerInput.includes('mama') || lowerInput.includes('yemek')) {
             quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Dostunun yaşına ve kilosuna özel mama seçeneklerini Petshopumuzda bulabilirsin!', action: { type: 'link', label: '🍎 Mamaları Gör', url: '/petshop?category=food' }, isNew: true };
         }

@@ -549,8 +549,9 @@ function VetPageContent() {
             }
         }
 
+        // Acil Bilgiler'deki alerji, kronik hastalık ve sağlık notu (tek kayıt).
         const sharedHealthNotes = (shareNotes && bookingPet)
-            ? (bookingPet.health_notes || bookingPet.sos_settings?.critical_health_note || null)
+            ? await healthService.getEmergencySummary(bookingPet.id)
             : "";
 
         const ownerInfo = shareOwner && user ? {

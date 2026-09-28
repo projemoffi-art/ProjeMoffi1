@@ -11,7 +11,7 @@ import { daysLeftText, lastCheckupDate, overallStatus, upcomingItems } from '@/l
 import { formatDateKeyTr } from '@/lib/appointmentTime';
 import { cn } from '@/lib/utils';
 
-const TILES: HealthModule[] = ['karne', 'asilar', 'parazit', 'ilaclar', 'kilo', 'muayeneler', 'belgeler', 'acil'];
+const TILES: HealthModule[] = ['pasaport', 'asilar', 'parazit', 'ilaclar', 'kilo', 'muayeneler', 'belgeler', 'acil'];
 
 // Referans Ekran 1 — Sağlık Merkezi.
 export default function HealthCenterPage() {

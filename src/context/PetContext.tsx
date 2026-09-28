@@ -20,15 +20,17 @@ export interface Pet {
     microchip_id?: string;
     microchip_no?: string;
     neutered?: boolean;
-    birthday?: string;
+    birthday?: string;      // YYYY-MM-DD (pets.birth_date)
     city?: string;
     color?: string;
+    petvet_no?: string;     // Resmi PETVET kayıt numarası (sahip girer, doğrulanmaz)
+    passport_no?: string;   // Moffi pasaport no (sunucu verir, değişmez)
+    created_at?: string;
     // Yeni kimlik alanları
     type?: string;          // Hayvan türü emoji: 🐶 🐱 🐰 vb.
     size?: string;          // Mini / Küçük / Orta / Büyük / Dev
     character?: string;     // Karakter & kişilik açıklaması
     features?: string;      // Ayırt edici özellikler
-    health_notes?: string;  // Sağlık notları
     owner?: {
         name: string;
         phone: string;
@@ -50,7 +52,6 @@ export interface Pet {
         emergency_sms_number: string;
         reward_amount: number;
         reward_currency: string;
-        critical_health_note: string;
         finder_message: string;
         quiet_hours?: { enabled: boolean; from: string; to: string };
         emergency_bypass?: boolean;
@@ -180,7 +181,7 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
         const defaultSosSettings = {
             auto_post_sos: true, sos_radius: '5km' as const, secure_proxy_only: false,
             location_precision: 'exact' as const, emergency_sms_number: "", reward_amount: 0,
-            reward_currency: "TL", critical_health_note: "",
+            reward_currency: "TL",
             finder_message: "Lütfen yardıma ihtiyacım var!",
             quiet_hours: { enabled: false, from: "23:00", to: "08:00" },
             emergency_bypass: true, header_sos_alert_enabled: true,

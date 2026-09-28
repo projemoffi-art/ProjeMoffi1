@@ -108,7 +108,7 @@ export default function VaccinesPage() {
                                 <ChevronRight className="w-4 h-4 text-secondary" />
                             </HealthCard>
                         )}
-                        <HealthCard href="/health/paylas?bolum=asilar" className="p-4 flex items-center gap-3">
+                        <HealthCard href="/pasaport/paylas?bolum=asilar" className="p-4 flex items-center gap-3">
                             <span className="w-10 h-10 rounded-xl bg-card-border/50 text-secondary flex items-center justify-center"><Download className="w-5 h-5" /></span>
                             <div className="flex-1">
                                 <div className="text-sm font-black">Aşı geçmişi belgesi</div>

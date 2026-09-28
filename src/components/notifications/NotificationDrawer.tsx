@@ -22,9 +22,11 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
   const { language } = useTranslation();
   const router = useRouter();
 
-  // Sağlık hatırlatması → ilgili evcil hayvanın Sağlık Merkezi; randevu → Randevularım.
+  // Sağlık hatırlatması → ilgili evcil hayvanın Sağlık Merkezi; künyeden gelen haber → Pasaport;
+  // randevu → Randevularım.
   const targetOf = (n: { type: string; entity_id?: string | null }) =>
     n.type === 'health' ? `/health${n.entity_id ? `?pet=${n.entity_id}` : ''}`
+      : n.type === 'sos' ? `/pasaport${n.entity_id ? `?pet=${n.entity_id}` : ''}`
       : n.type === 'appointment' ? '/vet?view=appointments' : null;
 
   const openNotification = (n: any) => {
@@ -43,6 +45,7 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
       case 'health': return <Heart className="w-4 h-4 text-orange-500" />;
       case 'system': return <Sparkles className="w-4 h-4 text-purple-500" />;
       case 'wellbeing': return <ShieldAlert className="w-4 h-4 text-orange-500" />;
+      case 'sos': return <ShieldAlert className="w-4 h-4 text-red-500" />;
       case 'shop': return <ShoppingBag className="w-4 h-4 text-green-500" />;
       default: return <Bell className="w-4 h-4 text-gray-500" />;
     }

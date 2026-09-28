@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ShieldAlert } from 'lucide-react';
+import { Phone, ShieldAlert } from 'lucide-react';
 import { useHealth } from '@/components/health/HealthProvider';
-import { ErrorText, Field, HealthCard, HealthHeader, LoadingBlocks, PrimaryButton, Sheet, SoftButton, TextInput } from '@/components/health/HealthUI';
+import { ErrorText, Field, HealthCard, HealthHeader, LoadingBlocks, PrimaryButton, SectionTitle, Sheet, SoftButton, TextArea, TextInput } from '@/components/health/HealthUI';
+import { useAuth } from '@/context/AuthContext';
 import { isMedicationActive } from '@/lib/health/derive';
 import { healthService } from '@/services/healthService';
 import { cn, showToast } from '@/lib/utils';
@@ -22,18 +23,27 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
     );
 }
 
-function Row({ label, value, empty = 'Yok' }: { label: string; value: React.ReactNode; empty?: string }) {
+function Row({ label, value, empty = 'Yok', phone }: { label: string; value: React.ReactNode; empty?: string; phone?: string | null }) {
     return (
-        <div className="flex items-start justify-between gap-3 px-4 py-3">
-            <span className="text-sm font-bold">{label}</span>
-            <span className="text-sm font-semibold text-secondary text-right">{value || empty}</span>
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="text-sm font-bold shrink-0">{label}</span>
+            <span className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-semibold text-secondary text-right whitespace-pre-wrap">{value || empty}</span>
+                {phone && (
+                    <a href={`tel:${phone.replace(/\s/g, '')}`} aria-label={`${label} ara`}
+                        className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                        <Phone className="w-4 h-4" />
+                    </a>
+                )}
+            </span>
         </div>
     );
 }
 
 const splitList = (s: string) => s.split(',').map(x => x.trim()).filter(Boolean);
 
-// Referans alt sıra — Acil Bilgiler.
+// Pasaport referansı Ekran 9 — Acil Bilgiler. Alerji, hastalık ve sağlık notunun TEK yazıldığı yer;
+// kayıp künyesi, doğrulama kodu, veterinere paylaşım ve randevu bu kaydı okur.
 export default function EmergencyInfoPage() {
     const { pet, bundle, today, loading, run } = useHealth();
     const [editOpen, setEditOpen] = useState(false);
@@ -50,7 +60,7 @@ export default function EmergencyInfoPage() {
 
     return (
         <>
-            <HealthHeader title="Acil Bilgiler" backHref="/health" />
+            <HealthHeader title="Acil Bilgiler" />
             <main className="max-w-2xl mx-auto px-4 space-y-4">
                 {loading || !bundle || !pet ? <LoadingBlocks /> : (
                     <>
@@ -59,14 +69,14 @@ export default function EmergencyInfoPage() {
                                 <span className="w-10 h-10 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0"><ShieldAlert className="w-5 h-5" /></span>
                                 <div>
                                     <div className="text-sm font-black">Acil durumda göster</div>
-                                    <p className="text-xs font-semibold text-secondary">Açarsan aşağıdaki bilgiler seçtiğin yerde görünür; ilacı, alerjisi ya da veterineri bilinirse yardım daha hızlı olur.</p>
+                                    <p className="text-xs font-semibold text-secondary">Kapalıyken bu bilgileri senden başka kimse göremez. Açtığın yerde, alerjisi, ilacı ya da veterineri bilinirse yardım daha hızlı olur.</p>
                                 </div>
                             </div>
                             <div className="divide-y divide-card-border mt-2">
                                 <Toggle on={!!profile?.showOnLost} onChange={v => setFlag({ showOnLost: v })}
-                                    label="Kayıp ilanında" hint="Kayıp modundayken künyeyi okutan kişi görür" />
+                                    label="Kayıp künyesinde" hint="Sadece kayıp modundayken, künyeyi okutan kişi görür" />
                                 <Toggle on={!!profile?.showOnQr} onChange={v => setFlag({ showOnQr: v })}
-                                    label="Karne doğrulama kodunda" hint="Karnedeki kodu okutan kişi (örn. klinik) görür" />
+                                    label="Doğrulama kodunda" hint="Eski karne QR kodunu okutan kişi (örn. klinik) aşı durumunu ve bu bilgileri görür" />
                             </div>
                         </HealthCard>
 
@@ -74,14 +84,26 @@ export default function EmergencyInfoPage() {
                             <Row label="Alerjiler" value={profile?.allergies.join(', ')} />
                             <Row label="Kronik hastalık" value={profile?.chronicConditions.join(', ')} />
                             <Row label="Düzenli ilaç" value={activeMeds.join(', ')} empty="Aktif ilaç yok" />
-                            <Row label="Çip numarası" value={chip ? (
-                                <button onClick={() => navigator.clipboard?.writeText(chip).then(() => showToast('Çip numarası kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'))}
-                                    className="font-black text-foreground tabular-nums">{chip} ⧉</button>
-                            ) : null} empty="Girilmedi" />
                             <Row label="Kan grubu" value={profile?.bloodType} empty="Bilinmiyor" />
-                            <Row label="Veteriner" value={[profile?.primaryVetName || lastClinic?.clinicName, profile?.primaryVetPhone].filter(Boolean).join(' · ')} empty="Girilmedi" />
+                            <Row label="Çip numarası" value={chip} empty="Girilmedi" />
                         </div>
-                        <p className="text-[11px] font-semibold text-secondary px-1">Düzenli ilaçlar İlaçlar bölümünden, çip numarası evcil hayvan profilinden gelir.</p>
+
+                        {profile?.notes && (
+                            <section>
+                                <SectionTitle>Sağlık notu</SectionTitle>
+                                <HealthCard className="p-4"><p className="text-sm font-semibold whitespace-pre-wrap">{profile.notes}</p></HealthCard>
+                            </section>
+                        )}
+
+                        <section>
+                            <SectionTitle>İletişim</SectionTitle>
+                            <div className="bg-card border border-card-border rounded-2xl divide-y divide-card-border">
+                                <Row label="Acil iletişim" value={[profile?.contactName, profile?.contactPhone].filter(Boolean).join('\n')} empty="Girilmedi" phone={profile?.contactPhone} />
+                                <Row label="Alternatif" value={[profile?.altContactName, profile?.altContactPhone].filter(Boolean).join('\n')} empty="Girilmedi" phone={profile?.altContactPhone} />
+                                <Row label="Veteriner" value={[profile?.primaryVetName || lastClinic?.clinicName, profile?.primaryVetPhone].filter(Boolean).join('\n')} empty="Girilmedi" phone={profile?.primaryVetPhone} />
+                            </div>
+                        </section>
+                        <p className="text-[11px] font-semibold text-secondary px-1">Düzenli ilaçlar İlaçlar bölümünden, çip numarası Kimlik Bilgileri'nden gelir.</p>
                         <SoftButton onClick={() => setEditOpen(true)}>Düzenle</SoftButton>
                     </>
                 )}
@@ -93,31 +115,35 @@ export default function EmergencyInfoPage() {
 
 function EditSheet({ open, onClose, defaultVet }: { open: boolean; onClose: () => void; defaultVet: string }) {
     const { pet, bundle, run } = useHealth();
+    const { user } = useAuth();
     const p = bundle?.profile;
-    const [allergies, setAllergies] = useState('');
-    const [chronic, setChronic] = useState('');
-    const [blood, setBlood] = useState('');
-    const [vetName, setVetName] = useState('');
-    const [vetPhone, setVetPhone] = useState('');
+    const [f, setF] = useState({ allergies: '', chronic: '', blood: '', notes: '', contactName: '', contactPhone: '', altName: '', altPhone: '', vetName: '', vetPhone: '' });
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (!open) return;
-        setAllergies(p?.allergies.join(', ') || '');
-        setChronic(p?.chronicConditions.join(', ') || '');
-        setBlood(p?.bloodType || '');
-        setVetName(p?.primaryVetName || defaultVet);
-        setVetPhone(p?.primaryVetPhone || '');
+        setF({
+            allergies: p?.allergies.join(', ') || '', chronic: p?.chronicConditions.join(', ') || '', blood: p?.bloodType || '',
+            notes: p?.notes || '',
+            // İlk kez dolduruluyorsa sahibin kendi adı ve telefonu önerilir.
+            contactName: p?.contactName || (p?.contactPhone ? '' : user?.name || ''),
+            contactPhone: p?.contactPhone || (user as any)?.phone || '',
+            altName: p?.altContactName || '', altPhone: p?.altContactPhone || '',
+            vetName: p?.primaryVetName || defaultVet, vetPhone: p?.primaryVetPhone || '',
+        });
         setError(null);
-    }, [open, p, defaultVet]);
+    }, [open, p, defaultVet, user]);
+
+    const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF(s => ({ ...s, [k]: e.target.value }));
 
     const save = async () => {
         if (!pet) return;
         setSaving(true);
         const err = await run(() => healthService.saveProfile(pet.id, {
-            allergies: splitList(allergies), chronicConditions: splitList(chronic), bloodType: blood,
-            primaryVetName: vetName, primaryVetPhone: vetPhone,
+            allergies: splitList(f.allergies), chronicConditions: splitList(f.chronic), bloodType: f.blood, notes: f.notes,
+            contactName: f.contactName, contactPhone: f.contactPhone, altContactName: f.altName, altContactPhone: f.altPhone,
+            primaryVetName: f.vetName, primaryVetPhone: f.vetPhone,
         }));
         setSaving(false);
         if (err) setError(err); else onClose();
@@ -125,11 +151,24 @@ function EditSheet({ open, onClose, defaultVet }: { open: boolean; onClose: () =
 
     return (
         <Sheet open={open} onClose={onClose} title="Acil bilgileri düzenle">
-            <Field label="Alerjiler" hint="Virgülle ayır. Örn: tavuk, penisilin"><TextInput value={allergies} onChange={e => setAllergies(e.target.value)} /></Field>
-            <Field label="Kronik hastalıklar" hint="Virgülle ayır"><TextInput value={chronic} onChange={e => setChronic(e.target.value)} /></Field>
-            <Field label="Kan grubu (biliyorsan)"><TextInput value={blood} onChange={e => setBlood(e.target.value)} placeholder="Örn: DEA 1.1 pozitif" /></Field>
-            <Field label="Veterinerin"><TextInput value={vetName} onChange={e => setVetName(e.target.value)} /></Field>
-            <Field label="Veterinerin telefonu"><TextInput type="tel" value={vetPhone} onChange={e => setVetPhone(e.target.value)} /></Field>
+            <Field label="Alerjiler" hint="Virgülle ayır. Örn: tavuk, penisilin"><TextInput value={f.allergies} onChange={set('allergies')} /></Field>
+            <Field label="Kronik hastalıklar" hint="Virgülle ayır"><TextInput value={f.chronic} onChange={set('chronic')} /></Field>
+            <Field label="Kan grubu (biliyorsan)"><TextInput value={f.blood} onChange={set('blood')} placeholder="Örn: DEA 1.1 pozitif" /></Field>
+            <Field label="Sağlık notu" hint="Listelere sığmayan her şey: hassasiyetler, özel bakım, bilinmesi gerekenler">
+                <TextArea value={f.notes} onChange={set('notes')} maxLength={1000} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+                <Field label="Acil iletişim"><TextInput value={f.contactName} onChange={set('contactName')} placeholder="Ad" /></Field>
+                <Field label="Telefon"><TextInput type="tel" value={f.contactPhone} onChange={set('contactPhone')} /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <Field label="Alternatif kişi"><TextInput value={f.altName} onChange={set('altName')} placeholder="Ad" /></Field>
+                <Field label="Telefon"><TextInput type="tel" value={f.altPhone} onChange={set('altPhone')} /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <Field label="Veterinerin"><TextInput value={f.vetName} onChange={set('vetName')} /></Field>
+                <Field label="Telefon"><TextInput type="tel" value={f.vetPhone} onChange={set('vetPhone')} /></Field>
+            </div>
             <ErrorText>{error}</ErrorText>
             <PrimaryButton onClick={save} disabled={saving}>{saving ? 'Kaydediliyor…' : 'Kaydet'}</PrimaryButton>
         </Sheet>

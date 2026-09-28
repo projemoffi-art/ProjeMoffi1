@@ -4,8 +4,8 @@
 import { supabase } from '@/lib/supabase';
 import type {
     ConsultationInput, DocumentCategory, HealthBundle, HealthProfile, HealthSpecies, MedicalRecord,
-    Medication, MedicationDose, ParasiteKind, ParasiteTreatment, PetDocument, VaccineDefinition,
-    VaccineRecord, WeightLog,
+    Medication, MedicationDose, ParasiteKind, ParasiteTreatment, PetDocument, ShareLink, ShareSection,
+    SharedPassport, TagReport, VaccineDefinition, VaccineRecord, WeightLog,
 } from '@/types/health';
 
 const DOCS_BUCKET = 'medical-documents';
@@ -69,8 +69,33 @@ const mapDocument = (r: any): PetDocument => ({
 const mapProfile = (r: any): HealthProfile => ({
     petId: r.pet_id, allergies: r.allergies || [], chronicConditions: r.chronic_conditions || [],
     bloodType: r.blood_type, primaryClinicId: r.primary_clinic_id, primaryVetName: r.primary_vet_name,
-    primaryVetPhone: r.primary_vet_phone, showOnLost: !!r.show_on_lost, showOnQr: !!r.show_on_qr,
+    primaryVetPhone: r.primary_vet_phone, notes: r.notes || null,
+    contactName: r.contact_name || null, contactPhone: r.contact_phone || null,
+    altContactName: r.alt_contact_name || null, altContactPhone: r.alt_contact_phone || null,
+    showOnLost: !!r.show_on_lost, showOnQr: !!r.show_on_qr,
 });
+
+const mapShareLink = (r: any): ShareLink => ({
+    id: r.id, petId: r.pet_id, token: r.token, sections: r.sections || [], expiresAt: r.expires_at,
+    revokedAt: r.revoked_at, viewCount: r.view_count || 0, lastViewedAt: r.last_viewed_at, createdAt: r.created_at,
+});
+
+function mapRecordRow(r: any, c: any): MedicalRecord {
+    return {
+        id: r.id, petId: r.pet_id, source: r.source === 'owner' ? 'owner' : 'clinic',
+        appointmentId: r.appointment_id, clinicId: r.clinic_id,
+        clinicName: c?.business_name || c?.full_name || r.clinic_name || r.external_clinic_name || null,
+        clinicAvatar: c?.avatar_url || null,
+        clinicAddress: c ? [c.district, c.province].filter(Boolean).join(', ') || c.address || null : null,
+        vetName: r.vet_name, diagnosis: r.diagnosis, criticalNotes: r.critical_notes,
+        weightKg: r.weight_kg != null ? Number(r.weight_kg) : null,
+        temperatureC: r.temperature_c != null ? Number(r.temperature_c) : null,
+        cost: r.cost != null ? Number(r.cost) : null,
+        medications: Array.isArray(r.medications) ? r.medications : [],
+        vaccines: Array.isArray(r.vaccines) ? r.vaccines : [],
+        date: r.visit_date || toDateKey(r.created_at) || '', createdAt: r.created_at,
+    };
+}
 
 async function mapRecords(rows: any[]): Promise<MedicalRecord[]> {
     const clinicIds = Array.from(new Set(rows.map(r => r.clinic_id).filter((id: string) => /^[0-9a-f-]{36}$/i.test(id || ''))));
@@ -81,23 +106,20 @@ async function mapRecords(rows: any[]): Promise<MedicalRecord[]> {
             .in('id', clinicIds);
         (data || []).forEach((c: any) => { clinics[c.id] = c; });
     }
-    return rows.map(r => {
-        const c = clinics[r.clinic_id];
-        return {
-            id: r.id, petId: r.pet_id, source: r.source === 'owner' ? 'owner' : 'clinic',
-            appointmentId: r.appointment_id, clinicId: r.clinic_id,
-            clinicName: c?.business_name || c?.full_name || r.external_clinic_name || null,
-            clinicAvatar: c?.avatar_url || null,
-            clinicAddress: c ? [c.district, c.province].filter(Boolean).join(', ') || c.address || null : null,
-            vetName: r.vet_name, diagnosis: r.diagnosis, criticalNotes: r.critical_notes,
-            weightKg: r.weight_kg != null ? Number(r.weight_kg) : null,
-            temperatureC: r.temperature_c != null ? Number(r.temperature_c) : null,
-            cost: r.cost != null ? Number(r.cost) : null,
-            medications: Array.isArray(r.medications) ? r.medications : [],
-            vaccines: Array.isArray(r.vaccines) ? r.vaccines : [],
-            date: r.visit_date || toDateKey(r.created_at) || '', createdAt: r.created_at,
-        };
-    });
+    return rows.map(r => mapRecordRow(r, clinics[r.clinic_id]));
+}
+
+// --- Ortak hafıza -------------------------------------------------------
+// Bir evcil hayvanın karnesi uygulama genelinde tek kopya tutulur. Sağlık ekranında yapılan her
+// değişiklikten sonra yeniden yüklenir ve ana sayfa, menü gibi aynı karneyi gösteren her ekran
+// yeni hâli anında alır (her ekranın ayrı ayrı çekip eski kopyada kalması yerine).
+type BundleListener = (bundle: HealthBundle | null) => void;
+const bundleCache = new Map<string, HealthBundle>();
+const bundleInflight = new Map<string, Promise<HealthBundle>>();
+const bundleListeners = new Map<string, Set<BundleListener>>();
+
+function emitBundle(petId: string, bundle: HealthBundle | null) {
+    bundleListeners.get(petId)?.forEach(fn => fn(bundle));
 }
 
 export const healthService = {
@@ -108,6 +130,29 @@ export const healthService = {
         const { data, error } = await q;
         if (error) fail(error, 'Aşı tanımları yüklenemedi.');
         return (data || []).map(mapDefinition);
+    },
+
+    /** Ortak hafızadaki karne; yoksa ya da force ise yükler ve dinleyen tüm ekranlara dağıtır. */
+    loadBundle(petId: string, species: HealthSpecies, force = false): Promise<HealthBundle> {
+        const cached = bundleCache.get(petId);
+        if (cached && !force) return Promise.resolve(cached);
+        const pending = bundleInflight.get(petId);
+        if (pending && !force) return pending;
+        const req = this.getBundle(petId, species)
+            .then(b => { bundleCache.set(petId, b); emitBundle(petId, b); return b; })
+            .finally(() => { if (bundleInflight.get(petId) === req) bundleInflight.delete(petId); });
+        bundleInflight.set(petId, req);
+        return req;
+    },
+
+    peekBundle(petId: string): HealthBundle | null {
+        return bundleCache.get(petId) || null;
+    },
+
+    subscribeBundle(petId: string, fn: BundleListener): () => void {
+        if (!bundleListeners.has(petId)) bundleListeners.set(petId, new Set());
+        bundleListeners.get(petId)!.add(fn);
+        return () => { bundleListeners.get(petId)?.delete(fn); };
     },
 
     /** Karnenin tamamı tek seferde (her sorgu RLS ile sahibine sınırlı). */
@@ -325,10 +370,97 @@ export const healthService = {
         if (patch.primaryClinicId !== undefined) row.primary_clinic_id = patch.primaryClinicId;
         if (patch.primaryVetName !== undefined) row.primary_vet_name = patch.primaryVetName?.trim() || null;
         if (patch.primaryVetPhone !== undefined) row.primary_vet_phone = patch.primaryVetPhone?.trim() || null;
+        if (patch.notes !== undefined) row.notes = patch.notes?.trim() || null;
+        if (patch.contactName !== undefined) row.contact_name = patch.contactName?.trim() || null;
+        if (patch.contactPhone !== undefined) row.contact_phone = patch.contactPhone?.trim() || null;
+        if (patch.altContactName !== undefined) row.alt_contact_name = patch.altContactName?.trim() || null;
+        if (patch.altContactPhone !== undefined) row.alt_contact_phone = patch.altContactPhone?.trim() || null;
         if (patch.showOnLost !== undefined) row.show_on_lost = patch.showOnLost;
         if (patch.showOnQr !== undefined) row.show_on_qr = patch.showOnQr;
         const { error } = await supabase.from('pet_health_profile').upsert(row, { onConflict: 'pet_id' });
         if (error) fail(error, 'Acil bilgiler kaydedilemedi.');
+    },
+
+    /** Randevu alırken veterinere gönderilecek sağlık notu: alerji, kronik hastalık ve serbest not. */
+    async getEmergencySummary(petId: string): Promise<string | null> {
+        const { data, error } = await supabase.from('pet_health_profile')
+            .select('allergies, chronic_conditions, notes').eq('pet_id', petId).maybeSingle();
+        if (error || !data) return null;
+        const parts = [
+            data.allergies?.length ? `Alerjiler: ${data.allergies.join(', ')}` : null,
+            data.chronic_conditions?.length ? `Kronik: ${data.chronic_conditions.join(', ')}` : null,
+            data.notes?.trim() || null,
+        ].filter(Boolean);
+        return parts.length ? parts.join('\n') : null;
+    },
+
+    // --- Pasaport paylaşımı ---------------------------------------------
+    async listShareLinks(petId: string): Promise<ShareLink[]> {
+        const { data, error } = await supabase.from('pet_share_links').select('*')
+            .eq('pet_id', petId).order('created_at', { ascending: false }).limit(20);
+        if (error) fail(error, 'Paylaşım bağlantıları yüklenemedi.');
+        return (data || []).map(mapShareLink);
+    },
+
+    async createShareLink(petId: string, sections: ShareSection[], days: number): Promise<ShareLink> {
+        const expires = new Date(Date.now() + days * 86400000).toISOString();
+        const { data, error } = await supabase.from('pet_share_links')
+            .insert({ pet_id: petId, sections, expires_at: expires }).select('*').single();
+        if (error || !data) fail(error, 'Bağlantı oluşturulamadı.');
+        return mapShareLink(data);
+    },
+
+    async revokeShareLink(id: string) {
+        const { error } = await supabase.from('pet_share_links').update({ revoked_at: new Date().toISOString() }).eq('id', id);
+        if (error) fail(error, 'Bağlantı kapatılamadı.');
+    },
+
+    /** Bağlantıyı açan herkes (giriş gerekmez) sadece sahibin seçtiği bölümleri görür. */
+    async getSharedPassport(token: string): Promise<SharedPassport | null> {
+        const { data, error } = await supabase.rpc('get_shared_passport', { p_token: token });
+        if (error) fail(error, 'Pasaport açılamadı.');
+        if (!data) return null;
+        const d = data as any;
+        const identity = d.identity ? {
+            gender: d.identity.gender, birthDate: d.identity.birth_date, age: d.identity.age, color: d.identity.color,
+            microchipNo: d.identity.microchip_no, petvetNo: d.identity.petvet_no, isNeutered: d.identity.is_neutered,
+        } : undefined;
+        const e = d.emergency;
+        return {
+            sections: d.sections || [], expiresAt: d.expires_at,
+            pet: { name: d.pet.name, type: d.pet.type, breed: d.pet.breed, avatarUrl: d.pet.avatar_url, passportNo: d.pet.passport_no },
+            identity,
+            bundle: {
+                definitions: (d.definitions || []).map(mapDefinition),
+                vaccines: (d.vaccines || []).map(mapVaccine),
+                parasites: (d.parasites || []).map(mapParasite),
+                weights: (d.weights || []).map(mapWeight),
+                medications: (d.medications || []).map(mapMedication),
+                doses: [],
+                records: (d.visits || []).map((r: any) => mapRecordRow(r, null)),
+                documents: [],
+                profile: e ? mapProfile({ ...e, pet_id: null }) : null,
+            },
+            documents: (d.documents || []).map((x: any) => ({
+                id: x.id, category: x.category, title: x.title, mimeType: x.mime_type, sizeBytes: x.size_bytes, docDate: x.doc_date,
+            })),
+        };
+    },
+
+    // --- Künye ----------------------------------------------------------
+    async getTagReports(petId: string): Promise<TagReport[]> {
+        const { data, error } = await supabase.from('pet_tag_reports').select('*')
+            .eq('pet_id', petId).order('created_at', { ascending: false }).limit(20);
+        if (error) fail(error, 'Künye bildirimleri yüklenemedi.');
+        return (data || []).map((r: any) => ({
+            id: r.id, petId: r.pet_id, message: r.message, contact: r.contact,
+            latitude: r.latitude, longitude: r.longitude, createdAt: r.created_at,
+        }));
+    },
+
+    async deleteTagReport(id: string) {
+        const { error } = await supabase.from('pet_tag_reports').delete().eq('id', id);
+        if (error) fail(error, 'Bildirim silinemedi.');
     },
 
     // --- İşletme: muayene kaydı (tek atomik sunucu fonksiyonu) ------------

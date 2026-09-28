@@ -749,8 +749,9 @@ export class SupabaseApiService implements IApiService {
 
         if (petIds.length > 0) {
             const { data: pets } = await supabase
-                .from('pets')
-                .select('id, breed, age, gender, size, health_notes, character, sos_settings')
+                // pet_cards: herkese açık, sadece güvenli alanlar (pets tablosu artık sadece sahibine açık).
+                .from('pet_cards')
+                .select('id, type, breed, age, gender, size, character, avatar_url, lost_message, reward_enabled, reward_amount')
                 .in('id', petIds);
             if (pets) {
                 pets.forEach(p => {
@@ -764,10 +765,10 @@ export class SupabaseApiService implements IApiService {
             const profileInfo = item.user_id ? profilesMap[item.user_id] : null;
             
             // Extract reward info
-            const hasReward = item.reward_enabled || petInfo?.sos_settings?.reward_enabled || false;
+            const hasReward = item.reward_enabled || petInfo?.reward_enabled || false;
             let rewardText = undefined;
             if (hasReward) {
-                const amount = item.reward_amount || petInfo?.sos_settings?.reward_amount;
+                const amount = item.reward_amount || petInfo?.reward_amount;
                 if (amount) {
                     rewardText = `${amount} TL`;
                 }
@@ -786,7 +787,7 @@ export class SupabaseApiService implements IApiService {
                 reward: rewardText,
                 dist: '0 km',
                 time: this.formatTimeAgo(item.created_at),
-                description: item.description || petInfo?.sos_settings?.finder_message || '',
+                description: item.description || petInfo?.lost_message || '',
                 type: item.pet_type || petInfo?.type || 'dog',
                 user_id: item.user_id,
                 latitude: item.latitude,
@@ -797,9 +798,8 @@ export class SupabaseApiService implements IApiService {
                 age: petInfo?.age,
                 gender: petInfo?.gender,
                 size: petInfo?.size,
-                health_notes: petInfo?.health_notes,
                 personality: petInfo?.character,
-                critical_health_note: petInfo?.sos_settings?.critical_health_note || petInfo?.health_notes || ''
+                // Sağlık bilgisi burada gösterilmez; sahip açtıysa künye sayfasında Acil Bilgiler'den gelir.
             } as any;
         });
     }
@@ -1070,13 +1070,14 @@ export class SupabaseApiService implements IApiService {
             size: item.size,
             microchip_id: item.microchip_no,
             microchip: item.microchip_no, // Alias for UI compatibility
-            health_notes: item.health_notes,
             personality: item.character,
             is_lost: item.is_lost,
             sos_settings: item.sos_settings,
-            // Birthday & color — direkt DB kolonu yoksa sos_settings'ten oku
-            birthday: item.birth_date || item.sos_settings?.birthday || '',
-            color: item.color || item.sos_settings?.color || '',
+            birthday: item.birth_date || '',
+            color: item.color || '',
+            petvet_no: item.petvet_no || '',
+            passport_no: item.passport_no || '',
+            created_at: item.created_at,
             // Owner bilgileri — sos_settings.owner JSON'undan oku
             owner: item.sos_settings?.owner || null,
             ownerName: item.sos_settings?.owner?.name || '',
@@ -1148,8 +1149,9 @@ export class SupabaseApiService implements IApiService {
             avatar_url: pet.image || pet.avatar,
             is_neutered: (pet as any).is_neutered || false,
             size: (pet as any).size,
-            health_notes: (pet as any).health_notes,
             character: (pet as any).character || (pet as any).personality,
+            birth_date: /^\d{4}-\d{2}-\d{2}$/.test(pet.birthday || '') ? pet.birthday : null,
+            color: pet.color?.trim() || null,
             microchip_no: (pet as any).microchip_id,
             weight: numericWeight,
         };
@@ -1236,15 +1238,17 @@ export class SupabaseApiService implements IApiService {
             size: (updates as any).size,
             // Key normalization: microchip her iki formda gelebilir
             microchip_no: (updates as any).microchip_id || (updates as any).microchip,
-            health_notes: (updates as any).health_notes || (updates as any).healthNotes,
+            // Kimlik alanları (Pet Pasaportu → Kimlik Bilgileri); boş değer "girilmedi" demek.
+            birth_date: updates.birthday !== undefined ? (/^\d{4}-\d{2}-\d{2}$/.test(updates.birthday || '') ? updates.birthday : null) : undefined,
+            color: updates.color !== undefined ? (updates.color?.trim() || null) : undefined,
+            petvet_no: updates.petvet_no !== undefined ? (updates.petvet_no?.trim() || null) : undefined,
             character: (updates as any).character || (updates as any).personality,
             is_lost: updates.is_lost,
+            // Günlük hedefler (aktivite/su/mama) ayrı kolon değil, sos_settings içinde durur;
+            // çağıran taraf güncel sos_settings'i hedeflerle birleştirip gönderir. Önceden burada
+            // var olmayan kolonlara yazıldığı için tüm güncelleme reddediliyordu.
             sos_settings: updates.sos_settings,
             weight: numericWeight,
-            // target alanları — camelCase formdan snake_case'e normalize et
-            activity_target: (updates as any).activity_target ?? (updates as any).activityTarget,
-            water_target: (updates as any).water_target ?? (updates as any).waterTarget,
-            food_target: (updates as any).food_target ?? (updates as any).foodTarget,
         };
 
         // Remove undefined keys
@@ -3633,7 +3637,8 @@ export class SupabaseApiService implements IApiService {
         const [profilesRes, postsRes, petsRes] = await Promise.all([
             supabase.from('profiles').select('*').or(`username.ilike.%${query}%,full_name.ilike.%${query}%`).limit(10),
             supabase.from('posts').select('*').ilike('content', `%${query}%`).limit(10),
-            supabase.from('pets').select('*').or(`name.ilike.%${query}%,pet_id.ilike.%${query}%`).limit(10)
+            // Sadece herkese açık kart alanları (pet_cards); eskiden var olmayan pet_id kolonu yüzünden hep boş dönüyordu.
+            supabase.from('pet_cards').select('id, name, type, breed, avatar_url, owner_id').ilike('name', `%${query}%`).limit(10)
         ]);
 
         return {
@@ -3653,8 +3658,9 @@ export class SupabaseApiService implements IApiService {
             pets: (petsRes.data || []).map(p => ({
                 id: p.id,
                 name: p.name,
-                pet_id: p.pet_id,
-                image: p.image_url,
+                breed: p.breed,
+                owner_id: p.owner_id,
+                image: p.avatar_url,
                 type: 'pet'
             }))
         };
@@ -3999,11 +4005,10 @@ export class SupabaseApiService implements IApiService {
                 size: item.size,
                 microchip_id: item.microchip_no,
                 microchip: item.microchip_no,
-                health_notes: item.health_notes,
                 personality: item.character,
                 is_lost: item.is_lost,
                 sos_settings: item.sos_settings,
-                birthday: item.birth_date || item.sos_settings?.birthday || '',
+                birthday: item.birth_date || '',
                 profiles: item.profiles
             }));
         } catch (err) {
@@ -4015,7 +4020,9 @@ export class SupabaseApiService implements IApiService {
     async getDailyStarCandidates(): Promise<any[]> {
         try {
             // 1. Fetch all pets with their profile details
-            const allPets = await this.getAllPetsAdmin();
+            const allPets = (await this.getPublicPetCards()).map((p: any) => ({
+                ...p, image: p.avatar_url || '', avatar: p.avatar_url, personality: p.character,
+            }));
             if (allPets.length === 0) return [];
 
             // 2. Fetch completed walk sessions (steps kolonu yok, mesafeden hesaplanıyor)
@@ -4083,10 +4090,15 @@ export class SupabaseApiService implements IApiService {
         try {
             const { data, error } = await supabase
                 .from('daily_stars')
-                .select('*, pets(*)')
+                .select('*')
                 .eq('date', dateString);
 
             if (error) throw error;
+
+            // Hayvan bilgisi herkese açık kartlardan (pets tablosu sadece sahibine açık).
+            const starPetIds = Array.from(new Set((data || []).map((d: any) => d.pet_id).filter(Boolean)));
+            const cards = starPetIds.length > 0 ? await this.getPublicPetCards({ ids: starPetIds }) : [];
+            const cardOf = (id: string) => cards.find((c: any) => c.id === id);
 
             const results: any[] = [];
             const candidates = await this.getDailyStarCandidates();
@@ -4105,10 +4117,10 @@ export class SupabaseApiService implements IApiService {
                         media_url: found.media_url,
                         status: found.status,
                         created_at: found.created_at,
-                        pet: found.pets ? {
-                            name: found.pets.name,
-                            image: found.pets.avatar_url,
-                            breed: found.pets.breed
+                        pet: cardOf(found.pet_id) ? {
+                            name: cardOf(found.pet_id).name,
+                            image: cardOf(found.pet_id).avatar_url,
+                            breed: cardOf(found.pet_id).breed
                         } : null
                     });
                 } else {
@@ -4130,7 +4142,7 @@ export class SupabaseApiService implements IApiService {
                         const { data: insertedData, error: insertError } = await supabase
                             .from('daily_stars')
                             .insert(payload)
-                            .select('*, pets(*)')
+                            .select('*')
                             .single();
 
                         if (!insertError && insertedData) {
@@ -4145,11 +4157,7 @@ export class SupabaseApiService implements IApiService {
                                 media_url: insertedData.media_url,
                                 status: insertedData.status,
                                 created_at: insertedData.created_at,
-                                pet: insertedData.pets ? {
-                                    name: insertedData.pets.name,
-                                    image: insertedData.pets.avatar_url,
-                                    breed: insertedData.pets.breed
-                                } : null
+                                pet: { name: candidate.name, image: candidate.image, breed: candidate.breed }
                             });
                         }
                     }
@@ -4271,28 +4279,37 @@ export class SupabaseApiService implements IApiService {
     }
 
     // --- LEADERBOARD & GAME INTEGRATION ---
+    /** Herkese açık hayvan kartları (pet_cards) + sahiplerinin adı; pets tablosu sadece sahibine açık. */
+    private async getPublicPetCards(opts: { orderByXp?: boolean; limit?: number; ids?: string[] } = {}): Promise<any[]> {
+        let q = supabase.from('pet_cards').select('id, owner_id, name, type, breed, gender, age, size, character, avatar_url, cover_url, is_lost, xp, level, created_at');
+        if (opts.ids) q = q.in('id', opts.ids);
+        q = opts.orderByXp ? q.order('xp', { ascending: false, nullsFirst: false }) : q.order('created_at', { ascending: false });
+        if (opts.limit) q = q.limit(opts.limit);
+        const { data, error } = await q;
+        if (error) throw error;
+        const ownerIds = Array.from(new Set((data || []).map((p: any) => p.owner_id).filter(Boolean)));
+        const owners: Record<string, any> = {};
+        if (ownerIds.length > 0) {
+            const { data: profs } = await supabase.from('profiles').select('id, full_name, username').in('id', ownerIds);
+            (profs || []).forEach((o: any) => { owners[o.id] = o; });
+        }
+        return (data || []).map((p: any) => ({ ...p, profiles: owners[p.owner_id] || null }));
+    }
+
+    async getPublicPetsByOwner(ownerId: string): Promise<{ id: string; name: string; type: string | null; breed: string | null; gender: string | null; image: string }[]> {
+        const { data, error } = await supabase.from('pet_cards').select('id, name, type, breed, gender, avatar_url')
+            .eq('owner_id', ownerId).order('created_at', { ascending: true });
+        if (error) { console.error('getPublicPetsByOwner:', error); return []; }
+        return (data || []).map((p: any) => ({ id: p.id, name: p.name, type: p.type, breed: p.breed, gender: p.gender, image: p.avatar_url || '' }));
+    }
+
     async getPetLeaderboard(limit: number = 50): Promise<any[]> {
         try {
-            // Fetch top pets ordered by xp
-            const { data, error } = await supabase
-                .from('pets')
-                .select(`
-                    id, 
-                    name, 
-                    avatar_url, 
-                    xp, 
-                    level,
-                    owner:profiles!inner(full_name, username)
-                `)
-                .order('xp', { ascending: false, nullsFirst: false })
-                .limit(limit);
-
-            if (error) throw error;
-
-            return (data || []).map((p: any) => ({
+            const data = await this.getPublicPetCards({ orderByXp: true, limit });
+            return data.map((p: any) => ({
                 id: p.id,
                 name: p.name || 'Gizli Pet',
-                ownerName: p.owner?.full_name || p.owner?.username || 'Gizli Kullanıcı',
+                ownerName: p.profiles?.full_name || p.profiles?.username || 'Gizli Kullanıcı',
                 avatar: p.avatar_url,
                 score: p.xp || 0,
                 level: p.level || 1,

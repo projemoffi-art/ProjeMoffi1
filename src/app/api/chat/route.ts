@@ -108,7 +108,7 @@ export async function POST(req: Request) {
         let fallbackText = "Şu anda Google bağlantımda geçici bir sorun var (Offline Mod). Ama seni duyabiliyorum! 🛠️ ";
 
         if (lastMsg.includes("mama")) fallbackText += "Mama konusunda: Yetişkin köpekler günde 2 kez, yavrular 3-4 kez beslenmeli.";
-        else if (lastMsg.includes("aşı")) fallbackText += "Aşı takvimi için Aşı Takibi sayfasına bakabilirsin. Kuduz aşısı yıllık tekrarlanmalı.";
+        else if (lastMsg.includes("aşı")) fallbackText += "Aşı takvimi Sağlık Merkezi → Aşılar bölümünde; yaklaşan dozlar için sana ayrıca hatırlatma gönderilir.";
         else if (lastMsg.includes("merhaba")) fallbackText += "Merhaba! Ben Moffi. Bugün sana nasıl yardım edebilirim?";
         else fallbackText += "Sorunu not aldım. İnternet bağlantım düzelince daha detaylı yanıt vereceğim. Şimdilik menüden diğer özelliklere göz atabilirsin! 🐾";
 
