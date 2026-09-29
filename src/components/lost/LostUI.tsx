@@ -103,6 +103,21 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
 
 export interface PhotoItem { url?: string; file?: File; preview: string }
 
+/**
+ * Henüz yüklenmemiş fotoğrafları sırayı koruyarak yükler (ilk fotoğraf kapak). Dönen `kept` forma geri yazılır:
+ * kayıt sunucuda reddedilip tekrar denenirse aynı fotoğraflar yeniden yüklenmez, depoda sahipsiz dosya kalmaz.
+ */
+export async function uploadPhotoItems(items: PhotoItem[], upload: (files: File[]) => Promise<string[]>): Promise<{ urls: string[]; kept: PhotoItem[] }> {
+    const urls: string[] = [];
+    const kept: PhotoItem[] = [];
+    for (const p of items) {
+        const url = p.url || (await upload([p.file!]))[0];
+        urls.push(url);
+        kept.push({ url, preview: p.preview });
+    }
+    return { urls, kept };
+}
+
 export function PhotoPicker({ items, onChange, max = 6 }: { items: PhotoItem[]; onChange: (items: PhotoItem[]) => void; max?: number }) {
     const ref = useRef<HTMLInputElement>(null);
     const add = (files: FileList | null) => {

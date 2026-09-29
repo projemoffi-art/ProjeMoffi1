@@ -262,16 +262,17 @@ export const lostService = {
         }));
     },
 
-    // --- Yakın çevre bildirimi ----------------------------------------------
-    async alertArea(): Promise<{ enabled: boolean; lat: number | null; lng: number | null }> {
+    // --- Yakın çevre bildirimi (kayıp ve sahiplendirme için ayrı onay, aynı bölge) -----------------------
+    async alertArea(): Promise<{ lost: boolean; adoption: boolean; lat: number | null; lng: number | null }> {
         const { data: auth } = await supabase.auth.getUser();
-        if (!auth.user) return { enabled: false, lat: null, lng: null };
-        const { data } = await supabase.from('profiles').select('lost_alerts_enabled, alert_lat, alert_lng').eq('id', auth.user.id).maybeSingle();
-        return { enabled: !!data?.lost_alerts_enabled, lat: data?.alert_lat ?? null, lng: data?.alert_lng ?? null };
+        if (!auth.user) return { lost: false, adoption: false, lat: null, lng: null };
+        const { data } = await supabase.from('profiles').select('lost_alerts_enabled, adoption_alerts_enabled, alert_lat, alert_lng')
+            .eq('id', auth.user.id).maybeSingle();
+        return { lost: !!data?.lost_alerts_enabled, adoption: !!data?.adoption_alerts_enabled, lat: data?.alert_lat ?? null, lng: data?.alert_lng ?? null };
     },
 
-    async setAlertArea(enabled: boolean, lat: number | null, lng: number | null) {
-        const { error } = await supabase.rpc('set_lost_alert_area', { p_enabled: enabled, p_lat: lat, p_lng: lng });
+    async setAlerts(lost: boolean, adoption: boolean, lat: number | null, lng: number | null) {
+        const { error } = await supabase.rpc('set_community_alerts', { p_lost: lost, p_adoption: adoption, p_lat: lat, p_lng: lng });
         if (error) fail(error, 'Ayar kaydedilemedi.');
     },
 

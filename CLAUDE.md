@@ -2906,7 +2906,7 @@ Baran'dan 21 ekran görseli bekleniyor (Kayıp 8, Sahiplendirme 7, Keşfet 6).
     `vet_advices` işletme sadece kendi tavsiyesini yazar. `getVetAdvices` embed hatası (PGRST200) giderildi.
   - Günün yıldızlarını sadece yönetici seçer; seçim yoksa tarayıcıda uydurma şampiyon üretilmez.
 - **Taklitler:** kayıp "Sahibine mesaj at"/"Gördüm"/"5 km'ye bildirim" (✅ Faz 1'de giderildi, bkz. 8.47),
-  sahiplendirme başvurusu (`submitAdoptionApplication` boş) ve "AI denetiminden geçti" hiçbir şey yapmıyor.
+  sahiplendirme başvurusu (`submitAdoptionApplication` boş) ve "AI denetiminden geçti" (✅ Faz 2'de giderildi, bkz. 8.48).
 
 ### 8.47 Faz 1 — Kayıp & Bulunan (2026-09-29)
 
@@ -2924,8 +2924,8 @@ artık Kayıp/Sahiplendirme; Mesajlar Keşfet üst çubuğunda.
   hiçbir yerde okunmuyor (içerik ilana taşındı).
 - Görünüm içinde fonksiyon çağırma: yetkisi çağıran kullanıcıya göre denetlenir (sahibi değil) — bu yüzden
   `pet_cards` ilanı alt sorguyla okur. Yeni görünümlerde de bunu unutma.
-- Yakın çevre bildirimi: kullanıcı `/kayip` → "Konum değiştir" içinden açar (`set_lost_alert_area`, ~1 km'ye
-  yuvarlanır). Bildirim türleri: `lost` (yakındaki ilan → `/kayip/{id}`), `lost_sighting` (sahibe görülme →
+- Yakın çevre bildirimi: kullanıcı `/kayip` → "Konum değiştir" içinden açar (`set_community_alerts`, ~1 km'ye
+  yuvarlanır; kayıp ve sahiplendirme ayrı onay, aynı bölge — bkz. 8.48). Bildirim türleri: `lost` (yakındaki ilan → `/kayip/{id}`), `lost_sighting` (sahibe görülme →
   `/kayip/{id}/yonet`, e-postalı).
 - Kayıp modu değişince `lostService` `PETS_CHANGED_EVENT` yayar, `PetContext` hayvanları yeniden yükler.
 - "Gördüm", ilan detayı ve el ilanı hesapsız açılır (`ClientAuthWrapper` `PUBLIC_PATTERNS`); ilan verme/yönetme giriş ister.
@@ -2942,6 +2942,51 @@ için" kartı yeni ilanlardan beslenir; eski `?tab=radar` (sahiplendirme dışı
 kullanıcıya 1 bildirim → künye kayıp modunda notu/ödülü gösterdi → hesapsız "Gördüm" → sahibe bildirim + e-posta
 kuyruğu → yönetimde görülme noktası → SOS penceresi → kavuştuk → künye normale döndü; REST/sayfa hatası yok.
 El ilanı PDF'i sadece ilanı basıyor. Test verisi temizlendi. `npm run build` başarılı.
+
+### 8.48 Faz 2 — Sahiplendirme (2026-09-29)
+
+Referans: `design-reference/community-final/sahiplendirme-reference.jpg` (14 ekran, hepsi yapıldı). Ekranlar
+`/sahiplendirme/*`: ana ekran (iki sütun) + `?view=list|map`, sihirbaz (`ilan-ver`, 4 adım; `?edit=` düzenler,
+`?pet=` pasaporttaki hayvanı seçer), yayınlandı, detay, başvur, Başvurularım (giden/gelen), başvuru detayı
+(`basvuru/[appId]`), yönet, sahiplendirildi, el ilanı. Migration: `adoption_listings` (+`pet_transfer_email_optional`,
+`pet_transfer_notification_wording`).
+
+🔴 **KURAL — sahiplendirmenin tek yolu `src/services/adoptionService.ts`.** Başkalarının ilanı `adoption_cards`
+görünümünden okunur (yaklaşık konum; telefon sadece "telefonumu göster" seçildiyse ve giriş yapmışsa).
+`adoption_pets`'ten `select('*')` YAPMA (telefon/tam konum kolon yetkisiyle kapalı).
+- İlan durumu (`active`/`paused`/`adopted`/`closed`/`removed`), sayaçlar ve başvuru akışı sadece sunucu fonksiyonlarıyla
+  değişir: `publish_adoption_listing` (bildirimi açmış, 10 km içindekilere bir kez), `set_adoption_listing_status`,
+  `submit_adoption_application`, `respond_adoption_application` (görüşme/kabul/ret), `withdraw_adoption_application`,
+  `complete_adoption`, `moderate_adoption_listing` (yönetici). `adoption_pets_guard` istemci yazmalarını süzer:
+  başkasının hayvanıyla ilan açılamaz, hayvan başına tek açık ilan, kapanmış ilan düzenlenemez.
+- **Sahiplendirme ücretsiz:** guard ilan metninde satış/fiyat/IBAN ve telefon numarası yazılmasını reddeder (açıklayıcı
+  mesajla). Eski "Moffi AI denetimi" (`/api/adoption/moderate`, `tl` gibi kelime parçalarını yasaklıyordu, hiç
+  çağrılmıyordu) ve `/api/adoption/report` + `adoption_reports` tablosu silindi; şikâyet ortak `reports` tablosuna düşer.
+- **Pasaport devri** (`pet_ownership_transfers`, `respond_pet_transfer`): sahip ilanı kapatırken kabul ettiği başvurana
+  devri teklif eder; yeni sahip Başvurularım'dan kabul edince `pets.owner_id` değişir. Sağlık geçmişi (aşı, muayene,
+  kilo) hayvanla gider; eski sahibin acil iletişim bilgisi, QR/kayıp paylaşım anahtarları ve paylaşım bağlantıları
+  kaldırılır. Eski e-postaya dayalı devir (`accept_pet_transfer`, kullanılmayan `PendingTransfersBanner`) silindi.
+- Yakın çevre bildirimi kayıp ile ortak bölge: `set_community_alerts(p_lost, p_adoption, lat, lng)`
+  (`set_lost_alert_area` silindi). Ortak "Konum" penceresi `components/lost/AreaSheet.tsx`.
+- Bildirim türleri: `adoption` (yakında ilan → detay), `adoption_application` (sahibe → `/sahiplendirme/basvuru/{id}`,
+  e-postalı), `adoption_update` ve `pet_transfer` (başvurana → Başvurularım, e-postalı).
+- "Barınak iş ortağı" anahtarı sadece onaylı `business_type='shelter'` hesabında açılır (sunucuda da denetlenir).
+- Metinlerde hayvan adına iyelik eki ekleme ("Testkedi'in" gibi yanlış çekimler çıkıyor); cümleyi eksiz kur.
+
+**Silinen eski sistem:** topluluk sayfasının `radar` sekmesi (AdoptionTab, ilan ekle/detay/başvuru/şikâyet
+modalları, sahte "AI denetiminden geçti" bildirimi), `getAdoptions/addAdoption/deleteAdoption/submitAdoptionApplication`,
+`AdoptionPet` tipi, `MOCK_ADOPTIONS`, ayarlardaki etkisiz "Sahiplendirme Radarı" tercihi. `?tab=radar&mode=adopt`
+→ `/sahiplendirme`. Kenar menüsündeki "Sahiplendirme"/"Kayıp bildir" kısayolları (hiçbir yere gitmiyordu) bağlandı.
+Yüzen yapay zekâ düğmesi `/kayip` ve `/sahiplendirme`'de gizli (sihirbaz düğmelerinin üstüne biniyordu).
+Sihirbazlarda (kayıp, buldum, sahiplendirme) kayıt reddedilip tekrar denenince fotoğraflar yeniden yükleniyor ve
+depoda sahipsiz dosya kalıyordu → `uploadPhotoItems` (LostUI).
+
+**Doğrulama:** Playwright (gerçek hesap, iki yön) + karşı taraf gerçek `authenticated` rolüyle SQL: sihirbaz (pasaporttan
+dolan bilgiler, fiyat yazınca ret) → yayınlandı → hesapsız detay → başvuru → sahibe bildirim + e-posta kuyruğu → görüşme →
+kabul → sahiplendirildi + pasaport devri → yeni sahip kabul etti, hayvan hesabına geçti, eski iletişim bilgisi silindi;
+ters yönde liste/harita, telefon görünürlüğü, kaydet, başvuru formu, Başvurularım'dan devri kabul. Kötüye kullanım
+denemeleri (ikinci başvuru, telefon kolonu okuma, başkasının ilanını değiştirme, başkasının hayvanıyla ilan, kendi
+başvurusunu kabul) reddedildi. Test verisi ve yüklenen test görselleri temizlendi. `npm run build` başarılı.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 

@@ -5,8 +5,8 @@ import { BarChart3, TrendingUp, Users, Activity, Target, Zap, Loader2 } from "lu
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { apiService } from "@/services/apiService";
 import { lostService } from "@/services/lostService";
+import { adoptionService } from "@/services/adoptionService";
 
 const GlassCard = ({ children, className }: any) => (
     <div className={cn(
@@ -34,7 +34,7 @@ export default function AnalyticsPage() {
                 setIsLoading(true);
                 const [users, adoptions, lostPets] = await Promise.all([
                     getAllUsers(),
-                    apiService.getAdoptions(),
+                    adoptionService.list().catch(() => []),
                     lostService.list().then(l => l.filter(x => x.status === 'active')).catch(() => [])
                 ]);
                 

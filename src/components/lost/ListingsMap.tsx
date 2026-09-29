@@ -1,20 +1,21 @@
 'use client';
 
-// Referans Ekran 2 — Kayıp ve bulunan ilanlarının haritası. İlan konumları yaklaşık (~300 m) gelir.
+// Kayıp & Bulunan ve Sahiplendirme ilan haritası. İlan konumları yaklaşık (~300 m) gelir.
 
 import React, { useEffect } from 'react';
 import { MapContainer, Marker, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { LostListing } from '@/services/lostService';
+/** Haritada gösterilebilen ilan: kayıp, bulunan ya da sahiplendirme. */
+export interface MapListing { id: string; lat: number | null; lng: number | null; photos: string[]; kind: 'lost' | 'found' | 'adopt'; status: string }
 
 function esc(v: string) {
     return v.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
 }
 
-function pin(l: LostListing, selected: boolean) {
+function pin(l: MapListing, selected: boolean) {
     const size = selected ? 54 : 44;
-    const ring = l.status === 'resolved' ? '#78716c' : l.kind === 'lost' ? '#EE5B3D' : '#16a34a';
+    const ring = l.status === 'resolved' ? '#78716c' : l.kind === 'found' ? '#16a34a' : '#EE5B3D';
     const inner = l.photos[0]
         ? `<img src="${esc(l.photos[0])}" alt="" style="width:100%;height:100%;object-fit:cover" />`
         : `<span style="font:800 18px system-ui">🐾</span>`;
@@ -43,7 +44,7 @@ function Fit({ center, radiusKm }: { center: [number, number]; radiusKm: number 
 }
 
 export default function ListingsMap({ listings, center, radiusKm, selectedId, onSelect }: {
-    listings: LostListing[];
+    listings: MapListing[];
     center: [number, number];
     radiusKm: number;
     selectedId: string | null;

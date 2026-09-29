@@ -30,8 +30,6 @@ Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.m
 
 ## Topluluk
 
-- [ ] **Faz 2 — Sahiplendirme** (`design-reference/community-final/sahiplendirme-reference.jpg`, 14 ekran).
-  Şimdilik topluluk sayfasının `?tab=radar` sekmesinde; `/sahiplendirme` oraya yönlendiriyor.
 - [ ] **Faz 3 — Keşfet** (12 ekran; gönderi kartları mevcut büyük kart ölçüsünde kalacak).
 - [ ] **Oyun ödülündeki coin eklenmiyor olabilir.** Eski `protect_profile_security_fields` tetikleyicisi
   `auth.role()`'e bakıyor; `add_game_reward` (SECURITY DEFINER) içinde bile rol "authenticated" göründüğü
@@ -39,6 +37,13 @@ Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.m
 - [ ] **Günün yıldızları (topluluk).** Yürüyüşü olmayan hayvana kimlik numarasından türetilmiş
   uydurma "Aura puanı" veriliyor ve seçim her kullanıcının tarayıcısında yapılıyor; sunucuda
   günde bir kez hesaplanmalı.
+- [ ] **Eski test sahiplendirme ilanları.** Başka bir hesaba (0dc5387e…) ait "dtj" ve "rklöu" ilanları anlamsız
+  isimli test kayıtları gibi duruyor; Baran onaylarsa yönetici panelinden kaldırılmalı. (2026-09-29)
+- [ ] **Hayvan adına iyelik eki.** Yürüyüş meydan okumaları, pet shop açıklamaları, künye teşekkür metni, ana sayfa
+  günlük hedef ve yapay zekâ yedek cevabında `{ad}'in` kullanılıyor ("Zelal'in" gibi yanlış çekimler çıkar).
+  Cümleler eksiz kurulmalı (bkz. CLAUDE.md 8.48).
+- [ ] **Yönetici ana panelindeki uydurma sayılar.** `admin/page.tsx`'te "Adoption Verifications: 12 Node" sabit metin;
+  `admin/analytics` grafiği rastgele sayı üretiyor. Gerçek veriye bağlanmalı ya da kaldırılmalı.
 - [ ] **Diş bakımı.** Eski diş bakımı penceresi (anket + fırçalama zamanlayıcısı) hiçbir yerden
   açılmadığı ve referansta olmadığı için silindi. Diş kontrolleri muayene kaydı olarak tutuluyor.
   İstenirse karneye "Diş" modülü eklenebilir.

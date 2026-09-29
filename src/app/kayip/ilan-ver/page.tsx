@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Check } from 'lucide-react';
 import { HealthHeader, ErrorText, Field, PrimaryButton, SelectInput, TextArea, TextInput } from '@/components/health/HealthUI';
 import { PetAvatar } from '@/components/health/PetPicker';
-import { ChipInput, LocationField, PhotoPicker, RadioRow, Stepper, ToggleRow, toLocalInput, type PhotoItem } from '@/components/lost/LostUI';
+import { ChipInput, LocationField, PhotoPicker, RadioRow, Stepper, ToggleRow, toLocalInput, uploadPhotoItems, type PhotoItem } from '@/components/lost/LostUI';
 import { usePet } from '@/context/PetContext';
 import { useAuth } from '@/context/AuthContext';
 import { lostService, LOST_SITUATIONS, type Species } from '@/services/lostService';
@@ -92,8 +92,8 @@ function Wizard() {
         if (reward && !(Number(rewardAmount) > 0)) { setError('Ödül miktarını yaz ya da ödülü kapat.'); return; }
         setSaving(true);
         try {
-            const uploaded = await lostService.uploadPhotos(photos.filter(p => p.file).map(p => p.file!));
-            const urls = [...photos.filter(p => p.url).map(p => p.url!), ...uploaded];
+            const { urls, kept } = await uploadPhotoItems(photos, lostService.uploadPhotos);
+            setPhotos(kept);
             const res = await lostService.create({
                 kind: 'lost', petId: pet?.id || null, petName: pet?.name || manual.name, species,
                 breed: pet?.breed || manual.breed, color: pet?.color || null, gender: pet ? genderLabel(pet.gender) : manual.gender || null,

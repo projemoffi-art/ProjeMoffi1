@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { 
-    Pet, Post, UserProfile, LostPet, AdoptionPet,
+    Pet, Post, UserProfile, LostPet,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService
 } from './types';
 

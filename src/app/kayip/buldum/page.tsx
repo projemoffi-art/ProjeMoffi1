@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { HealthHeader, ErrorText, Field, PrimaryButton, TextArea, TextInput } from '@/components/health/HealthUI';
-import { ChipInput, LocationField, PhotoPicker, RadioRow, Stepper, toLocalInput, type PhotoItem } from '@/components/lost/LostUI';
+import { ChipInput, LocationField, PhotoPicker, RadioRow, Stepper, toLocalInput, uploadPhotoItems, type PhotoItem } from '@/components/lost/LostUI';
 import { useAuth } from '@/context/AuthContext';
 import { lostService, CHIP_OPTIONS, FOUND_SITUATIONS, type Species } from '@/services/lostService';
 import { currentPosition } from '@/lib/geo';
@@ -51,7 +51,8 @@ export default function FoundPetPage() {
         if (showPhone && !/^[0-9 +()-]{10,20}$/.test(phone.trim())) { setError('Geçerli bir telefon numarası yaz.'); return; }
         setSaving(true);
         try {
-            const urls = await lostService.uploadPhotos(photos.filter(p => p.file).map(p => p.file!));
+            const { urls, kept } = await uploadPhotoItems(photos, lostService.uploadPhotos);
+            setPhotos(kept);
             const res = await lostService.create({
                 kind: 'found', petName: null, species, color: color || null, photos: urls, features,
                 situation, chipStatus: chip, description: notes, locationText: loc.address || null,

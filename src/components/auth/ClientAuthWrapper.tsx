@@ -10,8 +10,12 @@ const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbo
 // Uygulama dışındaki kişilere açık sayfalar: künye (/id), paylaşılan pasaport (/p), doğrulama kodu (/verify).
 // Künyeyi okutan kişinin Moffi hesabı olmayabilir; önceden bu sayfalar giriş ekranına atıyordu.
 const PUBLIC_PREFIXES = ["/id/", "/p/", "/verify/"];
-// Paylaşılan kayıp/bulunan ilanı: ilan, "Gördüm" bildirimi ve el ilanı hesapsız açılır. İlan verme ve yönetme girişi gerektirir.
-const PUBLIC_PATTERNS = [/^\/kayip\/[0-9a-f-]{36}(\/(gordum|el-ilani))?\/?$/i];
+// Paylaşılan kayıp/bulunan ve sahiplendirme ilanları: ilan, "Gördüm" bildirimi ve el ilanı hesapsız açılır.
+// İlan verme, başvuru ve yönetim girişi gerektirir.
+const PUBLIC_PATTERNS = [
+    /^\/kayip\/[0-9a-f-]{36}(\/(gordum|el-ilani))?\/?$/i,
+    /^\/sahiplendirme\/[0-9a-f-]{36}(\/el-ilani)?\/?$/i,
+];
 
 // Routes that require business role
 const BUSINESS_ROUTES_PREFIX = "/business";

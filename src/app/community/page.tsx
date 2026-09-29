@@ -7,7 +7,7 @@ import {
     Plus, Camera, Compass,
     Users, Activity, Sparkles, X, Send, PawPrint, Search, Menu, MoreHorizontal, Image as ImageIcon, Video, Mic,
     Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2, ImagePlus,
-    LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
+    LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, ShieldAlert, ChevronDown,
     AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe, Filter,
     Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon, Flame,
     Sun, Contrast, Droplet, Info, AlertCircle
@@ -54,8 +54,6 @@ import { PET_TYPES } from '@/constants/petTypes';
 import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
 import { OverlaySystem } from '@/components/community/OverlaySystem';
 import { FeedTab } from '@/components/community/FeedTab';
-import { AdoptionTab } from '@/components/community/AdoptionTab';
-import { MOCK_ADOPTIONS } from '@/lib/mockData';
 import Image from 'next/image';
 import { useChat } from '@/context/ChatContext';
 
@@ -141,14 +139,13 @@ export default function MoffiSocialMasterpiece() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState('feed'); 
-    // Kayıp ilanları /kayip'ta (design-reference/community-final). 'radar' sekmesinde sadece sahiplendirme kaldı.
+    // Kayıp ilanları /kayip'ta, sahiplendirme /sahiplendirme'de (design-reference/community-final).
     
     // REALTIME FEED ENTEGRASYONU
     const { posts, setPosts, isLoading: isLoadingPosts, refetchPosts: fetchPosts, sortPostsLocally } = useRealtimeFeed(true);
     
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPublishing, setIsPublishing] = useState(false);
-    const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
     const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -172,19 +169,6 @@ export default function MoffiSocialMasterpiece() {
     const [settingsPet, setSettingsPet] = useState<any>(null);
     const [isSOSCommandCenterOpen, setIsSOSCommandCenterOpen] = useState(false);
     const [sosActivePet, setSosActivePet] = useState<any>(null);
-    const [selectedAdoptionPet, setSelectedAdoptionPet] = useState<any | null>(null);
-    const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
-    const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
-    const [selectedAdoptionCategory, setSelectedAdoptionCategory] = useState("Hepsi");
-    const [adoptionPetName, setAdoptionPetName] = useState("");
-    const [adoptionPetBreed, setAdoptionPetBreed] = useState("");
-    const [adoptionPetAge, setAdoptionPetAge] = useState("");
-    const [adoptionPetDesc, setAdoptionPetDesc] = useState("");
-    const [adoptionPetPhotos, setAdoptionPetPhotos] = useState<{ file: File, preview: string }[]>([]);
-    const [adoptionPetType, setAdoptionPetType] = useState("cat");
-    const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
-    const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
-    const [appExperience, setAppExperience] = useState('0-2 Yıl');
     const [viewMode, setViewMode] = useState<'immersive' | 'grid'>('immersive');
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -203,9 +187,6 @@ export default function MoffiSocialMasterpiece() {
     };
 
 
-    const [appHomeType, setAppHomeType] = useState('Apartman');
-    const [appNote, setAppNote] = useState('');
-    const [isSubmittingApp, setIsSubmittingApp] = useState(false);
     const [isHubOpen, setIsHubOpen] = useState(false);
     const [isHubLongPressing, setIsHubLongPressing] = useState(false);
     const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
@@ -334,10 +315,6 @@ export default function MoffiSocialMasterpiece() {
     const [postToDelete, setPostToDelete] = useState<number | null>(null);
     const [storyToDelete, setStoryToDelete] = useState<string | null>(null);
     const [editingPost, setEditingPost] = useState<{ id: number, desc: string, mood: string | null, media: string } | null>(null);
-    const [isReportAdModalOpen, setIsReportAdModalOpen] = useState(false);
-    const [reportingAdId, setReportingAdId] = useState<string | null>(null);
-    const [reportReason, setReportReason] = useState<string>('');
-    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
     const generateAICaption = () => {
         setIsGeneratingAI(true);
@@ -669,7 +646,6 @@ export default function MoffiSocialMasterpiece() {
         }
     };
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const adoptionPhotoRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
          const globalScrollRef = useRef<HTMLDivElement>(null);
      const uploadScrollRef = useRef<HTMLDivElement>(null);
@@ -679,7 +655,6 @@ export default function MoffiSocialMasterpiece() {
     const storyTimerRef = useRef<NodeJS.Timeout | null>(null);
     const feedRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<HTMLDivElement>(null);
-    const radarRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
     const footerRef = useRef<HTMLDivElement>(null);
     const lastScrollY = useRef(0);
@@ -701,7 +676,6 @@ export default function MoffiSocialMasterpiece() {
         const handleOpenVet = () => setIsVetQuickSheetOpen(true);
         const handleOpenNotif = () => setIsNotificationsOpen(true);
         const handleOpenAddLostPet = () => router.push('/kayip/ilan-ver');
-        const handleOpenAddAdoptionPet = () => setIsAddAdoptionModalOpen(true);
 
         window.addEventListener('open-add-post', handleOpenPost);
         window.addEventListener('moffi-open-upload-modal', handleOpenPost);
@@ -712,7 +686,6 @@ export default function MoffiSocialMasterpiece() {
         window.addEventListener('open-vet-sheet', handleOpenVet);
         window.addEventListener('open-notification-drawer', handleOpenNotif);
         window.addEventListener('open-add-lost-pet', handleOpenAddLostPet);
-        window.addEventListener('open-add-adoption-pet', handleOpenAddAdoptionPet);
         
         const handleChangeTab = (e: any) => {
             setActiveTab(e.detail);
@@ -730,7 +703,6 @@ export default function MoffiSocialMasterpiece() {
             window.removeEventListener('open-notification-drawer', handleOpenNotif);
             window.removeEventListener('moffi-change-tab', handleChangeTab);
             window.removeEventListener('open-add-lost-pet', handleOpenAddLostPet);
-            window.removeEventListener('open-add-adoption-pet', handleOpenAddAdoptionPet);
         };
     }, [router]);
 
@@ -796,7 +768,6 @@ export default function MoffiSocialMasterpiece() {
         const loadInitialData = async () => {
             // Fetch everything independently so one slow request doesn't block others
             fetchPosts();
-            fetchAdoptionAds();
             fetchInbox();
         };
         loadInitialData();
@@ -843,15 +814,15 @@ export default function MoffiSocialMasterpiece() {
 
         const tab = searchParams.get('tab');
         const mode = searchParams.get('mode');
-        // Eski kayıp bağlantıları (radar / mode=lost) yeni Kayıp & Bulunan ekranına gider.
-        if (tab === 'radar' && mode !== 'adopt') {
-            router.replace('/kayip');
+        // Eski radar bağlantıları yeni panellere gider (design-reference/community-final).
+        if (tab === 'radar') {
+            router.replace(mode === 'adopt' ? '/sahiplendirme' : '/kayip');
             return;
         }
         if (tab === 'profile') {
             setActiveTab('profile');
-        } else if (tab === 'feed' || tab === 'radar') {
-            setActiveTab(tab as any);
+        } else if (tab === 'feed') {
+            setActiveTab('feed');
         }
     }, [searchParams]);
     
@@ -895,24 +866,6 @@ export default function MoffiSocialMasterpiece() {
             }
         }
     }, [user?.settings?.feed?.defaultSort]);
-
-
-    const fetchAdoptionAds = async () => {
-        setIsLoadingAdoptions(true);
-        try {
-            const data = await apiService.getAdoptions();
-            setAdoptionAds(data);
-        } catch (err) {
-            console.error("Sahiplendirme ilanları çekilirken hata:", err);
-            setAdoptionAds(MOCK_ADOPTIONS);
-        } finally {
-            setIsLoadingAdoptions(false);
-        }
-    };
-
-
-
-
 
 
     // Premium Header Transformations (Apple-Style) - Defined after activeTab
@@ -1506,120 +1459,6 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
-    // Logic for adoption posts
-
-    const handleAdoptionPost = async () => {
-        if (!user) {
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-
-        if (!adoptionPetName || !adoptionPetBreed || adoptionPetPhotos.length === 0) {
-            showToast('Eksik Bilgi', 'Lütfen isim, tür ve en az bir fotoğraf ekleyin.', 'error');
-            return;
-        }
-
-        setIsSubmittingAdoption(true);
-        showToast('Yükleniyor...', 'Fotoğraflar işleniyor ve Moffi AI denetimi başlatılıyor...', 'info');
-        try {
-            const photoUrls: string[] = [];
-            // 1. Upload Photos using apiService (Mockable)
-            for (const photo of adoptionPetPhotos) {
-                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
-                if (publicUrl) photoUrls.push(publicUrl);
-            }
-
-            // 2. Add via API
-            const newAd = await apiService.addAdoption({
-                name: adoptionPetName,
-                type: adoptionPetType,
-                description: adoptionPetDesc,
-                img: photoUrls[0] || undefined,
-                images: photoUrls,
-                breed: adoptionPetBreed,
-                age: adoptionPetAge,
-                owner: user.user_metadata?.username || user.email?.split('@')[0] || 'Moffi Üyesi'
-            });
-
-            setAdoptionAds(prev => [newAd, ...prev]);
-
-            // Simulation: Artificial delay for "AI Moderation"
-            setTimeout(() => {
-                showToast('✅ İlan Yayınlandı!', 'Moffi AI denetiminden geçti. İlanınız görünmeye başladı.', 'success');
-            }, 1000);
-
-            // Reset form
-            setIsAddAdoptionModalOpen(false);
-            setAdoptionPetName("");
-            setAdoptionPetBreed("");
-            setAdoptionPetAge("");
-            setAdoptionPetDesc("");
-            setAdoptionPetPhotos([]);
-            setAdoptionPetType("cat");
-
-        } catch (err: any) {
-            showToast('Hata', "İlan oluşturulamadı.", 'error');
-        } finally {
-            setIsSubmittingAdoption(false);
-        }
-    };
-
-    const handleDeleteAdoptionAd = async (adId: string) => {
-        if (!confirm('Bu ilanı kaldırmak istediğinizden emin misiniz?')) return;
-        try {
-            setAdoptionAds(prev => prev.filter(ad => ad.id !== adId));
-            showToast('İlan Kaldırıldı', 'Sahiplendirme ilanınız silindi.', 'success');
-        } catch (err: any) {
-            showToast('Hata', "İlan silinemedi.", 'error');
-        }
-    };
-
-
-
-    const handleReportAdoption = async () => {
-        if (!reportingAdId || !reportReason) return;
-        setIsSubmittingReport(true);
-        try {
-            await fetch('/api/adoption/report', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    adId: reportingAdId,
-                    reportedBy: user?.id || null,
-                    reason: reportReason,
-                    details: ''
-                })
-            });
-            showToast('🚨 Bildirim Alındı', 'Moffi ekibi en kısa sürede inceleyecek.', 'success');
-            setIsReportAdModalOpen(false);
-            setReportReason('');
-            setReportingAdId(null);
-        } catch (err: any) {
-            showToast('Hata', err.message, 'error');
-        } finally {
-            setIsSubmittingReport(false);
-        }
-    };
-
-    const submitAdoptionApplication = async () => {
-        if (!user || !selectedAdoptionPet || !selectedAdoptionPet.user_id) {
-            showToast("Hata", "İlan sahibi bilgisi bulunamadı.", "error");
-            return;
-        }
-        setIsSubmittingApp(true);
-        try {
-            await apiService.submitAdoptionApplication(selectedAdoptionPet.id, selectedAdoptionPet.user_id, appNote);
-            showToast("Başvuru İletildi! ❤️", "İlan sahibi başvurunuzu inceledikten sonra size dönecek.", "success");
-            setIsApplicationFormOpen(false);
-            setAppNote("");
-            setSelectedAdoptionPet(null);
-        } catch (err: any) {
-            showToast("Hata", err.message || "Başvuru yapılamadı.", "error");
-        } finally {
-            setIsSubmittingApp(false);
-        }
-    };
-
     const fetchInbox = async () => {
         try {
             await refreshInbox();
@@ -1677,41 +1516,6 @@ export default function MoffiSocialMasterpiece() {
                 onScroll={handleMainScroll}
                 className={`flex-1 relative z-10 w-full no-scrollbar ${activeTab === 'feed' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto overscroll-contain'}`}
             >
-                {activeTab === 'radar' && (
-                    <motion.header 
-                        id="community-radar-header"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="relative w-full z-[150] px-6 pt-10 pb-4 flex items-center justify-between transition-all duration-300"
-                    >
-                        {/* Back button */}
-                        <button 
-                            onClick={() => setActiveTab('feed')}
-                            className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center text-[var(--secondary-text)] hover:text-white transition-all active:scale-90 shadow-sm"
-                            title="Geri Dön"
-                        >
-                            <ChevronLeft className="w-5 h-5 text-white" />
-                        </button>
-
-                        {/* Segment Switcher: Kayıp / Sahiplen */}
-                        <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-2xl border border-black/10 dark:border-white/10 w-full max-w-[200px] shadow-inner backdrop-blur-md">
-                            <button
-                                onClick={() => router.push('/kayip')}
-                                className="flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                            >
-                                Kayıp
-                            </button>
-                            <button
-                                className="flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-white text-black shadow-lg"
-                            >
-                                Sahiplen
-                            </button>
-                        </div>
-
-                        {/* Right Spacer */}
-                        <div className="w-10 h-10" />
-                    </motion.header>
-                )}
                 <AnimatePresence>
                     {/* FEED TAB */}
                     {activeTab === 'feed' && (
@@ -1821,19 +1625,6 @@ export default function MoffiSocialMasterpiece() {
                         />
                     )}
 
-                    {/* ADOPTION PANEL CONTENT */}
-                    {activeTab === 'radar' && (
-                        <AdoptionTab
-                            user={user}
-                            onAddAd={() => setIsAddAdoptionModalOpen(true)}
-                            selectedCategory={selectedAdoptionCategory}
-                            setSelectedCategory={setSelectedAdoptionCategory}
-                            onAdClick={setSelectedAdoptionPet}
-                            ads={adoptionAds}
-                            isLoading={isLoadingAdoptions}
-                            onDeleteAd={handleDeleteAdoptionAd}
-                        />
-                    )}
                 </AnimatePresence>
             </main>
 
@@ -2035,7 +1826,7 @@ export default function MoffiSocialMasterpiece() {
                                         <Radar className="w-4 h-4" strokeWidth={2.5} />
                                         <span className="font-bold text-[11px]">Kayıp İlanı</span>
                                     </button>
-                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); }} className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95">
+                                    <button onClick={() => { setIsUploadModalOpen(false); router.push('/sahiplendirme/ilan-ver'); }} className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95">
                                         <HeartHandshake className="w-4 h-4" strokeWidth={2.5} />
                                         <span className="font-bold text-[11px]">Sahiplendirme</span>
                                     </button>
@@ -2928,635 +2719,6 @@ export default function MoffiSocialMasterpiece() {
                 )}
             </AnimatePresence>
 
-
-            {/* ADD ADOPTION PET MODAL (Apple Bottom Sheet Style) */}
-            <AnimatePresence>
-                {isAddAdoptionModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[300] flex flex-col justify-end"
-                    >
-                        {/* Blur Backdrop */}
-                        <motion.div
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => setIsAddAdoptionModalOpen(false)}
-                        />
-
-                        {/* Sliding Sheet */}
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="relative w-full h-[90vh] bg-[var(--card-bg)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-black/10 dark:border-white/10"
-                        >
-                            {/* Grab Handle */}
-                            {/* Grab Handle (Click to close) */}
-                            <button 
-                                onClick={() => setIsAddAdoptionModalOpen(false)}
-                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
-                            />
-
-
-
-                            <div className="p-4 sm:p-6 pt-12 pb-4 border-b border-[var(--card-border)] shrink-0 flex items-center gap-4">
-                                <button onClick={() => setIsAddAdoptionModalOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
-                                <div>
-                                    <h2 className="text-2xl font-black text-[var(--foreground)] flex items-center gap-2">
-                                        <HeartHandshake className="w-6 h-6 text-cyan-400" /> Sahiplendirme İlanı Ver
-                                    </h2>
-                                    <p className="text-xs text-[var(--secondary-text)] mt-1">Dostumuz için en iyi yuvayı bulalım.</p>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-6">
-                                {/* Photo Upload Apple Style */}
-                                <input
-                                    type="file"
-                                    ref={adoptionPhotoRef}
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        const files = e.target.files;
-                                        if (files) {
-                                            const newPhotos = Array.from(files).map(file => ({
-                                                file,
-                                                preview: URL.createObjectURL(file)
-                                            }));
-                                            setAdoptionPetPhotos(prev => [...prev, ...newPhotos]);
-                                            if (adoptionPhotoRef.current) adoptionPhotoRef.current.value = '';
-                                        }
-                                    }}
-                                />
-                                {adoptionPetPhotos.length > 0 ? (
-                                    <div className="grid grid-cols-4 gap-3 mb-2">
-                                        {adoptionPetPhotos.map((photo, idx) => (
-                                            <div key={idx} className="aspect-square rounded-2xl bg-card dark:bg-[var(--color-camera-surface)] border border-black/10 dark:border-white/10 relative overflow-hidden group">
-                                                <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                <button
-                                                    onClick={() => setAdoptionPetPhotos(prev => prev.filter((_, i) => i !== idx))}
-                                                    className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-[var(--foreground)]/70 hover:text-[var(--foreground)] transition-colors"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {adoptionPetPhotos.length < 4 && (
-                                            <button
-                                                onClick={() => adoptionPhotoRef.current?.click()}
-                                                className="aspect-square rounded-2xl border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:text-cyan-400 transition-all font-bold"
-                                            >
-                                                <Plus className="w-6 h-6" />
-                                                <span className="text-[10px] mt-1">Ekle</span>
-                                            </button>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div
-                                        onClick={() => adoptionPhotoRef.current?.click()}
-                                        className="w-full h-52 rounded-3xl bg-card dark:bg-[var(--color-camera-surface)] border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
-                                    >
-                                        <Camera className="w-8 h-8 mb-2 group-hover:text-cyan-400 group-hover:scale-110 transition-all drop-shadow-md" />
-                                        <span className="text-sm font-bold tracking-wide">Net Fotoğraflar Yükle</span>
-                                        <span className="text-[10px] mt-1 text-[var(--secondary-text)] font-medium italic">Sahiplendirme şansını %80 artırır</span>
-                                    </div>
-                                )}
-
-                                <div className="space-y-5">
-                                    <div>
-                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-2 block">Kategori</label>
-                                        <div className="flex gap-2 mb-4">
-                                            {[
-                                                { id: 'cat', label: 'Kedi', icon: '🐱' },
-                                                { id: 'dog', label: 'Köpek', icon: '🐶' },
-                                                { id: 'bird', label: 'Kuş', icon: '🦜' },
-                                                { id: 'other', label: 'Diğer', icon: '🐾' },
-                                            ].map(type => (
-                                                <button
-                                                    key={type.id}
-                                                    onClick={() => setAdoptionPetType(type.id)}
-                                                    className={cn(
-                                                        "flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex flex-col items-center gap-1 border",
-                                                        adoptionPetType === type.id
-                                                            ? "bg-cyan-500/20 border-cyan-400 text-cyan-400"
-                                                            : "bg-[var(--background)] border-[var(--card-border)] text-[var(--secondary-text)]"
-                                                    )}
-                                                >
-                                                    <span className="text-xl">{type.icon}</span>
-                                                    {type.label}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-1.5 block">İsim & Tür</label>
-                                        <div className="flex gap-3">
-                                            <input
-                                                type="text"
-                                                placeholder="İsim (Örn: Pamuk)"
-                                                value={adoptionPetName}
-                                                onChange={(e) => setAdoptionPetName(e.target.value)}
-                                                className="w-1/2 bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors placeholder:text-gray-600"
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="Tür / Irk"
-                                                value={adoptionPetBreed}
-                                                onChange={(e) => setAdoptionPetBreed(e.target.value)}
-                                                className="w-1/2 bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors placeholder:text-gray-600"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-1.5 block">Yaş & Açıklama</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Yaşı (Örn: 2 Aylık, 3 Yaşında)"
-                                            value={adoptionPetAge}
-                                            onChange={(e) => setAdoptionPetAge(e.target.value)}
-                                            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors mb-3 placeholder:text-gray-600"
-                                        />
-                                        <textarea
-                                            rows={4}
-                                            placeholder="Onu biraz anlatın... Tuvalet eğitimi var mı? Karakteri nasıl?"
-                                            value={adoptionPetDesc}
-                                            onChange={(e) => setAdoptionPetDesc(e.target.value)}
-                                            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors resize-none placeholder:text-gray-600"
-                                        />
-                                    </div>
-
-                                    {/* Alert / Warning Box */}
-                                    <div className="flex items-start gap-3 p-4 bg-red-500/10 rounded-3xl border border-red-500/20 mt-2">
-                                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-                                            <ShieldAlert className="w-4 h-4 text-red-500" />
-                                        </div>
-                                        <p className="text-[11px] text-gray-300 leading-relaxed font-medium mt-0.5">
-                                            <span className="text-red-400 font-bold tracking-wide">ÜCRET TALEP ETMEK YASAKTIR.</span> Moffi tamamen ücretsiz sahiplendirme üzerine kuruludur. Canlı satışı veya para talebi tespit edildiğinde hesaplar <strong className="text-[var(--foreground)]">kalıcı olarak</strong> kapatılır.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="p-4 sm:p-6 pt-3 pb-8 bg-[var(--card-bg)] shrink-0 border-t border-[var(--card-border)] relative z-20">
-                                <button
-                                    onClick={handleAdoptionPost}
-                                    disabled={isSubmittingAdoption}
-                                    className="w-full py-4 rounded-full bg-white text-black font-black text-[15px] shadow-[0_10px_30px_rgba(255,255,255,0.15)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {isSubmittingAdoption ? (
-                                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                                    ) : (
-                                        <><CheckCheck className="w-5 h-5" /> İlanı Onaya Gönder</>
-                                    )}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-
-            {/* APPLE BOTTOM SHEET - ADOPTION DETAY MODAL */}
-            <AnimatePresence>
-                {selectedAdoptionPet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[310] flex flex-col justify-end"
-                    >
-                        {/* Blur Backdrop */}
-                        <motion.div
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => setSelectedAdoptionPet(null)}
-                        />
-
-                        {/* Sliding Sheet */}
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            drag="y"
-                            dragConstraints={{ top: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={(e, { offset, velocity }) => {
-                                if (offset.y > 100 || velocity.y > 500) {
-                                    setSelectedAdoptionPet(null);
-                                }
-                            }}
-                            className="relative w-full h-[85vh] bg-[var(--background)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-black/10 dark:border-white/10"
-                        >
-                            {/* Grab Handle (Click to close) */}
-                            <button 
-                                onClick={() => setSelectedAdoptionPet(null)}
-                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
-                            />
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar w-full flex flex-col relative">
-                                {/* Hero Image */}
-                                <div 
-                                    className="w-full h-[350px] relative shrink-0 overflow-hidden bg-white dark:bg-black"
-                                    onTouchStart={(e) => {
-                                        const touch = e.touches[0];
-                                        (window as any).adoptionHeroTouchStartX = touch.clientX;
-                                    }}
-                                    onTouchEnd={(e) => {
-                                        const touchX = e.changedTouches[0].clientX;
-                                        const startX = (window as any).adoptionHeroTouchStartX;
-                                        if (startX && selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1) {
-                                            const diff = startX - touchX;
-                                            const currentIndex = selectedAdoptionPet.images.indexOf(selectedAdoptionPet.img || selectedAdoptionPet.images[0]);
-                                            if (diff > 40 && currentIndex < selectedAdoptionPet.images.length - 1) {
-                                                setSelectedAdoptionPet({ ...selectedAdoptionPet, img: selectedAdoptionPet.images[currentIndex + 1] });
-                                            } else if (diff < -40 && currentIndex > 0) {
-                                                setSelectedAdoptionPet({ ...selectedAdoptionPet, img: selectedAdoptionPet.images[currentIndex - 1] });
-                                            }
-                                        }
-                                    }}
-                                >
-                                    <img 
-                                        key={selectedAdoptionPet.img}
-                                        src={selectedAdoptionPet.img} 
-                                        className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300" 
-                                    />
-
-                                    {/* Badge Layering */}
-                                    <div className="absolute bottom-0 inset-x-0 p-6 flex items-end justify-between z-10 pointer-events-none">
-                                        <div className="flex flex-col gap-1 min-w-0 pr-4">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <div className="px-2 py-1 rounded-md bg-cyan-500 text-black text-[9px] font-black tracking-widest uppercase shadow-lg shadow-cyan-500/30 flex items-center gap-1">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-black animate-pulse" /> YUVASINI ARIYOR
-                                                </div>
-                                                {selectedAdoptionPet.created_at && (
-                                                    <span className="text-[9px] font-bold text-black/80 dark:text-white/80 bg-black/40 backdrop-blur-md px-2 py-1 rounded-md">
-                                                        {new Date(selectedAdoptionPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Pagination Dots */}
-                                    {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
-                                        <div className="absolute top-6 inset-x-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-                                            {selectedAdoptionPet.images.map((url: string, i: number) => (
-                                                <div key={i} className={cn("h-1.5 rounded-full transition-all duration-300", (selectedAdoptionPet.img || selectedAdoptionPet.images[0]) === url ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50 backdrop-blur-sm")} />
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Floating Actions (Close & Share) on top of image */}
-                                    <div className="absolute top-12 sm:top-6 right-6 flex items-center gap-2 z-20">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                openShare({
-                                                    title: 'Sahiplenme İlanı: ' + selectedAdoptionPet.name,
-                                                    text: 'Bu tatlı dosta yuva olmak ister misin?',
-                                                    url: typeof window !== 'undefined' ? window.location.href : ''
-                                                });
-                                            }}
-                                            className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
-                                        >
-                                            <Share2 className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button 
-                                            onClick={() => setSelectedAdoptionPet(null)}
-                                            className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Content */}
-                                <div className="flex-1 px-6 pt-2 pb-6 bg-[var(--background)] relative z-10 -mt-4 rounded-t-3xl">
-                                    <h1 className="text-2xl font-black text-[var(--foreground)] leading-tight mt-1">{selectedAdoptionPet.name}</h1>
-
-                                    {/* Thumbnail Gallery */}
-                                    {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
-                                        <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mb-2">
-                                            {selectedAdoptionPet.images.map((url: string, i: number) => (
-                                                <button 
-                                                    key={i} 
-                                                    onClick={() => setSelectedAdoptionPet({ ...selectedAdoptionPet, img: url })}
-                                                    className={cn(
-                                                        "w-14 h-14 rounded-xl overflow-hidden shrink-0 transition-all border",
-                                                        (selectedAdoptionPet.img || selectedAdoptionPet.images[0]) === url ? "border-cyan-500 scale-105 shadow-md" : "border-black/10 dark:border-white/10 opacity-60 hover:opacity-100"
-                                                    )}
-                                                >
-                                                    <img src={url} alt={`Görsel ${i+1}`} className="w-full h-full object-cover" />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Author Profile Snippet */}
-                                    <div className="flex items-center gap-3 mt-3 mb-4">
-                                        <div className="w-7 h-7 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden border border-black/20 dark:border-white/20">
-                                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAdoptionPet.user_id}`} className="w-full h-full object-cover" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest leading-tight">İlan Sahibi</span>
-                                            <span className="text-sm font-black text-[var(--foreground)] leading-tight">{selectedAdoptionPet.author_name || selectedAdoptionPet.owner}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Capsules */}
-                                    <div className="flex gap-2 flex-wrap mb-5">
-                                        {selectedAdoptionPet.breed && (
-                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
-                                                <span className="text-[15px]">🐾</span> {selectedAdoptionPet.breed}
-                                            </div>
-                                        )}
-                                        {selectedAdoptionPet.age && (
-                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
-                                                <span className="text-[15px]">🎂</span> {selectedAdoptionPet.age}
-                                            </div>
-                                        )}
-                                        {selectedAdoptionPet.gender && (
-                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
-                                                <span className="text-[15px]">{selectedAdoptionPet.gender === 'Erkek' ? '♂️' : '♀️'}</span> {selectedAdoptionPet.gender}
-                                            </div>
-                                        )}
-                                        {selectedAdoptionPet.tags?.map((tag: string) => (
-                                            <div key={tag} className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
-                                                <Check className="w-3.5 h-3.5 text-cyan-400" /> {tag}
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="bg-card dark:bg-[var(--color-camera-surface)] rounded-xl p-3.5 border border-black/5 dark:border-white/5 relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 blur-3xl rounded-full" />
-                                        <h3 className="text-cyan-400/80 text-[10px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                            <Info className="w-3 h-3" /> Hikaye & Durum
-                                        </h3>
-                                        <p className="text-gray-300 text-xs leading-relaxed font-medium whitespace-pre-wrap relative z-10">
-                                            {selectedAdoptionPet.description || selectedAdoptionPet.desc}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Apple iOS Style Floating Action Bar */}
-                            <div className="w-full p-4 sm:px-5 pt-2 pb-5 bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent relative z-20 shrink-0">
-                                <div className="flex gap-2.5">
-                                    <button
-                                        onClick={() => {
-                                            if (!selectedAdoptionPet?.user_id) {
-                                                showToast("Hata", "İlan sahibi bilgisi bulunamadı.", "error");
-                                                return;
-                                            }
-                                            if (!user) {
-                                                showToast("Giriş Gerekli", "Mesaj göndermek için giriş yapmalısınız.", "error");
-                                                window.dispatchEvent(new CustomEvent('open-auth-modal'));
-                                                return;
-                                            }
-                                            setSelectedAdoptionPet(null);
-                                            openChat(selectedAdoptionPet.user_id);
-                                        }}
-                                        className="flex-1 py-3 rounded-xl bg-black/10 dark:bg-white/10 border border-black/10 dark:border-white/10 text-[var(--foreground)] font-bold text-xs active:scale-95 transition-transform flex items-center justify-center gap-1.5"
-                                    >
-                                        <MessageCircle className="w-4 h-4" /> Mesaj
-                                    </button>
-                                    <button
-                                        onClick={() => setIsApplicationFormOpen(true)}
-                                        className="flex-[2] py-3 rounded-xl bg-cyan-500 text-black font-black text-xs shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-1.5"
-                                    >
-                                        <HeartHandshake className="w-4 h-4" /> Sahiplenme Başvurusu
-                                    </button>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setReportingAdId(selectedAdoptionPet?.id || null);
-                                        setIsReportAdModalOpen(true);
-                                    }}
-                                    className="w-full mt-2 py-2.5 rounded-xl bg-red-500/10 text-red-400 font-bold text-[11px] border border-red-500/20 active:scale-95 transition-transform flex items-center justify-center gap-1.5"
-                                >
-                                    <ShieldAlert className="w-3.5 h-3.5" /> Ücret Talep Ediyor / İhbar Et
-                                </button>
-                                <p className="text-[9px] text-[var(--secondary-text)] text-center font-medium mt-1.5">Moffi Güvenli Mesajlaşma ile verileriniz uçtan uca korunur.</p>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-
-            {/* REPORT ADOPTION AD MODAL (Apple Action Sheet) */}
-            <AnimatePresence>
-                {isReportAdModalOpen && selectedAdoptionPet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[501] flex flex-col justify-end"
-                    >
-                        <motion.div
-                            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                            onClick={() => setIsReportAdModalOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
-                            drag="y"
-                            dragConstraints={{ top: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={(e, { offset, velocity }) => {
-                                if (offset.y > 100 || velocity.y > 500) {
-                                    setIsReportAdModalOpen(false);
-                                }
-                            }}
-                            className="relative bg-[var(--card-bg)] rounded-t-[2.5rem] p-4 sm:p-6 pb-12 border-t border-black/10 dark:border-white/10 z-10"
-                        >
-                            <button 
-                                onClick={() => setIsReportAdModalOpen(false)}
-                                className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
-                            />
-
-                            <div className="flex items-center gap-3 mb-6">
-                                <button onClick={() => setIsReportAdModalOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
-                                <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center ml-1">
-                                    <ShieldAlert className="w-6 h-6 text-red-500" />
-                                </div>
-                                <div>
-                                    <h3 className="text-[var(--foreground)] font-black text-lg">İlanı Bildir</h3>
-                                    <p className="text-[var(--secondary-text)] text-xs">Moffi ekibi en kısa sürede inceleyecek</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 mb-6">
-                                {[
-                                    { value: 'fee', label: '💸 Ücret Talep Ediyor', desc: 'Sahiplendirme için para isteniyor' },
-                                    { value: 'sale', label: '🏷️ Hayvan Satışı', desc: 'Ticari amaçlı satış ilanı' },
-                                    { value: 'fake', label: '❌ Sahte İlan', desc: 'Görsel veya bilgiler gerçek değil' },
-                                    { value: 'inappropriate', label: '⚠️ Uygunsuz İçerik', desc: 'Kötü muamele veya şiddet' },
-                                    { value: 'other', label: '🔍 Diğer', desc: 'Diğer güvenlik sorunları' }
-                                ].map((opt) => (
-                                    <button
-                                        key={opt.value}
-                                        onClick={() => setReportReason(opt.value)}
-                                        className={cn(
-                                            "w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left",
-                                            reportReason === opt.value ? "bg-red-500/10 border-red-500/30" : "bg-[var(--card-bg)] border-[var(--card-border)]"
-                                        )}
-                                    >
-                                        <div className="flex-1">
-                                            <p className="text-[var(--foreground)] font-bold text-sm">{opt.label}</p>
-                                            <p className="text-[var(--secondary-text)] text-xs mt-0.5">{opt.desc}</p>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-
-                            <button
-                                onClick={handleReportAdoption}
-                                disabled={!reportReason || isSubmittingReport}
-                                className="w-full py-4 rounded-full bg-red-500 text-[var(--foreground)] font-black text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
-                            >
-                                {isSubmittingReport ? (
-                                    <div className="w-5 h-5 border-2 border-black/30 dark:border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <><ShieldAlert className="w-5 h-5" /> Bildirimi Gönder</>
-                                )}
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* ADOPTION APPLICATION FORM MODAL (Apple Style) */}
-            <AnimatePresence>
-                {isApplicationFormOpen && selectedAdoptionPet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[400] flex flex-col justify-end"
-                    >
-                        <motion.div
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                            onClick={() => setIsApplicationFormOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
-                            drag="y"
-                            dragConstraints={{ top: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={(e, { offset, velocity }) => {
-                                if (offset.y > 100 || velocity.y > 500) {
-                                    setIsApplicationFormOpen(false);
-                                }
-                            }}
-                            className="relative bg-[var(--background)] rounded-t-[3rem] p-4 sm:p-6 pb-12 border-t border-black/10 dark:border-white/10 z-10 flex flex-col max-h-[90vh]"
-                        >
-                            <button 
-                                onClick={() => setIsApplicationFormOpen(false)}
-                                className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
-                            />
-
-                            <div className="flex items-center gap-4 mb-8">
-                                <button onClick={() => setIsApplicationFormOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
-                                <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-black/10 dark:border-white/10">
-                                    <img src={selectedAdoptionPet.img} className="w-full h-full object-cover" />
-                                </div>
-                                <div>
-                                    <h3 className="text-[var(--foreground)] font-black text-xl">{selectedAdoptionPet.name} İçin Başvuru</h3>
-                                    <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mt-1">Son Adım: Yuva Olma Formu</p>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
-                                <div>
-                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Evcil Hayvan Tecrübeniz</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['0-2 Yıl', '3-5 Yıl', '5+ Yıl'].map(lvl => (
-                                            <button
-                                                key={lvl}
-                                                onClick={() => setAppExperience(lvl)}
-                                                className={cn(
-                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
-                                                    appExperience === lvl ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--secondary-text)]"
-                                                )}
-                                            >
-                                                {lvl}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Yaşam Alanınız</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['Apartman', 'Müstakil', 'Bahçeli'].map(type => (
-                                            <button
-                                                key={type}
-                                                onClick={() => setAppHomeType(type)}
-                                                className={cn(
-                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
-                                                    appHomeType === type ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--secondary-text)]"
-                                                )}
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Kendinizden Bahsedin</label>
-                                    <textarea
-                                        rows={4}
-                                        placeholder="Neden onu sahiplenmek istiyorsunuz? Ona nasıl bir hayat sunacaksınız?"
-                                        value={appNote}
-                                        onChange={(e) => setAppNote(e.target.value)}
-                                        className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-4 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none placeholder:text-gray-600"
-                                    />
-                                </div>
-
-                                <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-3xl p-4 flex items-start gap-3">
-                                    <ShieldAlert className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-                                    <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed">
-                                        Moffi, sahiplendirme sürecinde aracıdır. Başvurunuz ilan sahibine iletilir. Kişisel güvenliğiniz için buluşmaları halka açık yerlerde gerçekleştirmenizi öneririz.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={submitAdoptionApplication}
-                                disabled={!appNote.trim() || isSubmittingApp}
-                                className="w-full mt-8 py-4 rounded-full bg-cyan-500 text-black font-black text-[16px] shadow-[0_15px_40px_rgba(34,211,238,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
-                            >
-                                {isSubmittingApp ? (
-                                    <div className="w-6 h-6 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                                ) : (
-                                    <><CheckCheck className="w-5 h-5" /> Başvuruyu Tamamla</>
-                                )}
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* DEDICATED ADOPTION CHAT (Apple iMessage Style) */}
-            <AnimatePresence>
-
-            </AnimatePresence>
 
             {/* INSTAGRAM STYLE STORY VIEWER */}
             <AnimatePresence>

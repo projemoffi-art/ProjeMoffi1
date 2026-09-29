@@ -1,6 +1,6 @@
 // @ts-nocheck
 import {
-    Pet, Post, UserProfile, LostPet, AdoptionPet,
+    Pet, Post, UserProfile, LostPet,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
     SystemAnnouncement, SystemFeedback, SocialChallenge, BusinessAppointmentInput, ClinicClient, BusinessProfileData
 } from './types';
@@ -63,9 +63,6 @@ export class SupabaseApiService implements IApiService {
     }
     async fetchVets(): Promise<any[]> {
         return [];
-    }
-    async submitAdoptionApplication(listingId: string | number, ownerId: string, note: string): Promise<void> {
-        return Promise.resolve();
     }
 
     async getCurrentUser(): Promise<UserProfile | null> {
@@ -720,96 +717,6 @@ export class SupabaseApiService implements IApiService {
         await this.commentLikeQueues[key];
     }
 
-
-    async getAdoptions(): Promise<AdoptionPet[]> {
-        const { data, error } = await supabase
-            // Telefon kolonu herkese açık değil; iletişim uygulama içi mesajla.
-            .from('adoption_pets')
-            .select('id, user_id, pet_name, img_url, images, location_text, owner_name, description, pet_type, pet_breed, pet_age, gender, status, created_at, moderation_result, moderation_passed, moderated_at')
-            .eq('status', 'available')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching adoptions:', error);
-            return [];
-        }
-
-        return data.map(item => ({
-            id: item.id,
-            name: item.pet_name,
-            img: item.img_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
-            image_url: item.img_url,
-            images: item.images,
-            location: item.location_text || 'Moffi Radar',
-            dist: '0 km',
-            time: this.formatTimeAgo(item.created_at),
-            description: item.description || '',
-            type: item.pet_type || 'cat',
-            breed: item.pet_breed || 'Bilinmiyor',
-            age: item.pet_age || '',
-            gender: item.gender || '',
-            owner: item.owner_name || 'Moffi Üyesi',
-            phone: '',
-            user_id: item.user_id,
-            author_name: item.owner_name || 'Moffi Üyesi',
-            created_at: item.created_at
-        }));
-    }
-
-    async addAdoption(data: Partial<AdoptionPet>): Promise<AdoptionPet> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error("Giriş gerekli");
-
-        const { data: inserted, error } = await supabase
-            .from('adoption_pets')
-            .insert({
-                user_id: user.id,
-                pet_name: data.name,
-                img_url: data.img,
-                images: data.images,
-                description: data.description,
-                pet_type: data.type || 'cat',
-                pet_breed: data.breed || data.description?.split(',')[0],
-                pet_age: data.age,
-                gender: data.gender,
-                owner_name: data.owner
-            })
-            .select('id, user_id, pet_name, img_url, images, location_text, owner_name, description, pet_type, pet_breed, pet_age, gender, status, created_at, moderation_result, moderation_passed, moderated_at')
-            .single();
-
-        if (error) throw error;
-        return {
-            id: inserted.id,
-            name: inserted.pet_name,
-            img: inserted.img_url,
-            images: inserted.images,
-            description: inserted.description,
-            type: inserted.pet_type,
-            breed: inserted.pet_breed,
-            age: inserted.pet_age,
-            gender: inserted.gender,
-            dist: '0 km',
-            time: 'Şimdi',
-            owner: inserted.owner_name,
-            phone: '',
-            user_id: inserted.user_id,
-            author_name: inserted.owner_name,
-            created_at: inserted.created_at
-        } as AdoptionPet;
-    }
-
-    async deleteAdoption(id: string | number): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error("Giriş gerekli");
-        
-        const { error } = await supabase
-            .from('adoption_pets')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', user.id);
-            
-        if (error) throw error;
-    }
 
     // --- DIGITAL PASSPORT (Pets) ---
     async getPets(): Promise<Pet[]> {

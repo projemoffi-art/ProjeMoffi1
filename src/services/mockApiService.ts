@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { 
-    Pet, Post, UserProfile, LostPet, AdoptionPet,
+    Pet, Post, UserProfile, LostPet,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
     SystemAnnouncement, SystemFeedback
 } from './types';
 import { 
-    MOCK_PETS, MOCK_ADOPTIONS,
+    MOCK_PETS,
     MOCK_NOTIFICATIONS, MOCK_POSTS 
 } from '../lib/mockData';
 
@@ -266,44 +266,6 @@ export class MockApiService implements IApiService {
     }
 
 
-    async getAdoptions(): Promise<AdoptionPet[]> {
-        const data = await this.loadData<any[]>('adoptions') || MOCK_ADOPTIONS;
-        const current = await this.getCurrentUser();
-        return data.map(item => ({
-            id: item.id,
-            name: item.name || item.pet_name,
-            img: item.img || item.image_url || (item.photos && item.photos[0]) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
-            image_url: item.img || item.image_url || (item.photos && item.photos[0]),
-            location: item.location || 'Moffi Radar',
-            reward_enabled: item.reward_enabled || false,
-            dist: item.dist || '0 km',
-            time: item.time || 'Şimdi',
-            type: item.type || 'cat',
-            description: item.description || '',
-            owner: item.owner || item.owner_name || 'Moffi Üyesi',
-            phone: item.phone || '',
-            user_id: item.user_id || (item.id === '1' || item.id === '2' ? 'system' : current?.id)
-        }));
-    }
-
-    async addAdoption(data: Partial<AdoptionPet>): Promise<AdoptionPet> {
-        const current = await this.getCurrentUser();
-        const pets = await this.getAdoptions();
-        const newPet = { 
-            id: `adopt-${Date.now()}`, 
-            user_id: current?.id,
-            ...data 
-        } as AdoptionPet;
-        await this.saveData('adoptions', [...pets, newPet]);
-        return newPet;
-    }
-
-    async deleteAdoption(id: string | number): Promise<void> {
-        const pets = await this.getAdoptions();
-        const filtered = pets.filter(p => String(p.id) !== String(id));
-        await this.saveData('adoptions', filtered);
-    }
-
     async getInboxMessages(): Promise<any[]> {
         const saved = await this.loadData<any[]>('inbox_messages');
         return saved || (MOCK_NOTIFICATIONS as any);
@@ -483,10 +445,6 @@ export class MockApiService implements IApiService {
     async fetchMarketPlaces(): Promise<any[]> { return []; }
     async fetchVets(): Promise<any[]> { return []; }
 
-    async submitAdoptionApplication(listingId: string | number, ownerId: string, note: string): Promise<void> {
-        console.log(`[Mock] Sahiplendirme başvurusu iletildi. İlan: ${listingId}, Sahibi: ${ownerId}, Not: ${note}`);
-        return new Promise(resolve => setTimeout(resolve, 1000));
-    }
 
     // Health & Veterinary
     

@@ -7,16 +7,16 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { MapPin, Search } from 'lucide-react';
 import { PanelHeader } from '@/components/lost/PanelHeader';
-import { ListingCard, ToggleRow, KindBadge, listingTitle } from '@/components/lost/LostUI';
+import { ListingCard, KindBadge, listingTitle } from '@/components/lost/LostUI';
+import { AreaSheet } from '@/components/lost/AreaSheet';
 import { useSearchArea } from '@/components/lost/useSearchArea';
-import { LoadingBlocks, Sheet, PrimaryButton, SoftButton } from '@/components/health/HealthUI';
+import { LoadingBlocks } from '@/components/health/HealthUI';
 import { lostService, type LostListing, type Species } from '@/services/lostService';
 import { distanceKm, distanceText } from '@/lib/geo';
 import { useAuth } from '@/context/AuthContext';
-import { cn, showToast } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 const ListingsMap = dynamic(() => import('@/components/lost/ListingsMap'), { ssr: false });
-const LocationPicker = dynamic(() => import('@/components/business/LocationPicker'), { ssr: false });
 
 const RADII = [1, 3, 5, 10, 25];
 const TIMES: { id: string; label: string; hours: number | null }[] = [
@@ -153,53 +153,5 @@ export default function LostHomePage() {
 
             {area && <AreaSheet open={areaOpen} onClose={() => setAreaOpen(false)} area={area} onChoose={choose} onDevice={detectDevice} />}
         </>
-    );
-}
-
-function AreaSheet({ open, onClose, area, onChoose, onDevice }: {
-    open: boolean; onClose: () => void; area: { lat: number; lng: number; name: string };
-    onChoose: (lat: number, lng: number) => Promise<unknown>; onDevice: () => Promise<unknown>;
-}) {
-    const { user } = useAuth();
-    const [point, setPoint] = useState<{ lat: number; lng: number } | null>(null);
-    const [alerts, setAlerts] = useState<{ enabled: boolean } | null>(null);
-    const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        if (!open) return;
-        setPoint(null);
-        if (user) lostService.alertArea().then(a => setAlerts({ enabled: a.enabled })).catch(() => setAlerts({ enabled: false }));
-    }, [open, user]);
-
-    const save = async () => {
-        setSaving(true);
-        try {
-            const p = point || area;
-            if (point) await onChoose(point.lat, point.lng);
-            if (user && alerts) await lostService.setAlertArea(alerts.enabled, p.lat, p.lng);
-            onClose();
-        } catch (e: any) {
-            showToast(e?.message || 'Kaydedilemedi.', 'AlertCircle', 'text-red-500 font-bold');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    return (
-        <Sheet open={open} onClose={onClose} title="Konum">
-            <SoftButton onClick={async () => { const r = await onDevice(); if (!r) showToast('Konum alınamadı, tarayıcı iznini kontrol et.', 'AlertCircle', 'text-red-500 font-bold'); else onClose(); }}>
-                <MapPin className="w-4 h-4" /> Şu anki konumumu kullan
-            </SoftButton>
-            <p className="text-xs font-bold text-secondary">ya da haritada bir bölge seç</p>
-            <LocationPicker lat={point?.lat ?? area.lat} lng={point?.lng ?? area.lng} fallbackCenter={[area.lat, area.lng]} onChange={(lat, lng) => setPoint({ lat, lng })} />
-            {user && alerts && (
-                <div className="bg-card border border-card-border rounded-2xl px-4 py-2">
-                    <ToggleRow on={alerts.enabled} onChange={v => setAlerts({ enabled: v })}
-                        label="Yakınımda kayıp ilanı olursa haber ver"
-                        hint="Bu bölge mahalle düzeyinde kaydedilir; ilan veren kişi seni görmez. İstediğin an kapatabilirsin." />
-                </div>
-            )}
-            <PrimaryButton onClick={save} disabled={saving}>{saving ? 'Kaydediliyor…' : 'Kaydet'}</PrimaryButton>
-        </Sheet>
     );
 }

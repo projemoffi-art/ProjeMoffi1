@@ -4,7 +4,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, Bell, Heart, UserPlus, ShieldAlert, 
-  ShoppingBag, Sparkles, Trash2, CheckCircle2, Calendar
+  ShoppingBag, Sparkles, Trash2, CheckCircle2, Calendar, HeartHandshake
 } from "lucide-react";
 import { useNotifications } from "@/context/NotificationContext";
 import { cn } from "@/lib/utils";
@@ -23,12 +23,15 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
   const router = useRouter();
 
   // Sağlık hatırlatması → ilgili evcil hayvanın Sağlık Merkezi; künyeden gelen haber → Pasaport;
-  // randevu → Randevularım.
+  // randevu → Randevularım; sahiplendirme başvurusu → başvuru detayı, başvuru durumu / pasaport devri → Başvurularım.
   const targetOf = (n: { type: string; entity_id?: string | null }) =>
     n.type === 'health' ? `/health${n.entity_id ? `?pet=${n.entity_id}` : ''}`
       : n.type === 'sos' ? `/pasaport${n.entity_id ? `?pet=${n.entity_id}` : ''}`
       : n.type === 'lost' && n.entity_id ? `/kayip/${n.entity_id}`
       : n.type === 'lost_sighting' && n.entity_id ? `/kayip/${n.entity_id}/yonet`
+      : n.type === 'adoption' && n.entity_id ? `/sahiplendirme/${n.entity_id}`
+      : n.type === 'adoption_application' && n.entity_id ? `/sahiplendirme/basvuru/${n.entity_id}`
+      : n.type === 'adoption_update' || n.type === 'pet_transfer' ? '/sahiplendirme/basvurularim'
       : n.type === 'appointment' ? '/vet?view=appointments' : null;
 
   const openNotification = (n: any) => {
@@ -50,6 +53,10 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
       case 'sos': return <ShieldAlert className="w-4 h-4 text-red-500" />;
       case 'lost': return <ShieldAlert className="w-4 h-4 text-orange-500" />;
       case 'lost_sighting': return <CheckCircle2 className="w-4 h-4 text-orange-500" />;
+      case 'adoption':
+      case 'adoption_application':
+      case 'adoption_update':
+      case 'pet_transfer': return <HeartHandshake className="w-4 h-4 text-orange-500" />;
       case 'shop': return <ShoppingBag className="w-4 h-4 text-green-500" />;
       default: return <Bell className="w-4 h-4 text-gray-500" />;
     }

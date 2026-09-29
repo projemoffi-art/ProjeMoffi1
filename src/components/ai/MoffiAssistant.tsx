@@ -583,7 +583,7 @@ export function MoffiAssistant() {
                                                         transition={{ delay: 0.5 }}
                                                         onClick={() => {
                                                             if (msg.action?.type === 'link') router.push(msg.action.url!);
-                                                            else if (msg.action?.type === 'sos') router.push('/community?tab=radar');
+                                                            else if (msg.action?.type === 'sos') router.push('/kayip');
                                                             else if (msg.action?.type === 'vetline') router.push('/vet');
                                                             setIsOpen(false);
                                                         }}

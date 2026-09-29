@@ -1966,7 +1966,7 @@ export default function LegendaryLightDashboard() {
                         <span className="text-[9.5px] font-black text-[#EE5B3D] shrink-0">Tümünü Gör →</span>
                     </div>
                     <div className="grid grid-cols-5 gap-1.5 relative z-10">
-                        <QuickAccessBtn icon={Home} title="Kayıp & Sahiplen" tint="#EE5B3D" delay={0.1} onClick={() => router.push('/community?tab=radar')} />
+                        <QuickAccessBtn icon={Home} title="Kayıp & Sahiplen" tint="#EE5B3D" delay={0.1} onClick={() => router.push('/kayip')} />
                         <QuickAccessBtn icon={ShoppingBag} title="Market Petshop" tint="#E5473D" delay={0.15} onClick={() => router.push('/petshop')} />
                         <QuickAccessBtn icon={Stethoscope} title="Veteriner" tint="#4C8FD9" delay={0.2} onClick={() => router.push('/vet')} />
                         <QuickAccessBtn icon={Heart} title="Sağlık Merkezi" tint="#8B7FD9" delay={0.25} onClick={() => router.push('/health')} />

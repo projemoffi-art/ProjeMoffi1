@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
-type AdStatus = "pending" | "active" | "removed" | "all";
+type AdStatus = "paused" | "active" | "removed" | "all";
 
 const STAT_COLORS = {
     pending: "bg-amber-500/10 border-amber-500/20 text-amber-400",
@@ -21,7 +21,9 @@ const STAT_COLORS = {
 
 const STATUS_BADGE: Record<string, { label: string; className: string; icon: any }> = {
     active: { label: "AKTİF", className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20", icon: ShieldCheck },
-    pending: { label: "BEKLİYOR", className: "bg-amber-500/10 text-amber-400 border border-amber-500/20", icon: Clock },
+    paused: { label: "DURDURULDU", className: "bg-amber-500/10 text-amber-400 border border-amber-500/20", icon: Clock },
+    adopted: { label: "SAHİPLENDİRİLDİ", className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20", icon: ShieldCheck },
+    closed: { label: "KAPANDI", className: "bg-gray-500/10 text-gray-400 border border-gray-500/20", icon: ShieldX },
     removed: { label: "KALDIRILDI", className: "bg-red-500/10 text-red-500 border border-red-500/20", icon: ShieldX },
 };
 
@@ -47,17 +49,10 @@ export default function ModerationMatrix() {
         try {
             const { data: adsData, error: adsError } = await supabase
                 .from('adoption_pets')
-                .select('id, user_id, pet_name, img_url, images, location_text, owner_name, description, pet_type, pet_breed, pet_age, gender, status, created_at, moderation_result, moderation_passed, moderated_at')
+                .select('id, user_id, pet_name, img_url, images, location_text, description, pet_type, pet_breed, pet_age, gender, status, created_at')
                 .order('created_at', { ascending: false });
 
             if (adsError) throw adsError;
-
-            const { data: reportsData, error: reportsError } = await supabase
-                .from('adoption_reports')
-                .select('*, adoption_pets(pet_name, pet_breed)')
-                .order('created_at', { ascending: false });
-
-            if (reportsError) console.error("Could not fetch adoption_reports:", reportsError);
 
             const { data: globalReportsData, error: globalReportsError } = await supabase
                 .from('reports')
@@ -71,25 +66,11 @@ export default function ModerationMatrix() {
                 id: ad.id,
                 name: ad.pet_name,
                 breed: ad.pet_breed,
-                status: ad.status || 'pending',
+                status: ad.status,
                 author_name: ad.user_id ? 'User' : 'Unknown', // Ideally join users table, mock for now
                 created_at: ad.created_at,
                 location: ad.location_text || 'Bilinmiyor',
                 desc: ad.description || ''
-            }));
-
-            const realReports = (reportsData || []).map(r => ({
-                id: r.id,
-                sourceTable: 'adoption_reports',
-                targetType: 'post',
-                targetId: r.ad_id,
-                content: `İlan: ${(r as any).adoption_pets?.pet_name || 'Bilinmiyor'} (${(r as any).adoption_pets?.pet_breed || 'Bilinmiyor'})`,
-                authorName: 'System', 
-                reportedBy: r.reported_by || 'Anonim',
-                reason: r.reason,
-                details: r.details,
-                status: r.status || 'pending',
-                created_at: r.created_at
             }));
 
             const mappedGlobalReports = await Promise.all((globalReportsData || []).map(async r => {
@@ -129,13 +110,13 @@ export default function ModerationMatrix() {
                 };
             }));
 
-            const allReports = [...realReports, ...mappedGlobalReports].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            const allReports = [...mappedGlobalReports].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
             setAds(realAds);
             setReports(allReports);
             
             // Recalculate stats
-            const pendingAdsCount = realAds.filter(a => a.status === 'pending').length;
+            const pendingAdsCount = realAds.filter(a => a.status === 'paused').length;
             const activeAdsCount = realAds.filter(a => a.status === 'active').length;
             const removedAdsCount = realAds.filter(a => a.status === 'removed').length;
             const pendingReportsCount = allReports.filter(r => r.status === 'pending').length;
@@ -158,15 +139,10 @@ export default function ModerationMatrix() {
 
     const handleAction = async (adId: string, newStatus: "active" | "removed") => {
         try {
-            await supabase.from('adoption_pets').update({ status: newStatus }).eq('id', adId);
-            
-            setAds(prev => prev.map(a => a.id === adId ? { ...a, status: newStatus } : a));
-            // Update stats
-            setStats(prev => ({
-                ...prev,
-                pending: Math.max(0, prev.pending - (ads.find(a => a.id === adId)?.status === 'pending' ? 1 : 0)),
-                [newStatus]: prev[newStatus] + 1
-            }));
+            // İlan durumu sadece sunucu fonksiyonuyla değişir (sahibine bildirim gider, açık başvurular kapanır).
+            const { error } = await supabase.rpc('moderate_adoption_listing', { p_id: adId, p_action: newStatus === 'removed' ? 'remove' : 'restore' });
+            if (error) throw error;
+            await fetchData();
             showToast(newStatus === "active" ? "Protocol Synced: Ad Approved" : "Protocol Synced: Ad Removed");
             setSelectedAd(null);
         } catch (err) {
@@ -181,7 +157,7 @@ export default function ModerationMatrix() {
 
         try {
             // Raporun kendi durumunu güncelle
-            await supabase.from(reportToProcess.sourceTable || 'adoption_reports').update({ status: action }).eq('id', reportId);
+            await supabase.from('reports').update({ status: action }).eq('id', reportId);
 
             // Eğer eylem "kaldır" ise ve hedef belli ise, hedefi asıl tablodan tamamen sil!
             if (action === 'removed' && reportToProcess.targetType && reportToProcess.targetId) {
@@ -245,7 +221,7 @@ export default function ModerationMatrix() {
             {/* --- STAT UNITS --- */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { key: "pending", label: "Bekliyor", icon: Clock, value: stats.pending, color: STAT_COLORS.pending },
+                    { key: "pending", label: "Durdurulan", icon: Clock, value: stats.pending, color: STAT_COLORS.pending },
                     { key: "active", label: "Aktif İlanlar", icon: ShieldCheck, value: stats.active, color: STAT_COLORS.active },
                     { key: "removed", label: "Kaldırılanlar", icon: ShieldX, value: stats.removed, color: STAT_COLORS.removed },
                     { key: "reports", label: "Öncelikli Şikayetler", icon: Flag, value: stats.reports, color: STAT_COLORS.reports },
@@ -308,7 +284,7 @@ export default function ModerationMatrix() {
                         />
                     </div>
                     <div className="flex gap-2">
-                        {["all", "pending", "active"].map((s) => (
+                        {["all", "active", "removed"].map((s) => (
                             <button
                                 key={s}
                                 onClick={() => setFilter(s as any)}
@@ -319,7 +295,7 @@ export default function ModerationMatrix() {
                                         : "bg-black/5 dark:bg-white/5 border-card-border text-black/50 dark:text-white/40 hover:text-white hover:bg-black/10 dark:bg-white/10"
                                 )}
                             >
-                                {s === "all" ? "Hepsi" : s === "pending" ? "Bekliyor" : "Aktif"}
+                                {s === "all" ? "Hepsi" : s === "removed" ? "Kaldırılan" : "Aktif"}
                             </button>
                         ))}
                     </div>
@@ -498,7 +474,7 @@ export default function ModerationMatrix() {
                                             className="w-full py-6 bg-cyan-500 text-black rounded-3xl font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(6,182,212,0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                                         >
                                             <CheckCircle className="w-5 h-5" />
-                                            İlanı Onayla (Yayına Al)
+                                            Yayına Geri Al
                                         </button>
                                         <button 
                                             onClick={() => handleAction(selectedAd.id, "removed")}

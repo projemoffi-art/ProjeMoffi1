@@ -154,11 +154,6 @@ export interface LostPet {
     longitude?: number;
 }
 
-export interface AdoptionPet extends LostPet {
-    owner: string;
-    phone: string;
-}
-
 // --- SHOP & STUDIO TYPES ---
 export interface ProductColor {
     id: string;
@@ -291,12 +286,8 @@ export interface IApiService {
     // Community
     fetchMarketPlaces(): Promise<any[]>;
     fetchVets(): Promise<any[]>;
-    submitAdoptionApplication(listingId: string | number, ownerId: string, note: string): Promise<void>;
     getFeedContent(): Promise<Post[]>;
     getPostById(id: string | number): Promise<Post | null>;
-    getAdoptions(): Promise<AdoptionPet[]>;
-    addAdoption(data: Partial<AdoptionPet>): Promise<AdoptionPet>;
-    deleteAdoption(id: string | number): Promise<void>;
     getInboxMessages(): Promise<any[]>;
     addInboxMessage(message: any): Promise<void>;
     addPost(post: Partial<Post>): Promise<Post>;

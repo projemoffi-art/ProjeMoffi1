@@ -241,11 +241,9 @@ export function DynamicNavigation() {
             const id = e.detail;
             if (!id) return;
 
-            if (pathname === '/community') {
-                if (id === 'feed' || id === 'radar') {
-                    window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: id }));
-                    return;
-                }
+            if (pathname === '/community' && id === 'feed') {
+                window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: id }));
+                return;
             }
 
             const profileViews = ['wallet', 'passport', 'family', 'orders', 'routes', 'bookmarks', 'identity'];
@@ -259,8 +257,15 @@ export function DynamicNavigation() {
             } else if (id === 'appointments') {
                 // Randevuların tek ekranı: Veteriner → Randevularım.
                 router.push('/vet?view=appointments');
-            } else if (id === 'feed' || id === 'radar') {
-                router.push(`/community?tab=${id}`);
+            } else if (id === 'feed') {
+                router.push('/community?tab=feed');
+            } else if (id === 'radar') {
+                // Kayıp & Bulunan ve Sahiplendirme ayrı panelde (design-reference/community-final).
+                router.push('/kayip');
+            } else if (id === 'lost_pet') {
+                router.push('/kayip/ilan-ver');
+            } else if (id === 'adoption') {
+                router.push('/sahiplendirme');
             } else if (id === 'profile') {
                 if (user?.id) router.push(`/profile/${user.id}`);
             } else if (id === 'passport') {

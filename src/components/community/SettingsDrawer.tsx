@@ -22,6 +22,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useQuestEngine } from '@/context/QuestEngineContext';
 import { exportUserData } from '@/lib/utils/dataExport';
 import { apiService } from '@/services/apiService';
+import { adoptionService } from '@/services/adoptionService';
 import { isFrameUnlocked, formatRemaining, type FrameStyle } from '@/lib/vipFrames';
 
 interface SettingsDrawerProps {
@@ -447,21 +448,6 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
             </div>
         </Section>
 
-        <Section title="Sahiplendirme Radarı">
-            <ChoiceRow 
-                label="Varsayılan Canlı Türü" 
-                category="adoption" 
-                field="defaultCategory" 
-                current={user?.settings?.adoption?.defaultCategory || 'Hepsi'} 
-                onSelect={updateSettings}
-                options={[
-                    { id: 'Hepsi', label: 'Hepsi' },
-                    { id: '🐱 Kediler', label: 'Kediler' },
-                    { id: '🐶 Köpekler', label: 'Köpekler' },
-                    { id: '🦜 Kuşlar', label: 'Kuşlar' }
-                ]}
-            />
-        </Section>
         
         <Section title="Güvenlik ve Gizlilik">
             <div className="space-y-1">
@@ -1120,11 +1106,10 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
             await new Promise(r => setTimeout(r, 600));
 
             setExportStatus('İlanlar ve bildirimler paketleniyor...');
-            const [adoptions, notifications] = await Promise.all([
-                apiService.getAdoptions(),
+            const [userAds, notifications] = await Promise.all([
+                adoptionService.mine().catch(() => []),
                 apiService.getInboxMessages()
             ]);
-            const userAds = adoptions.filter(a => a.user_id === user.id);
             await new Promise(r => setTimeout(r, 600));
 
             setExportStatus('Mesajlaşma geçmişi şifreleniyor...');
