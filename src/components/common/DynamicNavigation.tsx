@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
 import { FloatingControls } from "@/components/common/FloatingControls";
 import { MoffiSidebar } from "@/components/community/MoffiSidebar";
@@ -30,10 +30,11 @@ const PremiumUpgradeModal = dynamic(() => import("@/components/community/modals/
 const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth', '/walk/tracking', '/walk/summary',
     // Paylaşılan pasaport, künye ve doğrulama sayfaları uygulama dışındaki kişilere açılır.
     '/p/', '/id/', '/verify/'];
+// Alt menü, ekranın altına sabit yorum/paylaşım kutusu olan sayfalarda gizlenir (genel pencereler çalışmaya devam eder).
+const BOTTOM_NAV_HIDDEN = ['/community/yeni', '/community/gonderi'];
 
 export function DynamicNavigation() {
     const pathname = usePathname();
-    const searchParams = useSearchParams();
     const router = useRouter();
     const { user } = useAuth();
     const { pets, activePet } = usePet();
@@ -241,10 +242,6 @@ export function DynamicNavigation() {
             const id = e.detail;
             if (!id) return;
 
-            if (pathname === '/community' && id === 'feed') {
-                window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: id }));
-                return;
-            }
 
             const profileViews = ['wallet', 'passport', 'family', 'orders', 'routes', 'bookmarks', 'identity'];
 
@@ -258,7 +255,7 @@ export function DynamicNavigation() {
                 // Randevuların tek ekranı: Veteriner → Randevularım.
                 router.push('/vet?view=appointments');
             } else if (id === 'feed') {
-                router.push('/community?tab=feed');
+                router.push('/community');
             } else if (id === 'radar') {
                 // Kayıp & Bulunan ve Sahiplendirme ayrı panelde (design-reference/community-final).
                 router.push('/kayip');
@@ -327,13 +324,7 @@ export function DynamicNavigation() {
             }
         };
 
-        const handleOpenPostGlobal = () => {
-            if (pathname === '/community') {
-                window.dispatchEvent(new CustomEvent('moffi-open-upload-modal'));
-            } else {
-                router.push('/community?openUpload=true');
-            }
-        };
+        const handleOpenPostGlobal = () => router.push('/community/yeni');
 
         const handleToggleNav = (e: any) => {
             const allowed = e.detail;
@@ -467,37 +458,26 @@ export function DynamicNavigation() {
             <PremiumUpgradeModal />
 
             {/* GLOBAL BOTTOM NAVIGATION */}
+            {!BOTTOM_NAV_HIDDEN.some(r => pathname?.startsWith(r)) && (
             <div className={`fixed bottom-0 inset-x-0 z-[2900] transition-transform duration-300 md:hidden ${isNavVisible ? 'translate-y-0' : 'translate-y-full'}`}>
                 <MoffiBottomNav
                     activeTab={
                         pathname === '/home' ? 'home' :
                         pathname === '/quests' ? 'quests' :
                         pathname?.startsWith('/profile') ? 'profile' :
-                        pathname === '/community' ? (searchParams?.get('tab') || 'feed') :
+                        pathname?.startsWith('/community') ? 'feed' :
                         'home'
                     }
                     isVisible={isNavVisible}
                     onTabChange={(tab) => {
-                        if (tab === 'home') {
-                            router.push('/home');
-                        } else if (tab === 'feed') {
-                            router.push('/community?tab=feed');
-                        } else if (tab === 'quests') {
-                            router.push('/quests');
-                        } else if (tab === 'profile') {
-                            if (user?.id) router.push(`/profile/${user.id}`);
-                        } else {
-                            const params = new URLSearchParams(searchParams.toString());
-                            params.set('tab', tab);
-                            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-
-                            if (pathname === '/community') {
-                                window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: tab }));
-                            }
-                        }
+                        if (tab === 'home') router.push('/home');
+                        else if (tab === 'feed') router.push('/community');
+                        else if (tab === 'quests') router.push('/quests');
+                        else if (tab === 'profile' && user?.id) router.push(`/profile/${user.id}`);
                     }}
                 />
             </div>
+            )}
         </>
     );
 }

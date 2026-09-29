@@ -16,13 +16,14 @@ import {
     EyeOff, BellRing, Mail, AlertTriangle,
     Clock, Moon, Sun, Timer, Coffee, Type, Glasses, Layers, Briefcase, Crown, QrCode, Building2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, showToast } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useQuestEngine } from '@/context/QuestEngineContext';
 import { exportUserData } from '@/lib/utils/dataExport';
 import { apiService } from '@/services/apiService';
 import { adoptionService } from '@/services/adoptionService';
+import { socialService, type PersonCard } from '@/services/socialService';
 import { isFrameUnlocked, formatRemaining, type FrameStyle } from '@/lib/vipFrames';
 
 interface SettingsDrawerProps {
@@ -872,33 +873,43 @@ const WellbeingView = ({ user, setView, updateSettings }: ViewProps) => {
     );
 };
 
-const BlockedUsersView = ({ user, setView, handleUnblock }: ViewProps) => (
-    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-        <div className="px-2">
-            <h3 className="text-[11px] font-black text-secondary uppercase tracking-[0.3em] mb-6 px-1 flex items-center gap-3">
-                <ShieldAlert className="w-4 h-4 text-red-500" /> Engellenenler
-            </h3>
-            <div className="space-y-3">
-                {user?.settings?.moderation?.blockedUsers?.map((acc: any) => (
-                    <div key={acc.id} className="flex items-center justify-between p-4 rounded-[2rem] bg-foreground/[0.03] border border-card-border group hover:bg-foreground/[0.06] transition-all">
-                        <div className="flex items-center gap-4">
-                            <img src={acc.avatar} className="w-12 h-12 rounded-2xl object-cover ring-2 ring-card-border" /> 
-                            <p className="text-[13px] font-black text-foreground uppercase tracking-tight">{acc.username}</p>
+// Engellenenler gerçek engelleme tablosundan (Keşfet → gönderi/profil menüsü → "Bu hesabı engelle").
+const BlockedUsersView = ({ setView }: ViewProps) => {
+    const [list, setList] = React.useState<PersonCard[] | null>(null);
+    const load = React.useCallback(() => { socialService.blockedUsers().then(setList).catch(() => setList([])); }, []);
+    React.useEffect(() => { load(); }, [load]);
+    const unblock = async (id: string) => {
+        try { await socialService.unblock(id); load(); }
+        catch (e: any) { showToast(e?.message || 'Engel kaldırılamadı.', 'AlertCircle', 'text-red-500'); }
+    };
+    return (
+        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
+            <div className="px-2">
+                <h3 className="text-[11px] font-black text-secondary uppercase tracking-[0.3em] mb-6 px-1 flex items-center gap-3">
+                    <ShieldAlert className="w-4 h-4 text-red-500" /> Engellenenler
+                </h3>
+                <div className="space-y-3">
+                    {list === null ? <p className="text-sm text-secondary px-1">Yükleniyor…</p> : list.map(acc => (
+                        <div key={acc.id} className="flex items-center justify-between p-4 rounded-[2rem] bg-foreground/[0.03] border border-card-border">
+                            <div className="flex items-center gap-4 min-w-0">
+                                {acc.avatar ? <img src={acc.avatar} className="w-12 h-12 rounded-2xl object-cover ring-2 ring-card-border" alt="" /> : <span className="w-12 h-12 rounded-2xl bg-foreground/10" />}
+                                <p className="text-[13px] font-black text-foreground truncate">{acc.name}</p>
+                            </div>
+                            <button onClick={() => unblock(acc.id)} className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-[11px] font-black text-red-500 active:scale-95">Engeli kaldır</button>
                         </div>
-                        <button onClick={() => handleUnblock?.(acc.id)} className="px-5 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-[10px] font-black text-red-500 hover:bg-red-500 hover:text-white transition-all active:scale-95">ENGELİ KALDIR</button>
-                    </div>
-                ))}
-                {(!user?.settings?.moderation?.blockedUsers || user.settings.moderation.blockedUsers.length === 0) && (
-                    <div className="py-20 flex flex-col items-center justify-center opacity-20">
-                        <ShieldCheck className="w-12 h-12 mb-4" />
-                        <p className="text-[11px] font-black uppercase tracking-[0.3em] italic">Liste Temiz</p>
-                    </div>
-                )}
+                    ))}
+                    {list && list.length === 0 && (
+                        <div className="py-20 flex flex-col items-center justify-center opacity-40">
+                            <ShieldCheck className="w-12 h-12 mb-4" />
+                            <p className="text-[12px] font-black">Engellediğin kimse yok</p>
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
-        <button onClick={() => setView('main')} className="mt-8 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
-    </motion.div>
-);
+            <button onClick={() => setView('main')} className="mt-8 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
+        </motion.div>
+    );
+};
 
 const HiddenWordsView = ({ user, setView, newWord, setNewWord, handleAddWord, handleRemoveWord }: ViewProps) => (
     <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
@@ -1101,8 +1112,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
             await new Promise(r => setTimeout(r, 600));
 
             setExportStatus('Gönderiler ve içerikler toplanıyor...');
-            const allPosts = await apiService.getFeedContent();
-            const userPosts = allPosts.filter(p => p.user_id === user.id || p.user?.name === user.username);
+            const userPosts = await socialService.myPostsForExport();
             await new Promise(r => setTimeout(r, 600));
 
             setExportStatus('İlanlar ve bildirimler paketleniyor...');
@@ -1154,12 +1164,6 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         updateSettings('content', { hiddenWords: currentWords.filter(w => w !== word) });
     };
 
-    const handleUnblock = (id: string) => {
-        if (!user?.settings?.moderation) return;
-        const currentBlocked = user.settings.moderation.blockedUsers || [];
-        updateSettings('moderation', { blockedUsers: currentBlocked.filter(u => u.id !== id) });
-    };
-
     const handleResetSystem = () => {
         if (confirm("Tüm sistem verileri ve ayarların sıfırlanacak. Bu işlem geri alınamaz. Emin misin?")) {
             // Clear all localStorage keys except Supabase authentication tokens (to keep user logged in)
@@ -1181,7 +1185,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         fontSize, setFontSize, colorBlindMode, setColorBlindMode,
         boldText, setBoldText, highContrast, setHighContrast,
         reduceMotion, setReduceMotion, reduceTransparency, setReduceTransparency,
-        newWord, setNewWord, handleAddWord, handleRemoveWord, handleUnblock,
+        newWord, setNewWord, handleAddWord, handleRemoveWord,
         terminateSession, terminateAllOtherSessions, changePassword,
         exportStatus,
         theme, setTheme,

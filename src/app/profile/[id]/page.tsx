@@ -25,6 +25,14 @@ import { RoutesTab } from "@/components/profile/RoutesTab";
 import { FamilyTab } from "@/components/profile/FamilyTab";
 import { HealthProvider } from "@/components/health/HealthProvider";
 import { PassportHome } from "@/components/passport/PassportHome";
+import { Avatar, FollowButton, PostGrid } from "@/components/social/SocialUI";
+import { Sheet, LoadingBlocks } from "@/components/health/HealthUI";
+import { ReportModal } from "@/components/common/modals/ReportModal";
+import { socialService, POSTS_CHANGED_EVENT, type GridPost } from "@/services/socialService";
+import { ageText } from "@/lib/health/derive";
+import { todayKey } from "@/lib/appointmentTime";
+import { speciesLabel } from "@/lib/petIdentity";
+import { MoreHorizontal, Plus } from "lucide-react";
 
 import { Wallet, Package, Calendar, Map, Users as UsersIcon, Bookmark, FileText, Activity } from "lucide-react";
 
@@ -92,94 +100,48 @@ export default function ProfilePage() {
         // Eski "?view=appointments" bağlantıları tek randevu ekranına gider (profil kopyası kaldırıldı).
         if (view === 'appointments') {
             router.replace('/vet?view=appointments');
+        } else if (view === 'bookmarks') {
+            setActiveTab('saved');
+        } else if (view === 'pets') {
+            setActiveTab('posts');
         } else if (view) {
             setActiveTab(view);
         }
     }, [searchParams]);
 
-    // ── Follow / Unfollow States & Handlers ─────────────────
-    const [isFollowing, setIsFollowing] = useState(false);
-    const [followCheckLoading, setFollowCheckLoading] = useState(true);
-    const [followLoading, setFollowLoading] = useState(false);
-
-    useEffect(() => {
-        if (!id || isOwnProfile || !currentUser) {
-            setFollowCheckLoading(false);
-            return;
-        }
-        const checkFollowStatus = async () => {
-            setFollowCheckLoading(true);
-            try {
-                const status = await apiService.isFollowing(id);
-                setIsFollowing(status);
-            } catch (err) {
-                console.error("isFollowing check error:", err);
-            } finally {
-                setFollowCheckLoading(false);
-            }
-        };
-        checkFollowStatus();
-    }, [id, isOwnProfile, currentUser]);
-
-    useEffect(() => {
-        const handleFollowChange = (e: any) => {
-            if (e.detail && e.detail.userId === id) {
-                setIsFollowing(e.detail.isFollowing);
-                setProfile((prev: any) => {
-                    if (!prev) return prev;
-                    const followersChange = e.detail.isFollowing ? 1 : -1;
-                    const prevFollowers = prev.stats?.followers || prev.stats?.pack || 0;
-                    return {
-                        ...prev,
-                        stats: {
-                            ...prev.stats,
-                            followers: Math.max(0, prevFollowers + followersChange)
-                        }
-                    };
-                });
-            }
-        };
-        window.addEventListener('moffi-follow-change', handleFollowChange);
-        return () => window.removeEventListener('moffi-follow-change', handleFollowChange);
+    // ── Profil özeti (Keşfet Ekran 10): gönderi/takipçi/takip sayısı, takip ve engel durumu tek sunucu çağrısından
+    const [summary, setSummary] = useState<{ posts: number; followers: number; following: number; isFollowing: boolean; followsMe: boolean; blockedByMe: boolean } | null>(null);
+    const [moreOpen, setMoreOpen] = useState(false);
+    const [reportUserOpen, setReportUserOpen] = useState(false);
+    const [blockConfirm, setBlockConfirm] = useState(false);
+    const loadSummary = useCallback(() => {
+        if (!id || id === 'me') return;
+        socialService.profileSummary(id).then(setSummary).catch(() => setSummary(null));
     }, [id]);
+    useEffect(() => {
+        loadSummary();
+        const onChange = () => loadSummary();
+        window.addEventListener('moffi-follow-change', onChange);
+        window.addEventListener(POSTS_CHANGED_EVENT, onChange);
+        return () => { window.removeEventListener('moffi-follow-change', onChange); window.removeEventListener(POSTS_CHANGED_EVENT, onChange); };
+    }, [loadSummary]);
 
-    const handleFollowToggle = async () => {
-        if (!currentUser) {
-            showToast("Takip etmek için önce giriş yapmalısınız!", "PawPrint");
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-        setFollowLoading(true);
+    const toggleBlock = async () => {
         try {
-            const newState = !isFollowing;
-            if (isFollowing) {
-                await apiService.unfollowUser(id);
-                showToast("Takibi bıraktınız", "Sparkles", "text-black/60 dark:text-white/60");
-            } else {
-                await apiService.followUser(id);
-                showToast("Takip ediliyor ✨", "Sparkles", "text-emerald-400");
-            }
-            setIsFollowing(newState);
-            setProfile((prev: any) => {
-                if (!prev) return prev;
-                const prevFollowers = prev.stats?.followers || prev.stats?.pack || 0;
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        followers: Math.max(0, prevFollowers + (newState ? 1 : -1))
-                    }
-                };
-            });
-            window.dispatchEvent(new CustomEvent('moffi-follow-change', {
-                detail: { userId: id, isFollowing: newState }
-            }));
+            if (summary?.blockedByMe) { await socialService.unblock(id); showToast("Engel kaldırıldı.", "CheckCircle2", "text-emerald-500"); }
+            else { await socialService.block(id); showToast("Hesap engellendi.", "CheckCircle2", "text-emerald-500"); }
+            setBlockConfirm(false); setMoreOpen(false); loadSummary();
         } catch (err: any) {
-            console.error("Follow error:", err);
-            showToast("İşlem başarısız: " + (err?.message || "Bilinmeyen hata"), "ShieldAlert", "text-red-500");
-        } finally {
-            setFollowLoading(false);
+            showToast(err?.message || "İşlem yapılamadı.", "AlertCircle", "text-red-500");
         }
+    };
+
+    const shareProfile = async () => {
+        const url = `${window.location.origin}/profile/${id}`;
+        try {
+            if (navigator.share) await navigator.share({ title: 'Moffi profili', url });
+            else { await navigator.clipboard.writeText(url); showToast("Bağlantı kopyalandı.", "CheckCircle2", "text-emerald-500"); }
+        } catch { /* vazgeçildi */ }
     };
 
     const handleMessageClick = () => {
@@ -474,266 +436,146 @@ export default function ProfilePage() {
     // Remove separate isOwnProfile return block, so we use the unified layout below.
 
 
-    // ── PREMIUM PROFILE PAGE ────────────────────────────────
+    // ── Keşfet Ekran 10 — Profil ─────────────────────────────
+    const displayName = displayUser?.name || displayUser?.display_name || displayUser?.full_name || displayUser?.username || 'Moffi Kullanıcısı';
+    const city = [displayUser?.district, displayUser?.province].filter(Boolean).join(', ');
+    const blocked = !!summary?.blockedByMe;
+    const Stat = ({ value, label, onClick }: { value: number; label: string; onClick?: () => void }) => (
+        <button onClick={onClick} disabled={!onClick} className="flex-1 text-center">
+            <div className="text-lg font-black leading-tight">{value.toLocaleString('tr-TR')}</div>
+            <div className="text-xs font-semibold text-secondary">{label}</div>
+        </button>
+    );
+    const tabs = [
+        { id: 'posts', label: 'Gönderiler', icon: <Grid3X3 className="w-5 h-5" /> },
+        ...(isOwnProfile ? [
+            { id: 'saved', label: 'Kaydedilenler', icon: <Bookmark className="w-5 h-5" /> },
+            { id: 'tools', label: 'Araçlarım', icon: <Settings className="w-5 h-5" /> },
+        ] : []),
+    ];
+    const isToolsActive = ['tools', 'wallet', 'orders', 'appointments', 'routes', 'family', 'passport'].includes(activeTab);
+
     return (
-        <main className="min-h-screen pb-32 overflow-x-hidden">
-            {/* ══ HERO — Cover + Avatar ══ */}
-            <div className="relative w-full h-72 sm:h-80">
-                {/* Cover */}
-                {coverUrl ? (
-                    <img 
-                        src={coverUrl} 
-                        className="absolute inset-0 w-full h-full object-cover cursor-pointer" 
-                        alt="Kapak" 
-                        
-                    />
-                ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364]">
-                        <div className="absolute inset-0 opacity-30"
-                            style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #527958 0%, transparent 50%), radial-gradient(circle at 80% 20%, #1a4731 0%, transparent 40%)' }}
-                        />
+        <main className="theme-vet min-h-screen bg-background text-foreground pb-32 overflow-x-hidden">
+            <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md px-4 pt-[calc(12px+env(safe-area-inset-top,0px))] pb-3">
+                <div className="max-w-2xl mx-auto grid grid-cols-[40px_1fr_40px] items-center gap-2">
+                    <button onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) router.back(); else router.push('/home'); }}
+                        aria-label="Geri" className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center">
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <h1 className="text-lg font-black text-center truncate">{displayUser?.username || displayName}</h1>
+                    {isOwnProfile ? (
+                        <button onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))} aria-label="Ayarlar"
+                            className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center"><Settings className="w-5 h-5" /></button>
+                    ) : (
+                        <button onClick={() => setMoreOpen(true)} aria-label="Diğer işlemler"
+                            className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center"><MoreHorizontal className="w-5 h-5" /></button>
+                    )}
+                </div>
+            </header>
+
+            <div className="max-w-2xl mx-auto px-4">
+                <div className="flex items-center gap-4">
+                    <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 border border-card-border">
+                        {avatarUrl ? <img src={avatarUrl} className="w-full h-full object-cover" alt="" />
+                            : <div className={`w-full h-full bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-white text-3xl font-black select-none`}>{initials}</div>}
                     </div>
-                )}
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-[#0A0A0F]/20 to-transparent" />
-
-                <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) { router.back(); } else { router.push('/home'); } }}
-                    className="absolute top-4 left-4 w-10 h-10 bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-zinc-900 dark:text-white border border-black/10 dark:border-white/10 z-10"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </motion.button>
-                {isOwnProfile && (
-                    <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
-                        className="absolute top-4 right-4 w-10 h-10 bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-zinc-900 dark:text-white border border-black/10 dark:border-white/10 z-10"
-                    >
-                        <Settings className="w-5 h-5" />
-                    </motion.button>
-                )}
-
-
-                {/* Avatar */}
-                <div className="absolute -bottom-14 left-5 z-20">
-                    <div className="relative">
-                        <div 
-                            className="w-28 h-28 rounded-[2rem] border-4 border-[#0A0A0F] overflow-hidden shadow-2xl shadow-black/50 bg-[#111] cursor-pointer"
-                            
-                        >
-                            {avatarUrl ? (
-                                <img src={avatarUrl} className="w-full h-full object-cover" alt="Avatar" />
-                            ) : (
-                                <div className={`w-full h-full bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-white text-4xl font-black select-none`}>
-                                    {initials}
-                                </div>
-                            )}
-                        </div>
+                    <div className="flex-1 flex">
+                        <Stat value={summary?.posts ?? 0} label="Gönderi" />
+                        <Stat value={summary?.followers ?? 0} label="Takipçi" onClick={blocked ? undefined : () => openRelationsModal('followers')} />
+                        <Stat value={summary?.following ?? 0} label="Takip" onClick={blocked ? undefined : () => openRelationsModal('following')} />
                     </div>
                 </div>
-            </div>
 
-            {/* ══ PROFILE INFO ══ */}
-            <div className="px-5 mt-16">
-                {/* Name + actions row */}
-                <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                <div className="mt-3 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-base font-black">{displayName}</span>
+                        {displayUser?.is_prime && <BadgeCheck className="w-4 h-4 text-accent shrink-0" />}
+                    </div>
+                    {displayUser?.bio && <p className="text-sm font-semibold whitespace-pre-wrap">{displayUser.bio}</p>}
+                    {city && <p className="text-xs font-semibold text-secondary inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-accent" />{city}</p>}
+                    {!isOwnProfile && summary?.followsMe && !summary.isFollowing && <p className="text-[11px] font-bold text-secondary">Seni takip ediyor</p>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                    {isOwnProfile ? (
                         <>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-2xl font-black text-zinc-900 dark:text-white italic tracking-tighter uppercase leading-tight">
-                                    {displayUser?.name || displayUser?.display_name || displayUser?.full_name || displayUser?.username || 'Moffi Kullanıcısı'}
-                                </h1>
-                                {displayUser?.is_prime && <BadgeCheck className="w-5 h-5 text-emerald-400 shrink-0" />}
-                                {(displayUser?.subscription_status === 'plus' || displayUser?.subscription_status === 'pro') && (
-                                    <div className="px-2 py-0.5 bg-gradient-to-r from-orange-400 to-yellow-500 rounded-md text-[8px] font-black text-black uppercase italic shadow-lg">PRIME</div>
-                                )}
-                            </div>
-                            <p className="text-emerald-400 font-bold text-sm mt-0.5 tracking-wide">
-                                @{displayUser?.username || 'moffi_user'}
-                            </p>
+                            <button onClick={() => {
+                                setEditName(currentUser?.name || currentUser?.username || '');
+                                setEditUsername(currentUser?.username || '');
+                                setEditBio(currentUser?.bio || '');
+                                setEditAvatarPreview(isPlaceholderUrl(currentUser?.avatar) ? null : (currentUser?.avatar || null));
+                                setEditCoverPreview(isPlaceholderUrl(currentUser?.cover_photo) ? null : (currentUser?.cover_photo || null));
+                                setIsEditing(true);
+                            }} className="h-10 rounded-xl bg-card border border-card-border text-sm font-black">Profili düzenle</button>
+                            <button onClick={shareProfile} className="h-10 rounded-xl bg-card border border-card-border text-sm font-black">Profili paylaş</button>
                         </>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2 ml-3 mt-1">
-                        {isOwnProfile ? (
-                            <>
-                                <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => {
-                                        setEditName(currentUser?.name || currentUser?.username || '');
-                                        setEditUsername(currentUser?.username || '');
-                                        setEditBio(currentUser?.bio || '');
-                                        setEditAvatarPreview(isPlaceholderUrl(currentUser?.avatar) ? null : (currentUser?.avatar || null));
-                                        setEditCoverPreview(isPlaceholderUrl(currentUser?.cover_photo) ? null : (currentUser?.cover_photo || null));
-                                        setIsEditing(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-zinc-100 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-2xl text-zinc-900 dark:text-white font-black text-[10px] uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors"
-                                >
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                    Düzenle
-                                </motion.button>
-                            </>
-                        ) : (
-                            <>
-                                <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={handleMessageClick}
-                                    aria-label="Mesaj gönder"
-                                    className="flex items-center justify-center w-11 h-11 bg-zinc-100 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-2xl text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors shrink-0"
-                                >
-                                    <MessageCircle className="w-5 h-5" />
-                                </motion.button>
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleFollowToggle}
-                                    disabled={followCheckLoading || followLoading}
-                                    className={`px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all duration-300 flex items-center gap-2 ${
-                                        followCheckLoading
-                                            ? "bg-emerald-500/50 text-black/50 dark:text-white/50 cursor-not-allowed shadow-none"
-                                            : isFollowing
-                                            ? "bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white border border-black/10 dark:border-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 shadow-none"
-                                            : "bg-emerald-500 text-white shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40"
-                                    }`}
-                                >
-                                    {followCheckLoading || followLoading ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    ) : isFollowing ? (
-                                        "Takiptesin"
-                                    ) : (
-                                        "Takip Et"
-                                    )}
-                                </motion.button>
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                {/* Bio */}
-                <div className="mt-4">
-                    {displayUser?.bio && (
-                        <p className="text-sm font-medium text-black/60 dark:text-white/60 leading-relaxed max-w-sm ml-1">
-                            {displayUser.bio}
-                        </p>
+                    ) : blocked ? (
+                        <button onClick={toggleBlock} className="col-span-2 h-10 rounded-xl bg-card border border-card-border text-sm font-black">Engeli kaldır</button>
+                    ) : (
+                        <>
+                            <FollowButton userId={id} initial={!!summary?.isFollowing} className="h-10 rounded-xl text-sm" onChange={loadSummary} />
+                            <button onClick={handleMessageClick} className="h-10 rounded-xl bg-card border border-card-border text-sm font-black">Mesaj</button>
+                        </>
                     )}
                 </div>
 
-                {/* Stats */}
-                <div className="flex items-center gap-6 mt-5 pb-5 border-b border-black/5 dark:border-white/5">
-                    {[
-                        { value: profilePets.length || 0, label: 'Pati' },
-                        { value: displayUser?.stats?.followers || displayUser?.stats?.pack || 0, label: 'Takipçi', type: 'followers' },
-                        { value: displayUser?.stats?.following || 0, label: 'Takip', type: 'following' },
-                    ].map(s => (
-                        s.type ? (
-                            <button
-                                key={s.label}
-                                onClick={() => openRelationsModal(s.type as any)}
-                                className="text-center active:scale-95 transition-transform hover:opacity-85 focus:outline-none"
-                            >
-                                <p className="text-zinc-900 dark:text-white font-black text-xl leading-tight">{s.value}</p>
-                                <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest mt-0.5">{s.label}</p>
-                            </button>
-                        ) : (
-                            <div key={s.label} className="text-center">
-                                <p className="text-zinc-900 dark:text-white font-black text-xl leading-tight">{s.value}</p>
-                                <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest mt-0.5">{s.label}</p>
-                            </div>
-                        )
-                    ))}
-                </div>
-
-
-
-                {/* Tab bar */}
-                <div className="flex mt-6 border-b border-white/8 overflow-x-auto no-scrollbar">
-                    {(() => {
-                        const baseTabs = [
-                            { id: 'posts', label: 'Gönderiler', icon: <Grid3X3 className="w-4 h-4" /> },
-                            { id: 'pets', label: 'Patiler', icon: <PawPrint className="w-4 h-4" /> },
-                        ];
-                        const ownerTabs = [
-                            ...baseTabs,
-                            { id: 'tools', label: 'Araçlarım', icon: <Settings className="w-4 h-4" /> }
-                        ];
-                        const tabsToDisplay = isOwnProfile ? ownerTabs : baseTabs;
-
-                        const isToolsActive = ['tools', 'wallet', 'orders', 'appointments', 'routes', 'family', 'passport', 'bookmarks'].includes(activeTab);
-
-                        return tabsToDisplay.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex-none sm:flex-1 px-3 flex flex-col items-center justify-center gap-1.5 py-3 text-[9px] sm:text-[11px] font-black uppercase tracking-widest transition-colors relative ${
-                                    (tab.id === 'tools' ? isToolsActive : activeTab === tab.id) ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-white/60'
-                                }`}
-                            >
-                                {tab.icon}
-                                {tab.label}
-                                {(tab.id === 'tools' ? isToolsActive : activeTab === tab.id) && (
-                                    <motion.div layoutId="tabIndicator" className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-emerald-400 rounded-full" />
-                                )}
-                            </button>
-                        ));
-                    })()}
-                </div>
-
-                {/* Content tabs */}
-                <AnimatePresence mode="wait">
-                    {activeTab === 'posts' ? (
-                        <motion.div key="posts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
-                            <PostsGrid userId={id} />
-                        </motion.div>
-                    ) : activeTab === 'pets' ? (
-                        <motion.div key="pets" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6">
-                            {profilePets.length === 0 ? (
-                                <div className="text-center py-16 space-y-3">
-                                    <div className="w-16 h-16 rounded-[1.5rem] bg-black/5 dark:bg-white/5 border border-white/8 flex items-center justify-center mx-auto mb-4">
-                                        <PawPrint className="w-8 h-8 text-black/30 dark:text-white/20" />
-                                    </div>
-                                    <p className="text-black/50 dark:text-white/40 font-black text-sm uppercase italic">Henüz Pati Yok</p>
+                {blocked ? (
+                    <div className="mt-8 text-center space-y-1">
+                        <div className="text-base font-black">Bu hesabı engelledin</div>
+                        <p className="text-sm font-semibold text-secondary">Gönderilerini ve hikâyelerini görmüyorsun; o da seninkileri görmüyor.</p>
+                    </div>
+                ) : (
+                    <>
+                        {(profilePets.length > 0 || isOwnProfile) && (
+                            <section className="mt-5">
+                                <div className="text-sm font-black mb-2">{isOwnProfile ? 'Hayvanlarım' : 'Hayvanları'}</div>
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                    {profilePets.map((pet: any) => (
+                                        <button key={pet.id} onClick={() => { if (isOwnProfile) { switchPet(pet.id); router.push('/pasaport'); } }}
+                                            className={`flex items-center gap-2.5 pl-1.5 pr-4 py-1.5 rounded-2xl bg-card border shrink-0 text-left ${isOwnProfile && activePet?.id === pet.id ? 'border-accent/50' : 'border-card-border'}`}>
+                                            <Avatar src={pet.image} name={pet.name} className="w-11 h-11" />
+                                            <span>
+                                                <span className="block text-sm font-black">{pet.name}</span>
+                                                <span className="block text-[11px] font-semibold text-secondary">
+                                                    {[pet.breed || speciesLabel(pet.type), isOwnProfile ? ageText(pet.birthday, pet.age, todayKey()) : null].filter(Boolean).join(' · ')}
+                                                </span>
+                                            </span>
+                                        </button>
+                                    ))}
                                     {isOwnProfile && (
-                                        <button onClick={() => setIsAddPetOpen(true)} className="mt-4 px-6 py-2.5 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30">
-                                            İlk Patimi Ekle
+                                        <button onClick={() => setIsAddPetOpen(true)} aria-label="Hayvan ekle"
+                                            className="w-14 h-14 shrink-0 self-center rounded-2xl border-2 border-dashed border-card-border flex items-center justify-center text-secondary">
+                                            <Plus className="w-5 h-5" />
                                         </button>
                                     )}
                                 </div>
-                            ) : (
-                                <div>
-                                    {isOwnProfile && (
-                                        <div className="flex justify-end mb-4 px-1">
-                                            <button onClick={() => setIsAddPetOpen(true)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 text-emerald-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500/20 transition-colors">
-                                                <PawPrint className="w-3.5 h-3.5" />
-                                                Yeni Ekle
-                                            </button>
-                                        </div>
-                                    )}
-                                    <div className="space-y-3">
-                                        {profilePets.map(pet => (
-                                            <motion.div key={pet.id} whileTap={{ scale: 0.99 }} onClick={() => { if (isOwnProfile) switchPet(pet.id); }} className={`flex items-center gap-4 p-4 rounded-[1.5rem] transition-colors cursor-pointer ${activePet?.id === pet.id ? 'bg-emerald-500/10 border border-emerald-500/40' : 'bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}>
-                                                <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0">
-                                                    {pet.image ? (
-                                                        <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
-                                                    ) : (
-                                                        <div className={`w-full h-full bg-gradient-to-tr ${seedColor(pet.name)} flex items-center justify-center text-white text-xl font-black`}>
-                                                            {pet.name[0]?.toUpperCase()}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-zinc-900 dark:text-white font-black uppercase tracking-tight flex items-center gap-2">
-                                                        {pet.name}
-                                                        {activePet?.id === pet.id && <div className="w-2 h-2 rounded-full bg-emerald-400" />}
-                                                    </p>
-                                                    <p className="text-black/50 dark:text-white/40 text-xs font-bold mt-0.5">{pet.breed || 'Tür bilgisi yok'} • {pet.gender || ''}</p>
-                                                </div>
-                                                <ChevronRight className="w-5 h-5 text-black/30 dark:text-white/20" />
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            </section>
+                        )}
+
+                        <div className="flex mt-5 border-b border-card-border">
+                            {tabs.map(tab => {
+                                const on = tab.id === 'tools' ? isToolsActive : activeTab === tab.id;
+                                return (
+                                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} aria-label={tab.label}
+                                        className={`flex-1 h-11 flex items-center justify-center border-b-2 -mb-px ${on ? 'border-foreground text-foreground' : 'border-transparent text-secondary'}`}>
+                                        {tab.icon}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </>
+                )}
+
+                {!blocked && (
+                <AnimatePresence mode="wait">
+                    {activeTab === 'posts' ? (
+                        <motion.div key="posts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3">
+                            <ProfilePosts userId={id} saved={false} own={isOwnProfile} />
+                        </motion.div>
+                    ) : activeTab === 'saved' && isOwnProfile ? (
+                        <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3">
+                            <ProfilePosts userId={id} saved own />
                         </motion.div>
                     ) : activeTab === 'tools' && isOwnProfile ? (
                         <motion.div key="tools" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6">
@@ -825,7 +667,7 @@ export default function ProfilePage() {
                                             <p className="text-[8px] font-bold text-indigo-500/80 uppercase mt-0.5">Yürüyüşler</p>
                                         </div>
                                     </motion.button>
-                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('bookmarks')} className="p-4 rounded-[1.5rem] bg-gradient-to-br from-zinc-500/10 to-gray-500/5 border border-zinc-500/20 hover:border-zinc-500/40 transition-colors flex flex-col gap-3">
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('saved')} className="p-4 rounded-[1.5rem] bg-gradient-to-br from-zinc-500/10 to-gray-500/5 border border-zinc-500/20 hover:border-zinc-500/40 transition-colors flex flex-col gap-3">
                                         <div className="w-9 h-9 rounded-xl bg-zinc-500/20 flex items-center justify-center text-zinc-500">
                                             <Bookmark className="w-4.5 h-4.5" />
                                         </div>
@@ -876,16 +718,28 @@ export default function ProfilePage() {
                             </button>
                             <FamilyTab />
                         </motion.div>
-                    ) : activeTab === 'bookmarks' && isOwnProfile ? (
-                        <motion.div key="bookmarks" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
-                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
-                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
-                            </button>
-                            <div className="text-center py-20 opacity-40 font-black text-zinc-900 dark:text-white uppercase italic tracking-[0.5em]">Koleksiyon Boş</div>
-                        </motion.div>
                     ) : null}
                 </AnimatePresence>
+                )}
             </div>
+
+            <Sheet open={moreOpen} onClose={() => { setMoreOpen(false); setBlockConfirm(false); }} title={blockConfirm ? `${displayName} engellensin mi?` : displayName}>
+                {blockConfirm ? (
+                    <div className="space-y-3">
+                        <p className="text-sm font-semibold text-secondary">Birbirinizin gönderilerini, yorumlarını ve hikâyelerini görmezsiniz; takip bağlantınız kaldırılır.</p>
+                        <button onClick={toggleBlock} className="w-full h-12 rounded-2xl bg-red-600 text-white font-black text-sm">Engelle</button>
+                    </div>
+                ) : (
+                    <div className="bg-card border border-card-border rounded-2xl divide-y divide-card-border text-sm font-bold">
+                        <button onClick={() => { setMoreOpen(false); shareProfile(); }} className="w-full px-4 py-3.5 text-left">Profili paylaş</button>
+                        {currentUser && <button onClick={() => { setMoreOpen(false); setReportUserOpen(true); }} className="w-full px-4 py-3.5 text-left text-red-600">Hesabı şikâyet et</button>}
+                        {currentUser && (summary?.blockedByMe
+                            ? <button onClick={toggleBlock} className="w-full px-4 py-3.5 text-left">Engeli kaldır</button>
+                            : <button onClick={() => setBlockConfirm(true)} className="w-full px-4 py-3.5 text-left text-red-600">Bu hesabı engelle</button>)}
+                    </div>
+                )}
+            </Sheet>
+            <ReportModal isOpen={reportUserOpen} onClose={() => setReportUserOpen(false)} entityType="user" entityId={id} />
 
             {/* Add Pet Modal */}
             <AddPetModal
@@ -1145,103 +999,26 @@ export default function ProfilePage() {
     );
 }
 
-// ── Posts Grid Bileşeni ──────────────────────────────────────
-function PostsGrid({ userId }: { userId: string }) {
-    const [posts, setPosts] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [selected, setSelected] = useState<any>(null);
-
+// ── Profil gönderileri / kaydedilenler ────────────────────────
+function ProfilePosts({ userId, saved, own }: { userId: string; saved: boolean; own: boolean }) {
+    const [posts, setPosts] = useState<GridPost[] | null>(null);
     useEffect(() => {
-        if (!userId) { setIsLoading(false); return; }
-        const load = async () => {
-            setIsLoading(true);
-            try {
-                const data = await (apiService as any).getUserPosts(userId);
-                setPosts(data || []);
-            } catch { setPosts([]); }
-            finally { setIsLoading(false); }
-        };
+        if (!userId || userId === 'me') return;
+        let alive = true;
+        const load = () => socialService.profilePosts(userId, saved).then(p => { if (alive) setPosts(p); }).catch(() => { if (alive) setPosts([]); });
         load();
-    }, [userId]);
-
-    if (isLoading) return (
-        <div className="grid grid-cols-3 gap-0.5">
-            {Array(9).fill(0).map((_, i) => (
-                <div key={i} className="aspect-square bg-white/4 animate-pulse rounded-sm" />
-            ))}
-        </div>
-    );
-
-    if (posts.length === 0) return (
-        <div className="flex flex-col items-center py-16 text-center">
-            <div className="w-16 h-16 rounded-[1.5rem] bg-black/5 dark:bg-white/5 border border-white/8 flex items-center justify-center mb-4">
-                <ImageIcon className="w-8 h-8 text-black/30 dark:text-white/20" />
+        window.addEventListener(POSTS_CHANGED_EVENT, load);
+        return () => { alive = false; window.removeEventListener(POSTS_CHANGED_EVENT, load); };
+    }, [userId, saved]);
+    if (!posts) return <LoadingBlocks count={2} />;
+    if (posts.length === 0) {
+        return (
+            <div className="py-12 text-center space-y-1">
+                <p className="text-base font-black">{saved ? 'Kaydedilen gönderi yok' : 'Henüz gönderi yok'}</p>
+                <p className="text-sm font-semibold text-secondary">{saved ? 'Beğendiğin gönderileri kaydederek burada toplayabilirsin.' : own ? 'İlk anını Keşfet\'te paylaş.' : ''}</p>
+                {own && !saved && <a href="/community/yeni" className="inline-flex mt-2 h-10 px-4 items-center rounded-xl bg-accent text-white text-sm font-black">Gönderi paylaş</a>}
             </div>
-            <p className="text-black/50 dark:text-white/40 font-black text-sm uppercase italic">Henüz Gönderi Yok</p>
-        </div>
-    );
-
-    return (
-        <>
-            <div className="grid grid-cols-3 gap-0.5 rounded-2xl overflow-hidden">
-                <AnimatePresence>
-                    {posts.map((p, i) => (
-                        <motion.div
-                            key={p.id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: i * 0.03 }}
-                            className="aspect-square relative overflow-hidden bg-white/4 cursor-pointer group"
-                            onClick={() => setSelected(p)}
-                        >
-                            {p.media_url || p.image ? (
-                                <img src={p.media_url || p.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-emerald-500/10 to-purple-500/10 flex items-center justify-center">
-                                    <MessageCircle className="w-6 h-6 text-black/30 dark:text-white/20" />
-                                </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
-                                <span className="flex items-center gap-1 text-white text-xs font-black"><Heart className="w-4 h-4 fill-white" />{p.likes || 0}</span>
-                                <span className="flex items-center gap-1 text-white text-xs font-black"><MessageCircle className="w-4 h-4 fill-white" />{p.comments || 0}</span>
-                            </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
-
-            {/* Post detail modal */}
-            <AnimatePresence>
-                {selected && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[500] bg-black/80 backdrop-blur-md" onClick={() => setSelected(null)} />
-                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }}
-                            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                            className="fixed inset-x-4 top-20 bottom-20 z-[510] bg-[#111] rounded-[2.5rem] overflow-hidden flex flex-col border border-white/8 shadow-2xl"
-                            onClick={e => e.stopPropagation()}>
-                            <div className="relative flex-1 bg-white dark:bg-black">
-                                <img src={selected.media_url || selected.image} className="w-full h-full object-contain" alt="" />
-                                <button onClick={() => setSelected(null)} className="absolute top-4 right-4 w-9 h-9 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-black/10 dark:border-white/10">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                            {selected.desc && (
-                                <div className="p-5 shrink-0">
-                                    <p className="text-white text-sm leading-relaxed">{selected.desc}</p>
-                                    <div className="flex items-center gap-4 mt-3 text-black/50 dark:text-white/40 text-xs font-bold">
-                                        <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5 text-red-400" />{selected.likes || 0}</span>
-                                        <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 text-cyan-400" />{selected.comments || 0}</span>
-                                        <span className="ml-auto">{selected.time}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
-
-        </>
-    );
+        );
+    }
+    return <PostGrid posts={posts} />;
 }

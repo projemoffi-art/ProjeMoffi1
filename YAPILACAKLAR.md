@@ -30,15 +30,16 @@ Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.m
 
 ## Topluluk
 
-- [ ] **Faz 3 — Keşfet** (12 ekran; gönderi kartları mevcut büyük kart ölçüsünde kalacak).
+- [ ] **localStorage `SocialContext` hâlâ duruyor.** ai-dressing, MoffiWallet ve HeroSection kullanıyor; sahte
+  paylaşım/beğeni verisi tarayıcıda tutuluyor. Bu ekranlar `socialService`'e bağlanıp context silinmeli. (2026-09-29)
+- [ ] **Profil kapak fotoğrafı artık gösterilmiyor** (referansta yok). Ayarlardaki kapak yükleme ya kaldırılmalı
+  ya da profile geri eklenmeli. (2026-09-29)
 - [ ] **Oyun ödülündeki coin eklenmiyor olabilir.** Eski `protect_profile_security_fields` tetikleyicisi
   `auth.role()`'e bakıyor; `add_game_reward` (SECURITY DEFINER) içinde bile rol "authenticated" göründüğü
   için `coin_balance` artışı geri alınıyor. `guard_profile_rewards`'daki `current_user` yöntemiyle düzeltilmeli.
 - [ ] **Günün yıldızları (topluluk).** Yürüyüşü olmayan hayvana kimlik numarasından türetilmiş
   uydurma "Aura puanı" veriliyor ve seçim her kullanıcının tarayıcısında yapılıyor; sunucuda
   günde bir kez hesaplanmalı.
-- [ ] **Eski test sahiplendirme ilanları.** Başka bir hesaba (0dc5387e…) ait "dtj" ve "rklöu" ilanları anlamsız
-  isimli test kayıtları gibi duruyor; Baran onaylarsa yönetici panelinden kaldırılmalı. (2026-09-29)
 - [ ] **Hayvan adına iyelik eki.** Yürüyüş meydan okumaları, pet shop açıklamaları, künye teşekkür metni, ana sayfa
   günlük hedef ve yapay zekâ yedek cevabında `{ad}'in` kullanılıyor ("Zelal'in" gibi yanlış çekimler çıkar).
   Cümleler eksiz kurulmalı (bkz. CLAUDE.md 8.48).

@@ -13,8 +13,7 @@ import { haptics } from "@/lib/haptics";
 // sorgusu) tamamen gerçekti, SADECE görsel dil kaba/tutarsızdı (mor #5B4D9D,
 // agresif büyük harf/italik). Bu turda SADECE görsel yeniden inşa edildi —
 // prop arayüzü (isOpen/onClose/clinics/onSelectClinic/isLoading) AYNEN
-// korunuyor, hiçbir çağıran nokta (vet/page.tsx, community/page.tsx,
-// OverlaySystem.tsx) değişmedi.
+// korunuyor; tek çağıran nokta vet/page.tsx.
 
 interface ClinicListModalProps {
     isOpen: boolean;

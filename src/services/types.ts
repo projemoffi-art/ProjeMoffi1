@@ -286,14 +286,8 @@ export interface IApiService {
     // Community
     fetchMarketPlaces(): Promise<any[]>;
     fetchVets(): Promise<any[]>;
-    getFeedContent(): Promise<Post[]>;
-    getPostById(id: string | number): Promise<Post | null>;
     getInboxMessages(): Promise<any[]>;
     addInboxMessage(message: any): Promise<void>;
-    addPost(post: Partial<Post>): Promise<Post>;
-    deletePost(postId: string | number): Promise<void>;
-    updatePost(postId: string | number, updates: Partial<Post>): Promise<void>;
-    getUserPosts(userId: string): Promise<any[]>;
     
     // Shop
     getProducts(category?: ShopCategory): Promise<ShopProduct[]>;
@@ -377,29 +371,10 @@ export interface IApiService {
     getWalkById(id: string): Promise<any>;
 
     // --- HİKAYELER (Stories) ---
-    getStories(): Promise<any[]>;
-    addStory(storyData: any): Promise<void>;
-    deleteStory(storyId: string): Promise<void>;
-    markStoryAsViewed(storyId: string): Promise<void>;
-    getViewedStoryIds(): Promise<string[]>;
-    toggleStoryLike(storyId: string): Promise<boolean>;
-    getStoryViewers(storyId: string): Promise<any[]>;
 
     // --- SOSYAL AKSİYONLAR ---
-    reactToPost(postId: string, reactionType: string): Promise<void>;
-    getPostReactions(postId: string): Promise<any[]>;
-    addComment(postId: string | number, content: string, parentCommentId?: string | number): Promise<any>;
-    getPostComments(postId: string): Promise<any[]>;
-    editComment(commentId: string | number, content: string): Promise<void>;
-    deleteComment(commentId: string | number): Promise<void>;
-    toggleCommentLike(commentId: string | number): Promise<void>;
     
     // User Discovery & Social Interactions
-    followUser(targetId: string): Promise<void>;
-    unfollowUser(targetId: string): Promise<void>;
-    isFollowing(targetId: string): Promise<boolean>;
-    blockUser(targetId: string): Promise<void>;
-    reportUser(targetId: string, reason: string): Promise<void>;
     getFollowers(userId: string): Promise<UserProfile[]>;
     getFollowing(userId: string): Promise<UserProfile[]>;
     

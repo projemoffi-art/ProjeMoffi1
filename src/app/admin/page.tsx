@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
 import { lostService } from "@/services/lostService";
+import { socialService } from "@/services/socialService";
 import {
     Users, Plus, Zap, MessageSquare, AlertCircle,
     TrendingUp, Globe, Sparkles, Store, Dog, Building2, Map, Activity, Shield, Megaphone,
@@ -85,14 +86,14 @@ export default function MoffiCoreDashboard() {
             try {
                 const [users, posts, lostPets, feedbacks] = await Promise.all([
                     getAllUsers(),
-                    apiService.getFeedContent(),
+                    socialService.countPosts(),
                     lostService.list().then(l => l.filter(x => x.status === 'active')).catch(() => []),
                     apiService.getFeedbacks()
                 ]);
                 
                 setStats({
                     users: users.length,
-                    posts: posts.length,
+                    posts,
                     feedbacks: feedbacks.length,
                     sos: lostPets.length
                 });

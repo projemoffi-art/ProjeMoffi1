@@ -1,210 +1,176 @@
 "use client";
 
-import React from "react";
+// Uygulamanın tek bildirim ekranı (Keşfet referansı Ekran 11): Tümü / Sosyal / Kayıp / Sahiplendirme sekmeleri,
+// kişi fotoğrafı, ilgili gönderi/ilan küçük resmi ve takip bildiriminde geri takip. Veri NotificationContext'ten.
+
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  X, Bell, Heart, UserPlus, ShieldAlert, 
-  ShoppingBag, Sparkles, Trash2, CheckCircle2, Calendar, HeartHandshake
-} from "lucide-react";
-import { useNotifications } from "@/context/NotificationContext";
-import { cn } from "@/lib/utils";
-import { formatRelativeTime } from "@/lib/dateUtils";
-import { useTranslation } from "@/context/LanguageContext";
+import { X, Bell, Heart, UserPlus, ShieldAlert, ShoppingBag, Trash2, CheckCircle2, Calendar, HeartHandshake, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useNotifications } from "@/context/NotificationContext";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
+import { timeAgo } from "@/services/socialService";
+import { Avatar, FollowButton } from "@/components/social/SocialUI";
 
 interface NotificationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type Tab = 'all' | 'social' | 'lost' | 'adoption';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'all', label: 'Tümü' }, { id: 'social', label: 'Sosyal' }, { id: 'lost', label: 'Kayıp' }, { id: 'adoption', label: 'Sahiplendirme' },
+];
+const GROUP: Record<string, Tab> = {
+  like: 'social', comment: 'social', follow: 'social', mention: 'social',
+  lost: 'lost', lost_sighting: 'lost', sos: 'lost',
+  adoption: 'adoption', adoption_application: 'adoption', adoption_update: 'adoption', pet_transfer: 'adoption',
+};
+
+// Bildirim → açılacak ekran
+const targetOf = (n: { type: string; entity_id?: string | null; actor_id?: string | null }) =>
+  n.type === 'health' ? `/health${n.entity_id ? `?pet=${n.entity_id}` : ''}`
+    : n.type === 'sos' ? `/pasaport${n.entity_id ? `?pet=${n.entity_id}` : ''}`
+    : (n.type === 'like' || n.type === 'comment' || n.type === 'mention') && n.entity_id ? `/community/gonderi/${n.entity_id}`
+    : n.type === 'follow' && n.actor_id ? `/profile/${n.actor_id}`
+    : n.type === 'lost' && n.entity_id ? `/kayip/${n.entity_id}`
+    : n.type === 'lost_sighting' && n.entity_id ? `/kayip/${n.entity_id}/yonet`
+    : n.type === 'adoption' && n.entity_id ? `/sahiplendirme/${n.entity_id}`
+    : n.type === 'adoption_application' && n.entity_id ? `/sahiplendirme/basvuru/${n.entity_id}`
+    : n.type === 'adoption_update' || n.type === 'pet_transfer' ? '/sahiplendirme/basvurularim'
+    : n.type === 'appointment' ? '/vet?view=appointments' : null;
+
+function TypeBadge({ type }: { type: string }) {
+  const icon = type === 'like' ? <Heart className="w-3 h-3 fill-current" />
+    : type === 'comment' || type === 'mention' ? <MessageCircle className="w-3 h-3" />
+    : type === 'follow' ? <UserPlus className="w-3 h-3" />
+    : GROUP[type] === 'lost' ? <ShieldAlert className="w-3 h-3" />
+    : GROUP[type] === 'adoption' ? <HeartHandshake className="w-3 h-3" />
+    : type === 'appointment' ? <Calendar className="w-3 h-3" />
+    : type === 'order' ? <ShoppingBag className="w-3 h-3" />
+    : <Bell className="w-3 h-3" />;
+  const tone = GROUP[type] === 'lost' ? 'bg-red-600' : GROUP[type] === 'adoption' ? 'bg-emerald-600' : 'bg-accent';
+  return <span className={cn('absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full text-white border-2 border-background flex items-center justify-center', tone)}>{icon}</span>;
+}
+
 export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, isLoading } = useNotifications();
-  const { language } = useTranslation();
+  const { user } = useAuth();
   const router = useRouter();
+  const [tab, setTab] = useState<Tab>('all');
+  const [actors, setActors] = useState<Record<string, { name: string; avatar: string | null }>>({});
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [following, setFollowing] = useState<Set<string>>(new Set());
 
-  // Sağlık hatırlatması → ilgili evcil hayvanın Sağlık Merkezi; künyeden gelen haber → Pasaport;
-  // randevu → Randevularım; sahiplendirme başvurusu → başvuru detayı, başvuru durumu / pasaport devri → Başvurularım.
-  const targetOf = (n: { type: string; entity_id?: string | null }) =>
-    n.type === 'health' ? `/health${n.entity_id ? `?pet=${n.entity_id}` : ''}`
-      : n.type === 'sos' ? `/pasaport${n.entity_id ? `?pet=${n.entity_id}` : ''}`
-      : n.type === 'lost' && n.entity_id ? `/kayip/${n.entity_id}`
-      : n.type === 'lost_sighting' && n.entity_id ? `/kayip/${n.entity_id}/yonet`
-      : n.type === 'adoption' && n.entity_id ? `/sahiplendirme/${n.entity_id}`
-      : n.type === 'adoption_application' && n.entity_id ? `/sahiplendirme/basvuru/${n.entity_id}`
-      : n.type === 'adoption_update' || n.type === 'pet_transfer' ? '/sahiplendirme/basvurularim'
-      : n.type === 'appointment' ? '/vet?view=appointments' : null;
+  const shown = useMemo(() => (tab === 'all' ? notifications : notifications.filter((n: any) => GROUP[n.type] === tab)), [notifications, tab]);
 
-  const openNotification = (n: any) => {
+  // Görünen bildirimlerin kişi fotoğrafları, küçük resimleri ve takip durumu (tek seferde)
+  useEffect(() => {
+    if (!isOpen || notifications.length === 0) return;
+    const list = notifications.slice(0, 60) as any[];
+    const actorIds = Array.from(new Set(list.map(n => n.actor_id).filter(Boolean)));
+    const postIds = list.filter(n => ['like', 'comment', 'mention'].includes(n.type) && n.entity_id).map(n => n.entity_id);
+    const lostIds = list.filter(n => (n.type === 'lost' || n.type === 'lost_sighting') && n.entity_id).map(n => n.entity_id);
+    const adoptIds = list.filter(n => n.type === 'adoption' && n.entity_id).map(n => n.entity_id);
+    const uuid = (x: string) => /^[0-9a-f-]{36}$/i.test(x);
+    (async () => {
+      const [pc, posts, lost, adopt, fol] = await Promise.all([
+        actorIds.length ? supabase.from('profile_cards').select('id, full_name, username, avatar_url, role, business_name').in('id', actorIds) : { data: [] },
+        postIds.length ? supabase.from('posts').select('id, media_url').in('id', postIds.filter(uuid)) : { data: [] },
+        lostIds.length ? supabase.from('lost_pet_cards').select('id, img_url').in('id', lostIds.filter(uuid)) : { data: [] },
+        adoptIds.length ? supabase.from('adoption_cards').select('id, img_url').in('id', adoptIds.filter(uuid)) : { data: [] },
+        user && actorIds.length ? supabase.from('follows').select('following_id').eq('follower_id', user.id).in('following_id', actorIds) : { data: [] },
+      ]) as any[];
+      const a: Record<string, { name: string; avatar: string | null }> = {};
+      (pc.data || []).forEach((p: any) => { a[p.id] = { name: (p.role === 'business' && p.business_name) || p.full_name || p.username || 'Moffi üyesi', avatar: p.avatar_url }; });
+      const t: Record<string, string> = {};
+      [...(posts.data || []).map((p: any) => [p.id, p.media_url]), ...(lost.data || []).map((p: any) => [p.id, p.img_url]), ...(adopt.data || []).map((p: any) => [p.id, p.img_url])]
+        .forEach(([id, url]) => { if (url) t[id] = url; });
+      setActors(a); setThumbs(t); setFollowing(new Set((fol.data || []).map((f: any) => f.following_id)));
+    })().catch(() => {});
+  }, [isOpen, notifications, user]);
+
+  const open = (n: any) => {
     const target = targetOf(n);
-    if (!target) return;
     if (!n.is_read) markAsRead(n.id);
+    if (!target) return;
     onClose();
     router.push(target);
-  };
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'like': return <Heart className="w-4 h-4 text-pink-500" />;
-      case 'follow': return <UserPlus className="w-4 h-4 text-cyan-500" />;
-      case 'appointment': return <Calendar className="w-4 h-4 text-orange-500" />;
-      case 'health': return <Heart className="w-4 h-4 text-orange-500" />;
-      case 'system': return <Sparkles className="w-4 h-4 text-purple-500" />;
-      case 'wellbeing': return <ShieldAlert className="w-4 h-4 text-orange-500" />;
-      case 'sos': return <ShieldAlert className="w-4 h-4 text-red-500" />;
-      case 'lost': return <ShieldAlert className="w-4 h-4 text-orange-500" />;
-      case 'lost_sighting': return <CheckCircle2 className="w-4 h-4 text-orange-500" />;
-      case 'adoption':
-      case 'adoption_application':
-      case 'adoption_update':
-      case 'pet_transfer': return <HeartHandshake className="w-4 h-4 text-orange-500" />;
-      case 'shop': return <ShoppingBag className="w-4 h-4 text-green-500" />;
-      default: return <Bell className="w-4 h-4 text-gray-500" />;
-    }
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[6000]"
-          />
-
-          {/* Drawer */}
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-background dark:bg-[#0A0A0E] border-l border-card-border z-[6001] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)]"
-          >
-            {/* Header */}
-            <div className="p-8 border-b border-card-border flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic flex items-center gap-3">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[6000]" />
+          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 240 }}
+            className="theme-vet fixed right-0 top-0 bottom-0 w-full max-w-md bg-background text-foreground border-l border-card-border z-[6001] flex flex-col"
+            role="dialog" aria-label="Bildirimler">
+            <div className="px-4 pt-[calc(14px+env(safe-area-inset-top,0px))] pb-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-black flex items-center gap-2">
                   Bildirimler
-                  {unreadCount > 0 && (
-                    <span className="px-2 py-0.5 bg-cyan-500 text-black text-[10px] font-black rounded-full not-italic tracking-normal">
-                      {unreadCount}
-                    </span>
-                  )}
+                  {unreadCount > 0 && <span className="min-w-5 h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-black flex items-center justify-center">{unreadCount}</span>}
                 </h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-2 italic">
-                  Evrensel Moffi Güncellemeleri
-                </p>
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <button onClick={() => markAllAsRead()} className="h-9 px-3 rounded-full bg-card border border-card-border text-xs font-black inline-flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Tümünü okundu yap
+                    </button>
+                  )}
+                  <button onClick={onClose} aria-label="Kapat" className="w-9 h-9 rounded-full bg-card border border-card-border flex items-center justify-center"><X className="w-4 h-4" /></button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={onClose}
-                  className="p-3 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl text-gray-500 hover:text-white transition-all active:scale-95"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                {TABS.map(t => (
+                  <button key={t.id} onClick={() => setTab(t.id)}
+                    className={cn('h-9 px-4 rounded-full text-xs font-black whitespace-nowrap shrink-0', tab === t.id ? 'bg-accent text-white' : 'bg-card border border-card-border text-secondary')}>{t.label}</button>
+                ))}
               </div>
             </div>
 
-            {/* Actions */}
-            {notifications.length > 0 && (
-              <div className="px-8 py-4 flex justify-between items-center bg-white/[0.02] border-b border-card-border">
-                <button 
-                  onClick={() => markAllAsRead()}
-                  className="flex items-center gap-2 text-[9px] font-black text-cyan-400 uppercase tracking-widest hover:text-cyan-300 transition-colors"
-                >
-                  <CheckCircle2 className="w-3 h-3" />
-                  Hepsini Okundu İşaretle
-                </button>
-              </div>
-            )}
-
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 pb-8">
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center h-full gap-4">
-                  <div className="w-10 h-10 border-2 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
-                  <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">Yükleniyor...</p>
-                </div>
-              ) : notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-10">
-                  <div className="w-20 h-20 bg-black/5 dark:bg-white/5 border border-card-border rounded-3xl flex items-center justify-center mb-6">
-                    <Bell className="w-10 h-10 text-foreground" />
-                  </div>
-                  <h3 className="text-xl font-black text-white uppercase italic mb-2 tracking-tight">Henüz bir şey yok</h3>
-                  <p className="text-xs text-gray-500 font-bold leading-relaxed uppercase tracking-widest">
-                    Moffi dünyasındaki gelişmeler burada görünecek.
-                  </p>
+                <div className="space-y-3">{[0, 1, 2].map(i => <div key={i} className="h-16 rounded-2xl bg-card border border-card-border animate-pulse" />)}</div>
+              ) : shown.length === 0 ? (
+                <div className="text-center py-16 space-y-1">
+                  <Bell className="w-8 h-8 text-secondary mx-auto mb-2" />
+                  <p className="text-base font-black">Henüz bildirim yok</p>
+                  <p className="text-sm font-semibold text-secondary">Beğeniler, yorumlar ve ilan haberleri burada görünür.</p>
                 </div>
               ) : (
-                notifications.map((notif) => (
-                  <motion.div
-                    key={notif.id}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => openNotification(notif)}
-                    className={cn(
-                      "group p-5 rounded-3xl border transition-all relative overflow-hidden",
-                      targetOf(notif) && "cursor-pointer",
-                      notif.is_read 
-                        ? "bg-white/[0.02] border-card-border opacity-60" 
-                        : "bg-white/[0.05] border-card-border shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
-                    )}
-                  >
-                    {!notif.is_read && (
-                      <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500" />
-                    )}
-
-                    <div className="flex gap-4">
-                      <div className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border",
-                        notif.is_read ? "bg-black/5 dark:bg-white/5 border-card-border" : "bg-black/10 dark:bg-white/10 border-card-border"
-                      )}>
-                        {getIcon(notif.type)}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className={cn(
-                            "text-sm font-black uppercase italic tracking-tight truncate pr-2",
-                            notif.is_read ? "text-gray-500 dark:text-gray-400" : "text-white"
-                          )}>
-                            {notif.title}
-                          </h4>
-                          <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter shrink-0 mt-1">
-                            {formatRelativeTime(notif.created_at, language)}
-                          </span>
+                <div className="divide-y divide-card-border">
+                  {shown.map((n: any) => {
+                    const actor = n.actor_id ? actors[n.actor_id] : null;
+                    const thumb = n.entity_id ? thumbs[n.entity_id] : null;
+                    return (
+                      <div key={n.id} onClick={() => open(n)} className={cn('flex items-center gap-3 py-3 cursor-pointer', !n.is_read && 'bg-accent/[0.04] -mx-4 px-4')}>
+                        <div className="relative shrink-0">
+                          {actor ? <Avatar src={actor.avatar} name={actor.name} className="w-11 h-11" />
+                            : <span className="w-11 h-11 rounded-full bg-card border border-card-border flex items-center justify-center"><Bell className="w-4 h-4 text-secondary" /></span>}
+                          <TypeBadge type={n.type} />
                         </div>
-                        <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                          {notif.content}
-                        </p>
-                        
-                        <div className="flex items-center gap-4 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {!notif.is_read && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }}
-                              className="text-[9px] font-black text-cyan-400 uppercase tracking-widest hover:text-cyan-300"
-                            >
-                              Okundu
-                            </button>
-                          )}
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
-                            className="text-[9px] font-black text-red-400/50 uppercase tracking-widest hover:text-red-400"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm leading-snug"><span className="font-black">{n.title}</span>{n.content && n.type !== 'like' ? <span className="font-semibold text-secondary"> {n.content}</span> : null}</p>
+                          <p className="text-[11px] font-semibold text-secondary mt-0.5">{timeAgo(n.created_at)}</p>
                         </div>
+                        {n.type === 'follow' && n.actor_id ? (
+                          <span onClick={e => e.stopPropagation()}><FollowButton userId={n.actor_id} initial={following.has(n.actor_id)} /></span>
+                        ) : thumb ? (
+                          <img src={thumb} alt="" className="w-11 h-11 rounded-lg object-cover shrink-0" />
+                        ) : null}
+                        <button onClick={e => { e.stopPropagation(); deleteNotification(n.id); }} aria-label="Bildirimi sil" className="w-7 h-7 shrink-0 flex items-center justify-center text-secondary/60">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                    </div>
-                  </motion.div>
-                ))
+                    );
+                  })}
+                </div>
               )}
             </div>
-
           </motion.div>
         </>
       )}

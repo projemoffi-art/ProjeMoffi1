@@ -10,7 +10,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { ErrorText, LoadingBlocks, PrimaryButton, Sheet, TextArea } from '@/components/health/HealthUI';
 import { listingTitle } from '@/components/lost/LostUI';
 import { lostService, type LostListing } from '@/services/lostService';
-import { apiService } from '@/services/apiService';
+import { socialService } from '@/services/socialService';
 import { showToast } from '@/lib/utils';
 
 export default function ReunitedPage() {
@@ -44,10 +44,13 @@ export default function ReunitedPage() {
     const post = async () => {
         setError(null); setPosting(true);
         try {
-            await apiService.addPost({ caption: caption.trim(), media: listing.photos[0] || undefined });
+            const postId = await socialService.create({
+                content: caption.trim(), media: [listing.photos[0]], taggedPetIds: listing.petId ? [listing.petId] : [],
+                locationText: null, lat: null, lng: null, topic: 'daily', showOnProfile: true, commentPrivacy: 'everyone',
+            });
             showToast("Keşfet'te paylaşıldı.", 'CheckCircle2', 'text-emerald-500 font-bold');
             setShareOpen(false);
-            router.push('/community');
+            router.push(`/community/gonderi/${postId}`);
         } catch (e: any) {
             setError(e?.message || 'Paylaşılamadı.');
         } finally {
@@ -73,7 +76,7 @@ export default function ReunitedPage() {
                 <p className="text-xs font-semibold text-secondary">İlan 30 gün boyunca "Kavuştu" rozetiyle görünür, sonra listeden kalkar.</p>
             </div>
             <div className="space-y-2.5 pt-2">
-                <PrimaryButton onClick={() => setShareOpen(true)}>Keşfet'te paylaş</PrimaryButton>
+                {listing.photos[0] && <PrimaryButton onClick={() => setShareOpen(true)}>Keşfet'te paylaş</PrimaryButton>}
                 <Link href="/kayip" className="w-full h-12 rounded-2xl border border-card-border bg-card font-black text-sm flex items-center justify-center">Tamam</Link>
             </div>
 

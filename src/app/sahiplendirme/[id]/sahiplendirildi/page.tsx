@@ -9,7 +9,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2 } from 'lucide-react';
 import { ErrorText, LoadingBlocks, PrimaryButton, Sheet, TextArea } from '@/components/health/HealthUI';
 import { adoptionService, type AdoptionListing } from '@/services/adoptionService';
-import { apiService } from '@/services/apiService';
+import { socialService } from '@/services/socialService';
 import { showToast } from '@/lib/utils';
 
 export default function AdoptedPage() {
@@ -47,10 +47,13 @@ function Adopted() {
     const post = async () => {
         setError(null); setPosting(true);
         try {
-            await apiService.addPost({ caption: caption.trim(), media: listing.photos[0] || undefined });
+            const postId = await socialService.create({
+                content: caption.trim(), media: [listing.photos[0]], taggedPetIds: [],
+                locationText: null, lat: null, lng: null, topic: 'daily', showOnProfile: true, commentPrivacy: 'everyone',
+            });
             showToast("Keşfet'te paylaşıldı.", 'CheckCircle2', 'text-emerald-500 font-bold');
             setShareOpen(false);
-            router.push('/community');
+            router.push(`/community/gonderi/${postId}`);
         } catch (e: any) {
             setError(e?.message || 'Paylaşılamadı.');
         } finally {
@@ -82,7 +85,7 @@ function Adopted() {
                 ))}
             </div>
             <div className="space-y-2.5">
-                <PrimaryButton onClick={() => setShareOpen(true)}>Keşfet'te paylaş</PrimaryButton>
+                {listing.photos[0] && <PrimaryButton onClick={() => setShareOpen(true)}>Keşfet'te paylaş</PrimaryButton>}
                 <Link href="/sahiplendirme" className="w-full h-12 rounded-2xl border border-card-border bg-card font-black text-sm flex items-center justify-center">Tamam</Link>
             </div>
 

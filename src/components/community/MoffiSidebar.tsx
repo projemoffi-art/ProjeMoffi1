@@ -8,7 +8,7 @@ import {
     Footprints, Droplets, Heart, Sun, MapPin, Bell,
     Mic, X, Save, Navigation, Flag,
     ShoppingBag, Stethoscope, Gamepad2, Wallet, Radar, Syringe,
-    Tv, Users, Edit3, Map, Search, HeartHandshake, Megaphone, Eye,
+    Tv, Users, Map, Search, HeartHandshake, Megaphone, Eye,
     CloudRain, CloudSun, Snowflake, CloudLightning, Cloud, Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -239,7 +239,6 @@ export function MoffiSidebar() {
         { id: 'vaccine', label: t('sidebar.vaccine'), icon: Syringe, color: 'from-red-400 to-rose-600', iconColor: 'text-red-450', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'carehub' })) },
         { id: 'tv', label: t('sidebar.tv'), icon: Tv, color: 'from-rose-500 to-indigo-700', iconColor: 'text-indigo-400', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'feed' })) },
         { id: 'family', label: t('sidebar.family'), icon: Users, color: 'from-blue-400 to-blue-600', iconColor: 'text-sky-400', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'family' })) },
-        { id: 'diary', label: t('sidebar.diary'), icon: Edit3, color: 'from-yellow-500 to-amber-700', iconColor: 'text-yellow-450', action: () => window.dispatchEvent(new CustomEvent('open-moffi-diary')) },
         { id: 'places', label: t('sidebar.places'), icon: Map, color: 'from-green-500 to-emerald-700', iconColor: 'text-green-400', action: () => window.dispatchEvent(new CustomEvent('open-moffi-maps')) },
         { id: 'search', label: t('sidebar.search'), icon: Search, color: 'from-gray-400 to-gray-600', iconColor: 'text-zinc-400', action: () => window.dispatchEvent(new CustomEvent('open-moffi-spotlight')) },
         { id: 'adoption', label: t('sidebar.adoption'), icon: HeartHandshake, color: 'from-rose-400 to-pink-600', iconColor: 'text-rose-400', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'adoption' })) },

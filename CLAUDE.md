@@ -2988,6 +2988,44 @@ ters yönde liste/harita, telefon görünürlüğü, kaydet, başvuru formu, Ba�
 denemeleri (ikinci başvuru, telefon kolonu okuma, başkasının ilanını değiştirme, başkasının hayvanıyla ilan, kendi
 başvurusunu kabul) reddedildi. Test verisi ve yüklenen test görselleri temizlendi. `npm run build` başarılı.
 
+### 8.49 Faz 3 — Keşfet (sosyal) (2026-09-29)
+
+Referans: `design-reference/community-final/kesfet-reference.jpg` (12 ekran; 12. ekran = mevcut `/kayip/[id]`).
+Ekranlar: `/community` (hikâyeler + "Senin İçin/Takip Ettiklerim" akışı, araya yakındaki kayıp/sahiplendirme
+kartları), `/community/kesfet` (arama + kişiler + çipler + ızgara), `/community/yeni` (oluştur → medya düzenle →
+seçenekler; `?edit=` düzenler), `/community/gonderi/[id]` (+`/yorumlar`), profil yeniden düzenlendi, bildirim
+çekmecesi Tümü/Sosyal/Kayıp/Sahiplendirme sekmeli. `/post/[id]` → `/community/gonderi/[id]` yönlendirir.
+Migration: `20260929120000_social_explore.sql`.
+
+🔴 **KURAL — sosyal verinin tek yolu `src/services/socialService.ts`** (gönderi, beğeni, kaydet, yorum, hikâye,
+takip, engelleme, Keşfet araması, profil özeti). Eski `apiService` sosyal metotları silindi; yeni bir ekran
+gönderi/yorum okuyacaksa bu servisi kullanır.
+- Okuma sunucu fonksiyonlarıyla: `get_social_feed`, `search_social_posts`, `social_post_rows`,
+  `get_profile_summary`, `get_profile_posts`. Izgara satırlarında `user_id` yok (sadece id/medya/sayaçlar).
+- `posts_guard` (invoker tetikleyici): sahip ve sayaçlar istemciden değişmez (sayaçlara kolon yetkisi yok),
+  etiketlenen hayvan yazarın olmalı (tür/ad/yavru bilgisi etiketten türetilir), konum ~1 km'ye yuvarlanır.
+- Yorumlar tek seviye: yanıta yanıt üst yoruma bağlanır. `enforce_comment_settings` yorum iznini
+  (herkes/takipçiler/kapalı), engeli ve gizlenen kelimeleri (→ onay bekler) sunucuda uygular.
+- Engelleme `block_user`/`unblock_user` (takipler iki yönlü silinir); engelli çiftin gönderi ve yorumları
+  akış, Keşfet ve doğrudan açılışta görünmez. Önceden `blocks` tablosunun hiç yetkisi yoktu, engelleme çalışmıyordu.
+- Kapatılan açıklar: beğenide "Universal" ALL kuralı, yorumları herkesin düzenleyip silebilmesi,
+  `story_views`'in herkese açık olması, `profiles`'ı sızdıran kullanılmayan `feed_view` (silindi).
+- 🔴 Görev/rozet motoru (`moffi-quest-trigger`: `post_added`, `like_toggled`, `comment_added`) gerçek
+  paylaşımlardan hiç beslenmiyordu (sadece kullanılmayan localStorage `SocialContext` tetikliyordu); artık
+  `socialService` tetikler. Ayarlardaki "gizlenen kelimeler" ve "engellenenler" de artık gerçekten çalışıyor.
+- Gönderi paylaşımı ve yorumlar hesapsız açılır (`ClientAuthWrapper` kalıbı); beğeni/yorum giriş ister.
+
+**Silinen (sahte/ölü):** FeedTab, ExploreGrid, ImmersivePostCard, OverlaySystem, CommunityHeader, AIActionHub,
+NotificationsDrawer (topluluk), DiaryModal (kaydetmiyordu), FeedbackModal, PostViewerOverlay,
+VisitorInteractionBar, useRealtimeFeed/Comments, useUserStories; hiçbir yerden açılmayan VetQuickSheet,
+MarketQuickSheet, StudioQuickSheet, GameQuickSheet (yukarıdaki bölümlerde geçen VetQuickSheet notları tarihseldir).
+
+**Doğrulama:** `npm run build` başarılı. Tarayıcı testi yapılamadı: OneDrive `node_modules`'teki bazı dosyaları
+"yalnızca bulutta" tutup açamıyor (`next start` açılmıyor, geliştirme sunucusu tarayıcı isteklerinde takılıyor;
+bkz. 5.6). Yerine gerçek kullanıcı oturumuyla API testi: oluşturma + tetikleyici kuralları, başkası adına/başkasının
+hayvanıyla paylaşım reddi, beğeni/kaydet/yorum/yanıt, Keşfet filtreleri ve arama, akış, profil, hesapsız okuma
+(beğeni ve kaydedilenler kapalı), engelleme/kaldırma — hepsi geçti; test verisi temizlendi.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

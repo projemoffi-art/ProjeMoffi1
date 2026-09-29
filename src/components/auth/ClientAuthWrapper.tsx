@@ -15,6 +15,8 @@ const PUBLIC_PREFIXES = ["/id/", "/p/", "/verify/"];
 const PUBLIC_PATTERNS = [
     /^\/kayip\/[0-9a-f-]{36}(\/(gordum|el-ilani))?\/?$/i,
     /^\/sahiplendirme\/[0-9a-f-]{36}(\/el-ilani)?\/?$/i,
+    // Paylaşılan Keşfet gönderisi ve yorumları (beğeni/yorum giriş ister)
+    /^\/community\/gonderi\/[0-9a-f-]{36}(\/yorumlar)?\/?$/i,
 ];
 
 // Routes that require business role
