@@ -30,6 +30,14 @@ Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.m
 
 ## Topluluk
 
+- [ ] **İnceleme için eklenen örnek içerik silinecek** (test hesabı projemoffi, 2026-09-29; Baran bakınca):
+  kayıp `lost_pets` 56dcdc8e-1e5a-4725-8b2d-e2d987bd674b, 6e6df1da-ff2b-4344-aa31-3e1c02930d6f,
+  fcaa4a44-1065-4e43-9ec1-dcd3039d830f, 1f63cfcc-b054-44d5-a1c6-879b224910e2, 3df31cf5-d9f1-4fff-9a99-a239293d3584;
+  sahiplendirme `adoption_pets` 4f146cc2-1528-4e91-9d72-bca039670fbc, 8517021c-ae3e-497c-95bc-9ea32828320a,
+  2ce35747-60fe-45b1-935a-1861fba43e9e, 1bc9e70c-0548-453e-a441-8a58fb91bf9d, 72e480f6-e1df-480e-a713-ce8346c725a2;
+  gönderi `posts` c27a67d7-3501-4804-bf69-0573aa7122da, 48a1a673-e506-4d10-bbc4-c594cde8cd01,
+  88bcbbab-55e1-4e97-b575-164ebab8e6db, 2b11e959-4ea5-4c27-8adb-158a04448591, 05d31f51-49a5-4a87-9c2c-d0c359be3fd8.
+  Silerken bunlara gelmiş beğeni/yorum/başvuru/görülme kayıtları da temizlenmeli.
 - [ ] **localStorage `SocialContext` hâlâ duruyor.** ai-dressing, MoffiWallet ve HeroSection kullanıyor; sahte
   paylaşım/beğeni verisi tarayıcıda tutuluyor. Bu ekranlar `socialService`'e bağlanıp context silinmeli. (2026-09-29)
 - [ ] **Profil kapak fotoğrafı artık gösterilmiyor** (referansta yok). Ayarlardaki kapak yükleme ya kaldırılmalı

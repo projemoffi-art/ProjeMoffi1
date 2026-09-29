@@ -3015,6 +3015,10 @@ gönderi/yorum okuyacaksa bu servisi kullanır.
   `socialService` tetikler. Ayarlardaki "gizlenen kelimeler" ve "engellenenler" de artık gerçekten çalışıyor.
 - Gönderi paylaşımı ve yorumlar hesapsız açılır (`ClientAuthWrapper` kalıbı); beğeni/yorum giriş ister.
 
+🔴 **Aynı gün bulunan 2 hata:** (1) `lost_pets.pet_name` NOT NULL olduğu için "Buldum" (bulunan hayvan) bildirimi
+hiç kaydedilemiyordu (bulunanın adı bilinmez) → boş bırakılabilir, kayıp ilanında hâlâ zorunlu (check kısıtı).
+(2) `get_social_feed` seçtiği gönderileri sırasız döndürüyordu; akış karışık görünüp sayfalama gönderi atlayabiliyordu → sıralandı.
+
 **Silinen (sahte/ölü):** FeedTab, ExploreGrid, ImmersivePostCard, OverlaySystem, CommunityHeader, AIActionHub,
 NotificationsDrawer (topluluk), DiaryModal (kaydetmiyordu), FeedbackModal, PostViewerOverlay,
 VisitorInteractionBar, useRealtimeFeed/Comments, useUserStories; hiçbir yerden açılmayan VetQuickSheet,
