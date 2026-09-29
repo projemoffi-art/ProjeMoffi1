@@ -191,11 +191,6 @@ export const WALLET_TRANSACTIONS = [
     { id: 3, type: 'spend', label: 'Mama Siparişi', amount: -400, date: '12 Ara' },
 ];
 
-export const MOCK_LOST_PETS = [
-    { id: '1', pet_name: "Gofret", breed: "Golden Retriever", last_seen_location: "Kadiköy Sahil", description: "Tasması yok, çok uysal.", photos: ["https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400"] },
-    { id: '2', pet_name: "Mırmır", breed: "Tekir", last_seen_location: "Beşiktaş", description: "Sol kulağı kesik.", photos: ["https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400"] }
-];
-
 export const MOCK_ADOPTIONS = [
     { id: '1', pet_name: "Pamuk", breed: "Ankara Kedisi", age: "2 Aylık", description: "Yuva arıyor.", photos: ["https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=400"], type: "cat" },
     { id: '2', pet_name: "Duman", breed: "Russian Blue", age: "1 Yaşında", description: "Çok sakin.", photos: ["https://images.unsplash.com/photo-1592194996308-7b43878e84a6?q=80&w=400"], type: "cat" }

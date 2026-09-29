@@ -13,7 +13,7 @@ import { usePet } from '@/context/PetContext';
 import { usePetHealthBundle } from '@/components/health/usePetHealthBundle';
 import { daysLeftText, upcomingItems } from '@/lib/health/derive';
 import { todayKey } from '@/lib/appointmentTime';
-import { apiService } from '@/services/apiService';
+import { lostService } from '@/services/lostService';
 
 interface CardData {
     id: string;
@@ -49,7 +49,9 @@ export const TodayForYouEngine = () => {
 
     useEffect(() => {
         let alive = true;
-        apiService.getLostPets().then(list => { if (alive) setLostCount((list || []).length); }).catch(() => {});
+        lostService.list()
+            .then(list => { if (alive) setLostCount(list.filter(l => l.kind === 'lost' && l.status === 'active').length); })
+            .catch(() => {});
         return () => { alive = false; };
     }, []);
 
@@ -96,8 +98,8 @@ export const TodayForYouEngine = () => {
                 iconBg: 'bg-red-50 dark:bg-red-950/30',
                 badgeText: 'KAYIP',
                 title: 'Kayıp ilanları',
-                subtitle: `Toplulukta ${lostCount} kayıp ilanı var`,
-                action: () => router.push('/community?tab=radar&mode=lost'),
+                subtitle: `Yayında ${lostCount} kayıp ilanı var`,
+                action: () => router.push('/kayip'),
             });
         }
         return list.filter(c => !dismissed[c.id]);

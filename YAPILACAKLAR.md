@@ -21,9 +21,18 @@ Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.m
 - [ ] **Eski sağlık notu kolonunu sil.** `pets.health_notes` ve `sos_settings.critical_health_note`
   artık okunmuyor (içerik `pet_health_profile.notes`'a taşındı, 2026-09-28). Canlı sürüm yeni kodla
   birkaç gün sorunsuz çalıştıktan sonra silinebilir.
-- [ ] **Kayıp merkezi (SOS) yeniden tasarım.** Eski koyu/neon tasarımda; sahte "Güvenli Arama" ve
-  "Anonim Mesaj" anahtarları kaldırıldı, künye sayfası gerçek hale getirildi. Ekranın kendisi
-  (sessiz saatler, ödül, yarıçap, otomatik ilan) ayrı bir inceleme istiyor.
+- [ ] **Eski SOS ayarlarını sil.** Kayıp bilgisi artık ilandan geliyor (CLAUDE.md 8.47). `pets.sos_settings`
+  içindeki `finder_message`, `reward_*`, `secure_proxy_only`, `emergency_sms_number`, `sos_radius`,
+  `quiet_hours`, `location_precision`, `auto_post_sos`, `header_sos_alert_enabled`, `emergency_bypass` ve
+  `PetContext`/`types.ts`/`home` içindeki varsayılanları birkaç gün sonra temizlenebilir.
+- [ ] **Ana sayfadaki yorum satırına alınmış "akıllı tasma" bloğu** (`home/page.tsx`, `[V2_FEATURE_TASMA]`)
+  uydurma AI ses çevirmeni / tasma LED'i içeriyor; özellik gelmeyecekse silinmeli.
+
+## Topluluk
+
+- [ ] **Faz 2 — Sahiplendirme** (`design-reference/community-final/sahiplendirme-reference.jpg`, 14 ekran).
+  Şimdilik topluluk sayfasının `?tab=radar` sekmesinde; `/sahiplendirme` oraya yönlendiriyor.
+- [ ] **Faz 3 — Keşfet** (12 ekran; gönderi kartları mevcut büyük kart ölçüsünde kalacak).
 - [ ] **Oyun ödülündeki coin eklenmiyor olabilir.** Eski `protect_profile_security_fields` tetikleyicisi
   `auth.role()`'e bakıyor; `add_game_reward` (SECURITY DEFINER) içinde bile rol "authenticated" göründüğü
   için `coin_balance` artışı geri alınıyor. `guard_profile_rewards`'daki `current_user` yöntemiyle düzeltilmeli.

@@ -16,7 +16,7 @@ const GlassCard = ({ children, className }: any) => (
 
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { apiService } from "@/services/apiService";
+import { lostService } from "@/services/lostService";
 
 export default function HealthPage() {
     const { getAllUsers, approveBusiness, rejectBusiness } = useAuth();
@@ -31,8 +31,11 @@ export default function HealthPage() {
                 const vetBusinesses = users.filter((u: any) => u.role === 'business' && u.businessType === 'vet');
                 setVets(vetBusinesses);
             } else if (activeTab === 'sos') {
-                const pets = await apiService.getLostPets();
-                setSosPets(pets || []);
+                const list = await lostService.list().catch(() => []);
+                setSosPets(list.filter(l => l.status === 'active').map(l => ({
+                    id: l.id, img: l.photos[0], name: `${l.kind === 'lost' ? 'Kayıp' : 'Bulundu'} · ${l.petName || 'isimsiz'}`,
+                    location: l.locationText, description: l.description,
+                })));
             }
         }
         loadData();

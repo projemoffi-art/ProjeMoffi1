@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { 
-    Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
+    Pet, Post, UserProfile, LostPet, AdoptionPet,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
     SystemAnnouncement, SystemFeedback
 } from './types';
 import { 
-    MOCK_PETS, MOCK_LOST_PETS, MOCK_ADOPTIONS, 
+    MOCK_PETS, MOCK_ADOPTIONS,
     MOCK_NOTIFICATIONS, MOCK_POSTS 
 } from '../lib/mockData';
 
@@ -265,84 +265,6 @@ export class MockApiService implements IApiService {
         return finalPosts as any;
     }
 
-    async getLostPets(): Promise<LostPet[]> {
-        const data = await this.loadData<any[]>('lost_pets') || MOCK_LOST_PETS;
-        const current = await this.getCurrentUser();
-        return data.map(item => {
-            const hasReward = item.reward_enabled || false;
-            return {
-                id: item.id,
-                pet_id: item.pet_id,
-                name: item.name || item.pet_name,
-                img: item.img || (item.photos && item.photos[0]) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
-                location: item.location || item.last_seen_location || 'Moffi Radar',
-                last_seen_location: item.last_seen_location || item.location,
-                reward_enabled: hasReward,
-                reward: item.reward || (hasReward ? "500 TL" : undefined),
-                dist: item.dist || '0 km',
-                time: item.time || 'Şimdi',
-                type: item.type || 'dog',
-                description: item.description || 'Lütfen görünce acil dönüş yapın.',
-                user_id: item.user_id || (item.id === '1' || item.id === '2' ? 'system' : current?.id),
-                latitude: item.latitude,
-                longitude: item.longitude,
-                author_name: item.user_id === 'system' ? 'Moffi Ekibi' : (current?.username || 'Moffi Kullanıcısı'),
-                author_avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user_id || 'system'}`,
-                breed: item.breed || (item.type === 'dog' ? 'Golden Retriever' : 'Tekir'),
-                age: '2 Yaşında',
-                gender: 'Erkek',
-                size: 'medium',
-                personality: 'Uysal ve sevecen.'
-            } as any;
-        });
-    }
-
-    async addLostPet(data: Partial<LostPet>): Promise<LostPet> {
-        const current = await this.getCurrentUser();
-        const pets = await this.getLostPets();
-        const newPet = { 
-            id: `lost-${Date.now()}`, 
-            user_id: current?.id,
-            ...data 
-        } as LostPet;
-        await this.saveData('lost_pets', [...pets, newPet]);
-        return newPet;
-    }
-
-    async deleteLostPet(id: string | number): Promise<void> {
-        const pets = await this.getLostPets();
-        const filtered = pets.filter(p => String(p.id) !== String(id));
-        await this.saveData('lost_pets', filtered);
-    }
-
-    async addLostPetSighting(data: { lost_pet_id: string; description: string; latitude: number; longitude: number; img_url?: string }): Promise<LostPetSighting> {
-        const current = await this.getCurrentUser();
-        const sightings = await this.loadData<any[]>('lost_pet_sightings') || [];
-        const newSighting: LostPetSighting = {
-            id: `sighting-${Date.now()}`,
-            lost_pet_id: data.lost_pet_id,
-            reporter_id: current?.id || 'anonymous',
-            reporter_name: current?.username || 'Moffi Kullanıcısı',
-            reporter_avatar: current?.avatar || 'https://i.pravatar.cc/150?u=anonymous',
-            description: data.description,
-            latitude: data.latitude,
-            longitude: data.longitude,
-            img_url: data.img_url,
-            created_at: new Date().toISOString()
-        };
-        await this.saveData('lost_pet_sightings', [...sightings, newSighting]);
-        return newSighting;
-    }
-
-    async getLostPetSightings(lostPetId: string): Promise<LostPetSighting[]> {
-        const sightings = await this.loadData<any[]>('lost_pet_sightings') || [];
-        return sightings
-            .filter(s => String(s.lost_pet_id) === String(lostPetId))
-            .map(s => ({
-                ...s,
-                created_at: 'Şimdi'
-            }));
-    }
 
     async getAdoptions(): Promise<AdoptionPet[]> {
         const data = await this.loadData<any[]>('adoptions') || MOCK_ADOPTIONS;
@@ -515,114 +437,6 @@ export class MockApiService implements IApiService {
 
 
 
-    async togglePetSosStatus(petId: string, status: 'safe' | 'lost'): Promise<void> {
-        const pets = await this.getPets();
-        const pet = pets.find(p => p.id === petId);
-        
-        if (pet) {
-            pet.is_lost = status === 'lost';
-            await this.saveData('pets', pets);
-
-            // Synchronize with Community Lost Pet Alerts (The Island Bridge)
-            const lostPets = await this.getLostPets();
-            const shouldPost = pet.sos_settings?.auto_post_sos ?? true;
-
-            if (status === 'lost' && shouldPost) {
-                const existingIndex = lostPets.findIndex(p => p.pet_id === petId);
-                const newAlert: LostPet = {
-                    id: Date.now(),
-                    pet_id: petId,
-                    name: pet.name,
-                    img: pet.image || pet.avatar || '',
-                    location: 'Moffi Güvenli Bölge',
-                    last_seen_location: pet.sos_settings?.last_seen_location,
-                    reward_enabled: pet.sos_settings?.reward_enabled,
-                    dist: '0.1 km',
-                    time: 'Şimdi',
-                    description: pet.sos_settings?.finder_message || 'Moffi SOS Sistemi tarafından otomatik oluşturulmuş acil durum ilanı.',
-                    type: pet.type?.includes('🐶') ? 'dog' : 'cat'
-                };
-
-                if (existingIndex > -1) {
-                    lostPets[existingIndex] = { ...lostPets[existingIndex], ...newAlert };
-                } else {
-                    lostPets.unshift(newAlert);
-                }
-            } else {
-                // If marked safe OR auto_post is disabled, remove from community alerts
-                const filteredLost = lostPets.filter(p => p.pet_id !== petId);
-                await this.saveData('lost_pets', filteredLost);
-                return;
-            }
-            await this.saveData('lost_pets', lostPets);
-
-            // FEED POST SYNC: Create/Delete automated community announcement
-            const posts = await this.getFeedContent();
-            const sosPostId = `sos-post-${petId}`;
-
-            if (status === 'lost' && shouldPost) {
-                const newPost: Partial<Post> = {
-                    id: sosPostId,
-                    type: 'lost' as any,
-                    media: pet.image || pet.avatar || '',
-                    caption: `🚨 ACİL DURUM: ${pet.name} KAYIP! \n\n${pet.sos_settings?.finder_message || 'Dostumuzu arıyoruz, lütfen paylaşın.'}`,
-                    likes: 0,
-                    comments: 0,
-                    time: 'ACİL',
-                    user: { 
-                        name: 'Moffi Güvenlik', 
-                        avatar: 'https://cdn-icons-png.flaticon.com/512/1067/1067555.png',
-                        is_verified: true 
-                    }
-                };
-                await this.addPost(newPost);
-            } else {
-                await this.deletePost(sosPostId);
-            }
-        }
-    }
-
-    async updatePetSosSettings(petId: string, settings: any): Promise<void> {
-        const pets = await this.getPets();
-        const pet = pets.find(p => p.id === petId);
-        if (pet) {
-            pet.sos_settings = { ...pet.sos_settings, ...settings };
-            await this.saveData('pets', pets);
-
-            // Synchronize alert presence if pet is lost
-            if (pet.is_lost) {
-                const lostPets = await this.getLostPets();
-                const shouldPost = pet.sos_settings?.auto_post_sos !== false; // Explicitly check against false
-                const existingIndex = lostPets.findIndex(p => p.pet_id === petId);
-
-                if (shouldPost) {
-                    const newAlert: LostPet = {
-                        id: Date.now(),
-                        pet_id: petId,
-                        name: pet.name,
-                        img: pet.image || pet.avatar || '',
-                        location: 'Moffi Güvenli Bölge',
-                        last_seen_location: pet.sos_settings?.last_seen_location,
-                        reward_enabled: pet.sos_settings?.reward_enabled,
-                        dist: '0.1 km',
-                        time: 'Şimdi',
-                        description: pet.sos_settings?.finder_message || 'Moffi SOS Sistemi tarafından otomatik oluşturulmuş acil durum ilanı.',
-                        type: pet.type?.includes('🐶') ? 'dog' : 'cat'
-                    };
-                    
-                    if (existingIndex > -1) {
-                        lostPets[existingIndex] = { ...lostPets[existingIndex], ...newAlert };
-                    } else {
-                        lostPets.unshift(newAlert);
-                    }
-                } else if (existingIndex > -1) {
-                    // Remove if autoPost turned off while lost
-                    lostPets.splice(existingIndex, 1);
-                }
-                await this.saveData('lost_pets', lostPets);
-            }
-        }
-    }
 
     async upgradeSubscription(status: "free" | "plus" | "pro"): Promise<void> {
         await this.updateProfile({ subscription_status: status });

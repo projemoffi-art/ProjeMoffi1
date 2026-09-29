@@ -8,13 +8,10 @@ import { supabase } from '@/lib/supabase';
 interface ChatContextType {
     isInboxOpen: boolean;
     setIsInboxOpen: (isOpen: boolean) => void;
-    inboxTab: 'chats' | 'sos';
-    setInboxTab: (tab: 'chats' | 'sos') => void;
     activeChatUserId: string | null;
     setActiveChatUserId: (id: string | null) => void;
     unreadCount: number;
     inboxMessages: any[];
-    sosAlerts: any[];
     activeMessages: any[];
     onSendReply: (text: string, attachmentUrl?: string) => Promise<void>;
     isReplying: boolean;
@@ -22,11 +19,9 @@ interface ChatContextType {
     notifyTyping: () => void;
     onlineUserIds: Set<string>;
     openChat: (userId: string) => void;
-    openSosAlerts: () => void;
     refreshInbox: () => Promise<void>;
     deleteMessage: (messageId: string) => Promise<void>;
     recallMessage: (messageId: string) => Promise<void>;
-    setSosAlerts: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -37,11 +32,9 @@ export type ChatMessageEventDetail = { id: string; senderId: string; receiverId:
 export function ChatProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [isInboxOpen, setIsInboxOpen] = useState(false);
-    const [inboxTab, setInboxTab] = useState<'chats' | 'sos'>('chats');
     const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [inboxMessages, setInboxMessages] = useState<any[]>([]);
-    const [sosAlerts, setSosAlerts] = useState<any[]>([]);
     const [activeMessages, setActiveMessages] = useState<any[]>([]);
     const [isReplying, setIsReplying] = useState(false);
     const [partnerTyping, setPartnerTyping] = useState(false);
@@ -82,15 +75,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
     }, []); // EMPTY deps - stable forever
 
-    const fetchSosAlerts = useCallback(async () => {
-        try {
-            const data = await apiService.getLostPets();
-            setSosAlerts(data || []);
-        } catch (err) {
-            console.error('SOS load error:', err);
-        }
-    }, []); // EMPTY deps - stable forever
-
     const fetchActiveMessages = useCallback(async (otherUserId: string) => {
         try {
             const msgs = await apiService.getChatMessages(otherUserId);
@@ -118,7 +102,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         initializedRef.current = true;
 
         fetchInbox();
-        fetchSosAlerts();
 
         // Setup realtime subscription ONCE
         const channel = supabase
@@ -330,12 +313,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     const openChat = useCallback((userId: string) => {
         setActiveChatUserId(userId);
-        setInboxTab('chats');
-        setIsInboxOpen(true);
-    }, []);
-
-    const openSosAlerts = useCallback(() => {
-        setInboxTab('sos');
         setIsInboxOpen(true);
     }, []);
 
@@ -397,18 +374,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return (
         <ChatContext.Provider value={{
             isInboxOpen, setIsInboxOpen,
-            inboxTab, setInboxTab,
             activeChatUserId, setActiveChatUserId,
-            unreadCount, inboxMessages, sosAlerts,
+            unreadCount, inboxMessages,
             activeMessages,
             onSendReply, isReplying,
             partnerTyping, notifyTyping,
             onlineUserIds,
-            openChat, openSosAlerts,
+            openChat,
             refreshInbox: fetchInbox,
             deleteMessage,
             recallMessage,
-            setSosAlerts
         }}>
             {children}
         </ChatContext.Provider>

@@ -154,19 +154,6 @@ export interface LostPet {
     longitude?: number;
 }
 
-export interface LostPetSighting {
-    id: string;
-    lost_pet_id: string;
-    reporter_id: string;
-    reporter_name?: string;
-    reporter_avatar?: string;
-    description: string;
-    latitude: number;
-    longitude: number;
-    img_url?: string;
-    created_at: string;
-}
-
 export interface AdoptionPet extends LostPet {
     owner: string;
     phone: string;
@@ -307,11 +294,6 @@ export interface IApiService {
     submitAdoptionApplication(listingId: string | number, ownerId: string, note: string): Promise<void>;
     getFeedContent(): Promise<Post[]>;
     getPostById(id: string | number): Promise<Post | null>;
-    getLostPets(): Promise<LostPet[]>;
-    addLostPet(data: Partial<LostPet>): Promise<LostPet>;
-    deleteLostPet(id: string | number): Promise<void>;
-    addLostPetSighting(data: { lost_pet_id: string; description: string; latitude: number; longitude: number; img_url?: string }): Promise<LostPetSighting>;
-    getLostPetSightings(lostPetId: string): Promise<LostPetSighting[]>;
     getAdoptions(): Promise<AdoptionPet[]>;
     addAdoption(data: Partial<AdoptionPet>): Promise<AdoptionPet>;
     deleteAdoption(id: string | number): Promise<void>;
@@ -333,8 +315,6 @@ export interface IApiService {
     getOrders(): Promise<ShopOrder[]>;
 
     // Subscriptions & Advanced Features
-    togglePetSosStatus(petId: string, status: 'safe' | 'lost'): Promise<void>;
-    updatePetSosSettings(petId: string, settings: any): Promise<void>;
     upgradeSubscription(status: 'free' | 'plus' | 'pro'): Promise<void>;
     addBalance(amount: number, type: 'fiat' | 'coin'): Promise<void>;
     updateAuraSettings(settings: any): Promise<void>;

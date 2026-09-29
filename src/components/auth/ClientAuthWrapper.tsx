@@ -10,6 +10,8 @@ const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbo
 // Uygulama dışındaki kişilere açık sayfalar: künye (/id), paylaşılan pasaport (/p), doğrulama kodu (/verify).
 // Künyeyi okutan kişinin Moffi hesabı olmayabilir; önceden bu sayfalar giriş ekranına atıyordu.
 const PUBLIC_PREFIXES = ["/id/", "/p/", "/verify/"];
+// Paylaşılan kayıp/bulunan ilanı: ilan, "Gördüm" bildirimi ve el ilanı hesapsız açılır. İlan verme ve yönetme girişi gerektirir.
+const PUBLIC_PATTERNS = [/^\/kayip\/[0-9a-f-]{36}(\/(gordum|el-ilani))?\/?$/i];
 
 // Routes that require business role
 const BUSINESS_ROUTES_PREFIX = "/business";
@@ -27,7 +29,7 @@ export function ClientAuthWrapper({ children }: Props) {
     const router = useRouter();
 
     const isDemoRoute = pathname.startsWith("/demo");
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute || PUBLIC_PREFIXES.some(p => pathname.startsWith(p));
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute || PUBLIC_PREFIXES.some(p => pathname.startsWith(p)) || PUBLIC_PATTERNS.some(r => r.test(pathname));
     const isBusinessRoute = pathname.startsWith(BUSINESS_ROUTES_PREFIX);
     const isAdminRoute = pathname.startsWith(ADMIN_ROUTES_PREFIX);
 

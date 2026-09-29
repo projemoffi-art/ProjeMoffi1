@@ -181,7 +181,7 @@ export function FeedTab({
             </div>
 
             {/* Feed SOS Alerts */}
-            {activePet?.is_lost && !isSosAlertDismissed && activePet.sos_settings?.auto_post_sos !== false && (
+            {activePet?.is_lost && !isSosAlertDismissed && (
                 <motion.div 
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -220,7 +220,7 @@ export function FeedTab({
                                         </span>
                                     </div>
                                     <p className="text-[8.5px] font-bold text-red-200/50 uppercase tracking-wider mt-1 leading-none">
-                                        Arama Kurtarma Sinyali Aktif
+                                        Kayıp ilanı yayında
                                     </p>
                                 </div>
                             </div>

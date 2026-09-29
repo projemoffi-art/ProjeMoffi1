@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
+import { lostService } from "@/services/lostService";
 
 const GlassCard = ({ children, className }: any) => (
     <div className={cn(
@@ -34,7 +35,7 @@ export default function AnalyticsPage() {
                 const [users, adoptions, lostPets] = await Promise.all([
                     getAllUsers(),
                     apiService.getAdoptions(),
-                    apiService.getLostPets()
+                    lostService.list().then(l => l.filter(x => x.status === 'active')).catch(() => [])
                 ]);
                 
                 setStats({

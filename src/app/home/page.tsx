@@ -3073,32 +3073,20 @@ export default function LegendaryLightDashboard() {
                                                                 <span className={lostPetMode ? 'text-red-700' : 'text-gray-600'}>ACİL SOS / KAYIP MODU</span>
                                                             </div>
                                                             <button 
-                                                                onClick={async () => {
-                                                                    if (lostPetMode) {
-                                                                        updatePet(pet.id, { is_lost: false });
-                                                                        try {
-                                                                            await apiService.togglePetSosStatus(pet.id, 'safe');
-                                                                        } catch (e) {
-                                                                            console.error(e);
-                                                                        }
-                                                                        setToastMsg(`🔕 Kayıp Modu Kapatıldı. ${pet.name} güvende.`);
-                                                                    } else {
-                                                                        window.dispatchEvent(new CustomEvent('open-sos-center', { detail: pet }));
-                                                                    }
-                                                                }}
+                                                                onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center', { detail: pet }))}
                                                                 className={`text-[9px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all border ${
                                                                     lostPetMode 
                                                                         ? 'bg-red-600 text-white border-red-700 shadow-sm' 
                                                                         : 'bg-white text-red-600 border-red-200 hover:bg-red-50'
                                                                 }`}
                                                             >
-                                                                {lostPetMode ? "Kayıp Modunu Kapat" : "Kayıp Modunu Aç"}
+                                                                {lostPetMode ? "Kayıp ilanını yönet" : "Kayıp ilanı ver"}
                                                             </button>
                                                         </div>
                                                         <p className="text-[9.5px] font-semibold leading-normal text-gray-500">
                                                             {lostPetMode 
-                                                                ? `⚠️ KAYIP MODU AKTİF! ${pet.name} için GPS konum güncellemeleri saniyelik sıklığa çıkartıldı, tasmadaki kırmızı SOS led ışığı yanıp sönüyor ve çevredeki tüm Moffi üyelerine bildirim gönderildi.` 
-                                                                : `${pet.name} kaybolursa bu modu aktif edin. GPS güncelleme hızı artar, tasmanın kırmızı SOS ledi yanar ve çevredeki kullanıcılara kayıp ihbarı iletilir.`
+                                                                ? `${pet.name} için kayıp ilanı yayında; künye kayıp modunda. Kavuşunca ilanı kapatman yeterli.`
+                                                                : `${pet.name} kaybolursa kayıp ilanı ver: künye kayıp moduna geçer, yakın çevrede bildirimi açanlara haber gider.`
                                                             }
                                                         </p>
                                                     </div>

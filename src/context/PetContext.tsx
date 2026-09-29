@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from "r
 import { apiService } from "../services/apiService";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/lib/supabase";
+import { PETS_CHANGED_EVENT } from "@/services/lostService";
 
 // --- TYPES ---
 export interface Pet {
@@ -153,6 +154,19 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             }
         };
         loadInitialData();
+    }, [user?.id]);
+
+    // Kayıp modu (pets.is_lost) sadece sunucuda, ilan yayınlanınca / kavuşunca değişir; lostService bu olayı yayar.
+    useEffect(() => {
+        if (!user) return;
+        const reload = () => {
+            apiService.getPets().then(fetched => {
+                setPets(fetched as any);
+                prevPetsRef.current = JSON.stringify(fetched);
+            }).catch(err => console.error('Pet yenileme hatası:', err));
+        };
+        window.addEventListener(PETS_CHANGED_EVENT, reload);
+        return () => window.removeEventListener(PETS_CHANGED_EVENT, reload);
     }, [user?.id]);
 
     // PERSISTENCE EFFECT - only saves when data actually changes

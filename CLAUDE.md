@@ -2905,8 +2905,43 @@ Baran'dan 21 ekran görseli bekleniyor (Kayıp 8, Sahiplendirme 7, Keşfet 6).
   - Duyurular, günün yıldızları, veteriner tavsiyelerinin hiç GRANT'i yoktu (hep örnek veriye düşüyordu); verildi.
     `vet_advices` işletme sadece kendi tavsiyesini yazar. `getVetAdvices` embed hatası (PGRST200) giderildi.
   - Günün yıldızlarını sadece yönetici seçer; seçim yoksa tarayıcıda uydurma şampiyon üretilmez.
-- **Taklitler:** kayıp "Sahibine mesaj at"/"Gördüm"/"5 km'ye bildirim", sahiplendirme başvurusu
-  (`submitAdoptionApplication` boş) ve "AI denetiminden geçti" hiçbir şey yapmıyor.
+- **Taklitler:** kayıp "Sahibine mesaj at"/"Gördüm"/"5 km'ye bildirim" (✅ Faz 1'de giderildi, bkz. 8.47),
+  sahiplendirme başvurusu (`submitAdoptionApplication` boş) ve "AI denetiminden geçti" hiçbir şey yapmıyor.
+
+### 8.47 Faz 1 — Kayıp & Bulunan (2026-09-29)
+
+Referans: `design-reference/community-final/kayip-bulunan-reference.jpg` (14 ekran, hepsi yapıldı).
+Ekranlar `/kayip/*`: liste/harita, kayıp ilanı sihirbazı (`ilan-ver`, 4 adım), bulundu sihirbazı (`buldum`),
+yayınlandı, detay, gördüm, yönet, kavuştuk, el ilanı (`el-ilani`, tarayıcıdan PDF). Alt menünün 4. yuvası
+artık Kayıp/Sahiplendirme; Mesajlar Keşfet üst çubuğunda.
+
+🔴 **KURAL — kayıp bilgisinin tek kaynağı ilan (`lost_pets`).** Tek okuma/yazma yolu `src/services/lostService.ts`.
+- Kayıp modu (`pets.is_lost`) sadece `publish_lost_listing` (açar) ve `resolve_lost_listing` (kapatır) ile değişir;
+  `pets_guard_lost_flag` tetikleyicisi istemcinin doğrudan değiştirmesini sessizce engeller.
+- Künye (`get_pet_tag_info`, `pet_cards.lost_message/reward_*`) kayıp mesajını, ödülü ve telefonu hayvanın yayındaki
+  kayıp ilanından okur (migration `lost_mode_single_source`). `sos_settings` içindeki `finder_message`,
+  `reward_*`, `secure_proxy_only`, `emergency_sms_number`, `sos_radius`, `quiet_hours`, `auto_post_sos` vb. artık
+  hiçbir yerde okunmuyor (içerik ilana taşındı).
+- Görünüm içinde fonksiyon çağırma: yetkisi çağıran kullanıcıya göre denetlenir (sahibi değil) — bu yüzden
+  `pet_cards` ilanı alt sorguyla okur. Yeni görünümlerde de bunu unutma.
+- Yakın çevre bildirimi: kullanıcı `/kayip` → "Konum değiştir" içinden açar (`set_lost_alert_area`, ~1 km'ye
+  yuvarlanır). Bildirim türleri: `lost` (yakındaki ilan → `/kayip/{id}`), `lost_sighting` (sahibe görülme →
+  `/kayip/{id}/yonet`, e-postalı).
+- Kayıp modu değişince `lostService` `PETS_CHANGED_EVENT` yayar, `PetContext` hayvanları yeniden yükler.
+- "Gördüm", ilan detayı ve el ilanı hesapsız açılır (`ClientAuthWrapper` `PUBLIC_PATTERNS`); ilan verme/yönetme giriş ister.
+
+**Silinen eski sistem:** topluluk sayfasındaki kayıp radarı (`RadarTab`, `RadarMap`, `SightingMapSelector`, SOS ilan
+modalı, detay çekmecesi, "anonim mesaj/gizli ihbar" — hiçbiri gerçekten mesaj/ihbar göndermiyordu), sahte koordinatla
+(40.985, 29.03) ilan açan `togglePetSosStatus`/`updatePetSosSettings`, `getLostPets`/`addLostPet`/`deleteLostPet`/
+görülme servisleri, mesaj kutusundaki tüm ilanları "yakın çevrenizde" diye gösteren SOS sekmesi. "Harekat Merkezi"
+(SOS penceresi) sade bir "Kayıp durumu" penceresine çevrildi: ilan varsa yönet/kavuştuk, yoksa ilan ver; çalışmayan
+SMS kişisi, sessiz saatler, radar menzili, konum hassasiyeti kaldırıldı. Hikâyelerdeki SOS kanalı ve "Bugün senin
+için" kartı yeni ilanlardan beslenir; eski `?tab=radar` (sahiplendirme dışı) bağlantıları `/kayip`'a gider.
+
+**Doğrulama:** Playwright uçtan uca (gerçek hesap + hesapsız ikinci tarayıcı): ilan ver → yakın çevrede bildirimi açık
+kullanıcıya 1 bildirim → künye kayıp modunda notu/ödülü gösterdi → hesapsız "Gördüm" → sahibe bildirim + e-posta
+kuyruğu → yönetimde görülme noktası → SOS penceresi → kavuştuk → künye normale döndü; REST/sayfa hatası yok.
+El ilanı PDF'i sadece ilanı basıyor. Test verisi temizlendi. `npm run build` başarılı.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
@@ -3055,6 +3090,9 @@ Antigravity. Karışıklığı önlemek için şu iş bölümü kuruldu:
   `design-reference/health-final/`: `health-karne-reference.jpg` (asıl referans, Baran'ın rapordaki
   brife göre hazırladığı) + `health-center-inspiration.jpg` (sadece ilham) + `README.md`.
   **`/health/*` ya da sağlık bilgisi gösteren herhangi bir ekranda UI değişikliğinden önce okunmalı.**
+- 🔴 **Kilitli Topluluk tasarımı** (2026-09-28) `design-reference/community-final/`: Kayıp & Bulunan (14),
+  Sahiplendirme (14), Keşfet (12 ekran) + README (kararlar, gerçekçilik kuralları). Keşfet gönderi kartları
+  mevcut büyük kart ölçüsünde kalır. **`/kayip`, `/sahiplendirme`, `/community` UI değişikliğinden önce okunmalı.**
 - 🔴 **Kilitli Pet Pasaportu tasarımı** (2026-09-28) `design-reference/passport-final/`: 10 ekranlık
   referans + README (ekran → kod eşlemesi, bilinçli farklar). **`/pasaport/*`, künye (`/id`) ve
   paylaşılan pasaport (`/p`) ekranlarında UI değişikliğinden önce okunmalı.**

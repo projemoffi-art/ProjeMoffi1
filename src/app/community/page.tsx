@@ -19,22 +19,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 const MapLocationPicker = dynamic(() => import('@/components/common/MapLocationPicker').then(mod => mod.MapLocationPicker), { ssr: false });
 
-const RadarMap = dynamic(() => import('@/components/community/RadarMap'), {
-    ssr: false,
-    loading: () => (
-        <div className="w-full h-[380px] rounded-[2.5rem] bg-[var(--card-bg)] border border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)]">
-            <Activity className="w-8 h-8 mb-2 animate-spin text-cyan-400" />
-            <p className="text-xs font-bold uppercase tracking-wider">Harita Yükleniyor...</p>
-        </div>
-    )
-});
-
-const SightingMapSelector = dynamic(() => import('@/components/community/SightingMapSelector'), {
-    ssr: false,
-    loading: () => (
-        <div className="w-full h-full bg-card dark:bg-[var(--color-camera-surface)] animate-pulse rounded-2xl flex items-center justify-center text-black/30 dark:text-white/20 font-bold">Harita Yükleniyor...</div>
-    )
-});
 
 import AuthModal from '../../components/auth/AuthModal';
 import { useAuth } from '../../context/AuthContext';
@@ -48,7 +32,6 @@ import { InboxModal } from '../../components/community/InboxModal';
 import { FeedbackModal } from '../../components/community/modals/FeedbackModal';
 import { MessageSquareHeart } from 'lucide-react';
 
-import { ShareSheet } from '../../components/community/ShareSheet';
 import { NotificationsDrawer } from '../../components/community/NotificationsDrawer';
 
 import { ImmersivePostCard } from '../../components/community/ImmersivePostCard';
@@ -71,7 +54,6 @@ import { PET_TYPES } from '@/constants/petTypes';
 import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
 import { OverlaySystem } from '@/components/community/OverlaySystem';
 import { FeedTab } from '@/components/community/FeedTab';
-import { RadarTab } from '@/components/community/RadarTab';
 import { AdoptionTab } from '@/components/community/AdoptionTab';
 import { MOCK_ADOPTIONS } from '@/lib/mockData';
 import Image from 'next/image';
@@ -141,14 +123,13 @@ export default function MoffiSocialMasterpiece() {
     const { user, logout, updateProfile, updateSettings } = useAuth();
     const { openShare } = useShare();
     const { 
-        isInboxOpen, setIsInboxOpen, 
-        inboxTab, setInboxTab, 
-        unreadCount, 
+        isInboxOpen, setIsInboxOpen,
+        unreadCount,
         openChat,
         activeChatUserId, setActiveChatUserId,
         replyMessage, setReplyMessage,
         onSendReply, isReplying,
-        sosAlerts, setSosAlerts, inboxMessages,
+        inboxMessages,
         refreshInbox
     } = useChat();
     const { theme, setTheme } = useTheme();
@@ -157,25 +138,16 @@ export default function MoffiSocialMasterpiece() {
     const { isQuietModeActive } = useWellbeing();
     const [likeError, setLikeError] = useState<string | null>(null);
 
-    // Real-time synchronization for user's own lost pet changes in Radar
-    const userLostPetIdsString = useMemo(() => {
-        return userPets.filter(p => p.is_lost).map(p => p.id).join(',');
-    }, [userPets]);
-
-    useEffect(() => {
-        fetchLostPets();
-    }, [userLostPetIdsString]);
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState('feed'); 
-    const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
+    // Kayıp ilanları /kayip'ta (design-reference/community-final). 'radar' sekmesinde sadece sahiplendirme kaldı.
     
     // REALTIME FEED ENTEGRASYONU
     const { posts, setPosts, isLoading: isLoadingPosts, refetchPosts: fetchPosts, sortPostsLocally } = useRealtimeFeed(true);
     
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPublishing, setIsPublishing] = useState(false);
-    const [isLoadingLost, setIsLoadingLost] = useState(false);
     const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
     const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -200,56 +172,6 @@ export default function MoffiSocialMasterpiece() {
     const [settingsPet, setSettingsPet] = useState<any>(null);
     const [isSOSCommandCenterOpen, setIsSOSCommandCenterOpen] = useState(false);
     const [sosActivePet, setSosActivePet] = useState<any>(null);
-    const [isSosFromHub, setIsSosFromHub] = useState(false);
-    const [isLostAdModalOpen, setIsLostAdModalOpen] = useState(false);
-    const [selectedLostPet, setSelectedLostPet] = useState<any | null>(null);
-    const [userCoords, setUserCoords] = useState<[number, number] | undefined>(undefined);
-    const [petSightings, setPetSightings] = useState<any[]>([]);
-    const [isLoadingSightings, setIsLoadingSightings] = useState(false);
-    const [radarViewMode, setRadarViewMode] = useState<'list' | 'map'>('list');
-    const [selectedCategory, setSelectedCategory] = useState("Tümü");
-    const [filterDistance, setFilterDistance] = useState<'all' | number>('all');
-
-    const [lostPets, setLostPets] = useState<any[]>([]);
-
-    const filteredLostPets = useMemo(() => {
-        return lostPets.filter(pet => {
-            if (selectedCategory !== "Tümü" && selectedCategory !== "Hepsi") {
-                const type = pet.pet_type?.toLowerCase() || pet.type?.toLowerCase() || "";
-                if (selectedCategory === "Kediler" && type !== "cat" && !type.includes("kedi")) return false;
-                if (selectedCategory === "Köpekler" && type !== "dog" && !type.includes("köpek")) return false;
-                if (selectedCategory === "Kuşlar" && type !== "bird" && !type.includes("kuş")) return false;
-                if (selectedCategory === "Diğer" && type !== "other") return false;
-            }
-            if (filterDistance !== 'all' && userCoords && pet.latitude && pet.longitude) {
-                const R = 6371; // Earth radius in km
-                const dLat = (pet.latitude - userCoords[0]) * Math.PI / 180;
-                const dLon = (pet.longitude - userCoords[1]) * Math.PI / 180;
-                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                          Math.cos(userCoords[0] * Math.PI / 180) * Math.cos(pet.latitude * Math.PI / 180) *
-                          Math.sin(dLon/2) * Math.sin(dLon/2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                const d = R * c;
-                if (d > filterDistance) return false;
-            }
-            return true;
-        });
-    }, [lostPets, selectedCategory, filterDistance, userCoords]);
-
-    const [lostPetType, setLostPetType] = useState("cat");
-    const [lostPetName, setLostPetName] = useState("");
-    const [lostPetBreed, setLostPetBreed] = useState("");
-    const [lostPetLocation, setLostPetLocation] = useState("");
-    const [newLostPetCoords, setNewLostPetCoords] = useState<[number, number]>([40.9850, 29.0300]);
-    useEffect(() => {
-        if (userCoords) {
-            setNewLostPetCoords(userCoords);
-        }
-    }, [userCoords]);
-    const [lostPetDesc, setLostPetDesc] = useState("");
-    const [lostPetPhotos, setLostPetPhotos] = useState<{ file: File, preview: string }[]>([]);
-    const [isSubmittingSOS, setIsSubmittingSOS] = useState(false);
-    const [isReportingLocation, setIsReportingLocation] = useState(false);
     const [selectedAdoptionPet, setSelectedAdoptionPet] = useState<any | null>(null);
     const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
     const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
@@ -284,11 +206,7 @@ export default function MoffiSocialMasterpiece() {
     const [appHomeType, setAppHomeType] = useState('Apartman');
     const [appNote, setAppNote] = useState('');
     const [isSubmittingApp, setIsSubmittingApp] = useState(false);
-    const [anonModalType, setAnonModalType] = useState<'report' | 'message' | null>(null);
     const [isHubOpen, setIsHubOpen] = useState(false);
-    const [anonMessage, setAnonMessage] = useState("");
-    const [anonError, setAnonError] = useState<string | null>(null);
-    const [isSubmittingAnon, setIsSubmittingAnon] = useState(false);
     const [isHubLongPressing, setIsHubLongPressing] = useState(false);
     const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -365,45 +283,6 @@ export default function MoffiSocialMasterpiece() {
             setActiveTab(tabParam);
         }
     }, [searchParams]);
-
-    useEffect(() => {
-        // Eğer URL'de lat ve lng parametreleri varsa, konum alıp haritayı oraya kaydırmayalım (race condition engelleme)
-        if (searchParams.get('lat') && searchParams.get('lng')) {
-            return;
-        }
-
-        if (typeof window !== 'undefined' && navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    setUserCoords([pos.coords.latitude, pos.coords.longitude]);
-                },
-                (err) => {
-                    console.log("Radar Geolocation error:", err);
-                    setUserCoords([40.9850, 29.0300]); // Fallback Kadikoy/Moda on land
-                }
-            );
-        }
-    }, [searchParams]);
-
-    useEffect(() => {
-        const loadSightings = async () => {
-            if (!selectedLostPet) {
-                setPetSightings([]);
-                return;
-            }
-            setIsLoadingSightings(true);
-            try {
-                const data = await apiService.getLostPetSightings(selectedLostPet.id);
-                setPetSightings(data || []);
-            } catch (err) {
-                console.error("Error loading sightings:", err);
-                setPetSightings([]);
-            } finally {
-                setIsLoadingSightings(false);
-            }
-        };
-        loadSightings();
-    }, [selectedLostPet]);
 
     const handleOpenStoryViews = async (storyId: string) => {
         setIsStoryPaused(true);
@@ -790,7 +669,6 @@ export default function MoffiSocialMasterpiece() {
         }
     };
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const sosInputRef = useRef<HTMLInputElement>(null);
     const adoptionPhotoRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
          const globalScrollRef = useRef<HTMLDivElement>(null);
@@ -815,10 +693,6 @@ export default function MoffiSocialMasterpiece() {
                 cameraInputRef.current?.click();
             }, 300);
         };
-        const handleOpenSOS = () => {
-            // Toggle SOS view or state
-            window.dispatchEvent(new CustomEvent('open-sos-command'));
-        };
 
         const handleOpenSpotlight = () => setIsSpotlightOpen(true);
         const handleOpenDiary = () => setIsDiaryOpen(true);
@@ -826,12 +700,11 @@ export default function MoffiSocialMasterpiece() {
         const handleOpenMarket = () => setIsMarketQuickSheetOpen(true);
         const handleOpenVet = () => setIsVetQuickSheetOpen(true);
         const handleOpenNotif = () => setIsNotificationsOpen(true);
-        const handleOpenAddLostPet = () => setIsLostAdModalOpen(true);
+        const handleOpenAddLostPet = () => router.push('/kayip/ilan-ver');
         const handleOpenAddAdoptionPet = () => setIsAddAdoptionModalOpen(true);
 
         window.addEventListener('open-add-post', handleOpenPost);
         window.addEventListener('moffi-open-upload-modal', handleOpenPost);
-        window.addEventListener('open-sos-center', handleOpenSOS);
         window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
         window.addEventListener('open-moffi-diary', handleOpenDiary);
         window.addEventListener('open-aura-studio', handleOpenAuraStudio);
@@ -849,7 +722,6 @@ export default function MoffiSocialMasterpiece() {
         return () => {
             window.removeEventListener('open-add-post', handleOpenPost);
             window.removeEventListener('moffi-open-upload-modal', handleOpenPost);
-            window.removeEventListener('open-sos-center', handleOpenSOS);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
             window.removeEventListener('open-moffi-diary', handleOpenDiary);
             window.removeEventListener('open-aura-studio', handleOpenAuraStudio);
@@ -924,7 +796,6 @@ export default function MoffiSocialMasterpiece() {
         const loadInitialData = async () => {
             // Fetch everything independently so one slow request doesn't block others
             fetchPosts();
-            fetchLostPets();
             fetchAdoptionAds();
             fetchInbox();
         };
@@ -967,41 +838,22 @@ export default function MoffiSocialMasterpiece() {
         const chatWithId = searchParams.get('chat');
         if (chatWithId) {
             setActiveChatUserId(chatWithId);
-            setInboxTab('chats');
             setIsInboxOpen(true);
         }
 
         const tab = searchParams.get('tab');
+        const mode = searchParams.get('mode');
+        // Eski kayıp bağlantıları (radar / mode=lost) yeni Kayıp & Bulunan ekranına gider.
+        if (tab === 'radar' && mode !== 'adopt') {
+            router.replace('/kayip');
+            return;
+        }
         if (tab === 'profile') {
             setActiveTab('profile');
         } else if (tab === 'feed' || tab === 'radar') {
             setActiveTab(tab as any);
         }
-
-        const mode = searchParams.get('mode');
-        if (mode === 'lost' || mode === 'adopt') {
-            setRadarTabMode(mode as any);
-        }
-
-        const latParam = searchParams.get('lat');
-        const lngParam = searchParams.get('lng');
-        if (latParam && lngParam) {
-            setUserCoords([parseFloat(latParam), parseFloat(lngParam)]);
-            setRadarViewMode('map');
-        }
-
-        const petId = searchParams.get('pet');
-        if (petId && lostPets.length > 0) {
-            const foundPet = lostPets.find(p => p.id === petId);
-            if (foundPet) {
-                showToast(
-                    "📍 Konum İşaretlendi",
-                    `${foundPet.pet_name} için kayıp konumu haritada gösteriliyor. Detaylar için haritadaki fotoğraflı patili işarete tıkla! 🐾`,
-                    "info"
-                );
-            }
-        }
-    }, [searchParams, lostPets]);
+    }, [searchParams]);
     
     // Keyboard Shortcut for AI Spotlight (Cmd+K / Ctrl+K)
     useEffect(() => {
@@ -1654,83 +1506,6 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
-    const handleSosImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files) {
-            const newPhotos = Array.from(files).map(file => ({
-                file,
-                preview: URL.createObjectURL(file)
-            }));
-            setLostPetPhotos(prev => [...prev, ...newPhotos]);
-            if (sosInputRef.current) sosInputRef.current.value = '';
-        }
-    };
-
-    const submitSos = async () => {
-        if (!lostPetName || !lostPetLocation) {
-            showToast("Eksik Bilgi", "Lütfen isim ve son görüldüğü yer alanlarını doldurun!", "error");
-            return;
-        }
-        if (!user) {
-            showToast("Giriş Gerekli", "Kayıp ilanı verebilmek için üye girişi yapmalısınız!", "error");
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-
-        setIsSubmittingSOS(true);
-        try {
-            const photoUrls: string[] = [];
-            // 1. Upload Images using apiService (Mockable)
-            for (const photo of lostPetPhotos) {
-                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
-                if (publicUrl) photoUrls.push(publicUrl);
-            }
-
-            // 2. Insert Record via API
-            const newAlert = await apiService.addLostPet({
-                name: lostPetName,
-                type: lostPetType,
-                img: photoUrls[0] || undefined,
-                images: photoUrls,
-                location: lostPetLocation,
-                description: lostPetDesc,
-                latitude: newLostPetCoords[0],
-                longitude: newLostPetCoords[1]
-            });
-
-            setSosAlerts(prev => [newAlert, ...prev]);
-
-            showToast("GÜÇLÜ SİNYAL GÖNDERİLDİ!", "Acil Durum İlanınız 5km çapındaki herkese ulaştı.", "success");
-
-            setIsLostAdModalOpen(false);
-            setLostPetName("");
-            setLostPetBreed("");
-            setLostPetLocation("");
-            setLostPetDesc("");
-            setLostPetPhotos([]);
-
-        } catch (error: any) {
-            console.error("SOS submission error:", error);
-            showToast("Hata", "İlan gönderilirken hata oluştu.", "error");
-        } finally {
-            setIsSubmittingSOS(false);
-        }
-    };
-
-    const handleDeleteLostPet = async (petId: string) => {
-        if (!window.confirm("Kayıp ilanını sistemden kaldırmak/silmek istediğinize emin misiniz?")) return;
-        try {
-            if (isSupabaseEnabled) {
-                await apiService.deleteLostPet(petId);
-            }
-            setSosAlerts(prev => prev.filter(p => p.id !== petId));
-            showToast("İlan Kaldırıldı", "İlanınız başarıyla sistemden kaldırıldı.", "success");
-        } catch (err: any) {
-            console.error("Failed to delete lost pet:", err);
-            showToast("Hata", "İlan silinemedi.", "error");
-        }
-    };
-
     // Logic for adoption posts
 
     const handleAdoptionPost = async () => {
@@ -1845,66 +1620,6 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
-    const handleReportLocation = () => {
-        if (!user) {
-            showToast("Giriş Gerekli", "Anonim olarak ihbar verebilmek için üye girişi yapmalısınız.", "error");
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-        setAnonModalType('report');
-        setAnonMessage("");
-        setAnonError(null);
-    };
-
-    const handleMessageOwner = () => {
-        if (!user) {
-            showToast("Giriş Gerekli", "Mesaj atabilmek için giriş yapmalısınız.", "error");
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-        setAnonModalType('message');
-        setAnonMessage("");
-        setAnonError(null);
-    };
-
-    const submitAnonAction = async () => {
-        if (!anonMessage.trim()) return;
-        setAnonError(null);
-
-        // --- AI MODERATION / PII CHECK ---
-        // Telefon Numarası Regex: (Örn: 0555 555 55 55, +905555555555, 532 123 4567)
-        const phoneRegex = /(?:\+90|0)?\s?[5]\d{2}\s?\d{3}\s?\d{2}\s?\d{2}/i;
-        // IBAN Regex: TR ile başlayıp 24 hane sayılan temel mantık
-        const ibanRegex = /TR[a-zA-Z0-9]{24}/i;
-
-        // Kelime bazlı basit spam/adres yakalama algoritması (örn. 'mah', 'sokak', 'no:')
-        const rawText = anonMessage.toLowerCase();
-
-        if (phoneRegex.test(rawText)) {
-            setAnonError("Hata: Sistemimiz iletişim bilginizi veya telefon numarası formatı tespit etti. Güvenliğiniz için direkt iletişim bilgisi paylaşmak yasaktır.");
-            return;
-        }
-        if (ibanRegex.test(rawText)) {
-            setAnonError("Hata: İbana ve para transferine yönelik teşebbüsleri reddediyoruz.");
-            return;
-        }
-
-        setIsSubmittingAnon(true);
-        try {
-            if (anonModalType === 'report' || anonModalType === 'message') {
-                const isMsg = anonModalType === 'message';
-                // Mock sighting submission
-                showToast("Sinyal İletildi", isMsg ? "Moffi Acil İhbar Hattına şifreli mesajınız ulaştı." : "Bölge bilgisini güvenle ulaştırdık.", "success");
-            }
-            setAnonModalType(null);
-            setAnonMessage("");
-        } catch (err: any) {
-            showToast("Bağlantı Hatası", "İşlem sırasında beklenmedik bir hata oluştu.", "error");
-        } finally {
-            setIsSubmittingAnon(false);
-        }
-    };
-
     const fetchInbox = async () => {
         try {
             await refreshInbox();
@@ -1913,66 +1628,6 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
-
-    // Unified SOS/Lost Pet fetcher used across the component
-    const fetchLostPets = async () => {
-        setIsLoadingLost(true);
-        try {
-            const data = await apiService.getLostPets();
-            setLostPets(data || []);
-            setSosAlerts(data || []);
-        } catch (err) {
-            console.error("Kayıp ilanlar çekilirken hata:", err);
-            setLostPets([]);
-            setSosAlerts([]);
-        } finally {
-            setIsLoadingLost(false);
-        }
-    };
-
-    const filteredSOSAlerts = useMemo(() => {
-        const sosSettings = {
-            radius: 5,
-            quietHours: { enabled: false, from: '23:00', to: '07:00' },
-            petTypes: ['dog', 'cat', 'bird', 'other'],
-            emergencyBypass: true
-        };
-
-        return sosAlerts.filter(alert => {
-            // 1. Radius Filter
-            if (alert.distance > (sosSettings.radius || 5)) return false;
-
-            // 2. Pet Type Filter
-            if (!(sosSettings.petTypes || []).includes(alert.type)) return false;
-
-            // 3. Quiet Hours & Emergency Bypass Logic
-            if (sosSettings.quietHours?.enabled) {
-                const now = new Date();
-                const currentMins = now.getHours() * 60 + now.getMinutes();
-                const [fromH, fromM] = (sosSettings.quietHours.from || '23:00').split(':').map(Number);
-                const [toH, toM] = (sosSettings.quietHours.to || '07:00').split(':').map(Number);
-                const fromMins = fromH * 60 + fromM;
-                const toMins = toH * 60 + toM;
-
-                let isQuietTime = false;
-                if (fromMins < toMins) {
-                    isQuietTime = currentMins >= fromMins && currentMins <= toMins;
-                } else {
-                    isQuietTime = currentMins >= fromMins || currentMins <= toMins;
-                }
-
-                if (isQuietTime) {
-                    // EMERGENCY BYPASS: If enabled, show very close alerts (< 1km) regardless of quiet hours
-                    if (sosSettings.emergencyBypass && alert.distance < 1.0) {
-                        return true;
-                    }
-                    return false;
-                }
-            }
-
-            return true;
-        });
-    }, [sosAlerts, user?.settings?.sos]);
 
 
 
@@ -2040,21 +1695,14 @@ export default function MoffiSocialMasterpiece() {
 
                         {/* Segment Switcher: Kayıp / Sahiplen */}
                         <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-2xl border border-black/10 dark:border-white/10 w-full max-w-[200px] shadow-inner backdrop-blur-md">
-                            <button 
-                                onClick={() => setRadarTabMode('lost')}
-                                className={cn(
-                                    "flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                    radarTabMode === 'lost' ? "bg-white text-black shadow-lg font-black" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                )}
+                            <button
+                                onClick={() => router.push('/kayip')}
+                                className="flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-[var(--secondary-text)] hover:text-[var(--foreground)]"
                             >
                                 Kayıp
                             </button>
-                            <button 
-                                onClick={() => setRadarTabMode('adopt')}
-                                className={cn(
-                                    "flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                    radarTabMode === 'adopt' ? "bg-white text-black shadow-lg font-black" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                )}
+                            <button
+                                className="flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-white text-black shadow-lg"
                             >
                                 Sahiplen
                             </button>
@@ -2098,6 +1746,21 @@ export default function MoffiSocialMasterpiece() {
                                                 className="p-2 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors bg-black/20 backdrop-blur-md border border-black/10 dark:border-white/10 shadow-lg"
                                             >
                                                 <Search className="w-4 h-4 text-black/90 dark:text-white/90" />
+                                            </motion.button>
+
+                                            {/* Mesajlar: alt menüdeki yer Kayıp/Sahiplendirme'ye verildi (design-reference/community-final). */}
+                                            <motion.button
+                                                style={{ scale: iconScale }}
+                                                onClick={() => setIsInboxOpen(true)}
+                                                aria-label="Mesajlar"
+                                                className="relative p-2 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors bg-black/20 backdrop-blur-md border border-black/10 dark:border-white/10 shadow-lg"
+                                            >
+                                                <MessageCircle className="w-4 h-4 text-black/90 dark:text-white/90" />
+                                                {unreadCount > 0 && (
+                                                    <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-[#EE5B3D] text-white text-[9px] font-black flex items-center justify-center">
+                                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                                    </span>
+                                                )}
                                             </motion.button>
 
                                             <motion.button
@@ -2158,30 +1821,8 @@ export default function MoffiSocialMasterpiece() {
                         />
                     )}
 
-                    {/* UNIFIED COMMUNITY RADAR TAB */}
-                    {activeTab === 'radar' && radarTabMode === 'lost' && (
-                        <RadarTab
-                            user={user}
-                            lostPets={filteredLostPets}
-                            isLoading={isLoadingLost}
-                            userCoords={userCoords}
-                            selectedCategory={selectedCategory}
-                            setSelectedCategory={setSelectedCategory}
-                            filterDistance={filterDistance}
-                            setFilterDistance={setFilterDistance}
-                            radarViewMode={radarViewMode}
-                            setRadarViewMode={setRadarViewMode}
-                            radarTabMode={radarTabMode}
-                            setRadarTabMode={setRadarTabMode}
-                            setActiveTab={setActiveTab}
-                            setIsLostAdModalOpen={setIsLostAdModalOpen}
-                            setSelectedLostPet={setSelectedLostPet}
-                            onDeleteSOS={handleDeleteLostPet}
-                        />
-                    )}
-
                     {/* ADOPTION PANEL CONTENT */}
-                    {activeTab === 'radar' && radarTabMode === 'adopt' && (
+                    {activeTab === 'radar' && (
                         <AdoptionTab
                             user={user}
                             onAddAd={() => setIsAddAdoptionModalOpen(true)}
@@ -2390,11 +2031,11 @@ export default function MoffiSocialMasterpiece() {
                                     </p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); setRadarTabMode('lost'); }} className="flex-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95">
+                                    <button onClick={() => { setIsUploadModalOpen(false); router.push('/kayip/ilan-ver'); }} className="flex-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95">
                                         <Radar className="w-4 h-4" strokeWidth={2.5} />
                                         <span className="font-bold text-[11px]">Kayıp İlanı</span>
                                     </button>
-                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); setRadarTabMode('adopt'); }} className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95">
+                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); }} className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95">
                                         <HeartHandshake className="w-4 h-4" strokeWidth={2.5} />
                                         <span className="font-bold text-[11px]">Sahiplendirme</span>
                                     </button>
@@ -3284,520 +2925,6 @@ export default function MoffiSocialMasterpiece() {
                             </div>
                         </motion.div>
                     </>
-                )}
-            </AnimatePresence>
-
-            {/* LOST AD (SOS) MODAL */}
-            <AnimatePresence>
-                {isLostAdModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, y: "100%" }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: "100%" }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed inset-0 z-[280] bg-[var(--background)] flex flex-col pt-12 text-[var(--foreground)]"
-                    >
-                        {/* Emergency Header */}
-                        <div className="flex justify-between items-center px-6 pb-4 border-b border-red-500/20">
-                            <button
-                                onClick={() => setIsLostAdModalOpen(false)}
-                                className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors"
-                            >
-                                <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
-                            </button>
-                            <h2 className="text-lg font-black text-red-500 tracking-wider">ACİL DURUM İLANI</h2>
-                            <div className="w-10" />
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 sm:p-6 space-y-6">
-
-                            <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-4 sm:p-6 text-center shadow-inner relative overflow-hidden">
-                                <div className="absolute inset-0 bg-red-500/10 animate-pulse pointer-events-none" />
-                                <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/30">
-                                    <MapPin className="w-8 h-8" />
-                                </div>
-                                <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">Çevredeki Herkesi Uyar!</h3>
-                                <p className="text-sm text-red-500 font-medium leading-relaxed">
-                                    Kaybolan dostunuzun bilgilerini girdiğinizde, 5 km çapındaki tüm Moffi üyelerine anında acil durum (SOS) bildirimi gönderilecektir.
-                                </p>
-                            </div>
-
-                            <div className="flex gap-2">
-                                {[
-                                    { id: 'cat', label: 'Kedi', icon: '🐈' },
-                                    { id: 'dog', label: 'Köpek', icon: '🐕' },
-                                    { id: 'bird', label: 'Kuş', icon: '🦜' },
-                                    { id: 'other', label: 'Diğer', icon: '🐾' },
-                                ].map(type => (
-                                    <button
-                                        key={type.id}
-                                        onClick={() => setLostPetType(type.id)}
-                                        className={cn(
-                                            "flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex flex-col items-center gap-1 border",
-                                            lostPetType === type.id
-                                                ? "bg-red-500/20 border-red-500 text-red-400"
-                                                : "bg-[var(--card-bg)] border-black/10 dark:border-white/10 text-[var(--secondary-text)]"
-                                        )}
-                                    >
-                                        <span className="text-xl">{type.icon}</span>
-                                        {type.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">İsmi</label>
-                                    <input value={lostPetName} onChange={e => setLostPetName(e.target.value)} type="text" placeholder="Örn: Buster" className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Cinsi / Türü</label>
-                                    <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 mb-2 block uppercase tracking-wider">En Son Göründüğü Yer (Harita)</label>
-                                    <MapLocationPicker 
-                                        coords={newLostPetCoords} 
-                                        onChange={(coords, address) => {
-                                            setNewLostPetCoords(coords);
-                                            if (address) setLostPetLocation(address);
-                                        }} 
-                                        height="220px" 
-                                    />
-                                </div>
-
-
-
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Detaylar / İletişim Notu</label>
-                                    <textarea value={lostPetDesc} onChange={e => setLostPetDesc(e.target.value)} placeholder="Tasma rengi, belirgin özelliği veya ek iletişim bilgileriniz..." className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors resize-none h-24" />
-                                </div>
-
-                                <div>
-                                    <div className="flex justify-between items-center mb-2 px-1">
-                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-wider">Fotoğraflar</label>
-                                        <button onClick={() => sosInputRef.current?.click()} className="text-[10px] bg-red-500/10 text-red-500 px-3 py-1 rounded-full border border-red-500/20 font-bold hover:bg-red-500/20 transition-all uppercase tracking-tighter flex items-center gap-1">
-                                            <Camera className="w-3 h-3" /> Fotoğraf Ekle
-                                        </button>
-                                        <input type="file" ref={sosInputRef} className="hidden" accept="image/*" multiple onChange={handleSosImageSelect} />
-                                    </div>
-
-                                    {lostPetPhotos.length > 0 ? (
-                                        <div className="grid grid-cols-4 gap-3">
-                                            {lostPetPhotos.map((photo, idx) => (
-                                                <div key={idx} className="aspect-square rounded-xl bg-[var(--card-bg)] border border-black/10 dark:border-white/10 relative overflow-hidden group">
-                                                    <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                    <button
-                                                        onClick={() => setLostPetPhotos(prev => prev.filter((_, i) => i !== idx))}
-                                                        className="absolute top-1 right-1 w-5 h-5 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            {lostPetPhotos.length < 4 && (
-                                                <button
-                                                    onClick={() => sosInputRef.current?.click()}
-                                                    className="aspect-square rounded-xl border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/50 hover:text-red-500 transition-all"
-                                                >
-                                                    <Plus className="w-5 h-5" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div
-                                            onClick={() => sosInputRef.current?.click()}
-                                            className="w-full py-8 border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/30 hover:bg-red-500/5 transition-all cursor-pointer"
-                                        >
-                                            <Camera className="w-8 h-8 mb-2 opacity-30" />
-                                            <p className="text-xs font-bold">Fotoğraf Ekle</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Sticky Action Button */}
-                        <div className="p-4 sm:p-6 border-t border-red-500/20 bg-[var(--background)] shrink-0">
-                            <button
-                                onClick={submitSos}
-                                disabled={isSubmittingSOS}
-                                className={cn("w-full py-4 rounded-2xl font-black text-[var(--foreground)] text-base tracking-wide flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(220,38,38,0.4)] transition-all", isSubmittingSOS ? "bg-red-800 cursor-not-allowed" : "bg-red-600 active:scale-95")}
-                            >
-                                {isSubmittingSOS ? (
-                                    <span className="animate-pulse">Sinyal İletiliyor...</span>
-                                ) : (
-                                    <><Activity className="w-5 h-5 animate-pulse" /> S.O.S Sinyali Gönder</>
-                                )}
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* IMMERSIVE LOST PET DETAIL BOTTOM SHEET / DRAWER */}
-            <AnimatePresence>
-                        {selectedLostPet && (
-                    <div className="fixed inset-0 z-[120] flex items-end justify-center sm:p-4 pb-0">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => setSelectedLostPet(null)}
-                        />
-                        <motion.div
-                            drag="y"
-                            dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={(e, info) => {
-                                if (info.offset.y > 100) setSelectedLostPet(null);
-                            }}
-                            initial={{ y: "100%", opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: "100%", opacity: 0 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="w-full sm:max-w-md bg-[var(--background)] sm:rounded-[3rem] rounded-t-[2.5rem] shadow-2xl relative z-10 flex flex-col overflow-hidden max-h-[90vh] sm:max-h-[85vh] border-t border-black/10 dark:border-white/10 sm:border"
-                        >
-                            {/* Drag Handle */}
-                            <button 
-                                onClick={() => setSelectedLostPet(null)}
-                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
-                            />
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar w-full flex flex-col relative">
-                                {/* Hero Image Section */}
-                            {selectedLostPet.active_image_url || selectedLostPet.media_url ? (
-                                <div 
-                                    className="relative w-full h-[260px] sm:h-[300px] bg-white dark:bg-black shrink-0 overflow-hidden"
-                                    onTouchStart={(e) => {
-                                        const touch = e.touches[0];
-                                        (window as any).heroTouchStartX = touch.clientX;
-                                    }}
-                                    onTouchEnd={(e) => {
-                                        const touchX = e.changedTouches[0].clientX;
-                                        const startX = (window as any).heroTouchStartX;
-                                        if (startX && selectedLostPet.images && selectedLostPet.images.length > 1) {
-                                            const diff = startX - touchX;
-                                            const currentIndex = selectedLostPet.images.indexOf(selectedLostPet.active_image_url || selectedLostPet.images[0] || selectedLostPet.media_url);
-                                            if (diff > 40 && currentIndex < selectedLostPet.images.length - 1) {
-                                                setSelectedLostPet({ ...selectedLostPet, active_image_url: selectedLostPet.images[currentIndex + 1] });
-                                            } else if (diff < -40 && currentIndex > 0) {
-                                                setSelectedLostPet({ ...selectedLostPet, active_image_url: selectedLostPet.images[currentIndex - 1] });
-                                            }
-                                        }
-                                    }}
-                                >
-                                    <img 
-                                        key={selectedLostPet.active_image_url || selectedLostPet.media_url}
-                                        src={selectedLostPet.active_image_url || selectedLostPet.media_url} 
-                                        alt={selectedLostPet.pet_name || 'Kayıp Pet'} 
-                                        className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300" 
-                                    />
-                                    
-                                    {/* Pagination Dots */}
-                                    {selectedLostPet.images && selectedLostPet.images.length > 1 && (
-                                        <div className="absolute top-4 inset-x-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-                                            {selectedLostPet.images.map((url: string, i: number) => (
-                                                <div key={i} className={cn("h-1.5 rounded-full transition-all duration-300", (selectedLostPet.active_image_url || selectedLostPet.images[0]) === url ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50 backdrop-blur-sm")} />
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Header Info Layered on Image */}
-                                    <div className="absolute bottom-0 inset-x-0 p-6 flex items-end justify-between z-10 pointer-events-none">
-                                        <div className="flex flex-col gap-1 min-w-0 pr-4">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <div className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-[10px] font-black tracking-widest uppercase shadow-lg shadow-red-500/30 flex items-center gap-1.5">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> S.O.S
-                                                </div>
-                                                <span className="text-[10px] font-bold text-black/80 dark:text-white/80 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg">
-                                                    {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Floating Actions (Close & Share) on top of image */}
-                                    <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                openShare({
-                                                    title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
-                                                    text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
-                                                    url: typeof window !== 'undefined' ? window.location.href : ''
-                                                });
-                                            }}
-                                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
-                                        >
-                                            <Share2 className="w-4 h-4" />
-                                        </button>
-                                        <button 
-                                            onClick={() => setSelectedLostPet(null)}
-                                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-red-900/40 to-[var(--background)] border-b border-red-500/10 pb-6 pt-12 px-6">
-                                    {/* Floating Actions (Close & Share) for No Image version */}
-                                    <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                openShare({
-                                                    title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
-                                                    text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
-                                                    url: typeof window !== 'undefined' ? window.location.href : ''
-                                                });
-                                            }}
-                                            className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] hover:bg-black/5 dark:bg-white/5 transition-all active:scale-95 shadow-sm"
-                                        >
-                                            <Share2 className="w-4 h-4" />
-                                        </button>
-                                        <button 
-                                            onClick={() => setSelectedLostPet(null)}
-                                            className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] hover:bg-black/5 dark:bg-white/5 transition-all active:scale-95 shadow-sm"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex flex-col gap-1 min-w-0 pr-4 relative z-10 mt-6">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-[10px] font-black tracking-widest uppercase shadow-lg shadow-red-500/30 flex items-center gap-1.5">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> S.O.S
-                                            </div>
-                                            <span className="text-[10px] font-bold text-[var(--secondary-text)] bg-[var(--card-bg)] px-2 py-1 rounded-lg border border-[var(--card-border)]">
-                                                {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
-                                            </span>
-                                        </div>
-                                        <h1 className="text-3xl font-black text-[var(--foreground)] tracking-tight truncate">
-                                            {selectedLostPet.pet_name}
-                                        </h1>
-                                    </div>
-                                    
-                                    {/* Big decorative background icon */}
-                                    <div className="absolute -right-8 -bottom-8 opacity-5 pointer-events-none">
-                                        <PawPrint className="w-48 h-48 text-red-500" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Scrollable details */}
-                            <div className="flex-1 px-6 pt-2 pb-4 space-y-6 pb-[calc(100px+env(safe-area-inset-bottom))] bg-[var(--background)] relative z-10 -mt-4 rounded-t-3xl">
-                                <h1 className="text-3xl font-black text-[var(--foreground)] tracking-tight truncate mt-1">
-                                    {selectedLostPet.pet_name}
-                                </h1>
-
-                                {/* Thumbnail Gallery */}
-                                {selectedLostPet.images && selectedLostPet.images.length > 1 && (
-                                    <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                                        {selectedLostPet.images.map((url: string, i: number) => (
-                                            <button 
-                                                key={i} 
-                                                onClick={() => setSelectedLostPet({ ...selectedLostPet, active_image_url: url })}
-                                                className={cn(
-                                                    "w-16 h-16 rounded-2xl overflow-hidden shrink-0 transition-all border-2",
-                                                    (selectedLostPet.active_image_url || selectedLostPet.media_url) === url ? "border-red-500 scale-105 shadow-md" : "border-black/10 dark:border-white/10 opacity-60 hover:opacity-100"
-                                                )}
-                                            >
-                                                <img src={url} alt={`Görsel ${i+1}`} className="w-full h-full object-cover" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Metadata Grid */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
-                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
-                                            <MapPin className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Son Görülen Yer</span>
-                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.last_location || selectedLostPet.location}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
-                                        <div className="w-8 h-8 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500 shrink-0">
-                                            <User className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">İlan Sahibi</span>
-                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.author_name || 'Moffi Üyesi'}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
-                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
-                                            <PawPrint className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Cinsi / Türü</span>
-                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.pet_breed || selectedLostPet.type || 'Belirtilmedi'}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
-                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
-                                            <Coins className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Ödül Miktarı</span>
-                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">
-                                                {selectedLostPet.reward_enabled && selectedLostPet.reward_amount 
-                                                    ? `${Number(selectedLostPet.reward_amount).toLocaleString('tr-TR')} TL` 
-                                                    : 'Ödül Yok'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Map Location Readonly */}
-                                {selectedLostPet.latitude && selectedLostPet.longitude && (
-                                    <div className="space-y-2">
-                                        <h3 className="text-sm font-black text-[var(--foreground)] uppercase tracking-wider">Son Konumu (Harita)</h3>
-                                        <MapLocationPicker 
-                                            coords={[selectedLostPet.latitude, selectedLostPet.longitude]} 
-                                            readonly={true}
-                                            height="160px"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Description */}
-                                <div className="space-y-1.5">
-                                    <h3 className="text-[13px] font-black text-[var(--foreground)] uppercase tracking-wider">İlan Detayı</h3>
-                                    <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed font-medium bg-[var(--card-bg)]/50 border border-black/5 dark:border-white/5 rounded-xl p-3.5">
-                                        {selectedLostPet.description || "Ek detay girilmemiş."}
-                                    </p>
-                                </div>
-
-                                {/* Warning Box */}
-                                <div className="bg-red-500/5 border border-red-500/15 p-3.5 rounded-xl flex gap-2.5 items-start">
-                                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5 animate-pulse" />
-                                    <p className="text-[10px] text-red-400 font-medium leading-relaxed">
-                                        Eğer bu dostumuzu görüyorsanız lütfen ani hareketler yapmadan, nazikçe yaklaşın ve hemen aşağıdaki butonlar yardımıyla sahibiyle iletişime geçin.
-                                    </p>
-                                </div>
-                            </div>
-                            </div>
-
-                            {/* Floating Actions Bottom Bar */}
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/95 to-transparent p-3 sm:px-5 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shrink-0 flex gap-2 z-30">
-                                <button 
-                                    className="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-[13px] flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-lg shadow-cyan-500/20" 
-                                    onClick={handleMessageOwner}
-                                >
-                                    <MessageCircle className="w-4 h-4" /> Sahibine Mesaj At
-                                </button>
-                                <button 
-                                    disabled={isReportingLocation} 
-                                    className={cn(
-                                        "flex-[0.8] py-3 rounded-2xl border border-black/10 dark:border-white/10 font-black text-sm flex items-center justify-center gap-2 transition-transform shadow-lg", 
-                                        isReportingLocation 
-                                            ? "bg-black/5 dark:bg-white/5 text-[var(--secondary-text)] cursor-not-allowed" 
-                                            : "bg-black/5 dark:bg-white/5 text-[var(--foreground)] hover:bg-black/10 dark:bg-white/10 active:scale-95"
-                                    )} 
-                                    onClick={handleReportLocation}
-                                >
-                                    {isReportingLocation ? <Activity className="w-4 h-4 animate-spin" /> : <Flame className="w-4 h-4 text-red-500" />} 
-                                    {isReportingLocation ? "Bulunuyor..." : "Onu Gördüm!"}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* SECURE ANON COMMUNICATION MODAL */}
-            <AnimatePresence>
-                {anonModalType && (
-                    <div className="fixed inset-0 z-[140] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                            onClick={() => setAnonModalType(null)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="w-full max-w-md bg-[var(--card-bg)] rounded-[2rem] border border-black/10 dark:border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col"
-                        >
-                            <div className="p-4 sm:p-6 pb-4 border-b border-[var(--card-border)] flex flex-col items-center">
-                                <div className="w-16 h-16 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 ring-4 ring-purple-500/10">
-                                    <Lock className="w-8 h-8" />
-                                </div>
-                                <h3 className="text-xl font-black text-[var(--foreground)] text-center">
-                                    {anonModalType === 'report' ? "Gizli İhbar Yap" : "Anonim Mesaj Gönder"}
-                                </h3>
-                            </div>
-
-                            <div className="p-4 sm:p-6 space-y-4">
-                                <p className="text-[var(--secondary-text)] text-sm font-medium leading-relaxed text-center">
-                                    Moffi KVKK yükümlülükleri gereğince, iletişim bilgileriniz, gerçek adınız veya net GPS konumunuz {selectedLostPet?.author_name} kullanıcısı ile <strong className="text-[var(--foreground)]">asla paylaşılmayacaktır.</strong>
-                                </p>
-
-                                <div className="bg-red-500/10 border-l-2 border-red-500 p-3 rounded-r-lg">
-                                    <p className="text-xs text-red-400">
-                                        Güvenliğiniz için lütfen buluşma tekliflerini doğrudan kabul etmeyin. Eğer kayıp dostumuzu bulursanız, teslimatı her iki taraf için de kalabalık bir alanda (Örn: Veteriner veya Polis Merkezi) gerçekleştirin.
-                                    </p>
-                                </div>
-
-                                {anonError && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-500/20 text-red-400 p-3 rounded-xl text-xs font-bold border border-red-500/50">
-                                        <Activity className="w-4 h-4 inline-block mr-1 mb-0.5" /> {anonError}
-                                    </motion.div>
-                                )}
-
-                                <div className="relative">
-                                    <textarea
-                                        value={anonMessage}
-                                        onChange={e => {
-                                            setAnonMessage(e.target.value);
-                                            if (anonError) setAnonError(null);
-                                        }}
-                                        placeholder={anonModalType === 'report' ? "Hangi bölgede gördünüz? (Sadece sokak, park veya mekan adı)" : "Mesajınız (Numaranız veya isminiz gizli kalacaktır)..."}
-                                        className={cn("w-full bg-[var(--background)] border rounded-xl p-4 text-[var(--foreground)] text-sm outline-none transition-colors h-28 resize-none", anonError ? "border-red-500 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]" : "border-black/10 dark:border-white/10 focus:border-cyan-500")}
-                                    />
-                                    {anonError && (
-                                        <div className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-full animate-bounce">
-                                            <Lock className="w-3 h-3 text-[var(--foreground)]" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        onClick={() => { setAnonModalType(null); setAnonError(null); }}
-                                        className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-[var(--secondary-text)] font-bold hover:bg-black/10 dark:bg-white/10 transition-colors"
-                                    >
-                                        İptal
-                                    </button>
-                                    <button
-                                        disabled={isSubmittingAnon || !anonMessage.trim()}
-                                        onClick={submitAnonAction}
-                                        className={cn("flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all", (!anonMessage.trim() || isSubmittingAnon) ? "bg-cyan-900 text-cyan-500/50 cursor-not-allowed" : "bg-cyan-500 text-black active:scale-95")}
-                                    >
-                                        {isSubmittingAnon ? "Gönderiliyor..." : "Güvenli Gönder"}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
                 )}
             </AnimatePresence>
 

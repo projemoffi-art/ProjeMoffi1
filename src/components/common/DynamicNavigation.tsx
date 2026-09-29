@@ -36,7 +36,7 @@ export function DynamicNavigation() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { user } = useAuth();
-    const { pets, updatePet, activePet } = usePet();
+    const { pets, activePet } = usePet();
     const { seniorMode } = useTheme();
     const { walkData } = useActivity();
 
@@ -418,14 +418,6 @@ export function DynamicNavigation() {
                 pet={sosActivePet}
                 allPets={pets}
                 onPetChange={(p) => setSosActivePet(p)}
-                sosData={null}
-                onUpdate={(newSosData) => {
-                    if (sosActivePet) {
-                        updatePet(sosActivePet.id, { is_lost: newSosData.status === 'lost' });
-                    }
-                    clearModalHistoryState();
-                    setIsSOSOpen(false);
-                }}
             />
 
             <SpotlightSearch

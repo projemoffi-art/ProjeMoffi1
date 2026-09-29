@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 interface ReportModalProps {
     isOpen: boolean;
     onClose: () => void;
-    entityType: 'post' | 'comment' | 'user' | 'pet';
+    entityType: 'post' | 'comment' | 'user' | 'pet' | 'lost_listing' | 'adoption_listing';
     entityId: string;
 }
 

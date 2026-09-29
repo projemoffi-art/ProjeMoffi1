@@ -1,15 +1,11 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    Home, Compass, Sparkles, MessageCircle, User
-} from 'lucide-react';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Home, Compass, Sparkles, HeartHandshake, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { useTranslation } from '@/context/LanguageContext';
-import { useChat } from '@/context/ChatContext';
 
 interface MoffiBottomNavProps {
     activeTab?: string;
@@ -18,14 +14,10 @@ interface MoffiBottomNavProps {
 }
 
 export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisible = true }: MoffiBottomNavProps) {
-    const { t } = useTranslation();
     const router = useRouter();
     const pathname = usePathname();
     const { user } = useAuth();
-    const { unreadCount, isInboxOpen, setIsInboxOpen } = useChat();
-    
-    const [isHubLongPressing, setIsHubLongPressing] = useState(false);
-    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const isHelpActive = !!pathname && (pathname.startsWith('/kayip') || pathname.startsWith('/sahiplendirme'));
 
     const activeTab = propActiveTab || (pathname === '/home' ? 'home' : pathname?.startsWith('/profile') ? 'profile' : 'feed');
 
@@ -93,26 +85,16 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         <div className="h-full" />
                     </div>
 
-                    {/* 4. MESAJLAR */}
+                    {/* 4. KAYIP & SAHİPLENDİRME (Pati Yardım). Mesajlar Keşfet üst çubuğunda — design-reference/community-final. */}
                     <button
-                        onClick={() => setIsInboxOpen(true)}
+                        onClick={() => router.push('/kayip')}
+                        aria-label="Kayıp ve sahiplendirme"
                         className={cn(
                             "flex-1 flex flex-col items-center justify-center transition-all active:scale-90 h-full",
-                            isInboxOpen ? "text-cyan-600 dark:text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "text-foreground/80 hover:text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                            isHelpActive ? "text-cyan-600 dark:text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "text-foreground/80 hover:text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
                         )}
                     >
-                        <div className="relative">
-                            <MessageCircle className={cn("w-5 h-5", isInboxOpen && "text-cyan-600 dark:text-cyan-400")} />
-                            {unreadCount > 0 && (
-                                <motion.div
-                                    animate={{ scale: [1, 1.15, 1] }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                    className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-cyan-400 rounded-full border border-[var(--background)] flex items-center justify-center shadow-[0_0_8px_rgba(34,211,238,0.6)]"
-                                >
-                                    <span className="text-[7px] font-black text-black">{unreadCount}</span>
-                                </motion.div>
-                            )}
-                        </div>
+                        <HeartHandshake className={cn("w-5 h-5", isHelpActive && "text-cyan-600 dark:text-cyan-400")} />
                     </button>
 
                     {/* 5. PROFİL */}

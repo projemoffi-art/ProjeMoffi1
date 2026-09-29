@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Search, MessageCircle, ShieldAlert, ChevronRight,
+    X, Search, MessageCircle, ChevronRight,
     CheckCheck, Check, Undo2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,8 +17,7 @@ const LONG_PRESS_MS = 450;
 export function InboxModal() {
     const {
         isInboxOpen, setIsInboxOpen,
-        inboxTab, setInboxTab,
-        inboxMessages, sosAlerts,
+        inboxMessages,
         activeChatUserId, setActiveChatUserId,
         activeMessages,
         onSendReply, isReplying,
@@ -154,17 +153,6 @@ export function InboxModal() {
                         </div>
                     )}
 
-                    {!activeChatUserId && (
-                        <div className="px-6 py-4 flex gap-2">
-                            <button onClick={() => setInboxTab('chats')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'chats' ? "bg-cyan-500 text-black shadow-cyan-500/20" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 border border-card-border")}>
-                                <MessageCircle className="w-4 h-4" /> Sohbetler
-                            </button>
-                            <button onClick={() => setInboxTab('sos')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'sos' ? "bg-red-500 text-white shadow-red-500/20" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 border border-card-border")}>
-                                <ShieldAlert className="w-4 h-4" /> SOS Alarmları
-                            </button>
-                        </div>
-                    )}
-
                     <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar">
                         {activeChatUserId ? (
                             <div className="flex flex-col min-h-full px-6 py-6 pb-24 space-y-4">
@@ -240,7 +228,7 @@ export function InboxModal() {
                                 })}
                                 <div ref={messagesEndRef} />
                             </div>
-                        ) : inboxTab === 'chats' ? (
+                        ) : (
                             <div className="flex flex-col">
                                 {inboxMessages.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
@@ -275,36 +263,6 @@ export function InboxModal() {
                                                     {m.unread && <div className="ml-2 w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]" />}
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col">
-                                {sosAlerts.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
-                                        <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
-                                            <ShieldAlert className="w-10 h-10 text-red-500" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-foreground mb-2">Güvendesiniz!</h3>
-                                        <p className="text-sm text-black/50 dark:text-white/40">Yakın çevrenizde aktif herhangi bir kayıp pet ihbarı bulunmuyor.</p>
-                                    </div>
-                                ) : (
-                                    sosAlerts.map((sos: any) => (
-                                        <div key={sos.id} className="px-6 py-5 flex items-start gap-4 hover:bg-red-500/5 transition-colors cursor-pointer border-b border-card-border relative group">
-                                            <div className="w-14 h-14 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500 border border-red-500/30">
-                                                <ShieldAlert className="w-7 h-7" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <h4 className="font-bold text-red-400 text-base">{(sos.pet_name || sos.name)} KAYIP!</h4>
-                                                    <span className="text-[10px] text-black/30 dark:text-white/20 font-bold uppercase tracking-tighter">{sos.time}</span>
-                                                </div>
-                                                <p className="text-sm text-black/60 dark:text-white/60 font-medium line-clamp-2 leading-relaxed">
-                                                    <span className="font-black text-foreground">{(sos.last_location || sos.location)}</span> konumunda ihtar geçildi. Lütfen çevreye duyarlı olun.
-                                                </p>
-                                            </div>
-                                            <ChevronRight className="w-6 h-6 text-black/30 dark:text-white/20 self-center" />
                                         </div>
                                     ))
                                 )}

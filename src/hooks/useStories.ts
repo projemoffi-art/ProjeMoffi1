@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '@/services/apiService';
+import { lostService } from '@/services/lostService';
 
+// Kayıp ilanı başlığı (LostUI'deki listingTitle ile aynı kural; hook bileşen modülü içe aktarmasın diye burada).
+const listingTitle = (l: { petName: string | null; kind: string }) =>
+    l.petName?.trim() || (l.kind === 'found' ? 'Bulunan dost' : 'Kayıp dost');
 export interface Story {
     id: string;
     media_url: string;
@@ -9,7 +13,7 @@ export interface Story {
     description?: string;
     badge?: string;
     ctaText?: string;
-    ctaType?: 'toast' | 'chat' | 'map' | 'coupon';
+    ctaType?: 'toast' | 'chat' | 'map' | 'coupon' | 'link';
     ctaValue?: string;
     expires_at?: string;
 }
@@ -29,8 +33,7 @@ export function useStories() {
     const fetchStories = useCallback(async () => {
         setIsLoading(true);
         try {
-            // Fetch live lost pets from Supabase
-            const lostPets = await apiService.getLostPets();
+            const lostListings = await lostService.list().catch(() => []);
             // Fetch live system announcements
             const announcements = await apiService.getAnnouncements();
             // Fetch today's daily star pets (up to 5)
@@ -68,18 +71,21 @@ export function useStories() {
                     ctaValue: ann.cta_value || ''
                 }));
             
-            const liveSosStories: Story[] = lostPets.map((pet: any) => ({
-                id: pet.id,
-                media_url: pet.img || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
-                created_at: pet.created_at || new Date().toISOString(),
-                title: `${pet.name} Kayıp! (${pet.location || 'Bilinmiyor'})`,
-                description: pet.description || `${pet.name} cinsi dostumuz kaybolmuştur. Görenlerin iletişime geçmesi rica olunur.`,
-                badge: pet.reward ? `Ödül: ${pet.reward}` : 'Acil İhbar',
-                ctaText: 'Konumu Haritada Gör 📍',
-                ctaType: 'sos' as any,
-                ctaValue: `${pet.latitude},${pet.longitude}`,
-                ctaValue2: pet.user_id
-            }));
+            // Sadece yayındaki kayıp ilanları; dokununca ilanın kendisi açılır (Gördüm / Sahibine yaz oradan).
+            const liveSosStories: Story[] = lostListings
+                .filter(l => l.kind === 'lost' && l.status === 'active' && l.photos[0])
+                .slice(0, 10)
+                .map(l => ({
+                    id: l.id,
+                    media_url: l.photos[0],
+                    created_at: l.createdAt,
+                    title: `Kayıp: ${listingTitle(l)}`,
+                    description: [l.locationText, l.description].filter(Boolean).join(' · '),
+                    badge: l.rewardEnabled && l.rewardAmount ? `Ödül: ${l.rewardAmount.toLocaleString('tr-TR')} TL` : 'Kayıp ilanı',
+                    ctaText: 'İlanı aç',
+                    ctaType: 'link' as const,
+                    ctaValue: `/kayip/${l.id}`,
+                }));
 
             const featuredStories: Story[] = (dailyStars || []).map((star: any) => ({
                 id: star.id || `daily_star_${star.rank}`,
