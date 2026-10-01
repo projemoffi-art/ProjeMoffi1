@@ -3132,6 +3132,16 @@ silindi, kararlar bu yüzden burada tutuluyor). **Bu yol haritasıyla ilgili her
     `commissionRate`), sonra web üzerinden PayTR ile "öne çıkma". Randevuya başlangıçta komisyon yok.
     İşletmeler coin almaz, vermez.
 
+- **1. faz kararları (2026-10-02):** veri yapısı = ayrı `businesses` kaydı + `business_members`
+  (sahip/yönetici/personel); mevcut işletmeler taşınır, eski işletme hesapları kişisel hesaba döner ve sahip olur.
+  Hesap silme: 30 gün geri alınabilir bekleme, sonra kalıcı silme. Personel varsayılanı: kendi takvimi +
+  randevu onay/tamamlama + muayene kaydı + müşteriyle mesaj; hizmet/fiyat/kampanya/personel/gelir sadece
+  sahip ve yönetici. Sıra: 1a güvenlik ✓ → 1b işletme kaydı/üyelik → 1c personel daveti → 1d kayıt-giriş
+  (e-posta kodu, şifre/oturum) → 1e hesap silme + yönetici 2FA. Apple girişi geliştirici hesabını bekliyor.
+- 🔴 **1a (yayında):** ara katman `moffi_user_role` çerezine güveniyordu; Vercel'de `SESSION_SECRET` yoktu,
+  kodda yazılı yedek anahtarla sahte yönetici çerezi üretilebiliyordu. Çerez ve `/api/auth/session` silindi;
+  rol sadece Supabase oturumundan. **KURAL:** yetkiyi asla istemcinin taşıdığı bir çereze/değere dayandırma.
+
 ### 8.53 Faz 2 — mesaj istekleri, @bahsetme, pati tepkisi, haftanın teması (2026-10-02)
 
 Migration `20261002100000_social_requests_mentions_paws_theme.sql` (Baran SQL Editor'dan uyguladı; Supabase
