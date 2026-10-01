@@ -2,50 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const SESSION_SECRET = process.env.SESSION_SECRET || "moffi_default_secret_fallback_2026_xyz";
-
-async function verifyRoleSignature(cookieValue: string): Promise<{ role: string; userId: string } | null> {
-    try {
-        const parts = cookieValue.split(".");
-        if (parts.length !== 2) return null;
-        
-        const [base64Payload, signatureHex] = parts;
-        
-        const encoder = new TextEncoder();
-        const keyData = encoder.encode(SESSION_SECRET);
-        
-        const cryptoKey = await crypto.subtle.importKey(
-            "raw",
-            keyData,
-            { name: "HMAC", hash: { name: "SHA-256" } },
-            false,
-            ["verify"]
-        );
-        
-        const sigMatches = signatureHex.match(/.{1,2}/g);
-        if (!sigMatches) return null;
-        const sigBuffer = new Uint8Array(sigMatches.map(byte => parseInt(byte, 16)));
-        
-        const dataBuffer = encoder.encode(base64Payload);
-        
-        const isValid = await crypto.subtle.verify(
-            "HMAC",
-            cryptoKey,
-            sigBuffer,
-            dataBuffer
-        );
-        
-        if (!isValid) return null;
-        
-        const payloadStr = atob(base64Payload);
-        const payload = JSON.parse(payloadStr);
-        return payload;
-    } catch (e) {
-        console.error("[Middleware] Signature verification exception:", e);
-        return null;
-    }
-}
-
 export async function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
     
@@ -113,21 +69,8 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    // Fallback to cryptographic signature check for development mock mode
-    if (!role) {
-        const roleCookie = request.cookies.get("moffi_user_role");
-        const cookieValue = roleCookie ? roleCookie.value : null;
-
-        if (cookieValue) {
-            const payload = await verifyRoleSignature(cookieValue);
-            if (payload) {
-                role = payload.role;
-                userId = payload.userId;
-            } else {
-                console.warn(`[Middleware] Tampered or invalid session cookie detected for ${pathname}`);
-            }
-        }
-    }
+    // Rol sadece Supabase oturumundan gelir. Ayrı bir rol çerezine güvenilmez (eskiden vardı ve imza anahtarı
+    // tanımsızken kodda yazılı yedek anahtarla taklit edilebiliyordu).
 
     // Bakım Modu Kontrolü (Roller tamamen belli olduktan sonra yapılır)
     if (isSupabaseEnabled) {

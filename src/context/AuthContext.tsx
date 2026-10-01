@@ -97,48 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Sync user role to cookies for Next.js Middleware route protection
     // IMPORTANT: Only runs AFTER loading is complete to avoid deleting valid sessions
-    useEffect(() => {
-        // Do NOT touch cookies while initial auth check is still running
-        if (isLoading) return;
-
-        const syncSessionCookie = async () => {
-            if (typeof window !== 'undefined') {
-                if (user) {
-                    document.cookie = `moffi_mock_user_role=${user.role}; path=/; max-age=86400; SameSite=Lax`;
-                    try {
-                        let token = "";
-                        if (isSupabaseEnabled) {
-                            const { data: { session } } = await supabase.auth.getSession();
-                            token = session?.access_token || "";
-                        } else {
-                            token = `mock-token-${user.role}`;
-                        }
-                        if (token) {
-                            await fetch("/api/auth/session", {
-                                method: "POST",
-                                headers: {
-                                    "Authorization": `Bearer ${token}`,
-                                    "Content-Type": "application/json"
-                                }
-                            });
-                        }
-                    } catch (e) {
-                        console.error("[AuthContext] Error setting secure server session cookie:", e);
-                    }
-                } else {
-                    // Only clear cookies when we are certain the user is NOT logged in
-                    document.cookie = "moffi_mock_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-                    try {
-                        await fetch("/api/auth/session", { method: "DELETE" });
-                    } catch (e) {
-                        console.error("[AuthContext] Error clearing secure server session cookie:", e);
-                    }
-                }
-            }
-        };
-
-        syncSessionCookie();
-    }, [user, isLoading]);
+    // Rol, ara katmanda (middleware) her istekte Supabase oturumundan ve profiles.role'den okunur.
+    // Ayrı bir imzalı rol çerezi tutulmaz (eskiden vardı; imza anahtarı tanımsızken taklit edilebiliyordu).
 
     // --- INITIALIZATION ---
     useEffect(() => {
