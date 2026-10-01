@@ -380,7 +380,8 @@ export interface IApiService {
     
     // Direct Messaging (Chat)
     getChatConversations(scope?: 'inbox' | 'clinic'): Promise<any[]>;
-    getChatMessages(otherUserId: string, scope?: 'inbox' | 'clinic'): Promise<any[]>;
+    getChatMessages(otherUserId: string, scope?: 'inbox' | 'clinic', before?: string | null, limit?: number): Promise<any[]>;
+    getChatPartner(userId: string): Promise<{ userId: string; partnerName: string; avatar: string | null; isBusiness: boolean } | null>;
     sendChatMessage(receiverId: string, content: string, scope?: 'inbox' | 'clinic', associatedAdId?: string, attachmentUrl?: string): Promise<any>;
     markChatAsRead(otherUserId: string, scope?: 'inbox' | 'clinic'): Promise<void>;
     deleteChatMessage(messageId: string): Promise<void>;

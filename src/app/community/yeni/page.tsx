@@ -52,6 +52,18 @@ function Composer() {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => { if (!user && loaded) router.replace('/'); }, [user, loaded, router]);
+
+    // Ana sayfadaki doğum günü kartından gelindiyse: hayvan etiketli, hazır bir kutlama metni.
+    const birthdayPetId = params.get('dogumgunu');
+    useEffect(() => {
+        if (!birthdayPetId || editId) return;
+        const pet = pets.find(p => p.id === birthdayPetId);
+        if (!pet) return;
+        const age = pet.birthday ? new Date().getFullYear() - Number(pet.birthday.slice(0, 4)) : null;
+        setTagged(t => (t.includes(pet.id) ? t : [pet.id, ...t].slice(0, 5)));
+        setContent(c => c || (age && age > 0 ? `Doğum günün kutlu olsun ${pet.name}! 🎂 Bugün ${age} yaşında 🐾` : `Doğum günün kutlu olsun ${pet.name}! 🎂🐾`));
+        setTopic(tp => tp || 'daily');
+    }, [birthdayPetId, pets]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { if (!editId) setPrivacy((user as any)?.settings?.default_comment_privacy === 'followers' ? 'followers' : 'everyone'); }, [user, editId]);
 
     useEffect(() => {

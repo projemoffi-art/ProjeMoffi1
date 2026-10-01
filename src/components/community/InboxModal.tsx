@@ -1,314 +1,383 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    X, Search, MessageCircle, ChevronRight,
-    CheckCheck, Check, Undo2
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+// Mesaj kutusu: sohbet listesi ve sohbet ekranı (Keşfet'in renkleri ve dokusu).
+// Veri ChatContext'ten; gönderilen mesaj önce "gönderiliyor", kaydolunca gerçek kimlik ve saatle güncellenir.
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Check, CheckCheck, ChevronLeft, MessageCircle, MoreHorizontal, Search, X } from 'lucide-react';
+import { cn, showToast } from '@/lib/utils';
 import { useChat } from '@/context/ChatContext';
-import { MessageText } from '@/components/chat/MessageText';
 import { useAuth } from '@/context/AuthContext';
 import { apiService } from '@/services/apiService';
+import { socialService } from '@/services/socialService';
+import { MessageText } from '@/components/chat/MessageText';
 import { ChatComposer } from '@/components/chat/MessageThread';
+import { Avatar } from '@/components/social/SocialUI';
+import { ReportModal } from '@/components/common/modals/ReportModal';
+import { haptics } from '@/lib/haptics';
 
-const LONG_PRESS_MS = 450;
+const LONG_PRESS_MS = 420;
+
+const clock = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '');
+
+function dayLabel(iso: string) {
+    const d = new Date(iso);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const that = new Date(d); that.setHours(0, 0, 0, 0);
+    const diff = Math.round((today.getTime() - that.getTime()) / 86400000);
+    if (diff === 0) return 'Bugün';
+    if (diff === 1) return 'Dün';
+    if (diff < 7) return d.toLocaleDateString('tr-TR', { weekday: 'long' });
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+}
+
+function listTime(iso?: string) {
+    if (!iso) return '';
+    const label = dayLabel(iso);
+    return label === 'Bugün' ? clock(iso) : label === 'Dün' ? 'Dün' : new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+}
 
 export function InboxModal() {
     const {
         isInboxOpen, setIsInboxOpen,
         inboxMessages,
-        activeChatUserId, setActiveChatUserId,
-        activeMessages,
-        onSendReply, isReplying,
+        activeChatUserId, setActiveChatUserId, activePartner,
+        activeMessages, messagesLoading, hasOlderMessages, loadOlderMessages,
+        onSendReply, retryMessage, isReplying,
         partnerTyping, notifyTyping,
         onlineUserIds,
-        recallMessage
+        recallMessage, refreshInbox,
     } = useChat();
-
     const { user } = useAuth();
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+    const endRef = useRef<HTMLDivElement>(null);
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-    const [menuForId, setMenuForId] = useState<string | null>(null);
-    const [searchOpen, setSearchOpen] = useState(false);
+    const [menuFor, setMenuFor] = useState<any | null>(null);
+    const [headerMenu, setHeaderMenu] = useState(false);
+    const [confirmBlock, setConfirmBlock] = useState(false);
+    const [reportOpen, setReportOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [loadingOlder, setLoadingOlder] = useState(false);
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const stickToBottom = useRef(true);
 
-    const visibleInboxMessages = searchQuery.trim()
-        ? inboxMessages.filter(m => (m.partnerName || '').toLocaleLowerCase('tr').includes(searchQuery.trim().toLocaleLowerCase('tr')))
-        : inboxMessages;
+    const visibleInbox = useMemo(() => {
+        const q = searchQuery.trim().toLocaleLowerCase('tr-TR');
+        return q ? inboxMessages.filter(m => (m.partnerName || '').toLocaleLowerCase('tr-TR').includes(q)) : inboxMessages;
+    }, [inboxMessages, searchQuery]);
 
-    const activePartnerInfo = inboxMessages.find(m => m.userId === activeChatUserId);
-    const activeChatPartner = activePartnerInfo?.partnerName || 'Sohbet';
-    const currentChatMessages = activeMessages; // ← Now from Supabase via ChatContext
+    const partnerName = activePartner?.partnerName || 'Sohbet';
+    const online = !!activeChatUserId && onlineUserIds.has(activeChatUserId);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+    // Yeni mesaj gelince, kullanıcı aşağıdaysa en alta kaydır (yukarıda eski mesaj okuyorsa yerinden oynatma).
+    useEffect(() => {
+        if (isInboxOpen && activeChatUserId && stickToBottom.current) endRef.current?.scrollIntoView({ block: 'end' });
+    }, [isInboxOpen, activeChatUserId, activeMessages.length]);
+    useEffect(() => { stickToBottom.current = true; }, [activeChatUserId]);
 
     useEffect(() => {
-        if (isInboxOpen && activeChatUserId) {
-            scrollToBottom();
-        }
-    }, [isInboxOpen, activeChatUserId, currentChatMessages]);
+        if (!isInboxOpen) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        refreshInbox();
+        return () => { document.body.style.overflow = prev; };
+    }, [isInboxOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Kutu açıkken arkadaki sayfanın kaymasını (scroll) durdur.
-    useEffect(() => {
-        if (isInboxOpen) {
-            const previousOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.body.style.overflow = previousOverflow;
-            };
-        }
-    }, [isInboxOpen]);
-
-    // Kutuyu tamamen kapatınca (çarpı ile) açık sohbeti unut, bir dahaki açılışta liste gelsin.
     const handleClose = () => {
-        setIsInboxOpen(false);
-        setActiveChatUserId(null);
-        setMenuForId(null);
-        setSearchOpen(false);
-        setSearchQuery('');
+        setIsInboxOpen(false); setActiveChatUserId(null); setMenuFor(null); setHeaderMenu(false); setSearchQuery('');
     };
 
-    const startLongPress = (id: string) => {
+    const startLongPress = (m: any) => {
         cancelLongPress();
-        longPressTimer.current = setTimeout(() => {
-            setMenuForId(id);
-            if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
-        }, LONG_PRESS_MS);
+        longPressTimer.current = setTimeout(() => { setMenuFor(m); haptics.tap(); }, LONG_PRESS_MS);
+    };
+    const cancelLongPress = () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
+
+    const older = async () => {
+        if (loadingOlder) return;
+        setLoadingOlder(true);
+        const el = listRef.current;
+        const before = el ? el.scrollHeight - el.scrollTop : 0;
+        stickToBottom.current = false;
+        await loadOlderMessages();
+        requestAnimationFrame(() => { if (el) el.scrollTop = el.scrollHeight - before; });
+        setLoadingOlder(false);
     };
 
-    const cancelLongPress = () => {
-        if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current);
-            longPressTimer.current = null;
-        }
+    const copy = async (text: string) => {
+        try { await navigator.clipboard.writeText(text); showToast('Mesaj kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
+        catch { showToast('Kopyalanamadı.', 'AlertCircle', 'text-red-500 font-bold'); }
     };
+
+    const block = async () => {
+        if (!activeChatUserId) return;
+        try {
+            await socialService.block(activeChatUserId);
+            showToast(`${partnerName} engellendi.`, 'CheckCircle2', 'text-emerald-500 font-bold');
+            setConfirmBlock(false); setActiveChatUserId(null); refreshInbox();
+        } catch (e: any) { showToast(e?.message || 'Engellenemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
+    };
+
+    // Gün ayırıcıları ve ardışık mesaj gruplaması
+    const rows = useMemo(() => {
+        const out: ({ kind: 'day'; key: string; label: string } | { kind: 'msg'; key: string; m: any; first: boolean; last: boolean })[] = [];
+        let lastDay = '';
+        activeMessages.forEach((m: any, i: number) => {
+            const day = m.createdAt ? new Date(m.createdAt).toDateString() : lastDay;
+            if (day && day !== lastDay) { out.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.createdAt) }); lastDay = day; }
+            const prev = activeMessages[i - 1], next = activeMessages[i + 1];
+            const same = (a: any) => a && a.sentByMe === m.sentByMe && a.createdAt && m.createdAt && new Date(a.createdAt).toDateString() === day
+                && Math.abs(new Date(a.createdAt).getTime() - new Date(m.createdAt).getTime()) < 5 * 60000;
+            out.push({ kind: 'msg', key: m.id, m, first: !same(prev), last: !same(next) });
+        });
+        return out;
+    }, [activeMessages]);
+
+    const lastMineRead = useMemo(() => [...activeMessages].reverse().find((m: any) => m.sentByMe && m.read)?.id, [activeMessages]);
 
     return (
         <AnimatePresence>
             {isInboxOpen && (
                 <motion.div
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 50 }}
-                    className="fixed inset-0 z-[6100] flex flex-col pt-safe-top bg-background text-foreground"
+                    initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                    className="theme-vet fixed inset-0 z-[6100] flex flex-col bg-background text-foreground pt-[env(safe-area-inset-top,0px)]"
+                    role="dialog" aria-label="Mesajlar"
                 >
-                    {/* HEADER */}
-                    <div className="px-6 py-4 flex items-center justify-between border-b border-card-border backdrop-blur-3xl sticky top-0 z-10 bg-card/90">
+                    {/* Başlık */}
+                    <header className="px-4 py-3 flex items-center gap-3 border-b border-card-border bg-background/95 backdrop-blur-md">
                         {activeChatUserId ? (
-                            <div className="flex items-center gap-3">
-                                <button onClick={() => setActiveChatUserId(null)} className="p-2 rounded-full bg-black/5 dark:bg-white/5 active:scale-95 transition-all">
-                                    <ChevronRight className="w-6 h-6 rotate-180 text-foreground" />
-                                </button>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-10 h-10 rounded-full border border-card-border overflow-hidden bg-gray-900">
-                                        <img src={inboxMessages.find(m => m.userId === activeChatUserId)?.avatar || ""} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-foreground font-bold text-sm">{activeChatPartner}</h3>
-                                        <div className="flex items-center gap-1.5">
-                                            {partnerTyping ? (
-                                                <span className="text-[10px] text-cyan-500 font-bold uppercase tracking-widest">yazıyor...</span>
-                                            ) : (
-                                                <>
-                                                    <div className={cn("w-1.5 h-1.5 rounded-full", activeChatUserId && onlineUserIds.has(activeChatUserId) ? "bg-green-500" : "bg-zinc-500")} />
-                                                    <span className="text-[10px] text-black/50 dark:text-white/40 font-bold uppercase tracking-widest">{activeChatUserId && onlineUserIds.has(activeChatUserId) ? "Çevrimiçi" : "Çevrimdışı"}</span>
-                                                </>
-                                            )}
+                            <>
+                                <button onClick={() => setActiveChatUserId(null)} aria-label="Sohbetlere dön"
+                                    className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center shrink-0"><ChevronLeft className="w-5 h-5" /></button>
+                                <Link href={`/profile/${activeChatUserId}`} onClick={handleClose} className="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <span className="relative shrink-0">
+                                        <Avatar src={activePartner?.avatar} name={partnerName} className="w-10 h-10" />
+                                        {online && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#4E8F2A] border-2 border-background" />}
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-black truncate">{partnerName}</span>
+                                        <span className={cn('block text-[11px] font-semibold', partnerTyping ? 'text-accent' : 'text-secondary')}>
+                                            {partnerTyping ? 'yazıyor…' : online ? 'Çevrimiçi' : activePartner?.isBusiness ? 'İşletme' : 'Profili gör'}
+                                        </span>
+                                    </span>
+                                </Link>
+                                <button onClick={() => setHeaderMenu(true)} aria-label="Sohbet seçenekleri"
+                                    className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center shrink-0"><MoreHorizontal className="w-5 h-5" /></button>
+                            </>
+                        ) : (
+                            <h2 className="flex-1 text-xl font-black">Mesajlar</h2>
+                        )}
+                        <button onClick={handleClose} aria-label="Kapat"
+                            className="w-10 h-10 rounded-full bg-card border border-card-border flex items-center justify-center shrink-0"><X className="w-5 h-5" /></button>
+                    </header>
+
+                    {activeChatUserId ? (
+                        <>
+                            <div ref={listRef} className="flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-4"
+                                onScroll={e => { const el = e.currentTarget; stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; }}>
+                                <div className="max-w-2xl mx-auto flex flex-col">
+                                    {hasOlderMessages && (
+                                        <button onClick={older} disabled={loadingOlder} className="self-center mb-3 h-8 px-4 rounded-full bg-card border border-card-border text-xs font-black text-secondary disabled:opacity-50">
+                                            {loadingOlder ? 'Yükleniyor…' : 'Önceki mesajlar'}
+                                        </button>
+                                    )}
+                                    {messagesLoading && activeMessages.length === 0 && (
+                                        <div className="space-y-3 pt-4">{[0, 1, 2].map(i => <div key={i} className={cn('h-10 rounded-2xl bg-card-border/50 animate-pulse', i % 2 ? 'w-1/2 ml-auto' : 'w-2/3')} />)}</div>
+                                    )}
+                                    {!messagesLoading && activeMessages.length === 0 && (
+                                        <div className="flex flex-col items-center text-center py-16 gap-3">
+                                            <Avatar src={activePartner?.avatar} name={partnerName} className="w-20 h-20 text-2xl" />
+                                            <div className="text-base font-black">{partnerName}</div>
+                                            <p className="text-sm font-semibold text-secondary max-w-xs">Henüz mesaj yok. Bir merhaba ile başla 👋</p>
                                         </div>
-                                    </div>
+                                    )}
+                                    {rows.map(r => r.kind === 'day' ? (
+                                        <div key={r.key} className="self-center my-3 px-3 h-6 rounded-full bg-card border border-card-border text-[11px] font-bold text-secondary flex items-center">{r.label}</div>
+                                    ) : (
+                                        <Bubble key={r.key} m={r.m} first={r.first} last={r.last} showSeen={r.m.id === lastMineRead}
+                                            onPress={() => r.m.attachmentUrl && setLightboxUrl(r.m.attachmentUrl)}
+                                            onLongStart={() => !r.m.deleted && !String(r.m.id).startsWith('temp-') && startLongPress(r.m)}
+                                            onLongEnd={cancelLongPress}
+                                            onRetry={() => retryMessage(r.m.id)} />
+                                    ))}
+                                    <div ref={endRef} />
                                 </div>
                             </div>
-                        ) : (
-                            <div className="flex-1">
-                                <h2 className="text-lg font-bold text-foreground">Gelen Kutusu</h2>
+                            <div className="border-t border-card-border bg-background px-3 pt-2 pb-[calc(10px+env(safe-area-inset-bottom,0px))]">
+                                <div className="max-w-2xl mx-auto">
+                                    <ChatComposer onSend={async (t, a) => { stickToBottom.current = true; await onSendReply(t, a); }}
+                                        uploadImage={file => apiService.uploadMedia(file, 'posts')} sending={isReplying} onTyping={notifyTyping} placeholder="Mesaj yaz…" />
+                                </div>
                             </div>
-                        )}
-                        <div className="flex items-center gap-3">
-                            {!activeChatUserId && (
-                                <button
-                                    onClick={() => setSearchOpen((v) => { const next = !v; if (!next) setSearchQuery(''); return next; })}
-                                    className={cn("p-2.5 rounded-full active:scale-95 transition-all", searchOpen ? "bg-cyan-500/15 text-cyan-500" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40")}
-                                >
-                                    <Search className="w-5 h-5" />
-                                </button>
-                            )}
-                            <button onClick={handleClose} className="p-2.5 rounded-full bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 active:scale-95 transition-all"><X className="w-5 h-5" /></button>
-                        </div>
-                    </div>
-
-                    {!activeChatUserId && searchOpen && (
-                        <div className="px-6 pt-4">
-                            <input
-                                autoFocus
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Kişi ara..."
-                                className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl px-4 py-2.5 text-sm text-foreground placeholder:text-secondary focus:outline-none focus:border-cyan-500/50 transition-colors"
-                            />
-                        </div>
-                    )}
-
-                    <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar">
-                        {activeChatUserId ? (
-                            <div className="flex flex-col min-h-full px-6 py-6 pb-24 space-y-4">
-                                {currentChatMessages.map((m: any, idx: number) => {
-                                    const isMenuOpen = menuForId === (m.id || idx);
-                                    const canManage = m.sentByMe && !m.deleted;
-
-                                    if (m.deleted) {
-                                        return (
-                                            <div key={m.id || idx} className={cn("flex w-full", m.sentByMe ? "justify-end" : "justify-start")}>
-                                                <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-xs italic opacity-50 border border-dashed border-card-border">
-                                                    Bu mesaj geri alındı
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div
-                                            key={m.id || idx}
-                                            className={cn("flex flex-col max-w-[85%] relative", m.sentByMe ? "ml-auto items-end" : "mr-auto items-start")}
-                                            onPointerDown={() => canManage && startLongPress(m.id || idx)}
-                                            onPointerUp={cancelLongPress}
-                                            onPointerLeave={cancelLongPress}
-                                            onPointerCancel={cancelLongPress}
-                                            onContextMenu={(e) => { if (canManage) e.preventDefault(); }}
-                                        >
-                                            {isMenuOpen && (
-                                                <>
-                                                    <div className="fixed inset-0 z-[6310]" onClick={() => setMenuForId(null)} />
-                                                    <div className={cn("absolute -top-11 z-[6320] bg-card border border-card-border rounded-xl shadow-xl overflow-hidden whitespace-nowrap", m.sentByMe ? "right-0" : "left-0")}>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setMenuForId(null); recallMessage(m.id); }}
-                                                            className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 w-full"
-                                                        >
-                                                            <Undo2 className="w-3.5 h-3.5" />
-                                                            Mesajı geri al
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
-
-                                            {m.attachmentUrl ? (
-                                                <div className={cn("flex flex-col gap-1.5", m.sentByMe ? "items-end" : "items-start")}>
-                                                    <img
-                                                        src={m.attachmentUrl}
-                                                        alt="Gönderilen fotoğraf"
-                                                        onClick={() => setLightboxUrl(m.attachmentUrl)}
-                                                        className="rounded-2xl max-w-[220px] max-h-64 object-cover cursor-zoom-in shadow-sm active:scale-[0.98] transition-transform"
-                                                    />
-                                                    {m.text && (
-                                                        <div className={cn("px-4 py-3 rounded-[1.5rem] shadow-sm", m.sentByMe ? "bg-amber-100 dark:bg-white/10 text-zinc-900 dark:text-foreground font-medium border border-amber-200/60 dark:border-card-border rounded-tr-none" : "bg-cyan-500 text-black rounded-tl-none")}>
-                                                            <MessageText text={m.text} />
-                                                        </div>
-                                                    )}
-                                                    <div className={cn("flex items-center gap-1", m.sentByMe ? "justify-end" : "justify-start")}>
-                                                        <span className="text-[9px] font-bold uppercase tracking-tighter opacity-60 text-black/50 dark:text-white/40">{m.time}</span>
-                                                        {m.sentByMe && (m.read ? <CheckCheck className="w-3 h-3 text-cyan-500" /> : <Check className="w-3 h-3 text-black/40 dark:text-white/30" />)}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className={cn("px-4 py-3 rounded-[1.5rem] shadow-sm", m.sentByMe ? "bg-amber-100 dark:bg-white/10 text-zinc-900 dark:text-foreground font-medium border border-amber-200/60 dark:border-card-border rounded-tr-none" : "bg-cyan-500 text-black rounded-tl-none")}>
-                                                    <MessageText text={m.text} />
-                                                    <div className={cn("flex items-center gap-1 mt-1.5", m.sentByMe ? "justify-end" : "justify-start")}>
-                                                        <span className={cn("text-[9px] font-bold uppercase tracking-tighter opacity-60", m.sentByMe ? "text-black/50 dark:text-white/40" : "text-black")}>{m.time}</span>
-                                                        {m.sentByMe && (m.read ? <CheckCheck className="w-3 h-3 text-cyan-600" /> : <Check className="w-3 h-3 text-black/40 dark:text-white/30" />)}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                <div ref={messagesEndRef} />
-                            </div>
-                        ) : (
-                            <div className="flex flex-col">
+                        </>
+                    ) : (
+                        <div className="flex-1 overflow-y-auto overscroll-contain">
+                            <div className="max-w-2xl mx-auto px-4 pt-3 pb-8 space-y-3">
+                                {inboxMessages.length > 0 && (
+                                    <label className="flex items-center gap-2 h-11 px-4 rounded-2xl bg-card border border-card-border">
+                                        <Search className="w-4 h-4 text-secondary shrink-0" />
+                                        <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Sohbetlerde ara"
+                                            className="flex-1 bg-transparent text-sm font-semibold outline-none" />
+                                        {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Temizle"><X className="w-4 h-4 text-secondary" /></button>}
+                                    </label>
+                                )}
                                 {inboxMessages.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
-                                        <div className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-6">
-                                            <MessageCircle className="w-10 h-10 text-black/30 dark:text-white/20" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-foreground mb-2">Henüz Sohbet Yok</h3>
-                                        <p className="text-sm text-black/50 dark:text-white/40">Arkadaşlarınıza mesaj atarak ilk sohbeti siz başlatın.</p>
+                                    <div className="flex flex-col items-center text-center py-16 gap-3">
+                                        <span className="w-16 h-16 rounded-full bg-accent/10 text-accent flex items-center justify-center"><MessageCircle className="w-8 h-8" /></span>
+                                        <div className="text-base font-black">Henüz sohbetin yok</div>
+                                        <p className="text-sm font-semibold text-secondary max-w-xs">Bir profilden "Mesaj"a dokunarak ya da bir gönderiyi paylaşarak sohbet başlatabilirsin.</p>
+                                        <Link href="/community/kesfet" onClick={handleClose} className="mt-1 h-11 px-5 rounded-2xl bg-accent text-white font-black text-sm inline-flex items-center">Keşfet'e göz at</Link>
                                     </div>
-                                ) : visibleInboxMessages.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-16 px-10 text-center">
-                                        <p className="text-sm text-black/50 dark:text-white/40">"{searchQuery}" ile eşleşen kimse bulunamadı.</p>
-                                    </div>
+                                ) : visibleInbox.length === 0 ? (
+                                    <p className="text-sm font-semibold text-secondary text-center py-10">"{searchQuery}" ile eşleşen sohbet yok.</p>
                                 ) : (
-                                    visibleInboxMessages.map((m: any) => (
-                                        <div key={m.userId} onClick={() => setActiveChatUserId(m.userId)} className="px-6 py-5 flex items-center gap-4 hover:bg-black/5 dark:bg-white/5 active:bg-black/5 dark:bg-white/5 transition-colors cursor-pointer border-b border-card-border relative group">
-                                            <div className="relative">
-                                                <div className="w-14 h-14 rounded-full border border-card-border overflow-hidden bg-gray-900">
-                                                    <img src={m.avatar} className="w-full h-full object-cover" />
-                                                </div>
-                                                {onlineUserIds.has(m.userId) && <div className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-green-500 rounded-full border-4 border-black" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <h4 className="font-bold text-foreground text-base truncate pr-2">{m.partnerName}</h4>
-                                                    <span className="text-[10px] text-black/50 dark:text-white/40 font-bold uppercase tracking-tight">{m.latestTime}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <p className={cn("text-sm truncate", m.unread ? "text-cyan-400 font-black" : "text-black/50 dark:text-white/40 font-medium")}>
-                                                        {m.sentByMe ? 'Siz: ' : ''}{m.latestMessage}
-                                                    </p>
-                                                    {m.unread && <div className="ml-2 w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]" />}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
+                                    <div className="bg-card border border-card-border rounded-3xl divide-y divide-card-border overflow-hidden">
+                                        {visibleInbox.map((m: any) => (
+                                            <motion.button key={m.userId} whileTap={{ scale: 0.985 }} onClick={() => { haptics.tap(); setActiveChatUserId(m.userId); }}
+                                                className="w-full flex items-center gap-3 px-4 py-3.5 text-left">
+                                                <span className="relative shrink-0">
+                                                    <Avatar src={m.avatar} name={m.partnerName} className="w-12 h-12" />
+                                                    {onlineUserIds.has(m.userId) && <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#4E8F2A] border-2 border-card" />}
+                                                </span>
+                                                <span className="flex-1 min-w-0">
+                                                    <span className="flex items-baseline justify-between gap-2">
+                                                        <span className={cn('text-sm truncate', m.unread ? 'font-black' : 'font-bold')}>{m.partnerName}</span>
+                                                        <span className={cn('text-[11px] shrink-0 tabular-nums', m.unread ? 'font-black text-accent' : 'font-semibold text-secondary')}>{listTime(m.latestAt)}</span>
+                                                    </span>
+                                                    <span className="flex items-center justify-between gap-2 mt-0.5">
+                                                        <span className={cn('text-[13px] truncate', m.unread ? 'font-bold text-foreground' : 'font-semibold text-secondary')}>
+                                                            {m.sentByMe ? 'Sen: ' : ''}{m.latestMessage}
+                                                        </span>
+                                                        {m.unreadCount > 0 && (
+                                                            <span className="min-w-5 h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-black flex items-center justify-center shrink-0 tabular-nums">{m.unreadCount > 99 ? '99+' : m.unreadCount}</span>
+                                                        )}
+                                                    </span>
+                                                </span>
+                                            </motion.button>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
-                        )}
-                    </div>
-
-                    {activeChatUserId && (
-                        <div className="absolute bottom-0 inset-x-0 bg-card/90 backdrop-blur-3xl px-4 py-3 border-t border-card-border">
-                            <ChatComposer
-                                onSend={onSendReply}
-                                uploadImage={(file) => apiService.uploadMedia(file)}
-                                sending={isReplying}
-                                onTyping={notifyTyping}
-                            />
                         </div>
                     )}
+
+                    {/* Mesaj menüsü (uzun basınca) */}
+                    <AnimatePresence>
+                        {menuFor && (
+                            <motion.div className="fixed inset-0 z-[6300] bg-black/40 flex items-end justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMenuFor(null)}>
+                                <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} onClick={e => e.stopPropagation()}
+                                    className="w-full max-w-2xl bg-background rounded-t-3xl p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] space-y-2">
+                                    {menuFor.text && <p className="text-sm font-semibold text-secondary line-clamp-2 px-1">{menuFor.text}</p>}
+                                    <div className="bg-card border border-card-border rounded-2xl divide-y divide-card-border text-sm font-bold">
+                                        {menuFor.text && <button onClick={() => { copy(menuFor.text); setMenuFor(null); }} className="w-full px-4 py-3.5 text-left">Kopyala</button>}
+                                        {menuFor.sentByMe && <button onClick={() => { recallMessage(menuFor.id); setMenuFor(null); }} className="w-full px-4 py-3.5 text-left text-red-600">Herkesten geri al</button>}
+                                        {!menuFor.sentByMe && <button onClick={() => { setMenuFor(null); setReportOpen(true); }} className="w-full px-4 py-3.5 text-left text-red-600">Şikâyet et</button>}
+                                    </div>
+                                    <button onClick={() => setMenuFor(null)} className="w-full h-12 rounded-2xl bg-card border border-card-border text-sm font-black">Vazgeç</button>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Sohbet seçenekleri */}
+                    <AnimatePresence>
+                        {headerMenu && (
+                            <motion.div className="fixed inset-0 z-[6300] bg-black/40 flex items-end justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                onClick={() => { setHeaderMenu(false); setConfirmBlock(false); }}>
+                                <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} onClick={e => e.stopPropagation()}
+                                    className="w-full max-w-2xl bg-background rounded-t-3xl p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] space-y-2">
+                                    {confirmBlock ? (
+                                        <>
+                                            <div className="text-base font-black px-1">{partnerName} engellensin mi?</div>
+                                            <p className="text-sm font-semibold text-secondary px-1">Birbirinizin gönderilerini ve hikâyelerini görmezsiniz, takip bağlantınız kaldırılır. Engeli ayarlardan kaldırabilirsin.</p>
+                                            <button onClick={block} className="w-full h-12 rounded-2xl bg-red-600 text-white text-sm font-black">Engelle</button>
+                                            <button onClick={() => setConfirmBlock(false)} className="w-full h-12 rounded-2xl bg-card border border-card-border text-sm font-black">Vazgeç</button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="bg-card border border-card-border rounded-2xl divide-y divide-card-border text-sm font-bold">
+                                                <Link href={`/profile/${activeChatUserId}`} onClick={handleClose} className="block w-full px-4 py-3.5">Profili gör</Link>
+                                                <button onClick={() => { setHeaderMenu(false); setReportOpen(true); }} className="w-full px-4 py-3.5 text-left text-red-600">Şikâyet et</button>
+                                                <button onClick={() => setConfirmBlock(true)} className="w-full px-4 py-3.5 text-left text-red-600">Engelle</button>
+                                            </div>
+                                            <button onClick={() => setHeaderMenu(false)} className="w-full h-12 rounded-2xl bg-card border border-card-border text-sm font-black">Vazgeç</button>
+                                        </>
+                                    )}
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <ReportModal isOpen={reportOpen} onClose={() => setReportOpen(false)} entityType="user" entityId={activeChatUserId || ''} />
 
                     <AnimatePresence>
                         {lightboxUrl && (
-                            <motion.div
-                                key="inbox-photo-lightbox"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setLightboxUrl(null)}
-                                className="fixed inset-0 z-[6300] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
-                            >
-                                <img
-                                    src={lightboxUrl}
-                                    alt="Fotoğraf"
-                                    className="max-w-full max-h-full object-contain rounded-2xl"
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                                <button
-                                    onClick={() => setLightboxUrl(null)}
-                                    className="absolute top-6 right-6 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-90"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                            <motion.div key="inbox-photo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setLightboxUrl(null)}
+                                className="fixed inset-0 z-[6400] bg-black/95 flex items-center justify-center p-4">
+                                <img src={lightboxUrl} alt="Fotoğraf" className="max-w-full max-h-full object-contain rounded-2xl" onClick={e => e.stopPropagation()} />
+                                <button onClick={() => setLightboxUrl(null)} aria-label="Kapat"
+                                    className="absolute top-[calc(16px+env(safe-area-inset-top,0px))] right-4 w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center"><X className="w-5 h-5" /></button>
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </motion.div>
             )}
         </AnimatePresence>
+    );
+}
+
+function Bubble({ m, first, last, showSeen, onPress, onLongStart, onLongEnd, onRetry }: {
+    m: any; first: boolean; last: boolean; showSeen: boolean;
+    onPress: () => void; onLongStart: () => void; onLongEnd: () => void; onRetry: () => void;
+}) {
+    const mine = m.sentByMe;
+    if (m.deleted) {
+        return (
+            <div className={cn('flex', mine ? 'justify-end' : 'justify-start', first ? 'mt-2' : 'mt-0.5')}>
+                <div className="max-w-[78%] rounded-2xl px-3.5 py-2 text-xs italic text-secondary border border-dashed border-card-border">Bu mesaj geri alındı</div>
+            </div>
+        );
+    }
+    const radius = mine
+        ? cn('rounded-2xl', !first && 'rounded-tr-md', !last && 'rounded-br-md')
+        : cn('rounded-2xl', !first && 'rounded-tl-md', !last && 'rounded-bl-md');
+    return (
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+            className={cn('flex flex-col', mine ? 'items-end' : 'items-start', first ? 'mt-2' : 'mt-0.5')}>
+            <div onPointerDown={onLongStart} onPointerUp={onLongEnd} onPointerLeave={onLongEnd} onPointerCancel={onLongEnd}
+                onContextMenu={e => { e.preventDefault(); onLongStart(); }}
+                className={cn('max-w-[78%] overflow-hidden select-text', radius,
+                    mine ? 'bg-accent text-white' : 'bg-card border border-card-border text-foreground',
+                    m.pending && 'opacity-70', m.failed && 'ring-2 ring-red-500/60')}>
+                {m.attachmentUrl && (
+                    <button onClick={onPress} className="block">
+                        <img src={m.attachmentUrl} alt="Gönderilen fotoğraf" className="max-h-72 w-full object-cover" />
+                    </button>
+                )}
+                {m.text && (
+                    <div className="px-3.5 py-2 text-[15px] leading-snug [&_a]:underline">
+                        <MessageText text={m.text} />
+                    </div>
+                )}
+            </div>
+            {(last || m.failed) && (
+                <div className={cn('flex items-center gap-1 mt-1 px-1 text-[10.5px] font-semibold text-secondary tabular-nums', mine ? 'justify-end' : 'justify-start')}>
+                    {m.failed ? (
+                        <button onClick={onRetry} className="font-black text-red-600">Gönderilemedi · Tekrar dene</button>
+                    ) : (
+                        <>
+                            <span>{clock(m.createdAt)}</span>
+                            {mine && (m.pending ? <span aria-label="Gönderiliyor">·</span>
+                                : m.read ? <CheckCheck className="w-3.5 h-3.5 text-accent" aria-label="Okundu" />
+                                    : <Check className="w-3.5 h-3.5" aria-label="İletildi" />)}
+                            {mine && showSeen && <span className="text-accent">Görüldü</span>}
+                        </>
+                    )}
+                </div>
+            )}
+        </motion.div>
     );
 }

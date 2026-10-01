@@ -41,6 +41,7 @@ import { usePetHealthBundle } from '@/components/health/usePetHealthBundle';
 import { healthService } from '@/services/healthService';
 import { daysLeftText, isMedicationActive, medicationDaysLeft, overallStatus, upcomingItems } from '@/lib/health/derive';
 import { formatDateKeyTr, todayKey } from '@/lib/appointmentTime';
+import { BirthdayCard } from '@/components/home/BirthdayCard';
 
 // Kilitli tasarım referansı (design-reference/home-final): başlık fontu Baloo 2, gövde fontu Nunito
 const baloo2 = Baloo_2({ subsets: ['latin'], weight: ['600', '700', '800'] });
@@ -1737,6 +1738,9 @@ export default function LegendaryLightDashboard() {
                         })}
                     </div>
                 </div>
+
+                {/* Doğum günü: sadece pasaporttaki doğum tarihi bugünse görünür (Baran onaylı ek, kilitli tasarımı bozmaz) */}
+                <BirthdayCard pets={userPets} />
 
                 {/* Bugünkü Yürüyüş — kilitli tasarım kartı, GERÇEK yürüyüş verisiyle (useWalk/useActivity — sayfada zaten mevcut hook).
                     Not: reference'taki "kalori" istatistiği gerçek veride yok (WalkData'da kalori alanı bulunmuyor),

@@ -536,6 +536,7 @@ export class MockApiService implements IApiService {
     // Direct Messaging (Chat)
     async getChatConversations(scope: 'inbox' | 'clinic' = 'inbox'): Promise<any[]> { return []; }
     async getChatMessages(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<any[]> { return []; }
+    async getChatPartner(userId: string) { return null; }
     async sendChatMessage(receiverId: string, content: string, scope: 'inbox' | 'clinic' = 'inbox', associatedAdId?: string, attachmentUrl?: string): Promise<any> { return { id: Date.now(), content }; }
     async markChatAsRead(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<void> {}
     async deleteChatMessage(messageId: string): Promise<void> {}

@@ -8,6 +8,26 @@ import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
 import { Doctor } from '@/types/domain';
 
+/** Sohbette görünen ad: işletmede işletme adı, kişide ad soyad, yoksa kullanıcı adı. */
+function chatDisplayName(p: any): string {
+    return (p?.role === 'business' && p?.business_name) || p?.full_name || p?.username || 'Moffi üyesi';
+}
+
+function mapChatMessage(msg: any, myId: string, time: string) {
+    return {
+        id: msg.id,
+        text: msg.is_deleted ? '' : msg.content,
+        attachmentUrl: msg.is_deleted ? null : msg.attachment_url,
+        sentByMe: msg.sender_id === myId,
+        senderId: msg.sender_id,
+        time,
+        createdAt: msg.created_at,
+        read: !!msg.is_read,
+        deleted: !!msg.is_deleted,
+        conversationId: msg.conversation_id,
+    };
+}
+
 export class SupabaseApiService implements IApiService {
     // Session is managed internally by Supabase client very efficiently.
     // Custom aggressive caching causes cross-account validation bugs.
@@ -2118,209 +2138,159 @@ export class SupabaseApiService implements IApiService {
         })) as any[];
     }
     // --- CHAT & MESSAGING (Real-time Supabase) ---
+    // --- Mesajlaşma -------------------------------------------------------------------------------------------------
+    // Aynı iki kişi arasında geçmişte birden fazla sohbet kaydı açılmış olabilir (ör. kayıp ilanından gelen sohbet ile
+    // normal sohbet). Okurken hepsi tek konuşma olarak birleştirilir, yazarken en güncel kayda yazılır.
+
+    /** Karşı tarafla aradaki sohbet kayıtları, en güncel önce. */
+    async chatConversationIds(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<string[]> {
+        const user = await this.getSessionUser();
+        if (!user) return [];
+        let q = supabase
+            .from('conversations')
+            .select('id, last_message_at')
+            .or(`and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`)
+            .order('last_message_at', { ascending: false, nullsFirst: false });
+        q = scope === 'clinic' ? q.eq('context_type', 'clinic') : q.neq('context_type', 'clinic');
+        const { data } = await q;
+        return (data || []).map((c: any) => c.id);
+    }
+
+    /** Sohbet başlığı için karşı tarafın görünen adı ve fotoğrafı (daha önce hiç yazışılmamış olsa da). */
+    async getChatPartner(userId: string): Promise<{ userId: string; partnerName: string; avatar: string | null; isBusiness: boolean } | null> {
+        const { data } = await supabase.from('profile_cards').select('id, username, full_name, business_name, role, avatar_url').eq('id', userId).maybeSingle();
+        if (!data) return null;
+        return { userId, partnerName: chatDisplayName(data), avatar: data.avatar_url || null, isBusiness: data.role === 'business' };
+    }
+
     async getChatConversations(scope: 'inbox' | 'clinic' = 'inbox'): Promise<any[]> {
         const user = await this.getSessionUser();
         if (!user) return [];
 
-        // Fetch conversations where the user is either participant_1 or participant_2
         let query = supabase
             .from('conversations')
-            .select(`
-                id,
-                last_message,
-                last_message_at,
-                participant_1,
-                participant_2
-            `)
+            .select('id, last_message, last_message_at, participant_1, participant_2')
             .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-            .order('last_message_at', { ascending: false });
-
-        if (scope === 'clinic') {
-            query = query.eq('context_type', 'clinic');
-        } else {
-            query = query.neq('context_type', 'clinic');
-        }
-
+            .order('last_message_at', { ascending: false, nullsFirst: false });
+        query = scope === 'clinic' ? query.eq('context_type', 'clinic') : query.neq('context_type', 'clinic');
         const { data, error } = await query;
+        if (error || !data) { if (error) console.error('getChatConversations error:', error); return []; }
 
-        if (error) { console.error("getStories error:", error); return []; } if (!data) return [];
+        // Kişi başına tek satır (en güncel sohbet kaydı), aynı kişinin diğer kayıtları birleştirilir.
+        const byPartner = new Map<string, { ids: string[]; conv: any }>();
+        for (const conv of data) {
+            const other = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+            if (!other) continue;
+            const entry = byPartner.get(other);
+            if (entry) entry.ids.push(conv.id); else byPartner.set(other, { ids: [conv.id], conv });
+        }
+        const partnerIds = Array.from(byPartner.keys());
+        const allIds = Array.from(byPartner.values()).flatMap(e => e.ids);
+        if (!partnerIds.length) return [];
 
-        // For each conversation, fetch the OTHER user's profile
-        const results = await Promise.all(data.map(async (conv) => {
-            const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+        // Tek sorguda profiller, tek sorguda okunmamışlar ve son mesajlar (her kayıt için ayrı sorgu yok).
+        const [{ data: profiles }, { data: unreadRows }, { data: lastRows }] = await Promise.all([
+            supabase.from('profile_cards').select('id, username, full_name, business_name, role, avatar_url').in('id', partnerIds),
+            supabase.from('messages').select('conversation_id').in('conversation_id', allIds).eq('is_read', false).neq('sender_id', user.id).limit(1000),
+            supabase.from('messages').select('conversation_id, sender_id, content, attachment_url, is_deleted, created_at').in('conversation_id', allIds)
+                .order('created_at', { ascending: false }).limit(Math.min(1000, allIds.length * 3)),
+        ]);
+        const profileById = new Map((profiles || []).map((p: any) => [p.id, p]));
+        const unreadByConv = new Map<string, number>();
+        (unreadRows || []).forEach((r: any) => unreadByConv.set(r.conversation_id, (unreadByConv.get(r.conversation_id) || 0) + 1));
+        const lastByConv = new Map<string, any>();
+        (lastRows || []).forEach((r: any) => { if (!lastByConv.has(r.conversation_id)) lastByConv.set(r.conversation_id, r); });
 
-            const { data: profile } = await supabase
-                .from('profile_cards')
-                .select('id, username, avatar_url')
-                .eq('id', otherUserId)
-                .single();
-
-            // Count unread messages
-            const { count } = await supabase
-                .from('messages')
-                .select('id', { count: 'exact', head: true })
-                .eq('conversation_id', conv.id)
-                .eq('is_read', false)
-                .neq('sender_id', user.id);
-
+        const rows = partnerIds.map(other => {
+            const { ids, conv } = byPartner.get(other)!;
+            const p = profileById.get(other);
+            const last = ids.map(i => lastByConv.get(i)).filter(Boolean).sort((a: any, b: any) => b.created_at.localeCompare(a.created_at))[0];
+            const unreadCount = ids.reduce((n, i) => n + (unreadByConv.get(i) || 0), 0);
+            const preview = last
+                ? (last.is_deleted ? 'Mesaj geri alındı' : last.content || (last.attachment_url ? '📷 Fotoğraf' : ''))
+                : (conv.last_message || '');
+            const at = last?.created_at || conv.last_message_at;
             return {
-                userId: otherUserId,
-                partnerName: profile?.username || 'Moffi Kullanıcı',
-                avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUserId}`,
-                latestMessage: conv.last_message || '',
-                latestTime: this.formatTimeAgo(conv.last_message_at),
-                unread: (count || 0) > 0,
+                userId: other,
+                partnerName: chatDisplayName(p),
+                avatar: p?.avatar_url || null,
+                isBusiness: p?.role === 'business',
+                latestMessage: preview,
+                latestAt: at,
+                latestTime: this.formatTimeAgo(at),
+                sentByMe: last ? last.sender_id === user.id : false,
+                unread: unreadCount > 0,
+                unreadCount,
                 online: false,
                 messages: [],
-                conversationId: conv.id
+                conversationId: conv.id,
+                conversationIds: ids,
             };
-        }));
-
-        return results;
+        });
+        return rows.sort((a, b) => (b.latestAt || '').localeCompare(a.latestAt || ''));
     }
 
-    async getChatMessages(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<any[]> {
+    /** Sohbetin son mesajları (en eski önce). `before` verilirse o andan önceki sayfa. */
+    async getChatMessages(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox', before?: string | null, limit = 50): Promise<any[]> {
         const user = await this.getSessionUser();
         if (!user) return [];
-
-        // Find the conversation
-        let convQuery = supabase
-            .from('conversations')
-            .select('id')
-            .or(
-                `and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`
-            );
-
-        if (scope === 'clinic') {
-            convQuery = convQuery.eq('context_type', 'clinic');
-        } else {
-            convQuery = convQuery.neq('context_type', 'clinic');
-        }
-
-        const { data: conv } = await convQuery.single();
-
-        if (!conv) return [];
-
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: true });
-
-        if (error) { console.error("getStories error:", error); return []; } if (!data) return [];
-
-        return data.map(msg => ({
-            id: msg.id,
-            text: msg.is_deleted ? '' : msg.content,
-            attachmentUrl: msg.is_deleted ? null : msg.attachment_url,
-            sentByMe: msg.sender_id === user.id,
-            time: this.formatTimeAgo(msg.created_at),
-            createdAt: msg.created_at,
-            read: msg.is_read,
-            deleted: !!msg.is_deleted
-        }));
+        const ids = await this.chatConversationIds(otherUserId, scope);
+        if (!ids.length) return [];
+        let q = supabase.from('messages').select('*').in('conversation_id', ids).order('created_at', { ascending: false }).limit(limit);
+        if (before) q = q.lt('created_at', before);
+        const { data, error } = await q;
+        if (error || !data) { if (error) console.error('getChatMessages error:', error); return []; }
+        return data.reverse().map((msg: any) => mapChatMessage(msg, user.id, this.formatTimeAgo(msg.created_at)));
     }
 
-    async sendChatMessage(otherUserId: string, content: string, scope: 'inbox' | 'clinic' = 'inbox', associatedAdId?: string, attachmentUrl?: string): Promise<void> {
+    async sendChatMessage(otherUserId: string, content: string, scope: 'inbox' | 'clinic' = 'inbox', associatedAdId?: string, attachmentUrl?: string): Promise<{ id: string; createdAt: string } | void> {
         const user = await this.getSessionUser();
         if (!user) throw new Error("Giriş gerekli");
+        if (otherUserId === user.id) throw new Error('Kendine mesaj gönderemezsin.');
 
-        // Find or create conversation
-        let conversationId: string;
+        let conversationId: string | undefined = (await this.chatConversationIds(otherUserId, scope))[0];
 
-        let convQuery = supabase
-            .from('conversations')
-            .select('id, associated_ad_id')
-            .or(
-                `and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`
-            );
-
-        if (scope === 'clinic') {
-            convQuery = convQuery.eq('context_type', 'clinic');
-        } else {
-            convQuery = convQuery.neq('context_type', 'clinic');
-        }
-
-        const { data: existing } = await convQuery.maybeSingle();
-
-        if (existing) {
-            conversationId = existing.id;
-            // Update association if not set yet
-            if (associatedAdId && !existing.associated_ad_id) {
-                await supabase
-                    .from('conversations')
-                    .update({ associated_ad_id: associatedAdId })
-                    .eq('id', conversationId);
+        if (conversationId) {
+            if (associatedAdId) {
+                await supabase.from('conversations').update({ associated_ad_id: associatedAdId }).eq('id', conversationId).is('associated_ad_id', null);
             }
         } else {
-            // Create new conversation
-            let newContextType = 'general';
-            if (scope === 'clinic') {
-                newContextType = 'clinic';
-            } else if (scope === 'inbox' && associatedAdId) {
-                newContextType = 'lost_pet';
-            }
-
+            const newContextType = scope === 'clinic' ? 'clinic' : associatedAdId ? 'lost_pet' : 'general';
             const { data: newConv, error: convErr } = await supabase
                 .from('conversations')
-                .insert({
-                    participant_1: user.id,
-                    participant_2: otherUserId,
-                    associated_ad_id: associatedAdId || null,
-                    context_type: newContextType
-                })
+                .insert({ participant_1: user.id, participant_2: otherUserId, associated_ad_id: associatedAdId || null, context_type: newContextType })
                 .select('id')
                 .single();
-
-            if (convErr || !newConv) throw convErr;
+            if (convErr || !newConv) throw convErr || new Error('Sohbet başlatılamadı.');
             conversationId = newConv.id;
         }
 
-        // Insert message
-        const { error: msgErr } = await supabase
+        const { data: inserted, error: msgErr } = await supabase
             .from('messages')
-            .insert({
-                conversation_id: conversationId,
-                sender_id: user.id,
-                receiver_id: otherUserId,
-                content: content,
-                attachment_url: attachmentUrl || null
-            });
-
+            .insert({ conversation_id: conversationId, sender_id: user.id, receiver_id: otherUserId, content, attachment_url: attachmentUrl || null })
+            .select('id, created_at')
+            .single();
         if (msgErr) throw msgErr;
 
-        // Update conversation's last message (for preview in inbox)
+        // Gelen kutusu önizlemesi. (Kalıcı çözüm: bunu sunucu tetikleyicisi yazmalı — bkz. YAPILACAKLAR.)
         await supabase
             .from('conversations')
-            .update({
-                last_message: content || (attachmentUrl ? '📷 Fotoğraf' : ''),
-                last_message_at: new Date().toISOString()
-            })
+            .update({ last_message: content || (attachmentUrl ? '📷 Fotoğraf' : ''), last_message_at: inserted?.created_at || new Date().toISOString() })
             .eq('id', conversationId);
+
+        return inserted ? { id: inserted.id, createdAt: inserted.created_at } : undefined;
     }
 
     async markChatAsRead(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<void> {
         const user = await this.getSessionUser();
         if (!user) return;
-
-        let convQuery = supabase
-            .from('conversations')
-            .select('id')
-            .or(`and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`);
-
-        if (scope === 'clinic') {
-            convQuery = convQuery.eq('context_type', 'clinic');
-        } else {
-            convQuery = convQuery.neq('context_type', 'clinic');
-        }
-
-        const { data: conv } = await convQuery.single();
-        if (!conv) return;
-
+        const ids = await this.chatConversationIds(otherUserId, scope);
+        if (!ids.length) return;
         await supabase
             .from('messages')
             .update({ is_read: true })
-            .eq('conversation_id', conv.id)
+            .in('conversation_id', ids)
+            .eq('is_read', false)
             .neq('sender_id', user.id);
     }
 
