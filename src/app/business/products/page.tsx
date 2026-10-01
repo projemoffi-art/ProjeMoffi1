@@ -1,5 +1,6 @@
 "use client";
 
+import { productEmoji, productImages } from '@/lib/productImage';
 import { useState, useMemo, useEffect } from "react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -44,7 +45,7 @@ export default function BusinessProductsPage() {
                 // Map real db schema to UI expected schema
                 const mappedProducts = products.map((p: any) => ({
                     ...p,
-                    images: [p.image_url || 'https://via.placeholder.com/150'],
+                    images: productImages(p.image_url), emoji: productEmoji(p.image_url),
                     status: p.stock > 0 ? 'active' : 'out_of_stock'
                 }));
                 setAllProducts(mappedProducts);
@@ -178,7 +179,7 @@ export default function BusinessProductsPage() {
                                     <tr key={product.id} className="border-b border-gray-50 dark:border-zinc-800/50 hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 transition">
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
-                                                <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                                                {product.images[0] ? <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" /> : <span className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-xl">{product.emoji}</span>}
                                                 <span className="font-medium text-foreground truncate max-w-[200px]">{product.name}</span>
                                             </div>
                                         </td>
@@ -237,7 +238,7 @@ function ProductCard({ product, onEdit }: { product: BusinessProduct; onEdit: ()
     return (
         <div className={cn("bg-card rounded-2xl border border-card-border shadow-moffi-card overflow-hidden group hover:shadow-lg transition-all duration-300", isOutOfStock && "opacity-75")}>
             <div className="relative h-40 bg-gray-100">
-                <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                {product.images[0] ? <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" /> : <span className="w-full h-full flex items-center justify-center text-5xl">{product.emoji}</span>}
                 {isOutOfStock && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">Tükendi</span>

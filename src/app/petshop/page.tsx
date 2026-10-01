@@ -1,5 +1,6 @@
 "use client";
 
+import { isImageUrl } from '@/lib/productImage';
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -422,7 +423,7 @@ export default function PetShopPage() {
                             onClick={() => addToCart(product.id)}
                             className="flex flex-col items-center shrink-0 w-24 bg-card dark:bg-white/5 rounded-3xl p-3 border border-card-border dark:border-card-border shadow-moffi-card active:bg-orange-50 transition-colors"
                         >
-                            {product.image && (product.image.startsWith('http') || product.image.startsWith('/') || product.image.includes('.') || product.image.length > 4) ? (
+                            {isImageUrl(getFirstImgUrl(product.image)) ? (
                                 <>
                                     <img 
                                         src={getFirstImgUrl(product.image)} 
@@ -541,7 +542,7 @@ export default function PetShopPage() {
                                     onClick={() => setSelectedProduct(product)}
                                     className="relative h-36 bg-gradient-to-br from-white to-gray-100/50 dark:from-white/5 dark:to-transparent flex items-center justify-center overflow-hidden cursor-pointer"
                                 >
-                                    {product.image && (product.image.startsWith('http') || product.image.startsWith('/') || product.image.includes('.') || product.image.length > 4) ? (
+                                    {isImageUrl(getFirstImgUrl(product.image)) ? (
                                         <>
                                             <img 
                                                 src={getFirstImgUrl(product.image)} 
@@ -805,7 +806,7 @@ export default function PetShopPage() {
                                             return (
                                                 <div key={item.productId} className="flex items-center gap-5 bg-card dark:bg-white/5 rounded-[1.8rem] p-4 border border-card-border dark:border-card-border shadow-moffi-card">
                                                     <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-4xl overflow-hidden shrink-0">
-                                                        {product.image && (product.image.startsWith('http') || product.image.startsWith('/') || product.image.includes('.') || product.image.length > 4) ? (
+                                                        {isImageUrl(getFirstImgUrl(product.image)) ? (
                                                             <>
                                                                 <img 
                                                                     src={getFirstImgUrl(product.image)} 
@@ -1161,12 +1162,7 @@ export default function PetShopPage() {
                                     {(() => {
                                         const imgList = selectedProduct.image ? selectedProduct.image.split(',') : [];
                                         const activeImg = imgList[activeImgIndex] || selectedProduct.image || "🦴";
-                                        const isUrl = activeImg && (
-                                            activeImg.startsWith('http') || 
-                                            activeImg.startsWith('/') || 
-                                            activeImg.includes('.') || 
-                                            activeImg.length > 4
-                                        );
+                                        const isUrl = isImageUrl(activeImg);
                                         return (
                                             <div className="w-full h-full relative flex items-center justify-center">
                                                 {isUrl ? (
@@ -1326,7 +1322,7 @@ export default function PetShopPage() {
                                                             <div className="bg-gray-50 dark:bg-white/5 border border-card-border p-3 rounded-2xl flex items-center justify-between gap-4">
                                                                 <div className="flex items-center gap-3 min-w-0">
                                                                     <div className="w-12 h-12 bg-black/5 dark:bg-white/5 rounded-xl flex items-center justify-center text-2xl overflow-hidden shrink-0 border border-card-border">
-                                                                        {compProd.image && (compProd.image.startsWith("http") || compProd.image.startsWith("/") || compProd.image.includes(".") || compProd.image.length > 4) ? (
+                                                                        {isImageUrl(getFirstImgUrl(compProd.image)) ? (
                                                                             <img src={getImgUrl(compProd.image)} alt={compProd.name} className="w-full h-full object-cover" />
                                                                         ) : (
                                                                             compProd.image || "🦴"
@@ -1573,7 +1569,7 @@ export default function PetShopPage() {
                                         const img = imgList[0] || prod.image || "";
                                         return (
                                             <div key={prod.id} className="relative group w-8 h-8 rounded-full border border-card-border dark:border-white/10 bg-white dark:bg-zinc-800 overflow-hidden shadow-sm flex items-center justify-center text-xs shrink-0">
-                                                {img ? (
+                                                {isImageUrl(img) ? (
                                                     <img src={getImgUrl(img)} alt={prod.name} className="w-full h-full object-cover" />
                                                 ) : (
                                                     "🦴"
@@ -1703,7 +1699,7 @@ export default function PetShopPage() {
                                                 {/* Image & Basic Details */}
                                                 <div className="flex flex-col items-center text-center pb-4 border-b border-card-border/60">
                                                     <div className="w-28 h-28 bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-sm flex items-center justify-center mb-3">
-                                                        {img ? (
+                                                        {isImageUrl(img) ? (
                                                             <img src={getImgUrl(img)} alt={product.name} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <span className="text-3xl">🦴</span>
@@ -1815,7 +1811,7 @@ export default function PetShopPage() {
                                                     <X size={12} />
                                                 </button>
                                                 <div className="w-20 h-20 bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border border-card-border shadow-sm flex items-center justify-center mb-2">
-                                                    {img ? <img src={getImgUrl(img)} alt={product.name} className="w-full h-full object-cover" /> : <span className="text-xl">🦴</span>}
+                                                    {isImageUrl(img) ? <img src={getImgUrl(img)} alt={product.name} className="w-full h-full object-cover" /> : <span className="text-xl">{img || "🦴"}</span>}
                                                 </div>
                                                 <span className="text-[8px] font-black bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded uppercase tracking-wider mb-1">
                                                     {product.category === 'food' ? 'MAMA' : product.category === 'snack' ? 'ATIŞTIRMALIK' : product.category === 'toy' ? 'OYUNCAK' : product.category === 'care' ? 'BAKIM' : 'AKSESUAR'}
