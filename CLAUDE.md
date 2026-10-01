@@ -38,6 +38,10 @@ aksesuar) bir arada.
 
 Komutlar: `npm run dev`, `npm run build` (webpack modunda), `npm run lint`.
 
+**Proje konumu (2026-10-02):** `C:\dev\moffi` (OneDrive dışı). Eski `OneDrive\Masaüstü\ProjeMoffi1` kopyası
+artık kullanılmıyor; Bölüm 5.6'daki OneDrive/Turbopack ikon çökmeleri ve "yalnızca bulutta" `node_modules` sorunu
+bu taşımayla kök nedeninden çözüldü. C: diski neredeyse dolu (~2 GB boş) — büyük indirmelerden önce yer kontrol et.
+
 **Telefon önizleme:** `npm run dev` açıkken `http://localhost:3000/live` uygulamayı telefon çerçevesinde
 gösterir (Baran bunu Claude panelinin yanındaki tarayıcıda kullanıyor; `src/app/live/route.ts`, sadece
 geliştirmede çalışır). Eskiden geçici klasörde duruyordu ve kayboldu; silme.
