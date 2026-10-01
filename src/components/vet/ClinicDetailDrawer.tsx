@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn, showToast } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
+import { uploadChatImage } from "@/lib/chatMedia";
 import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { VetClinic } from "@/types/domain";
 import { supabase } from "@/lib/supabase";
@@ -264,7 +265,7 @@ export function ClinicDetailDrawer({
                                         />
                                     </div>
                                     <div className="p-4 border-t border-card-border bg-card sticky bottom-0">
-                                        <ChatComposer onSend={handleSendMessage} uploadImage={(file) => apiService.uploadMedia(file, 'posts')} sending={isSendingMessage} />
+                                        <ChatComposer onSend={handleSendMessage} uploadImage={uploadChatImage} sending={isSendingMessage} />
                                     </div>
                                 </div>
                             ) : loading && !clinic ? (

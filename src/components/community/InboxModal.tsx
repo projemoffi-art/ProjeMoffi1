@@ -8,9 +8,9 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, CheckCheck, ChevronLeft, MessageCircle, MoreHorizontal, Search, X } from 'lucide-react';
 import { cn, showToast } from '@/lib/utils';
-import { useChat } from '@/context/ChatContext';
+import { MESSAGE_REACTIONS, useChat } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
-import { apiService } from '@/services/apiService';
+import { uploadChatImage, useChatMediaUrl } from '@/lib/chatMedia';
 import { socialService } from '@/services/socialService';
 import { MessageText } from '@/components/chat/MessageText';
 import { ChatComposer } from '@/components/chat/MessageThread';
@@ -48,7 +48,7 @@ export function InboxModal() {
         onSendReply, retryMessage, isReplying,
         partnerTyping, notifyTyping,
         onlineUserIds,
-        recallMessage, refreshInbox,
+        recallMessage, refreshInbox, toggleReaction, setChatPref,
     } = useChat();
     const { user } = useAuth();
     const listRef = useRef<HTMLDivElement>(null);
@@ -57,6 +57,8 @@ export function InboxModal() {
     const [menuFor, setMenuFor] = useState<any | null>(null);
     const [headerMenu, setHeaderMenu] = useState(false);
     const [confirmBlock, setConfirmBlock] = useState(false);
+    const [confirmClear, setConfirmClear] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<any | null>(null);
     const [reportOpen, setReportOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingOlder, setLoadingOlder] = useState(false);
@@ -69,6 +71,9 @@ export function InboxModal() {
     }, [inboxMessages, searchQuery]);
 
     const partnerName = activePartner?.partnerName || 'Sohbet';
+    const muted = !!inboxMessages.find((m: any) => m.userId === activeChatUserId)?.muted;
+    const byId = useMemo(() => new Map(activeMessages.map((m: any) => [m.id, m])), [activeMessages]);
+    useEffect(() => { setReplyingTo(null); setConfirmClear(false); }, [activeChatUserId]);
     const online = !!activeChatUserId && onlineUserIds.has(activeChatUserId);
 
     // Yeni mesaj gelince, kullanıcı aşağıdaysa en alta kaydır (yukarıda eski mesaj okuyorsa yerinden oynatma).
@@ -86,7 +91,7 @@ export function InboxModal() {
     }, [isInboxOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleClose = () => {
-        setIsInboxOpen(false); setActiveChatUserId(null); setMenuFor(null); setHeaderMenu(false); setSearchQuery('');
+        setIsInboxOpen(false); setActiveChatUserId(null); setMenuFor(null); setHeaderMenu(false); setSearchQuery(''); setReplyingTo(null);
     };
 
     const startLongPress = (m: any) => {
@@ -109,6 +114,12 @@ export function InboxModal() {
     const copy = async (text: string) => {
         try { await navigator.clipboard.writeText(text); showToast('Mesaj kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
         catch { showToast('Kopyalanamadı.', 'AlertCircle', 'text-red-500 font-bold'); }
+    };
+
+    const pref = async (p: { muted?: boolean; clear?: boolean }, done: string) => {
+        try { await setChatPref(p); showToast(done, 'CheckCircle2', 'text-emerald-500 font-bold'); }
+        catch (e: any) { showToast(e?.message || 'Kaydedilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
+        setHeaderMenu(false); setConfirmClear(false);
     };
 
     const block = async () => {
@@ -198,6 +209,8 @@ export function InboxModal() {
                                         <div key={r.key} className="self-center my-3 px-3 h-6 rounded-full bg-card border border-card-border text-[11px] font-bold text-secondary flex items-center">{r.label}</div>
                                     ) : (
                                         <Bubble key={r.key} m={r.m} first={r.first} last={r.last} showSeen={r.m.id === lastMineRead}
+                                            myId={user?.id} quoted={r.m.replyTo ? (byId.get(r.m.replyTo) || 'missing') : null} partnerName={partnerName}
+                                            onReact={emoji => toggleReaction(r.m.id, emoji)}
                                             onPress={() => r.m.attachmentUrl && setLightboxUrl(r.m.attachmentUrl)}
                                             onLongStart={() => !r.m.deleted && !String(r.m.id).startsWith('temp-') && startLongPress(r.m)}
                                             onLongEnd={cancelLongPress}
@@ -208,8 +221,18 @@ export function InboxModal() {
                             </div>
                             <div className="border-t border-card-border bg-background px-3 pt-2 pb-[calc(10px+env(safe-area-inset-bottom,0px))]">
                                 <div className="max-w-2xl mx-auto">
-                                    <ChatComposer onSend={async (t, a) => { stickToBottom.current = true; await onSendReply(t, a); }}
-                                        uploadImage={file => apiService.uploadMedia(file, 'posts')} sending={isReplying} onTyping={notifyTyping} placeholder="Mesaj yaz…" />
+                                    {replyingTo && (
+                                        <div className="mb-2 flex items-center gap-2 rounded-2xl bg-card border border-card-border pl-3 pr-1.5 py-1.5">
+                                            <span className="w-1 self-stretch rounded-full bg-accent shrink-0" />
+                                            <span className="flex-1 min-w-0">
+                                                <span className="block text-[11px] font-black text-accent">{replyingTo.sentByMe ? 'Kendi mesajına yanıt' : 'Yanıtlanıyor'}</span>
+                                                <span className="block text-xs font-semibold text-secondary truncate">{replyingTo.text || '📷 Fotoğraf'}</span>
+                                            </span>
+                                            <button onClick={() => setReplyingTo(null)} aria-label="Yanıtı iptal et" className="w-8 h-8 rounded-full flex items-center justify-center text-secondary shrink-0"><X className="w-4 h-4" /></button>
+                                        </div>
+                                    )}
+                                    <ChatComposer onSend={async (t, a) => { stickToBottom.current = true; const rid = replyingTo?.id; setReplyingTo(null); await onSendReply(t, a, rid); }}
+                                        uploadImage={uploadChatImage} sending={isReplying} onTyping={notifyTyping} placeholder="Mesaj yaz…" />
                                 </div>
                             </div>
                         </>
@@ -244,7 +267,7 @@ export function InboxModal() {
                                                 </span>
                                                 <span className="flex-1 min-w-0">
                                                     <span className="flex items-baseline justify-between gap-2">
-                                                        <span className={cn('text-sm truncate', m.unread ? 'font-black' : 'font-bold')}>{m.partnerName}</span>
+                                                        <span className={cn('text-sm truncate', m.unread ? 'font-black' : 'font-bold')}>{m.partnerName}{m.muted && <span className="ml-1 text-xs opacity-60" aria-label="Sessizde">🔕</span>}</span>
                                                         <span className={cn('text-[11px] shrink-0 tabular-nums', m.unread ? 'font-black text-accent' : 'font-semibold text-secondary')}>{listTime(m.latestAt)}</span>
                                                     </span>
                                                     <span className="flex items-center justify-between gap-2 mt-0.5">
@@ -252,7 +275,7 @@ export function InboxModal() {
                                                             {m.sentByMe ? 'Sen: ' : ''}{m.latestMessage}
                                                         </span>
                                                         {m.unreadCount > 0 && (
-                                                            <span className="min-w-5 h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-black flex items-center justify-center shrink-0 tabular-nums">{m.unreadCount > 99 ? '99+' : m.unreadCount}</span>
+                                                            <span className={cn('min-w-5 h-5 px-1.5 rounded-full text-white text-[11px] font-black flex items-center justify-center shrink-0 tabular-nums', m.muted ? 'bg-secondary/60' : 'bg-accent')}>{m.unreadCount > 99 ? '99+' : m.unreadCount}</span>
                                                         )}
                                                     </span>
                                                 </span>
@@ -270,8 +293,19 @@ export function InboxModal() {
                             <motion.div className="fixed inset-0 z-[6300] bg-black/40 flex items-end justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMenuFor(null)}>
                                 <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} onClick={e => e.stopPropagation()}
                                     className="w-full max-w-2xl bg-background rounded-t-3xl p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] space-y-2">
+                                    <div className="flex justify-between bg-card border border-card-border rounded-2xl px-2 py-1.5">
+                                        {MESSAGE_REACTIONS.map(e => {
+                                            const mineR = menuFor.reactions?.find((r: any) => r.userId === user?.id)?.emoji === e;
+                                            return (
+                                                <motion.button key={e} whileTap={{ scale: 0.8 }} onClick={() => { toggleReaction(menuFor.id, e); haptics.tap(); setMenuFor(null); }}
+                                                    aria-label={`${e} tepkisi`} aria-pressed={mineR}
+                                                    className={cn('w-11 h-11 rounded-full text-2xl flex items-center justify-center', mineR && 'bg-accent/15')}>{e}</motion.button>
+                                            );
+                                        })}
+                                    </div>
                                     {menuFor.text && <p className="text-sm font-semibold text-secondary line-clamp-2 px-1">{menuFor.text}</p>}
                                     <div className="bg-card border border-card-border rounded-2xl divide-y divide-card-border text-sm font-bold">
+                                        <button onClick={() => { setReplyingTo(menuFor); setMenuFor(null); }} className="w-full px-4 py-3.5 text-left">Yanıtla</button>
                                         {menuFor.text && <button onClick={() => { copy(menuFor.text); setMenuFor(null); }} className="w-full px-4 py-3.5 text-left">Kopyala</button>}
                                         {menuFor.sentByMe && <button onClick={() => { recallMessage(menuFor.id); setMenuFor(null); }} className="w-full px-4 py-3.5 text-left text-red-600">Herkesten geri al</button>}
                                         {!menuFor.sentByMe && <button onClick={() => { setMenuFor(null); setReportOpen(true); }} className="w-full px-4 py-3.5 text-left text-red-600">Şikâyet et</button>}
@@ -286,10 +320,17 @@ export function InboxModal() {
                     <AnimatePresence>
                         {headerMenu && (
                             <motion.div className="fixed inset-0 z-[6300] bg-black/40 flex items-end justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                onClick={() => { setHeaderMenu(false); setConfirmBlock(false); }}>
+                                onClick={() => { setHeaderMenu(false); setConfirmBlock(false); setConfirmClear(false); }}>
                                 <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} onClick={e => e.stopPropagation()}
                                     className="w-full max-w-2xl bg-background rounded-t-3xl p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] space-y-2">
-                                    {confirmBlock ? (
+                                    {confirmClear ? (
+                                        <>
+                                            <div className="text-base font-black px-1">Sohbet temizlensin mi?</div>
+                                            <p className="text-sm font-semibold text-secondary px-1">Mesajlar sadece senin görünümünden kaldırılır; karşı taraf için sohbet olduğu gibi kalır.</p>
+                                            <button onClick={() => pref({ clear: true }, 'Sohbet temizlendi.')} className="w-full h-12 rounded-2xl bg-red-600 text-white text-sm font-black">Temizle</button>
+                                            <button onClick={() => setConfirmClear(false)} className="w-full h-12 rounded-2xl bg-card border border-card-border text-sm font-black">Vazgeç</button>
+                                        </>
+                                    ) : confirmBlock ? (
                                         <>
                                             <div className="text-base font-black px-1">{partnerName} engellensin mi?</div>
                                             <p className="text-sm font-semibold text-secondary px-1">Birbirinizin gönderilerini ve hikâyelerini görmezsiniz, takip bağlantınız kaldırılır. Engeli ayarlardan kaldırabilirsin.</p>
@@ -300,6 +341,12 @@ export function InboxModal() {
                                         <>
                                             <div className="bg-card border border-card-border rounded-2xl divide-y divide-card-border text-sm font-bold">
                                                 <Link href={`/profile/${activeChatUserId}`} onClick={handleClose} className="block w-full px-4 py-3.5">Profili gör</Link>
+                                                {(activeMessages.length > 0 || muted) && (
+                                                    <button onClick={() => pref({ muted: !muted }, muted ? 'Sohbet sessizden çıkarıldı.' : 'Sohbet sessize alındı.')} className="w-full px-4 py-3.5 text-left">
+                                                        {muted ? 'Sessizden çıkar' : 'Sessize al'}
+                                                    </button>
+                                                )}
+                                                {activeMessages.length > 0 && <button onClick={() => setConfirmClear(true)} className="w-full px-4 py-3.5 text-left">Sohbeti temizle</button>}
                                                 <button onClick={() => { setHeaderMenu(false); setReportOpen(true); }} className="w-full px-4 py-3.5 text-left text-red-600">Şikâyet et</button>
                                                 <button onClick={() => setConfirmBlock(true)} className="w-full px-4 py-3.5 text-left text-red-600">Engelle</button>
                                             </div>
@@ -317,7 +364,7 @@ export function InboxModal() {
                         {lightboxUrl && (
                             <motion.div key="inbox-photo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setLightboxUrl(null)}
                                 className="fixed inset-0 z-[6400] bg-black/95 flex items-center justify-center p-4">
-                                <img src={lightboxUrl} alt="Fotoğraf" className="max-w-full max-h-full object-contain rounded-2xl" onClick={e => e.stopPropagation()} />
+                                <ChatImage refUrl={lightboxUrl} alt="Fotoğraf" className="max-w-full max-h-full object-contain rounded-2xl" onClick={e => e.stopPropagation()} />
                                 <button onClick={() => setLightboxUrl(null)} aria-label="Kapat"
                                     className="absolute top-[calc(16px+env(safe-area-inset-top,0px))] right-4 w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center"><X className="w-5 h-5" /></button>
                             </motion.div>
@@ -329,10 +376,19 @@ export function InboxModal() {
     );
 }
 
-function Bubble({ m, first, last, showSeen, onPress, onLongStart, onLongEnd, onRetry }: {
-    m: any; first: boolean; last: boolean; showSeen: boolean;
-    onPress: () => void; onLongStart: () => void; onLongEnd: () => void; onRetry: () => void;
+function ChatImage({ refUrl, className, alt, onClick }: { refUrl: string; className?: string; alt: string; onClick?: (e: React.MouseEvent) => void }) {
+    const url = useChatMediaUrl(refUrl);
+    if (!url) return <span className={cn('block bg-card-border/50 animate-pulse min-h-40 min-w-40', className)} />;
+    return <img src={url} alt={alt} className={className} onClick={onClick} />;
+}
+
+function Bubble({ m, first, last, showSeen, myId, quoted, partnerName, onReact, onPress, onLongStart, onLongEnd, onRetry }: {
+    m: any; first: boolean; last: boolean; showSeen: boolean; myId?: string; quoted: any | 'missing' | null; partnerName: string;
+    onReact: (emoji: string) => void; onPress: () => void; onLongStart: () => void; onLongEnd: () => void; onRetry: () => void;
 }) {
+    const reactions: { userId: string; emoji: string }[] = m.reactions || [];
+    const grouped = reactions.reduce<Record<string, number>>((acc, r) => { acc[r.emoji] = (acc[r.emoji] || 0) + 1; return acc; }, {});
+    const myReaction = reactions.find(r => r.userId === myId)?.emoji;
     const mine = m.sentByMe;
     if (m.deleted) {
         return (
@@ -349,12 +405,25 @@ function Bubble({ m, first, last, showSeen, onPress, onLongStart, onLongEnd, onR
             className={cn('flex flex-col', mine ? 'items-end' : 'items-start', first ? 'mt-2' : 'mt-0.5')}>
             <div onPointerDown={onLongStart} onPointerUp={onLongEnd} onPointerLeave={onLongEnd} onPointerCancel={onLongEnd}
                 onContextMenu={e => { e.preventDefault(); onLongStart(); }}
+                onDoubleClick={() => !m.pending && !m.failed && onReact('❤️')}
                 className={cn('max-w-[78%] overflow-hidden select-text', radius,
                     mine ? 'bg-accent text-white' : 'bg-card border border-card-border text-foreground',
                     m.pending && 'opacity-70', m.failed && 'ring-2 ring-red-500/60')}>
+                {quoted && (
+                    <div className={cn('mx-1.5 mt-1.5 rounded-xl px-2.5 py-1.5 border-l-[3px]', mine ? 'bg-white/15 border-white/70' : 'bg-background border-accent')}>
+                        {quoted === 'missing' ? (
+                            <span className="block text-xs font-semibold opacity-75">Önceki bir mesaja yanıt</span>
+                        ) : (
+                            <>
+                                <span className="block text-[11px] font-black opacity-90">{quoted.sentByMe ? 'Sen' : partnerName}</span>
+                                <span className="block text-xs font-semibold opacity-80 truncate">{quoted.deleted ? 'Bu mesaj geri alındı' : quoted.text || '📷 Fotoğraf'}</span>
+                            </>
+                        )}
+                    </div>
+                )}
                 {m.attachmentUrl && (
                     <button onClick={onPress} className="block">
-                        <img src={m.attachmentUrl} alt="Gönderilen fotoğraf" className="max-h-72 w-full object-cover" />
+                        <ChatImage refUrl={m.attachmentUrl} alt="Gönderilen fotoğraf" className="max-h-72 w-full object-cover" />
                     </button>
                 )}
                 {m.text && (
@@ -363,6 +432,13 @@ function Bubble({ m, first, last, showSeen, onPress, onLongStart, onLongEnd, onR
                     </div>
                 )}
             </div>
+            {Object.keys(grouped).length > 0 && (
+                <motion.button initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                    onClick={() => myReaction && onReact(myReaction)} aria-label="Tepkiler"
+                    className={cn('-mt-2 z-10 flex items-center gap-0.5 h-6 px-1.5 rounded-full bg-background border border-card-border shadow-sm text-sm', mine ? 'mr-2' : 'ml-2')}>
+                    {Object.entries(grouped).map(([e, n]) => <span key={e} className="flex items-center">{e}{n > 1 && <span className="text-[10px] font-black text-secondary ml-0.5">{n}</span>}</span>)}
+                </motion.button>
+            )}
             {(last || m.failed) && (
                 <div className={cn('flex items-center gap-1 mt-1 px-1 text-[10.5px] font-semibold text-secondary tabular-nums', mine ? 'justify-end' : 'justify-start')}>
                     {m.failed ? (

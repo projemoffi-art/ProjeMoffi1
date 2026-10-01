@@ -11,6 +11,7 @@ import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
 import { showToast, cn } from "@/lib/utils";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { uploadChatImage } from "@/lib/chatMedia";
 import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { supabase } from "@/lib/supabase";
 import { useDragScroll } from "@/hooks/useDragScroll";
@@ -1779,7 +1780,7 @@ export default function BusinessAppointmentsPage() {
                                     <div className="p-4 border-t border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-[#18181b]">
                                         <ChatComposer
                                             onSend={handleSendMessage}
-                                            uploadImage={(file) => apiService.uploadMedia(file, 'posts')}
+                                            uploadImage={uploadChatImage}
                                             sending={isSendingMessage}
                                         />
                                     </div>

@@ -225,16 +225,6 @@ export class MockApiService implements IApiService {
         return saved || (MOCK_NOTIFICATIONS as any);
     }
 
-    async addInboxMessage(message: any): Promise<void> {
-        const messages = await this.getInboxMessages();
-        const newMessage = {
-            id: Date.now(),
-            time: 'Şimdi',
-            read: false,
-            ...message
-        };
-        await this.saveData('inbox_messages', [newMessage, ...messages]);
-    }
     
 
 
@@ -539,8 +529,9 @@ export class MockApiService implements IApiService {
     async getChatPartner(userId: string) { return null; }
     async sendChatMessage(receiverId: string, content: string, scope: 'inbox' | 'clinic' = 'inbox', associatedAdId?: string, attachmentUrl?: string): Promise<any> { return { id: Date.now(), content }; }
     async markChatAsRead(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<void> {}
-    async deleteChatMessage(messageId: string): Promise<void> {}
     async recallChatMessage(messageId: string): Promise<void> {}
+    async toggleMessageReaction(messageId: string, emoji: string): Promise<string | null> { return emoji; }
+    async setConversationPref(otherUserId: string, pref: { muted?: boolean; clear?: boolean }, scope: 'inbox' | 'clinic' = 'inbox'): Promise<void> {}
 
 
 

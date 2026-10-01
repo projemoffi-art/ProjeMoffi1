@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { apiService } from '@/services/apiService';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/lib/supabase';
+import { showToast } from '@/lib/utils';
 
 export interface ChatPartner { userId: string; partnerName: string; avatar: string | null; isBusiness?: boolean }
 
@@ -20,7 +21,7 @@ interface ChatContextType {
     messagesLoading: boolean;
     hasOlderMessages: boolean;
     loadOlderMessages: () => Promise<void>;
-    onSendReply: (text: string, attachmentUrl?: string) => Promise<void>;
+    onSendReply: (text: string, attachmentUrl?: string, replyTo?: string) => Promise<void>;
     retryMessage: (tempId: string) => Promise<void>;
     isReplying: boolean;
     partnerTyping: boolean;
@@ -28,9 +29,13 @@ interface ChatContextType {
     onlineUserIds: Set<string>;
     openChat: (userId: string) => void;
     refreshInbox: () => Promise<void>;
-    deleteMessage: (messageId: string) => Promise<void>;
     recallMessage: (messageId: string) => Promise<void>;
+    toggleReaction: (messageId: string, emoji: string) => Promise<void>;
+    /** Açık sohbet için: sessize al / kaldır, ya da sohbeti kendinden temizle. */
+    setChatPref: (pref: { muted?: boolean; clear?: boolean }) => Promise<void>;
 }
+
+export const MESSAGE_REACTIONS = ['❤️', '😂', '😮', '😢', '👍', '🐾'] as const;
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -50,8 +55,13 @@ function fromRow(msg: any, myId: string | undefined) {
         read: !!msg.is_read,
         deleted: !!msg.is_deleted,
         conversationId: msg.conversation_id,
+        replyTo: msg.reply_to || null,
     };
 }
+
+type Reaction = { userId: string; emoji: string };
+const withReaction = (list: Reaction[] = [], userId: string, emoji: string | null) =>
+    [...list.filter(r => r.userId !== userId), ...(emoji ? [{ userId, emoji }] : [])];
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
@@ -78,7 +88,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const lastTypingSentRef = useRef(0);
     const inboxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const failedRef = useRef<Record<string, { text: string; attachmentUrl?: string }>>({});
+    const failedRef = useRef<Record<string, { text: string; attachmentUrl?: string; replyTo?: string }>>({});
 
     useEffect(() => { userRef.current = user; }, [user]);
     useEffect(() => { activeChatUserIdRef.current = activeChatUserId; }, [activeChatUserId]);
@@ -97,7 +107,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         try {
             const data = await apiService.getChatConversations();
             setInboxMessages(data || []);
-            setUnreadCount((data || []).filter((m: any) => m.unread).length);
+            setUnreadCount((data || []).filter((m: any) => m.unread && !m.muted).length);
         } catch (err) {
             console.error('Inbox load error:', err);
         }
@@ -164,7 +174,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             const me = userRef.current?.id;
             const belongs = !!partner && ((row.sender_id === partner && row.receiver_id === me) || (row.sender_id === me && row.receiver_id === partner));
             if (!belongs) return;
-            setActiveMessages(prev => (prev.some(m => m.id === row.id) ? prev : [...prev, fromRow(row, me)]));
+            setActiveMessages(prev => (prev.some(m => m.id === row.id) ? prev : [...prev, { ...fromRow(row, me), reactions: [] }]));
             if (row.sender_id === partner) scheduleMarkRead();
         };
         const onUpdate = (payload: any) => {
@@ -173,11 +183,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             setActiveMessages(prev => prev.map(m => (m.id === row.id ? { ...m, ...fromRow(row, userRef.current?.id) } : m)));
             if (row.is_deleted) scheduleInbox();
         };
-        const onDelete = (payload: any) => {
-            const id = payload.old?.id;
-            if (!id) return;
-            setActiveMessages(prev => prev.filter(m => m.id !== id));
-            scheduleInbox();
+        const onReaction = (payload: any) => {
+            const row = (payload.eventType === 'DELETE' ? payload.old : payload.new) as any;
+            if (!row?.message_id || !row?.user_id) return;
+            const emoji = payload.eventType === 'DELETE' ? null : row.emoji;
+            setActiveMessages(prev => prev.map(m => (m.id === row.message_id ? { ...m, reactions: withReaction(m.reactions, row.user_id, emoji) } : m)));
         };
 
         // Sadece bu kullanıcının gönderdiği ya da aldığı mesajlar dinlenir (tek tablo, tek kolon filtresi —
@@ -188,7 +198,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${user.id}` }, onInsert)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `sender_id=eq.${user.id}` }, onUpdate)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, onUpdate)
-            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, onDelete)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions', filter: `user_id=eq.${user.id}` }, onReaction)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions', filter: `peer_id=eq.${user.id}` }, onReaction)
             .subscribe();
         channelRef.current = channel;
 
@@ -280,9 +291,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsInboxOpen(true);
     }, []);
 
-    const send = useCallback(async (tempId: string, partner: string, text: string, attachmentUrl?: string) => {
+    const send = useCallback(async (tempId: string, partner: string, text: string, attachmentUrl?: string, replyTo?: string) => {
         try {
-            const saved = await apiService.sendChatMessage(partner, text, 'inbox', undefined, attachmentUrl);
+            const saved = await apiService.sendChatMessage(partner, text, 'inbox', undefined, attachmentUrl, replyTo);
             delete failedRef.current[tempId];
             setActiveMessages(prev => {
                 // Realtime kaydı önce getirdiyse geçici satır silinir, değilse gerçek kimlikle değiştirilir.
@@ -292,13 +303,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             scheduleInbox();
         } catch (err) {
             console.error('Send message error:', err);
-            failedRef.current[tempId] = { text, attachmentUrl };
+            showToast((err as any)?.message || 'Mesaj gönderilemedi.', 'AlertCircle', 'text-red-500 font-bold');
+            failedRef.current[tempId] = { text, attachmentUrl, replyTo };
             setActiveMessages(prev => prev.map(m => (m.id === tempId ? { ...m, pending: false, failed: true } : m)));
             throw err;
         }
     }, [scheduleInbox]);
 
-    const onSendReply = useCallback(async (text: string, attachmentUrl?: string) => {
+    const onSendReply = useCallback(async (text: string, attachmentUrl?: string, replyTo?: string) => {
         const trimmed = text.trim();
         const partner = activeChatUserIdRef.current;
         if ((!trimmed && !attachmentUrl) || !partner) return;
@@ -306,9 +318,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const tempId = `temp-${Date.now()}`;
         setActiveMessages(prev => [...prev, {
             id: tempId, text: trimmed, attachmentUrl, sentByMe: true, senderId: userRef.current?.id,
-            createdAt: new Date().toISOString(), read: false, pending: true,
+            createdAt: new Date().toISOString(), read: false, pending: true, replyTo: replyTo || null, reactions: [],
         }]);
-        try { await send(tempId, partner, trimmed, attachmentUrl); }
+        try { await send(tempId, partner, trimmed, attachmentUrl, replyTo); }
         finally { setIsReplying(false); }
     }, [send]);
 
@@ -317,20 +329,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const partner = activeChatUserIdRef.current;
         if (!f || !partner) return;
         setActiveMessages(prev => prev.map(m => (m.id === tempId ? { ...m, pending: true, failed: false } : m)));
-        await send(tempId, partner, f.text, f.attachmentUrl).catch(() => {});
+        await send(tempId, partner, f.text, f.attachmentUrl, f.replyTo).catch(() => {});
     }, [send]);
-
-    const deleteMessage = useCallback(async (messageId: string) => {
-        setActiveMessages(prev => prev.filter(m => m.id !== messageId));
-        try { await apiService.deleteChatMessage(messageId); scheduleInbox(); }
-        catch (err) { console.error('Delete message error:', err); if (activeChatUserIdRef.current) fetchActiveMessages(activeChatUserIdRef.current); }
-    }, [fetchActiveMessages, scheduleInbox]);
 
     const recallMessage = useCallback(async (messageId: string) => {
         setActiveMessages(prev => prev.map(m => (m.id === messageId ? { ...m, deleted: true, text: '', attachmentUrl: null } : m)));
         try { await apiService.recallChatMessage(messageId); scheduleInbox(); }
         catch (err) { console.error('Recall message error:', err); if (activeChatUserIdRef.current) fetchActiveMessages(activeChatUserIdRef.current); }
     }, [fetchActiveMessages, scheduleInbox]);
+
+    const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
+        const me = userRef.current?.id;
+        if (!me) return;
+        const current = activeMessages.find(m => m.id === messageId)?.reactions?.find((r: Reaction) => r.userId === me)?.emoji;
+        const next = current === emoji ? null : emoji;
+        setActiveMessages(prev => prev.map(m => (m.id === messageId ? { ...m, reactions: withReaction(m.reactions, me, next) } : m)));
+        try {
+            const saved = await apiService.toggleMessageReaction(messageId, emoji);
+            setActiveMessages(prev => prev.map(m => (m.id === messageId ? { ...m, reactions: withReaction(m.reactions, me, saved) } : m)));
+        } catch (err) {
+            console.error('Reaction error:', err);
+            setActiveMessages(prev => prev.map(m => (m.id === messageId ? { ...m, reactions: withReaction(m.reactions, me, current || null) } : m)));
+        }
+    }, [activeMessages]);
+
+    const setChatPref = useCallback(async (pref: { muted?: boolean; clear?: boolean }) => {
+        const partner = activeChatUserIdRef.current;
+        if (!partner) return;
+        await apiService.setConversationPref(partner, pref);
+        if (pref.clear) { setActiveMessages([]); setHasOlderMessages(false); }
+        await fetchInbox();
+    }, [fetchInbox]);
 
     return (
         <ChatContext.Provider value={{
@@ -343,8 +372,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             onlineUserIds,
             openChat,
             refreshInbox: fetchInbox,
-            deleteMessage,
             recallMessage,
+            toggleReaction,
+            setChatPref,
         }}>
             {children}
         </ChatContext.Provider>

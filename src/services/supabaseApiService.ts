@@ -25,6 +25,8 @@ function mapChatMessage(msg: any, myId: string, time: string) {
         read: !!msg.is_read,
         deleted: !!msg.is_deleted,
         conversationId: msg.conversation_id,
+        replyTo: msg.reply_to || null,
+        reactions: [] as { userId: string; emoji: string }[],
     };
 }
 
@@ -499,10 +501,6 @@ export class SupabaseApiService implements IApiService {
             .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
             .order('created_at', { ascending: false });
         return data || [];
-    };
-
-    addInboxMessage = async (m: any) => {
-        await supabase.from('messages').insert(m);
     };
 
 
@@ -2180,7 +2178,7 @@ export class SupabaseApiService implements IApiService {
         const byPartner = new Map<string, { ids: string[]; conv: any }>();
         for (const conv of data) {
             const other = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
-            if (!other) continue;
+            if (!other || other === user.id) continue;
             const entry = byPartner.get(other);
             if (entry) entry.ids.push(conv.id); else byPartner.set(other, { ids: [conv.id], conv });
         }
@@ -2189,28 +2187,34 @@ export class SupabaseApiService implements IApiService {
         if (!partnerIds.length) return [];
 
         // Tek sorguda profiller, tek sorguda okunmamışlar ve son mesajlar (her kayıt için ayrı sorgu yok).
-        const [{ data: profiles }, { data: unreadRows }, { data: lastRows }] = await Promise.all([
+        const [{ data: profiles }, { data: unreadRows }, { data: lastRows }, { data: prefRows }] = await Promise.all([
             supabase.from('profile_cards').select('id, username, full_name, business_name, role, avatar_url').in('id', partnerIds),
             supabase.from('messages').select('conversation_id').in('conversation_id', allIds).eq('is_read', false).neq('sender_id', user.id).limit(1000),
             supabase.from('messages').select('conversation_id, sender_id, content, attachment_url, is_deleted, created_at').in('conversation_id', allIds)
                 .order('created_at', { ascending: false }).limit(Math.min(1000, allIds.length * 3)),
+            supabase.from('conversation_prefs').select('conversation_id, muted, cleared_at').in('conversation_id', allIds),
         ]);
+        const prefByConv = new Map((prefRows || []).map((p: any) => [p.conversation_id, p]));
         const profileById = new Map((profiles || []).map((p: any) => [p.id, p]));
         const unreadByConv = new Map<string, number>();
         (unreadRows || []).forEach((r: any) => unreadByConv.set(r.conversation_id, (unreadByConv.get(r.conversation_id) || 0) + 1));
         const lastByConv = new Map<string, any>();
         (lastRows || []).forEach((r: any) => { if (!lastByConv.has(r.conversation_id)) lastByConv.set(r.conversation_id, r); });
 
-        const rows = partnerIds.map(other => {
+        const rows = partnerIds.flatMap(other => {
             const { ids, conv } = byPartner.get(other)!;
             const p = profileById.get(other);
+            const pref: any = prefByConv.get(conv.id);
             const last = ids.map(i => lastByConv.get(i)).filter(Boolean).sort((a: any, b: any) => b.created_at.localeCompare(a.created_at))[0];
+            const at = last?.created_at || conv.last_message_at;
+            // Kendinden temizlenmiş ve sonra yeni mesaj gelmemiş sohbet listede görünmez.
+            if (pref?.cleared_at && (!at || at <= pref.cleared_at)) return [];
             const unreadCount = ids.reduce((n, i) => n + (unreadByConv.get(i) || 0), 0);
             const preview = last
                 ? (last.is_deleted ? 'Mesaj geri alındı' : last.content || (last.attachment_url ? '📷 Fotoğraf' : ''))
                 : (conv.last_message || '');
-            const at = last?.created_at || conv.last_message_at;
-            return {
+            return [{
+                muted: !!pref?.muted,
                 userId: other,
                 partnerName: chatDisplayName(p),
                 avatar: p?.avatar_url || null,
@@ -2225,7 +2229,7 @@ export class SupabaseApiService implements IApiService {
                 messages: [],
                 conversationId: conv.id,
                 conversationIds: ids,
-            };
+            }];
         });
         return rows.sort((a, b) => (b.latestAt || '').localeCompare(a.latestAt || ''));
     }
@@ -2238,94 +2242,60 @@ export class SupabaseApiService implements IApiService {
         if (!ids.length) return [];
         let q = supabase.from('messages').select('*').in('conversation_id', ids).order('created_at', { ascending: false }).limit(limit);
         if (before) q = q.lt('created_at', before);
+        // "Sohbeti temizle" yalnızca kendi görünümünü temizler: o andan önceki mesajlar gelmez.
+        const { data: prefs } = await supabase.from('conversation_prefs').select('cleared_at').in('conversation_id', ids).not('cleared_at', 'is', null);
+        const cleared = (prefs || []).map((p: any) => p.cleared_at).sort().pop();
+        if (cleared) q = q.gt('created_at', cleared);
         const { data, error } = await q;
         if (error || !data) { if (error) console.error('getChatMessages error:', error); return []; }
-        return data.reverse().map((msg: any) => mapChatMessage(msg, user.id, this.formatTimeAgo(msg.created_at)));
+        const msgs = data.reverse().map((msg: any) => mapChatMessage(msg, user.id, this.formatTimeAgo(msg.created_at)));
+        if (msgs.length) {
+            const { data: reactions } = await supabase.from('message_reactions').select('message_id, user_id, emoji').in('message_id', msgs.map(m => m.id));
+            const byMsg = new Map<string, { userId: string; emoji: string }[]>();
+            (reactions || []).forEach((r: any) => byMsg.set(r.message_id, [...(byMsg.get(r.message_id) || []), { userId: r.user_id, emoji: r.emoji }]));
+            msgs.forEach(m => { m.reactions = byMsg.get(m.id) || []; });
+        }
+        return msgs;
     }
 
-    async sendChatMessage(otherUserId: string, content: string, scope: 'inbox' | 'clinic' = 'inbox', associatedAdId?: string, attachmentUrl?: string): Promise<{ id: string; createdAt: string } | void> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error("Giriş gerekli");
-        if (otherUserId === user.id) throw new Error('Kendine mesaj gönderemezsin.');
-
-        let conversationId: string | undefined = (await this.chatConversationIds(otherUserId, scope))[0];
-
-        if (conversationId) {
-            if (associatedAdId) {
-                await supabase.from('conversations').update({ associated_ad_id: associatedAdId }).eq('id', conversationId).is('associated_ad_id', null);
-            }
-        } else {
-            const newContextType = scope === 'clinic' ? 'clinic' : associatedAdId ? 'lost_pet' : 'general';
-            const { data: newConv, error: convErr } = await supabase
-                .from('conversations')
-                .insert({ participant_1: user.id, participant_2: otherUserId, associated_ad_id: associatedAdId || null, context_type: newContextType })
-                .select('id')
-                .single();
-            if (convErr || !newConv) throw convErr || new Error('Sohbet başlatılamadı.');
-            conversationId = newConv.id;
-        }
-
-        const { data: inserted, error: msgErr } = await supabase
-            .from('messages')
-            .insert({ conversation_id: conversationId, sender_id: user.id, receiver_id: otherUserId, content, attachment_url: attachmentUrl || null })
-            .select('id, created_at')
-            .single();
-        if (msgErr) throw msgErr;
-
-        // Gelen kutusu önizlemesi. (Kalıcı çözüm: bunu sunucu tetikleyicisi yazmalı — bkz. YAPILACAKLAR.)
-        await supabase
-            .from('conversations')
-            .update({ last_message: content || (attachmentUrl ? '📷 Fotoğraf' : ''), last_message_at: inserted?.created_at || new Date().toISOString() })
-            .eq('id', conversationId);
-
-        return inserted ? { id: inserted.id, createdAt: inserted.created_at } : undefined;
+    // Mesaj yazma işlemlerinin hepsi sunucu fonksiyonlarıyla (engel, uzunluk, hız sınırı ve ek kontrolü orada).
+    async sendChatMessage(otherUserId: string, content: string, scope: 'inbox' | 'clinic' = 'inbox', associatedAdId?: string, attachmentUrl?: string, replyTo?: string): Promise<{ id: string; createdAt: string } | void> {
+        const { data, error } = await supabase.rpc('send_chat_message', {
+            p_receiver: otherUserId,
+            p_content: content,
+            p_attachment: attachmentUrl || null,
+            p_clinic: scope === 'clinic',
+            p_ad: associatedAdId || null,
+            p_reply_to: replyTo || null,
+        });
+        if (error) throw new Error(error.message || 'Mesaj gönderilemedi.');
+        const row = Array.isArray(data) ? data[0] : data;
+        return row ? { id: row.id, createdAt: row.created_at } : undefined;
     }
 
     async markChatAsRead(otherUserId: string, scope: 'inbox' | 'clinic' = 'inbox'): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) return;
-        const ids = await this.chatConversationIds(otherUserId, scope);
-        if (!ids.length) return;
-        await supabase
-            .from('messages')
-            .update({ is_read: true })
-            .in('conversation_id', ids)
-            .eq('is_read', false)
-            .neq('sender_id', user.id);
+        await supabase.rpc('mark_chat_read', { p_other: otherUserId, p_clinic: scope === 'clinic' });
     }
 
-    async deleteChatMessage(messageId: string): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error("Giriş gerekli");
-
-        const { error } = await supabase
-            .from('messages')
-            .delete()
-            .eq('id', messageId)
-            .eq('sender_id', user.id);
-
-        if (error) {
-            console.error('Delete message error:', error);
-            throw error;
-        }
-    }
-
-    // Mesajı tamamen silmez, "geri alındı" olarak işaretler (WhatsApp tarzı).
-    // Karşı taraf da geri alındığını görür, ama kayıt veritabanında kalır.
+    /** Mesajı "geri alındı" yapar: metin ve fotoğraf kaldırılır, karşı taraf da geri alındığını görür. */
     async recallChatMessage(messageId: string): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error("Giriş gerekli");
+        const { error } = await supabase.rpc('recall_chat_message', { p_id: messageId });
+        if (error) throw new Error(error.message || 'Mesaj geri alınamadı.');
+    }
 
-        const { error } = await supabase
-            .from('messages')
-            .update({ is_deleted: true })
-            .eq('id', messageId)
-            .eq('sender_id', user.id);
+    /** Aynı emojiye tekrar basmak tepkiyi kaldırır. Dönen değer: güncel tepki (yoksa null). */
+    async toggleMessageReaction(messageId: string, emoji: string): Promise<string | null> {
+        const { data, error } = await supabase.rpc('toggle_message_reaction', { p_message: messageId, p_emoji: emoji });
+        if (error) throw new Error(error.message || 'Tepki verilemedi.');
+        return (data as string | null) ?? null;
+    }
 
-        if (error) {
-            console.error('Recall message error:', error);
-            throw error;
-        }
+    /** Sessize alma (bildirim ve sayaç dışı) ve sohbeti kendinden temizleme. */
+    async setConversationPref(otherUserId: string, pref: { muted?: boolean; clear?: boolean }, scope: 'inbox' | 'clinic' = 'inbox'): Promise<void> {
+        const { error } = await supabase.rpc('set_conversation_pref', {
+            p_other: otherUserId, p_muted: pref.muted ?? null, p_clear: !!pref.clear, p_clinic: scope === 'clinic',
+        });
+        if (error) throw new Error(error.message || 'Ayar kaydedilemedi.');
     }
 
     async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds' = 'posts', onProgress?: (percent: number) => void): Promise<string> {

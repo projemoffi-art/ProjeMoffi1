@@ -287,7 +287,6 @@ export interface IApiService {
     fetchMarketPlaces(): Promise<any[]>;
     fetchVets(): Promise<any[]>;
     getInboxMessages(): Promise<any[]>;
-    addInboxMessage(message: any): Promise<void>;
     
     // Shop
     getProducts(category?: ShopCategory): Promise<ShopProduct[]>;
@@ -382,10 +381,11 @@ export interface IApiService {
     getChatConversations(scope?: 'inbox' | 'clinic'): Promise<any[]>;
     getChatMessages(otherUserId: string, scope?: 'inbox' | 'clinic', before?: string | null, limit?: number): Promise<any[]>;
     getChatPartner(userId: string): Promise<{ userId: string; partnerName: string; avatar: string | null; isBusiness: boolean } | null>;
-    sendChatMessage(receiverId: string, content: string, scope?: 'inbox' | 'clinic', associatedAdId?: string, attachmentUrl?: string): Promise<any>;
+    sendChatMessage(receiverId: string, content: string, scope?: 'inbox' | 'clinic', associatedAdId?: string, attachmentUrl?: string, replyTo?: string): Promise<any>;
     markChatAsRead(otherUserId: string, scope?: 'inbox' | 'clinic'): Promise<void>;
-    deleteChatMessage(messageId: string): Promise<void>;
     recallChatMessage(messageId: string): Promise<void>;
+    toggleMessageReaction(messageId: string, emoji: string): Promise<string | null>;
+    setConversationPref(otherUserId: string, pref: { muted?: boolean; clear?: boolean }, scope?: 'inbox' | 'clinic'): Promise<void>;
     
     // Media & Storage
     uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds', onProgress?: (percent: number) => void): Promise<string>;

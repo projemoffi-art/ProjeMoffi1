@@ -3068,6 +3068,20 @@ Baran'ın geri bildirimi: akış durağan, eski efekt özelliği görünmüyor, 
   paylaşım paneli + QR, yorum + yorum beğenisi, Keşfet + Yakınımda, editör (kaydırma, filtre, ayar), gerçek paylaşım
   (efekt dosyaya işlendi) ve silme (dosya da silindi) doğrulandı; test verisi temizlendi. `npm run build` başarılı.
 
+### 8.51 Mesajlaşma v2 — yazma sadece sunucuda (2026-10-01)
+
+Migration `20261001100000_messaging_v2.sql` (Baran SQL Editor'dan uyguladı). 🔴 **KURAL:** `messages`/`conversations`
+tablolarına istemcinin yazma yetkisi yok; gönderme `send_chat_message`, okundu `mark_chat_read`, geri alma
+`recall_chat_message`, tepki `toggle_message_reaction` (❤️😂😮😢👍🐾), sessize alma/kendinden temizleme
+`set_conversation_pref`. Engel, 2000 karakter, dakikada 30 mesaj ve ek kontrolü sunucuda. İki kişi arasında tek sohbet
+(genel + klinik ayrı, `conversations_one_per_pair`). Gelen kutusu önizlemesini tetikleyici yazar. Okuma kuralları tek kolon
+(`sender_id`/`receiver_id`) — Realtime için. Mesaj fotoğrafları özel `chat-media` alanında (`src/lib/chatMedia.ts`:
+`uploadChatImage`, `useChatMediaUrl` imzalı adres); sadece gönderen ve alıcı görür. Yanıt (`reply_to`) alıntısı ve tepkiler
+mesaj kutusunda. Kendi kendine açılmış eski test sohbetleri listede gösterilmez.
+Doğrulama: authenticated rolüyle SQL (doğrudan ekleme/düzenleme reddi, sınırlar, üçüncü kişinin mesaj/fotoğraf/tepki
+görememesi) + Playwright (gönder, tepki, yanıt, fotoğraf, yenileme sonrası kalıcılık, sessize alma).
+**Yapılmadı:** tanımadığın kişilerden gelen ilk mesajlar için "mesaj istekleri" kutusu.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

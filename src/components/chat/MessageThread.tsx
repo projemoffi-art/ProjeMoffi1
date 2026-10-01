@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MoreVertical, Undo2, Image as ImageIcon, Smile, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useChatMediaUrl } from "@/lib/chatMedia";
 
 export interface ChatBubbleMessage {
     id: string;
@@ -92,15 +93,7 @@ export function ChatMessageBubble({ message, onRecall }: ChatMessageBubbleProps)
                         : "bg-zinc-900 dark:bg-zinc-700 text-white rounded-tl-sm"
                 )}
             >
-                {message.attachmentUrl && (
-                    <a href={message.attachmentUrl} target="_blank" rel="noopener noreferrer">
-                        <img
-                            src={message.attachmentUrl}
-                            alt="Gönderilen fotoğraf"
-                            className={cn("rounded-xl max-w-full max-h-64 object-cover", message.text && "mb-2")}
-                        />
-                    </a>
-                )}
+                {message.attachmentUrl && <BubbleImage refUrl={message.attachmentUrl} withText={!!message.text} />}
                 {message.text && <p className="whitespace-pre-wrap break-words">{message.text}</p>}
                 {timestamp && (
                     <span
@@ -114,6 +107,16 @@ export function ChatMessageBubble({ message, onRecall }: ChatMessageBubbleProps)
                 )}
             </div>
         </div>
+    );
+}
+
+function BubbleImage({ refUrl, withText }: { refUrl: string; withText: boolean }) {
+    const url = useChatMediaUrl(refUrl);
+    if (!url) return <span className={cn("block rounded-xl w-48 h-40 bg-card-border/50 animate-pulse", withText && "mb-2")} />;
+    return (
+        <a href={url} target="_blank" rel="noopener noreferrer">
+            <img src={url} alt="Gönderilen fotoğraf" className={cn("rounded-xl max-w-full max-h-64 object-cover", withText && "mb-2")} />
+        </a>
     );
 }
 
