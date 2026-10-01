@@ -8,14 +8,13 @@ import {
     Zap, MousePointer2, Share2, HelpCircle,
     Maximize2, RefreshCcw, Save, Type, Sliders, Wand2, ArrowLeftRight, ArrowUpDown, Upload, Globe, Smartphone, X 
 } from 'lucide-react';
-import { useShare } from '@/context/ShareContext';
+import { openShare } from '@/components/common/ShareSheet';
 import { useRouter } from 'next/navigation';
 import { cn, showToast } from '@/lib/utils';
 import { generateImageAction } from '@/app/actions/ai';
 
 export default function ProductionStudio() {
     const router = useRouter();
-    const { openShare } = useShare();
     const [isGenerating, setIsGenerating] = useState(false);
     const [activePrompt, setActivePrompt] = useState('');
     const [printDesign, setPrintDesign] = useState<string | null>(null);

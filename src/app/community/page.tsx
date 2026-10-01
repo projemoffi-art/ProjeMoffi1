@@ -7,6 +7,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, MessageCircle, Plus, Search } from 'lucide-react';
 import { LoadingBlocks } from '@/components/health/HealthUI';
 import { PostCard } from '@/components/social/SocialUI';
@@ -22,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useChat } from '@/context/ChatContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { cn } from '@/lib/utils';
+import { haptics } from '@/lib/haptics';
 
 type Mode = 'following' | 'for_you';
 const PAGE = 12;
@@ -148,20 +150,26 @@ function Feed() {
                 </div>
                 <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-card border border-card-border">
                     {([['following', 'Takip Ettiklerim'], ['for_you', 'Senin İçin']] as const).map(([m, label]) => (
-                        <button key={m} onClick={() => { setMode(m); router.replace(m === 'following' ? '/community?sekme=takip' : '/community', { scroll: false }); }}
-                            className={cn('h-10 rounded-xl text-sm font-black', mode === m ? 'bg-accent text-white' : 'text-secondary')}>{label}</button>
+                        <button key={m} onClick={() => { haptics.tap(); setMode(m); router.replace(m === 'following' ? '/community?sekme=takip' : '/community', { scroll: false }); }}
+                            className='relative h-10 rounded-xl text-sm font-black'>
+                            {mode === m && <motion.span layoutId='feed-tab' className='absolute inset-0 rounded-xl bg-accent' transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                            <span className={cn('relative transition-colors', mode === m ? 'text-white' : 'text-secondary')}>{label}</span>
+                        </button>
                     ))}
                 </div>
             </header>
 
             <StoriesBar groups={stories} reload={loadStories} />
 
-            {fresh && (
-                <div className="sticky top-[132px] z-20 flex justify-center">
-                    <button onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); load(mode); }}
-                        className="mt-2 h-9 px-4 rounded-full bg-accent text-white text-xs font-black shadow-lg">Yeni gönderiler ↑</button>
-                </div>
-            )}
+            <AnimatePresence>
+                {fresh && (
+                    <motion.div className="sticky top-[132px] z-20 flex justify-center" initial={{ y: -24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -24, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 22 }}>
+                        <button onClick={() => { haptics.tap(); window.scrollTo({ top: 0, behavior: 'smooth' }); load(mode); }}
+                            className="mt-2 h-9 px-4 rounded-full bg-accent text-white text-xs font-black shadow-lg">Yeni gönderiler ↑</button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {error && <p className="px-4 pt-3 text-sm font-semibold text-red-600">{error}</p>}
             {!posts ? <div className="px-4 pt-4"><LoadingBlocks count={3} /></div> : posts.length === 0 ? (

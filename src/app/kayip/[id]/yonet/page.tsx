@@ -12,6 +12,7 @@ import { ChipInput, KindBadge, ListingCard, ToggleRow, eventTimeText, listingTit
 import { lostService, type LostListing, type Sighting } from '@/services/lostService';
 import { useChat } from '@/context/ChatContext';
 import { showToast } from '@/lib/utils';
+import { openShare } from '@/components/common/ShareSheet';
 
 const MiniMap = dynamic(() => import('@/components/lost/MiniMap'), { ssr: false, loading: () => <div className="h-56 rounded-2xl bg-card border border-card-border animate-pulse" /> });
 
@@ -56,11 +57,11 @@ export default function ManageListingPage() {
     const recent = sightings.filter(s => new Date(s.seenAt).getTime() >= week);
 
     const share = async () => {
-        try {
-            if (navigator.share) await navigator.share({ title: `${l.kind === 'lost' ? 'Kayıp' : 'Bulundu'}: ${listingTitle(l)}`, url });
-            else { await navigator.clipboard.writeText(url); showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
-            lostService.recordEvent(l.id, 'share');
-        } catch { /* vazgeçildi */ }
+        openShare({
+            title: `${l.kind === 'lost' ? 'Kayıp' : 'Bulundu'}: ${listingTitle(l)}`, text: l.locationText || undefined,
+            url, image: l.photos[0] || null, badge: l.kind === 'lost' ? 'Acil kayıp' : 'Bulundu',
+        });
+        lostService.recordEvent(l.id, 'share');
     };
 
     return (

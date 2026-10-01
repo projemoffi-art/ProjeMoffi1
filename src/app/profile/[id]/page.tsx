@@ -26,6 +26,8 @@ import { FamilyTab } from "@/components/profile/FamilyTab";
 import { HealthProvider } from "@/components/health/HealthProvider";
 import { PassportHome } from "@/components/passport/PassportHome";
 import { Avatar, FollowButton, PostGrid } from "@/components/social/SocialUI";
+import { useQuestEngine } from "@/context/QuestEngineContext";
+import { FRAME_CLASSES, resolveFrameStyle, type FrameStyle } from "@/lib/vipFrames";
 import { Sheet, LoadingBlocks } from "@/components/health/HealthUI";
 import { ReportModal } from "@/components/common/modals/ReportModal";
 import { socialService, POSTS_CHANGED_EVENT, type GridPost } from "@/services/socialService";
@@ -35,6 +37,7 @@ import { speciesLabel } from "@/lib/petIdentity";
 import { MoreHorizontal, Plus } from "lucide-react";
 
 import { Wallet, Package, Calendar, Map, Users as UsersIcon, Bookmark, FileText, Activity } from "lucide-react";
+import { openShare } from '@/components/common/ShareSheet';
 
 // ─── Başharf Avatar Yardımcısı ─────────────────────────────
 const AVATAR_COLORS = [
@@ -87,6 +90,12 @@ export default function ProfilePage() {
         return () => { alive = false; };
     }, [id, isOwnProfile]);
     const profilePets = isOwnProfile ? pets : ownerPets;
+    // Ödül Merkezi / Prime çerçevesi: hakkı (Prime ya da süresi geçmemiş VIP) her çizimde yeniden doğrulanır.
+    // Başkalarının profilinde henüz gösterilmiyor; seçim sadece sahibinin ayarlarında duruyor (YAPILACAKLAR).
+    const { activePerks } = useQuestEngine();
+    const frameStyle: FrameStyle = isOwnProfile
+        ? resolveFrameStyle((currentUser as any)?.settings?.appearance?.frameStyle, { isPrime: !!(currentUser as any)?.is_prime, activePerks })
+        : 'minimal';
 
     // ── State ──────────────────────────────────────────────
     const [loading, setLoading] = useState(true);
@@ -137,11 +146,7 @@ export default function ProfilePage() {
     };
 
     const shareProfile = async () => {
-        const url = `${window.location.origin}/profile/${id}`;
-        try {
-            if (navigator.share) await navigator.share({ title: 'Moffi profili', url });
-            else { await navigator.clipboard.writeText(url); showToast("Bağlantı kopyalandı.", "CheckCircle2", "text-emerald-500"); }
-        } catch { /* vazgeçildi */ }
+        openShare({ title: `${profile?.name || profile?.username || 'Moffi profili'} · Moffi`, text: 'Moffi topluluğundaki profil', url: `/profile/${id}`, image: profile?.avatar || null });
     };
 
     const handleMessageClick = () => {
@@ -476,7 +481,7 @@ export default function ProfilePage() {
 
             <div className="max-w-2xl mx-auto px-4">
                 <div className="flex items-center gap-4">
-                    <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 border border-card-border">
+                    <div className={`w-24 h-24 rounded-full overflow-hidden shrink-0 ${frameStyle === 'minimal' ? 'border border-card-border' : FRAME_CLASSES[frameStyle].md}`}>
                         {avatarUrl ? <img src={avatarUrl} className="w-full h-full object-cover" alt="" />
                             : <div className={`w-full h-full bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-white text-3xl font-black select-none`}>{initials}</div>}
                     </div>

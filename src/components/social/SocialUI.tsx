@@ -14,6 +14,9 @@ import { socialService, timeAgo, type GridPost, type PersonCard, type SocialPost
 import { useAuth } from '@/context/AuthContext';
 import { cn, showToast } from '@/lib/utils';
 import { speciesLabel } from '@/lib/petIdentity';
+import { filterCss } from '@/lib/mediaFilters';
+import { haptics } from '@/lib/haptics';
+import { openShare } from '@/components/common/ShareSheet';
 
 export function Avatar({ src, name, className }: { src?: string | null; name: string; className?: string }) {
     return src
@@ -23,12 +26,66 @@ export function Avatar({ src, name, className }: { src?: string | null; name: st
 
 export const postUrl = (id: string) => `${typeof window !== 'undefined' ? window.location.origin : ''}/community/gonderi/${id}`;
 
-export async function sharePost(post: Pick<SocialPost, 'id' | 'author'>) {
-    const url = postUrl(post.id);
-    try {
-        if (navigator.share) await navigator.share({ title: `${post.author.name} · Moffi`, url });
-        else { await navigator.clipboard.writeText(url); showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
-    } catch { /* vazgeçildi */ }
+/** Ortak paylaşım panelini gönderi için açar (Moffi mesajı, dış uygulamalar, QR, hikâye kartı). */
+export function sharePost(post: Pick<SocialPost, 'id' | 'author' | 'content' | 'media' | 'isVideo'>) {
+    const caption = (post.content || '').replace(/\s+/g, ' ').trim();
+    openShare({
+        title: `${post.author.name} · Moffi`,
+        text: caption ? (caption.length > 120 ? caption.slice(0, 117) + '…' : caption) : 'Moffi topluluğunda bir paylaşım',
+        url: postUrl(post.id),
+        image: post.isVideo ? null : post.media[0] || null,
+    });
+}
+
+// --- Canlı etkileşimler -------------------------------------------------------------------------------------------
+
+const BURST = Array.from({ length: 8 }, (_, i) => (i / 8) * Math.PI * 2);
+
+/** Beğenide kalbin etrafına saçılan küçük parçacıklar. */
+function Burst({ size = 26 }: { size?: number }) {
+    return (
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            {BURST.map((a, i) => (
+                <motion.span key={i} className={cn('absolute rounded-full', i % 2 ? 'bg-accent' : 'bg-amber-400')}
+                    style={{ width: 5, height: 5 }}
+                    initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                    animate={{ x: Math.cos(a) * size, y: Math.sin(a) * size, opacity: 0, scale: 0.4 }}
+                    transition={{ duration: 0.55, ease: 'easeOut' }} />
+            ))}
+            <motion.span className="absolute rounded-full border-2 border-accent" initial={{ width: 8, height: 8, opacity: 0.8 }}
+                animate={{ width: size * 2, height: size * 2, opacity: 0 }} transition={{ duration: 0.45, ease: 'easeOut' }} />
+        </span>
+    );
+}
+
+/** Kalp: beğenince yaylanarak büyür ve parçacık saçar. */
+export function LikeHeart({ liked, onToggle, className, burstSize }: { liked: boolean; onToggle: () => void; className?: string; burstSize?: number }) {
+    const [burst, setBurst] = useState(0);
+    return (
+        <motion.button whileTap={{ scale: 0.8 }} onClick={() => { if (!liked) { setBurst(b => b + 1); haptics.tap(); } onToggle(); }}
+            aria-label={liked ? 'Beğeniyi kaldır' : 'Beğen'} aria-pressed={liked} className="relative inline-flex items-center justify-center">
+            <motion.span key={liked ? 'on' : 'off'} initial={liked ? { scale: 0.3 } : { scale: 1 }} animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 520, damping: 11 }} className="inline-flex">
+                <Heart className={cn(className || 'w-6 h-6', liked ? 'fill-accent text-accent' : '')} />
+            </motion.span>
+            {burst > 0 && <Burst key={burst} size={burstSize} />}
+        </motion.button>
+    );
+}
+
+/** Sayı değişince yukarı/aşağı kayarak yenilenir. */
+export function RollingCount({ value, className }: { value: number; className?: string }) {
+    const prev = useRef(value);
+    const dir = value >= prev.current ? 1 : -1;
+    useEffect(() => { prev.current = value; }, [value]);
+    return (
+        <span className={cn('relative inline-flex overflow-hidden tabular-nums', className)}>
+            <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span key={value} initial={{ y: dir * 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -dir * 12, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}>{value.toLocaleString('tr-TR')}</motion.span>
+            </AnimatePresence>
+        </span>
+    );
 }
 
 function useNeedLogin() {
@@ -62,8 +119,9 @@ function MediaCarousel({ post, onDoubleTap }: { post: SocialPost; onDoubleTap: (
         const now = Date.now();
         if (now - lastTap.current < 300) {
             onDoubleTap();
+            haptics.tap();
             setHeart(true);
-            setTimeout(() => setHeart(false), 700);
+            setTimeout(() => setHeart(false), 850);
         } else if (post.isVideo) {
             setMuted(m => !m);
         }
@@ -71,10 +129,10 @@ function MediaCarousel({ post, onDoubleTap }: { post: SocialPost; onDoubleTap: (
     };
 
     return (
-        <div ref={boxRef} className="relative mx-3 rounded-2xl overflow-hidden bg-card-border/40 aspect-[4/5]" onClick={tap}>
+        <div ref={boxRef} className="relative overflow-hidden bg-card-border/40 aspect-[4/5]" onClick={tap}>
             {post.isVideo ? (
                 <>
-                    <video ref={videoRef} src={post.media[0]} muted={muted} loop playsInline className="w-full h-full object-cover" />
+                    <video ref={videoRef} src={post.media[0]} muted={muted} loop playsInline className="w-full h-full object-cover" style={{ filter: filterCss(post.mediaFilter) }} />
                     <span className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center">
                         {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                     </span>
@@ -97,9 +155,16 @@ function MediaCarousel({ post, onDoubleTap }: { post: SocialPost; onDoubleTap: (
             )}
             <AnimatePresence>
                 {heart && (
-                    <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1.1 }} exit={{ opacity: 0, scale: 1.4 }}
-                        className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <Heart className="w-24 h-24 text-white fill-white drop-shadow-xl" />
+                    <motion.div key="heart" className="absolute inset-0 flex items-center justify-center pointer-events-none" exit={{ opacity: 0, transition: { duration: 0.2 } }}>
+                        <motion.span initial={{ scale: 0, rotate: -18 }} animate={{ scale: [0, 1.25, 1], rotate: [-18, 6, 0] }} transition={{ duration: 0.45, ease: 'easeOut' }}>
+                            <Heart className="w-28 h-28 text-white fill-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]" />
+                        </motion.span>
+                        {[-60, -25, 15, 50].map((x, i) => (
+                            <motion.span key={i} className="absolute" initial={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
+                                animate={{ x, y: -90 - i * 12, opacity: [0, 1, 0], scale: [0.4, 0.9, 0.7] }} transition={{ duration: 0.8, delay: 0.08 * i, ease: 'easeOut' }}>
+                                <Heart className="w-6 h-6 text-white fill-accent" />
+                            </motion.span>
+                        ))}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -116,6 +181,40 @@ export function useMaskHidden() {
         ? t.replace(new RegExp(escape(w.trim()), 'gi'), m => '*'.repeat(m.length)) : t), text);
 }
 
+const TAG_RE = /([#@][\p{L}\p{N}_]{2,40})/gu;
+
+/** @kullanıcıadı: profil kartından eşleşen kişiyi bulup profiline gider. */
+function MentionLink({ handle }: { handle: string }) {
+    const router = useRouter();
+    const open = async (e: React.MouseEvent) => {
+        e.preventDefault(); e.stopPropagation();
+        const name = handle.slice(1);
+        const people = await socialService.searchPeople(name).catch(() => []);
+        const hit = people.find(p => (p.username || '').toLocaleLowerCase('tr-TR') === name.toLocaleLowerCase('tr-TR'));
+        if (hit) router.push(`/profile/${hit.id}`);
+        else showToast(`${handle} adlı bir kullanıcı bulunamadı.`, 'AlertCircle', 'text-secondary font-bold');
+    };
+    return <button onClick={open} className="font-black text-accent">{handle}</button>;
+}
+
+/** Metindeki #etiket (Keşfet araması) ve @kullanıcı (profil) bağlantıları. */
+export function RichText({ text }: { text: string }) {
+    const parts = text.split(TAG_RE);
+    return (
+        <>
+            {parts.map((part, i) => {
+                if (i % 2 === 0) return <React.Fragment key={i}>{part}</React.Fragment>;
+                if (part.startsWith('#')) {
+                    return (
+                        <Link key={i} href={`/community/kesfet?q=${encodeURIComponent(part)}`} onClick={e => e.stopPropagation()} className="font-black text-accent">{part}</Link>
+                    );
+                }
+                return <MentionLink key={i} handle={part} />;
+            })}
+        </>
+    );
+}
+
 export function Caption({ text: raw, clamp = true }: { text: string; clamp?: boolean }) {
     const [open, setOpen] = useState(!clamp);
     const mask = useMaskHidden();
@@ -127,7 +226,9 @@ export function Caption({ text: raw, clamp = true }: { text: string; clamp?: boo
     return (
         <div className="text-sm leading-relaxed">
             <p className={cn('whitespace-pre-wrap', !open && long && 'line-clamp-3')}>
-                {body ? <><span className="font-black">{first}</span>{'\n'}{body}</> : <span className="font-semibold">{text}</span>}
+                {body
+                    ? <><span className="font-black"><RichText text={first} /></span>{'\n'}<RichText text={body} /></>
+                    : <span className="font-semibold"><RichText text={text} /></span>}
             </p>
             {!open && long && <button onClick={() => setOpen(true)} className="text-xs font-bold text-secondary mt-0.5">devamını gör</button>}
         </div>
@@ -164,13 +265,15 @@ export function PostCard({ post, onChange, onRemoved, onBlocked, detail = false 
         update({ ...p, isSaved: !p.isSaved });
         try {
             await socialService.setSave(p.id, !prev.isSaved);
-            showToast(prev.isSaved ? 'Kaydedilenlerden çıkarıldı.' : 'Kaydedildi.', 'CheckCircle2', 'text-emerald-500 font-bold');
+            haptics.tap();
+            if (!prev.isSaved) showToast('Kaydedildi · profilindeki Kaydedilenler sekmesinde.', 'CheckCircle2', 'text-emerald-500 font-bold');
         } catch (e: any) { update(prev); showToast(e?.message || 'Kaydedilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
     };
     const commentsHref = `/community/gonderi/${p.id}/yorumlar`;
 
     return (
-        <article className="py-3">
+        <motion.article className="py-3" initial={detail ? false : { opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }} transition={{ type: 'spring', stiffness: 260, damping: 28 }}>
             <header className="flex items-center gap-3 px-4 pb-2.5">
                 <Link href={`/profile/${p.userId}`} className="flex items-center gap-3 min-w-0 flex-1">
                     <Avatar src={p.author.avatar} name={p.author.name} className="w-10 h-10" />
@@ -201,18 +304,19 @@ export function PostCard({ post, onChange, onRemoved, onBlocked, detail = false 
                     </div>
                 )}
                 <div className="flex items-center gap-4 pt-0.5">
-                    <button onClick={() => like()} aria-label={p.isLiked ? 'Beğeniyi kaldır' : 'Beğen'} aria-pressed={p.isLiked} className="inline-flex items-center gap-1.5 text-sm font-bold">
-                        <Heart className={cn('w-6 h-6', p.isLiked ? 'fill-accent text-accent' : '')} />
-                    </button>
-                    {p.likes > 0 && <button onClick={() => setLikers(true)} className="-ml-3 text-sm font-bold">{p.likes.toLocaleString('tr-TR')}</button>}
-                    <button onClick={() => p.commentPrivacy === 'nobody' ? showToast('Bu gönderi yorumlara kapalı.', 'AlertCircle', 'text-secondary font-bold') : router.push(commentsHref)}
+                    <LikeHeart liked={p.isLiked} onToggle={() => like()} />
+                    {p.likes > 0 && <button onClick={() => setLikers(true)} className="-ml-3 text-sm font-bold"><RollingCount value={p.likes} /></button>}
+                    <motion.button whileTap={{ scale: 0.82 }} onClick={() => p.commentPrivacy === 'nobody' ? showToast('Bu gönderi yorumlara kapalı.', 'AlertCircle', 'text-secondary font-bold') : router.push(commentsHref)}
                         aria-label="Yorumlar" className={cn('inline-flex items-center gap-1.5 text-sm font-bold', p.commentPrivacy === 'nobody' && 'opacity-40')}>
-                        <MessageCircle className="w-6 h-6" />{p.comments > 0 ? p.comments.toLocaleString('tr-TR') : ''}
-                    </button>
-                    <button onClick={() => sharePost(p)} aria-label="Paylaş"><Send className="w-6 h-6" /></button>
-                    <button onClick={save} aria-label={p.isSaved ? 'Kaydedilenlerden çıkar' : 'Kaydet'} aria-pressed={p.isSaved} className="ml-auto">
-                        <Bookmark className={cn('w-6 h-6', p.isSaved ? 'fill-foreground' : '')} />
-                    </button>
+                        <MessageCircle className="w-6 h-6" />{p.comments > 0 && <RollingCount value={p.comments} />}
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.82, rotate: -12 }} onClick={() => { haptics.tap(); sharePost(p); }} aria-label="Paylaş"><Send className="w-6 h-6" /></motion.button>
+                    <motion.button whileTap={{ scale: 0.8 }} onClick={save} aria-label={p.isSaved ? 'Kaydedilenlerden çıkar' : 'Kaydet'} aria-pressed={p.isSaved} className="ml-auto">
+                        <motion.span key={p.isSaved ? 'on' : 'off'} className="inline-flex" initial={p.isSaved ? { scale: 0.4, y: -6 } : { scale: 1 }} animate={{ scale: 1, y: 0 }}
+                            transition={{ type: 'spring', stiffness: 520, damping: 13 }}>
+                            <Bookmark className={cn('w-6 h-6', p.isSaved ? 'fill-foreground' : '')} />
+                        </motion.span>
+                    </motion.button>
                 </div>
                 {detail && <Caption text={p.content} clamp={false} />}
                 {!detail && p.comments > 0 && p.commentPrivacy !== 'nobody' && (
@@ -224,7 +328,7 @@ export function PostCard({ post, onChange, onRemoved, onBlocked, detail = false 
                 onRemoved={id => { onRemoved?.(id); if (detail) router.replace('/community'); }}
                 onBlocked={uid => { onBlocked?.(uid); if (detail) router.replace('/community'); }} />
             <LikersSheet open={likers} onClose={() => setLikers(false)} postId={p.id} />
-        </article>
+        </motion.article>
     );
 }
 
@@ -356,11 +460,11 @@ export function PersonRow({ person, initialFollowing, onNavigate, right }: { per
     );
 }
 
-export function GridTile({ post }: { post: GridPost }) {
+export function GridTile({ post, big = false }: { post: GridPost; big?: boolean }) {
     return (
-        <Link href={`/community/gonderi/${post.id}`} className="relative aspect-square bg-card-border/40 overflow-hidden">
+        <Link href={`/community/gonderi/${post.id}`} className={cn("relative aspect-square bg-card-border/40 overflow-hidden active:opacity-80 transition-opacity", big && "col-span-2 row-span-2")}>
             {post.media && (post.isVideo
-                ? <video src={post.media} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                ? <video src={post.media} muted playsInline preload="metadata" className="w-full h-full object-cover" style={{ filter: filterCss(post.mediaFilter) }} />
                 : <img src={post.media} alt="" loading="lazy" className="w-full h-full object-cover" />)}
             {(post.mediaCount > 1 || post.isVideo) && (
                 <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/55 text-white text-[10px] font-black">{post.isVideo ? '▶' : `1/${post.mediaCount}`}</span>
@@ -369,6 +473,11 @@ export function GridTile({ post }: { post: GridPost }) {
     );
 }
 
-export function PostGrid({ posts }: { posts: GridPost[] }) {
-    return <div className="grid grid-cols-3 gap-0.5 rounded-2xl overflow-hidden">{posts.map(p => <GridTile key={p.id} post={p} />)}</div>;
+/** mosaic: Keşfet ızgarası — her 10 gönderide bir büyük kare (sırayla sağda ve solda), akış daha canlı görünür. */
+export function PostGrid({ posts, mosaic = false }: { posts: GridPost[]; mosaic?: boolean }) {
+    return (
+        <div className="grid grid-cols-3 grid-flow-dense gap-0.5 rounded-2xl overflow-hidden">
+            {posts.map((p, i) => <GridTile key={p.id} post={p} big={mosaic && posts.length >= 6 && (i % 10 === 0 || i % 10 === 6)} />)}
+        </div>
+    );
 }

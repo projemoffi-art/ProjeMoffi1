@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat } from '@/context/ChatContext';
+import { MessageText } from '@/components/chat/MessageText';
 import { useAuth } from '@/context/AuthContext';
 import { apiService } from '@/services/apiService';
 import { ChatComposer } from '@/components/chat/MessageThread';
@@ -206,7 +207,7 @@ export function InboxModal() {
                                                     />
                                                     {m.text && (
                                                         <div className={cn("px-4 py-3 rounded-[1.5rem] shadow-sm", m.sentByMe ? "bg-amber-100 dark:bg-white/10 text-zinc-900 dark:text-foreground font-medium border border-amber-200/60 dark:border-card-border rounded-tr-none" : "bg-cyan-500 text-black rounded-tl-none")}>
-                                                            <p className="text-sm leading-relaxed">{m.text}</p>
+                                                            <MessageText text={m.text} />
                                                         </div>
                                                     )}
                                                     <div className={cn("flex items-center gap-1", m.sentByMe ? "justify-end" : "justify-start")}>
@@ -216,7 +217,7 @@ export function InboxModal() {
                                                 </div>
                                             ) : (
                                                 <div className={cn("px-4 py-3 rounded-[1.5rem] shadow-sm", m.sentByMe ? "bg-amber-100 dark:bg-white/10 text-zinc-900 dark:text-foreground font-medium border border-amber-200/60 dark:border-card-border rounded-tr-none" : "bg-cyan-500 text-black rounded-tl-none")}>
-                                                    <p className="text-sm leading-relaxed">{m.text}</p>
+                                                    <MessageText text={m.text} />
                                                     <div className={cn("flex items-center gap-1 mt-1.5", m.sentByMe ? "justify-end" : "justify-start")}>
                                                         <span className={cn("text-[9px] font-bold uppercase tracking-tighter opacity-60", m.sentByMe ? "text-black/50 dark:text-white/40" : "text-black")}>{m.time}</span>
                                                         {m.sentByMe && (m.read ? <CheckCheck className="w-3 h-3 text-cyan-600" /> : <Check className="w-3 h-3 text-black/40 dark:text-white/30" />)}

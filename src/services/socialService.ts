@@ -17,6 +17,8 @@ export interface SocialPost {
     content: string;
     media: string[];
     isVideo: boolean;
+    /** Videoya uygulanan efekt (fotoğrafta efekt dosyaya işlenmiştir). */
+    mediaFilter: string | null;
     pets: TaggedPet[];
     locationText: string | null;
     topic: PostTopic | null;
@@ -32,7 +34,7 @@ export interface SocialPost {
     followsAuthor: boolean;
 }
 
-export interface GridPost { id: string; media: string | null; isVideo: boolean; mediaCount: number; likes: number; comments: number }
+export interface GridPost { id: string; media: string | null; isVideo: boolean; mediaFilter: string | null; mediaCount: number; likes: number; comments: number }
 
 export interface SocialComment {
     id: string;
@@ -55,6 +57,7 @@ export interface PostInput {
     content: string;
     media: string[];
     isVideo?: boolean;
+    mediaFilter?: string | null;
     taggedPetIds: string[];
     locationText: string | null;
     lat: number | null;
@@ -81,7 +84,7 @@ const emit = (name: string, detail?: any) => {
 const questTrigger = (type: 'post_added' | 'like_toggled' | 'comment_added') => emit('moffi-quest-trigger', { type });
 
 const mapPost = (r: any): SocialPost => ({
-    id: r.id, userId: r.user_id, content: r.content || '', media: (r.media_urls || []).filter(Boolean), isVideo: !!r.is_video,
+    id: r.id, userId: r.user_id, content: r.content || '', media: (r.media_urls || []).filter(Boolean), isVideo: !!r.is_video, mediaFilter: r.media_filter || null,
     pets: Array.isArray(r.tagged_pets) ? r.tagged_pets : [],
     locationText: r.location_text, topic: r.topic, commentPrivacy: r.comment_privacy || 'everyone',
     likes: r.likes_count || 0, comments: r.comments_count || 0, createdAt: r.created_at, editedAt: r.edited_at,
@@ -90,7 +93,7 @@ const mapPost = (r: any): SocialPost => ({
 });
 
 const mapGrid = (r: any): GridPost => ({
-    id: r.id, media: r.media_url, isVideo: !!r.is_video, mediaCount: r.media_count || 1, likes: r.likes_count || 0, comments: r.comments_count || 0,
+    id: r.id, media: r.media_url, isVideo: !!r.is_video, mediaFilter: r.media_filter || null, mediaCount: r.media_count || 1, likes: r.likes_count || 0, comments: r.comments_count || 0,
 });
 
 async function me() {
@@ -105,6 +108,15 @@ async function cards(ids: string[]) {
     const { data } = await supabase.from('profile_cards').select('id, full_name, username, avatar_url, role, business_name').in('id', unique);
     (data || []).forEach((p: any) => { byId[p.id] = p; });
     return byId;
+}
+
+/** Kendi klasöründeki görselleri depodan siler: silinen gönderi/hikâyenin fotoğrafı herkese açık adreste kalmasın. */
+async function removeOwnFiles(bucket: 'posts' | 'stories', urls: string[], userId: string) {
+    const marker = `/storage/v1/object/public/${bucket}/`;
+    const paths = urls
+        .map(u => (u && u.includes(marker) ? decodeURIComponent(u.split(marker)[1].split('?')[0]) : null))
+        .filter((p): p is string => !!p && p.startsWith(`${userId}/`));
+    if (paths.length) await supabase.storage.from(bucket).remove(paths);
 }
 
 const personName = (p: any) => (p?.role === 'business' && p?.business_name) || p?.full_name || p?.username || 'Moffi üyesi';
@@ -134,6 +146,7 @@ export const socialService = {
         if (!user) throw new Error('Paylaşmak için giriş yapmalısın.');
         const { data, error } = await supabase.from('posts').insert({
             user_id: user.id, content: input.content.trim(), media_urls: input.media, is_video: !!input.isVideo,
+            media_filter: input.isVideo && input.mediaFilter && input.mediaFilter !== 'none' ? input.mediaFilter : null,
             tagged_pet_ids: input.taggedPetIds, location_text: input.locationText, area_lat: input.lat, area_lng: input.lng,
             topic: input.topic, show_on_profile: input.showOnProfile, comment_privacy: input.commentPrivacy,
         }).select('id').single();
@@ -156,8 +169,11 @@ export const socialService = {
     },
 
     async remove(id: string) {
+        const user = await me();
+        const { data: row } = await supabase.from('posts').select('media_urls').eq('id', id).maybeSingle();
         const { error } = await supabase.from('posts').delete().eq('id', id);
         if (error) fail(error, 'Gönderi silinemedi.');
+        if (user && row?.media_urls?.length) await removeOwnFiles('posts', row.media_urls, user.id).catch(() => {});
         emit(POSTS_CHANGED_EVENT);
     },
 
@@ -313,6 +329,25 @@ export const socialService = {
         return ids.map(i => ({ id: i, name: personName(byId[i]), username: byId[i]?.username || null, avatar: byId[i]?.avatar_url || null, isBusiness: byId[i]?.role === 'business' }));
     },
 
+    /** Paylaşım panelindeki "Moffi'de gönder" listesi: takip ettiklerin (en yeni takip önce). */
+    async following(): Promise<PersonCard[]> {
+        const user = await me();
+        if (!user) return [];
+        const { data } = await supabase.from('follows').select('following_id, created_at').eq('follower_id', user.id).order('created_at', { ascending: false }).limit(60);
+        const ids = (data || []).map((f: any) => f.following_id);
+        const byId = await cards(ids);
+        return ids.filter(i => byId[i]).map(i => ({ id: i, name: personName(byId[i]), username: byId[i].username, avatar: byId[i].avatar_url, isBusiness: byId[i].role === 'business' }));
+    },
+
+    /** Bağlantıyı seçilen kişilere Moffi mesajı olarak gönderir. Gönderilemeyenlerin sayısını döndürür. */
+    async sendInMessages(userIds: string[], text: string): Promise<number> {
+        let failed = 0;
+        for (const id of userIds) {
+            try { await apiService.sendChatMessage(id, text); } catch { failed++; }
+        }
+        return failed;
+    },
+
     /** Veri dışa aktarma (KVKK): kendi gönderilerinin tamamı. */
     async myPostsForExport(): Promise<any[]> {
         const user = await me();
@@ -364,8 +399,11 @@ export const socialService = {
     },
 
     async deleteStory(id: string) {
+        const user = await me();
+        const { data: row } = await supabase.from('stories').select('image_url').eq('id', id).maybeSingle();
         const { error } = await supabase.from('stories').delete().eq('id', id);
         if (error) fail(error, 'Hikâye silinemedi.');
+        if (user && row?.image_url) await removeOwnFiles('stories', [row.image_url], user.id).catch(() => {});
     },
 
     async markStoryViewed(id: string) {

@@ -17,6 +17,7 @@ import { CHAT_MESSAGE_EVENT, type ChatMessageEventDetail } from "@/context/ChatC
 import type { BusinessType } from "@/context/AuthContext";
 import { usePet } from "@/context/PetContext";
 import { CategoryTile, FilterChips, directionsUrl, formatDistance, openStatusText } from "@/components/vet/VetShared";
+import { openShare } from '@/components/common/ShareSheet';
 
 // Referans Ekran 4 (klinik detayı) + 8 (yorumlar) + 9 (ekip) + 10 (hizmetler): design-reference/vet-final.
 
@@ -195,16 +196,7 @@ export function ClinicDetailDrawer({
 
     const handleShare = async () => {
         const url = `${window.location.origin}/vet?${businessType !== 'vet' ? `type=${businessType}&` : ''}clinic=${targetId}`;
-        try {
-            if (navigator.share) {
-                await navigator.share({ title: clinic?.name, url });
-                return;
-            }
-            await navigator.clipboard.writeText(url);
-            showToast("Bağlantı kopyalandı.", "CheckCircle2", "text-emerald-500 font-bold");
-        } catch {
-            // Kullanıcı paylaşım penceresini kapattı.
-        }
+        openShare({ title: clinic?.name || 'Moffi işletmesi', text: clinic?.address || undefined, url, image: clinic?.coverUrl || clinic?.imageUrl || null });
     };
 
     const offeredShortcuts = useMemo(() => {

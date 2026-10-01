@@ -4,7 +4,7 @@ import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, MapPin, AlertTr
 import Image from "next/image";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useShare } from "@/context/ShareContext";
+import { openShare } from '@/components/common/ShareSheet';
 import { useReport } from "@/context/ReportContext";
 
 interface PostProps {
@@ -29,7 +29,6 @@ interface PostProps {
 }
 
 export function SocialPostCard({ user, content, isSponsored, context }: PostProps) {
-    const { openShare } = useShare();
     const [isLiked, setIsLiked] = useState(false);
     const [showHeart, setShowHeart] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);

@@ -3,7 +3,7 @@
 // GEÇİCİ olarak da açılabiliyor (bkz. `vip_perks`/`user_active_perks`,
 // migration add_vip_temporary_perks_system). Bu dosya, "bu çerçeveyi kullanmaya
 // gerçekten hakkı var mı" kontrolünü TEK bir yerde topluyor — hem
-// ProfileHeader hem SettingsDrawer aynı fonksiyonu çağırıyor, iki ayrı yerde
+// profil sayfası hem SettingsDrawer aynı fonksiyonu çağırıyor, iki ayrı yerde
 // aynı mantığın tekrar edip birbirinden habersizleşmesi (bkz. CLAUDE.md Bölüm 7)
 // riski olmasın diye.
 

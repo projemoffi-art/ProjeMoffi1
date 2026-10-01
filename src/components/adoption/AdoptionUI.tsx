@@ -12,6 +12,7 @@ import { SPECIES_LABEL } from '@/services/lostService';
 import { adoptionService, AGE_GROUP_SHORT, APPLICATION_STATUS, type AdoptionListing, type ApplicationStatus } from '@/services/adoptionService';
 import { genderLabel } from '@/lib/petIdentity';
 import { useAuth } from '@/context/AuthContext';
+import { openShare } from '@/components/common/ShareSheet';
 
 /** "3 ay · Erkek · Golden Mix" */
 export function listingFacts(l: Pick<AdoptionListing, 'ageText' | 'gender' | 'breed' | 'species'>, withBreed = true) {
@@ -156,11 +157,10 @@ export function downloadQr(canvasId: string, fileName: string) {
 }
 
 /** Başvuru ve ilan paylaşımı için ortak paylaş fonksiyonu. */
-export async function shareListing(l: Pick<AdoptionListing, 'id' | 'petName'>) {
-    const url = `${window.location.origin}/sahiplendirme/${l.id}`;
-    try {
-        if (navigator.share) await navigator.share({ title: `${l.petName} yuva arıyor`, url });
-        else { await navigator.clipboard.writeText(url); showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
-        adoptionService.recordEvent(l.id, 'share');
-    } catch { /* kullanıcı vazgeçti */ }
+export function shareListing(l: Pick<AdoptionListing, 'id' | 'petName'> & { photos?: string[]; locationText?: string | null }) {
+    openShare({
+        title: `${l.petName} yuva arıyor`, text: l.locationText ? `${l.locationText} · Moffi'de sahiplendirme ücretsiz` : "Moffi'de sahiplendirme ücretsiz",
+        url: `/sahiplendirme/${l.id}`, image: l.photos?.[0] || null, badge: 'Yuva arıyor',
+    });
+    adoptionService.recordEvent(l.id, 'share');
 }

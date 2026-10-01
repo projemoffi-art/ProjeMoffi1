@@ -3030,6 +3030,44 @@ bkz. 5.6). Yerine gerçek kullanıcı oturumuyla API testi: oluşturma + tetikle
 hayvanıyla paylaşım reddi, beğeni/kaydet/yorum/yanıt, Keşfet filtreleri ve arama, akış, profil, hesapsız okuma
 (beğeni ve kaydedilenler kapalı), engelleme/kaldırma — hepsi geçti; test verisi temizlendi.
 
+### 8.50 Keşfet canlılık turu: efekt editörü, ortak paylaşım paneli, mikro etkileşimler (2026-10-01)
+
+Baran'ın geri bildirimi: akış durağan, eski efekt özelliği görünmüyor, kartların kenarında boşluk var, paylaş çalışmıyor.
+
+- **Efektler tek tanımda: `src/lib/mediaFilters.ts`** (15 filtre: eski yükleme ekranındaki adlarla aynı; ayarlar:
+  parlaklık/kontrast/doygunluk/sıcaklık/vinyet). Fotoğrafta efekt piksel düzeyinde dosyaya işlenir (CSS filtre
+  tanımlarıyla aynı matematik, Safari'de de aynı sonuç). Videoda tarayıcıda yeniden kodlamak yerine filtre adı
+  `posts.media_filter` kolonunda saklanır, oynatılırken aynı tanımın CSS karşılığıyla uygulanır (migration
+  `20260929140000_social_media_filter.sql`; kısıt filtre kimliklerini sınırlar, fotoğrafta tetikleyici boşaltır).
+  Eski editör (13 filtre, kaydırarak değiştirme, ayar kaydırıcıları) Faz 3'te eski topluluk sayfasıyla silinmişti.
+- **Editör (`MediaEditor`):** medya seçilince doğrudan açılır; canlı küçük önizlemeli filtre şeridi, fotoğrafın
+  üstünde kaydırınca filtre değişir (adı kısa süre görünür), Ayarla/Kırp/Döndür, çok fotoğrafta "tümüne uygula".
+- 🔴 **KURAL — paylaşımın tek yolu `openShare()` (`components/common/ShareSheet.tsx`, kökte `ShareSheetHost`).**
+  Moffi'de mesajla gönder (son sohbetler + takip edilenler, çoklu seçim, not), WhatsApp/Telegram/X/Facebook/e-posta,
+  kopyala, QR, sistem paylaşımı ve görselli içerikte 1080×1920 hikâye kartı. Gönderi, kayıp, sahiplendirme, profil,
+  klinik, stüdyo, sipariş ve aile daveti bunu kullanır. Eski `ShareContext` + `GlobalShareSheet` silindi (önce sistem
+  paylaşımını deneyip hata ayıklama `alert()`'ları gösteriyordu). 🔴 `OrderTrackingModal` eski fonksiyonu tanımlamadan
+  çağırıyordu → Paylaş'a basınca pencere çöküyordu.
+- Mesaj kutusunda Moffi bağlantısı önizleme kartına dönüşür, diğer bağlantılar tıklanabilir (`components/chat/MessageText.tsx`).
+- **Kart ve etkileşimler:** medya kenardan kenara; beğenide yaylanan kalp + parçacık; çift dokunuşta büyük kalp;
+  kaydet ikonu sıçrar; sayılar kayarak değişir; kartlar kayarak girer; akış/Keşfet sekmelerinde kayan vurgu;
+  yeni yorum kısa vurguyla belirir; yorum beğenisi iyimser; haptik geri bildirim. #etiket → Keşfet araması,
+  @kullanıcı → profil (`RichText`). Keşfet: tek satır çipler, mozaik ızgara (her 10'da büyük kare), "Yakınımda"da
+  konumu değiştir; sayfalamada tekrar eden gönderiler atılır. Yüzen yapay zekâ düğmesi `/community` ve `/profile`'da gizli.
+- 🔴 **Görev motorunda yan etkiler state güncelleyicisinin içindeydi:** rozet bildirimi iki kez çıkıyordu ve haftalık
+  7 pul ödülü (250 PP, sunucuya yazılan) iki kez verilebiliyordu (React güncelleyicileri iki kez çalıştırabilir).
+  Artık karar ref'ten verilir, yan etkiler dışarıda. **KURAL:** `setX(prev => ...)` içinde bildirim, `setTimeout`
+  ya da sunucu çağrısı yapma.
+- 🔴 **Silinen gönderi/hikâyenin görseli depoda ve herkese açık adreste kalıyordu.** Artık kullanıcının kendi
+  klasöründeki dosyalar da silinir (geçmişte kalanlar için YAPILACAKLAR).
+- VIP çerçeve (Ödül Merkezi/Prime) yürüyüş modülü yenilemesinden beri hiçbir yerde çizilmiyordu (`ProfileHeader`
+  bağlantısız kalmıştı). Artık kendi profil fotoğrafında hak doğrulanarak çiziliyor; ölü `ProfileHeader` ve eski
+  radardan kalan `RadarComponents` silindi.
+- **Doğrulama:** OneDrive `node_modules`'ün bir kısmını "yalnızca bulutta" tuttuğu için (dosyalar açılamıyor) testler
+  OneDrive dışındaki bir kopyada (`C:\Users\uveys\moffi-testrun`, `npm ci`) yapıldı: Playwright ile beğeni,
+  paylaşım paneli + QR, yorum + yorum beğenisi, Keşfet + Yakınımda, editör (kaydırma, filtre, ayar), gerçek paylaşım
+  (efekt dosyaya işlendi) ve silme (dosya da silindi) doğrulandı; test verisi temizlendi. `npm run build` başarılı.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

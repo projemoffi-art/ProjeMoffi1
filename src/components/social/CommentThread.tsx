@@ -6,10 +6,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { LoadingBlocks, Sheet } from '@/components/health/HealthUI';
 import { ReportModal } from '@/components/common/modals/ReportModal';
-import { Avatar, useMaskHidden } from '@/components/social/SocialUI';
+import { Avatar, LikeHeart, RichText, RollingCount, useMaskHidden } from '@/components/social/SocialUI';
+import { haptics } from '@/lib/haptics';
 import { socialService, timeAgo, type SocialComment, type SocialPost } from '@/services/socialService';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -40,6 +42,25 @@ export function CommentThread({ post, comments, reload, limit, onOpenAll }: {
     const [reportId, setReportId] = useState<string | null>(null);
     const [editing, setEditing] = useState<SocialComment | null>(null);
     const [replyTo, setReplyTo] = useState<SocialComment | null>(null);
+    const known = useRef<Set<string> | null>(null);
+    const [fresh, setFresh] = useState<Set<string>>(new Set());
+    const [likeOverride, setLikeOverride] = useState<Record<string, { isLiked: boolean; likes: number }>>({});
+
+    useEffect(() => {
+        if (!comments) return;
+        setLikeOverride({}); // sunucudan gelen güncel değer iyimser değerin yerini alır
+        const ids = comments.flatMap(c => [c.id, ...c.replies.map(r => r.id)]);
+        if (known.current) {
+            const added = ids.filter(i => !known.current!.has(i));
+            if (added.length) {
+                setFresh(new Set(added));
+                const tm = setTimeout(() => setFresh(new Set()), 1600);
+                known.current = new Set(ids);
+                return () => clearTimeout(tm);
+            }
+        }
+        known.current = new Set(ids);
+    }, [comments]);
 
     if (!comments) return <LoadingBlocks count={2} />;
     const shown = limit ? comments.slice(0, limit) : comments;
@@ -47,30 +68,37 @@ export function CommentThread({ post, comments, reload, limit, onOpenAll }: {
 
     const toggleLike = async (c: SocialComment) => {
         if (!user) { showToast('Beğenmek için giriş yapmalısın.', 'AlertCircle', 'text-red-500 font-bold'); return; }
-        try { await socialService.setCommentLike(c.id, !c.isLiked); reload(); }
-        catch (e: any) { showToast(e?.message || 'Beğenilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
+        const next = { isLiked: !c.isLiked, likes: Math.max(0, c.likes + (c.isLiked ? -1 : 1)) };
+        setLikeOverride(o => ({ ...o, [c.id]: next }));
+        try { await socialService.setCommentLike(c.id, next.isLiked); reload(); }
+        catch (e: any) {
+            setLikeOverride(o => { const n = { ...o }; delete n[c.id]; return n; });
+            showToast(e?.message || 'Beğenilemedi.', 'AlertCircle', 'text-red-500 font-bold');
+        }
     };
+    const view = (c: SocialComment): SocialComment => (likeOverride[c.id] ? { ...c, ...likeOverride[c.id] } : c);
 
-    const Item = ({ c, reply }: { c: SocialComment; reply?: boolean }) => (
-        <div className={cn('flex gap-3', reply && 'pl-11')}>
+    const renderItem = (c: SocialComment, reply?: boolean) => (
+        <motion.div key={c.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            className={cn('flex gap-3 rounded-2xl -mx-2 px-2 py-1 transition-colors duration-700', reply && 'pl-[52px]', fresh.has(c.id) && 'bg-accent/10')}>
             <Link href={`/profile/${c.userId}`}><Avatar src={c.author.avatar} name={c.author.name} className={reply ? 'w-7 h-7 text-xs' : 'w-9 h-9'} /></Link>
             <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
                     <Link href={`/profile/${c.userId}`} className="text-[13px] font-black truncate">{c.author.username || c.author.name}</Link>
                     <span className="text-[11px] font-semibold text-secondary shrink-0">{timeAgo(c.createdAt)}{c.editedAt ? ' · düzenlendi' : ''}</span>
                 </div>
-                <p className="text-sm font-semibold whitespace-pre-wrap break-words">{mask(c.content)}</p>
+                <p className="text-sm font-semibold whitespace-pre-wrap break-words"><RichText text={mask(c.content)} /></p>
                 {c.status === 'pending' && <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300">Gönderi sahibinin onayını bekliyor</p>}
                 <div className="flex items-center gap-4 mt-1 text-[11px] font-bold text-secondary">
                     {post.commentPrivacy !== 'nobody' && <button onClick={() => { setReplyTo(reply ? comments.find(t => t.id === c.parentId) || c : c); setEditing(null); }}>Yanıtla</button>}
                     <button onClick={() => setMenuFor(c)}>•••</button>
                 </div>
             </div>
-            <button onClick={() => toggleLike(c)} aria-label={c.isLiked ? 'Beğeniyi kaldır' : 'Beğen'} className="flex flex-col items-center gap-0.5 pt-1 w-7 shrink-0">
-                <Heart className={cn('w-4 h-4', c.isLiked ? 'fill-accent text-accent' : 'text-secondary')} />
-                {c.likes > 0 && <span className="text-[10px] font-bold text-secondary">{c.likes}</span>}
-            </button>
-        </div>
+            <span className="flex flex-col items-center gap-0.5 pt-1 w-7 shrink-0">
+                <LikeHeart liked={c.isLiked} onToggle={() => toggleLike(c)} className={cn('w-4 h-4', !c.isLiked && 'text-secondary')} burstSize={16} />
+                {c.likes > 0 && <RollingCount value={c.likes} className="text-[10px] font-bold text-secondary" />}
+            </span>
+        </motion.div>
     );
 
     return (
@@ -84,8 +112,8 @@ export function CommentThread({ post, comments, reload, limit, onOpenAll }: {
                         const replies = open ? c.replies : c.replies.slice(0, 1);
                         return (
                             <div key={c.id} className="space-y-3">
-                                <Item c={c} />
-                                {replies.map(r => <Item key={r.id} c={r} reply />)}
+                                {renderItem(view(c))}
+                                {replies.map(r => renderItem(view(r), true))}
                                 {!open && (
                                     <button onClick={() => setExpanded(e => ({ ...e, [c.id]: true }))} className="pl-11 text-xs font-black text-secondary">
                                         — {c.replies.length - 1} yanıt daha gör
@@ -170,7 +198,7 @@ function CommentComposerPortal(props: {
                 const status = await socialService.addComment(post.id, t, replyTo?.id);
                 if (status === 'pending') showToast('Yorumun gönderi sahibinin onayına gönderildi.', 'Bell', 'text-amber-600 font-bold');
             }
-            setText(''); setReplyTo(null); setEditing(null); reload();
+            setText(''); setReplyTo(null); setEditing(null); reload(); haptics.success();
         } catch (e: any) {
             showToast(e?.message || 'Gönderilemedi.', 'AlertCircle', 'text-red-500 font-bold');
         } finally {
@@ -188,7 +216,7 @@ function CommentComposerPortal(props: {
                     </div>
                 )}
                 <div className="flex justify-between">
-                    {EMOJIS.map(e => <button key={e} onClick={() => setText(t => t + e)} className="text-xl w-9 h-9">{e}</button>)}
+                    {EMOJIS.map(e => <motion.button key={e} whileTap={{ scale: 1.45 }} onClick={() => { haptics.tap(); setText(t => t + e); }} className="text-xl w-9 h-9">{e}</motion.button>)}
                 </div>
                 <div className="flex items-center gap-2">
                     <Avatar src={user?.avatar} name={user?.name || 'Sen'} className="w-9 h-9" />
@@ -196,9 +224,10 @@ function CommentComposerPortal(props: {
                         onKeyDown={e => { if (e.key === 'Enter') send(); }}
                         placeholder={user ? 'Yorum ekle…' : 'Yorum yazmak için giriş yap'}
                         className="flex-1 h-11 px-4 rounded-full bg-card border border-card-border text-sm font-semibold outline-none focus:border-accent" />
-                    <button onClick={send} disabled={!text.trim() || sending} className="h-11 px-4 rounded-full bg-accent text-white text-sm font-black disabled:opacity-40">
-                        {editing ? 'Kaydet' : 'Paylaş'}
-                    </button>
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={send} disabled={!text.trim() || sending}
+                        animate={{ scale: text.trim() ? 1 : 0.96 }} className="h-11 px-4 rounded-full bg-accent text-white text-sm font-black disabled:opacity-40">
+                        {sending ? '…' : editing ? 'Kaydet' : 'Paylaş'}
+                    </motion.button>
                 </div>
             </div>
         </div>

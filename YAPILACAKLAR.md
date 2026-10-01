@@ -30,6 +30,13 @@ Sonra bakılacak işler. Bir madde bitince buradan silinir, gerekiyorsa CLAUDE.m
 
 ## Topluluk
 
+- [ ] **VIP çerçeve başkalarına görünmüyor.** Seçim sadece sahibinin ayarlarında; `profile_cards` görünümü çerçeveyi
+  Prime / süresi geçmemiş VIP hakkına göre sunucuda hesaplayıp vermeli, profil ve gönderi avatarları onu çizmeli. (2026-10-01)
+- [ ] **Depoda sahipsiz görseller.** Bugünden önce silinen gönderilerin ve süresi dolan tüm hikâyelerin dosyaları
+  `posts`/`stories` alanında herkese açık adreste duruyor; günlük bir temizlik işi (service role) gerekli. (2026-10-01)
+- [ ] **@bahsetme bildirimi.** @kullanıcı artık profile götürüyor ama bahsedilen kişiye bildirim gitmiyor (sunucu tetikleyicisi). (2026-10-01)
+- [ ] **Mesaj kutusu renkleri.** InboxModal hâlâ camgöbeği (cyan) balonlar ve büyük harf etiketler kullanıyor; tasarım
+  kuralına (Bölüm 5) ve Keşfet'in diline uymuyor. (2026-10-01)
 - [ ] **İnceleme için eklenen örnek içerik silinecek** (test hesabı projemoffi, 2026-09-29; Baran bakınca):
   kayıp `lost_pets` 56dcdc8e-1e5a-4725-8b2d-e2d987bd674b, 6e6df1da-ff2b-4344-aa31-3e1c02930d6f,
   fcaa4a44-1065-4e43-9ec1-dcd3039d830f, 1f63cfcc-b054-44d5-a1c6-879b224910e2, 3df31cf5-d9f1-4fff-9a99-a239293d3584;

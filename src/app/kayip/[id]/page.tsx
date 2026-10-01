@@ -18,6 +18,7 @@ import { useChat } from '@/context/ChatContext';
 import { genderLabel } from '@/lib/petIdentity';
 import { distanceKm, distanceText, currentPosition } from '@/lib/geo';
 import { showToast } from '@/lib/utils';
+import { openShare } from '@/components/common/ShareSheet';
 
 const MiniMap = dynamic(() => import('@/components/lost/MiniMap'), { ssr: false, loading: () => <div className="h-40 rounded-2xl bg-card border border-card-border animate-pulse" /> });
 
@@ -57,12 +58,12 @@ export default function ListingDetailPage() {
     const chip = CHIP_OPTIONS.find(c => c.id === l.chipStatus)?.label;
 
     const share = async () => {
-        const url = window.location.href.split('?')[0];
-        try {
-            if (navigator.share) await navigator.share({ title: `${isLost ? 'Kayıp' : 'Bulundu'}: ${listingTitle(l)}`, url });
-            else { await navigator.clipboard.writeText(url); showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
-            lostService.recordEvent(id, 'share');
-        } catch { /* vazgeçildi */ }
+        openShare({
+            title: `${isLost ? 'Kayıp' : 'Bulundu'}: ${listingTitle(l)}`,
+            text: [l.locationText, isLost ? 'Görürsen lütfen haber ver.' : 'Sahibini arıyoruz.'].filter(Boolean).join(' · '),
+            url: `/kayip/${id}`, image: l.photos[0] || null, badge: isLost ? 'Acil kayıp' : 'Bulundu',
+        });
+        lostService.recordEvent(id, 'share');
     };
 
     const needLogin = () => { showToast('Bunun için giriş yapmalısın.', 'AlertCircle', 'text-red-500 font-bold'); router.push('/'); };

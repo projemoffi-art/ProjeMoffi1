@@ -5,10 +5,13 @@
 
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import { HealthHeader, LoadingBlocks } from '@/components/health/HealthUI';
 import { PersonRow, PostGrid } from '@/components/social/SocialUI';
 import { useSearchArea } from '@/components/lost/useSearchArea';
+import { AreaSheet } from '@/components/lost/AreaSheet';
+import { haptics } from '@/lib/haptics';
 import { socialService, EXPLORE_FILTERS, type ExploreFilter, type GridPost, type PersonCard } from '@/services/socialService';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +24,8 @@ export default function ExplorePage() {
 function Explore() {
     const router = useRouter();
     const params = useSearchParams();
-    const { area } = useSearchArea();
+    const { area, choose, detectDevice } = useSearchArea();
+    const [areaOpen, setAreaOpen] = useState(false);
     const [q, setQ] = useState(params.get('q') || '');
     const [term, setTerm] = useState(params.get('q') || '');
     const [filter, setFilter] = useState<ExploreFilter>((params.get('f') as ExploreFilter) || 'all');
@@ -58,7 +62,9 @@ function Explore() {
         loadingMore.current = true;
         try {
             const list = await socialService.search(term, filter, areaArg, posts.length, PAGE);
-            setPosts(p => [...(p || []), ...list]); setHasMore(list.length === PAGE);
+            // Sıralama zamanla kaydığı için aynı gönderi iki sayfada gelebilir; tekrarlar atılır.
+            setPosts(p => { const seen = new Set((p || []).map(x => x.id)); return [...(p || []), ...list.filter(x => !seen.has(x.id))]; });
+            setHasMore(list.length === PAGE);
         } finally { loadingMore.current = false; }
     }, [posts, hasMore, term, filter, areaArg]);
 
@@ -79,15 +85,20 @@ function Explore() {
                         className="flex-1 bg-transparent text-sm font-semibold outline-none" />
                     {q && <button onClick={() => setQ('')} aria-label="Temizle"><X className="w-4 h-4 text-secondary" /></button>}
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
                     {EXPLORE_FILTERS.map(f => (
-                        <button key={f.id} onClick={() => setFilter(f.id)}
-                            className={cn('h-9 px-3.5 rounded-full text-xs font-bold border', filter === f.id ? 'bg-accent text-white border-accent' : 'bg-card border-card-border text-secondary')}>
-                            {f.label}
+                        <button key={f.id} onClick={() => { haptics.tap(); setFilter(f.id); }}
+                            className={cn('relative h-9 px-3.5 rounded-full text-xs font-bold border shrink-0', filter === f.id ? 'border-accent' : 'bg-card border-card-border')}>
+                            {filter === f.id && <motion.span layoutId='explore-chip' className='absolute inset-0 rounded-full bg-accent' transition={{ type: 'spring', stiffness: 460, damping: 34 }} />}
+                            <span className={cn('relative', filter === f.id ? 'text-white' : 'text-secondary')}>{f.label}</span>
                         </button>
                     ))}
                 </div>
-                {filter === 'nearby' && area && <p className="text-[11px] font-semibold text-secondary">{area.name} çevresinde 10 km içinde, semt konumu paylaşılmış gönderiler.</p>}
+                {filter === 'nearby' && (
+                    <p className="text-[11px] font-semibold text-secondary">
+                        {area ? <>{area.name} çevresinde 10 km içinde, semt konumu paylaşılmış gönderiler. <button onClick={() => setAreaOpen(true)} className="font-black text-accent">Konumu değiştir</button></> : 'Konumun bulunuyor…'}
+                    </p>
+                )}
 
                 {people.length > 0 && (
                     <section>
@@ -104,9 +115,11 @@ function Explore() {
                             {filter === 'nearby' ? 'Yakınında konum paylaşılmış gönderi yok.' : 'Başka bir kelime ya da filtre dene.'}
                         </p>
                     </div>
-                ) : <PostGrid posts={posts} />}
+                ) : <PostGrid posts={posts} mosaic />}
                 <div ref={sentinel} />
             </main>
+            {area && <AreaSheet open={areaOpen} onClose={() => setAreaOpen(false)} area={area}
+                onChoose={choose} onDevice={detectDevice} />}
         </>
     );
 }

@@ -9,7 +9,8 @@ import { ChevronLeft, MapPin, Plus, X } from 'lucide-react';
 import { ErrorText, LoadingBlocks, SelectInput } from '@/components/health/HealthUI';
 import { PetAvatar } from '@/components/health/PetPicker';
 import { ToggleRow } from '@/components/lost/LostUI';
-import { MediaEditor, DEFAULT_EDIT, renderEdited, type EditState } from '@/components/social/MediaEditor';
+import { MediaEditor, DEFAULT_EDIT, isEdited, renderEdited, type EditState } from '@/components/social/MediaEditor';
+import { filterCss, filterLabel } from '@/lib/mediaFilters';
 import { usePet } from '@/context/PetContext';
 import { useAuth } from '@/context/AuthContext';
 import { socialService, COMMENT_PRIVACY, TOPICS, type CommentPrivacy, type PostTopic } from '@/services/socialService';
@@ -73,15 +74,19 @@ function Composer() {
         if (video) {
             if (video.size > MAX_VIDEO_MB * 1024 * 1024) { setError(`Video en fazla ${MAX_VIDEO_MB} MB olabilir.`); return; }
             setMedia([{ key: `${Date.now()}`, file: video, preview: URL.createObjectURL(video), isVideo: true, edit: DEFAULT_EDIT }]);
+            setEditIndex(0); setStep('edit');
             return;
         }
         const next = hasVideo ? [] : [...media];
+        const first = next.length;
         for (const f of list) {
             if (next.length >= MAX_IMAGES) break;
             if (!f.type.startsWith('image/')) continue;
             next.push({ key: `${Date.now()}-${f.name}-${next.length}`, file: f, preview: URL.createObjectURL(f), isVideo: false, edit: DEFAULT_EDIT });
         }
         setMedia(next);
+        // Seçilen fotoğraflar doğrudan düzenleyicide açılır (filtre ve ayarlar burada).
+        if (next.length > first) { setEditIndex(first); setStep('edit'); }
     };
 
     const detectLocation = async () => {
@@ -126,7 +131,7 @@ function Composer() {
                 files.push(new File([blob], 'moffi.jpg', { type: 'image/jpeg' }));
             }
             const urls = await socialService.uploadMedia(files);
-            const id = await socialService.create({ ...input, media: urls, isVideo: hasVideo });
+            const id = await socialService.create({ ...input, media: urls, isVideo: hasVideo, mediaFilter: hasVideo ? media[0].edit.filter : null });
             router.replace(`/community/gonderi/${id}${shareAfter ? '?paylas=1' : ''}`);
         } catch (e: any) {
             setError(e?.message || 'Paylaşılamadı.');
@@ -161,14 +166,16 @@ function Composer() {
                             <div className="flex gap-2 overflow-x-auto no-scrollbar">
                                 {media.map((m, i) => (
                                     <div key={m.key} className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-card-border/40">
-                                        <button onClick={() => { if (!m.isVideo && !editId) { setEditIndex(i); setStep('edit'); } }} className="w-full h-full" aria-label="Düzenle">
-                                            {m.isVideo ? <video src={m.preview} muted className="w-full h-full object-cover" /> : <img src={m.preview} alt="" className="w-full h-full object-cover" />}
+                                        <button onClick={() => { if (!editId) { setEditIndex(i); setStep('edit'); } }} className="w-full h-full" aria-label="Düzenle">
+                                            {m.isVideo
+                                                ? <video src={m.preview} muted className="w-full h-full object-cover" style={{ filter: filterCss(m.edit.filter) }} />
+                                                : <img src={m.preview} alt="" className="w-full h-full object-cover" style={{ filter: filterCss(m.edit.filter) }} />}
                                         </button>
                                         {!editId && (
                                             <button onClick={() => setMedia(ms => ms.filter((_, j) => j !== i))} aria-label="Kaldır"
                                                 className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
                                         )}
-                                        {m.edit !== DEFAULT_EDIT && <span className="absolute bottom-1 left-1 text-[9px] font-black bg-black/60 text-white px-1.5 py-0.5 rounded">Düzenlendi</span>}
+                                        {isEdited(m.edit) && <span className="absolute bottom-1 left-1 text-[9px] font-black bg-black/60 text-white px-1.5 py-0.5 rounded">{m.edit.filter !== 'none' ? filterLabel(m.edit.filter) : 'Düzenlendi'}</span>}
                                     </div>
                                 ))}
                                 {!editId && !hasVideo && media.length < MAX_IMAGES && (
@@ -180,8 +187,14 @@ function Composer() {
                             <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => { addFiles(e.target.files); e.target.value = ''; }} />
                             <div className="flex justify-between text-[11px] font-semibold text-secondary mt-1.5">
                                 <span>Medya</span>
-                                <span>{editId ? 'Medya düzenlemede değiştirilemez' : hasVideo ? '1 video seçildi' : `${media.length} fotoğraf seçildi · düzenlemek için dokun`}</span>
+                                <span>{editId ? 'Medya düzenlemede değiştirilemez' : hasVideo ? '1 video seçildi' : `${media.length} fotoğraf seçildi`}</span>
                             </div>
+                            {!editId && media.length > 0 && (
+                                <button onClick={() => { setEditIndex(0); setStep('edit'); }}
+                                    className="mt-2.5 w-full h-11 rounded-2xl bg-card border border-card-border text-sm font-black flex items-center justify-center gap-2">
+                                    <span aria-hidden>✨</span> Efekt ve düzenleme
+                                </button>
+                            )}
                         </section>
 
                         <section>
@@ -242,17 +255,9 @@ function Composer() {
 
                 {step === 'edit' && media[editIndex] && (
                     <>
-                        <MediaEditor src={media[editIndex].preview} value={media[editIndex].edit}
-                            onChange={v => setMedia(ms => ms.map((m, i) => (i === editIndex ? { ...m, edit: v } : m)))} />
-                        {media.length > 1 && (
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                                {media.map((m, i) => !m.isVideo && (
-                                    <button key={m.key} onClick={() => setEditIndex(i)} className={cn('w-16 h-16 rounded-xl overflow-hidden shrink-0 border-2', i === editIndex ? 'border-accent' : 'border-transparent')}>
-                                        <img src={m.preview} alt="" className="w-full h-full object-cover" />
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        <MediaEditor items={media} index={editIndex} onIndex={setEditIndex}
+                            onChange={(idx, v) => setMedia(ms => ms.map((m, i) => (i === idx ? { ...m, edit: v } : m)))}
+                            onApplyAll={v => setMedia(ms => ms.map(m => (m.isVideo ? m : { ...m, edit: { ...m.edit, filter: v.filter, adjust: v.adjust } })))} />
                     </>
                 )}
 

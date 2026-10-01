@@ -8,7 +8,7 @@ import {
     ShieldCheck, ChevronRight, MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useShare } from "@/context/ShareContext";
+import { openShare } from '@/components/common/ShareSheet';
 import { useFamily } from "@/hooks/useFamily";
 import { FamilyLog } from "@/types/domain";
 import { QRCodeSVG } from "qrcode.react";
@@ -26,7 +26,6 @@ const getIcon = (type: FamilyLog['iconType']) => {
 
 export function FamilyTab() {
     const { members, logs, notification, isLoading } = useFamily();
-    const { openShare } = useShare();
     const [isInviteSheetOpen, setIsInviteSheetOpen] = useState(false);
 
     if (isLoading) return (

@@ -890,9 +890,13 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     const [totalPatiPuan, setTotalPatiPuan] = useState(0);
     const [totalXP, setTotalXP] = useState(0);
     const [earnedBadgeIds, setEarnedBadgeIds] = useState<string[]>([]);
+    const earnedBadgeIdsRef = useRef<string[]>([]);
+    useEffect(() => { earnedBadgeIdsRef.current = earnedBadgeIds; }, [earnedBadgeIds]);
     const [monthlyResearch, setMonthlyResearch] = useState<MonthlyResearch | null>(null);
     const [todayEarned, setTodayEarned] = useState({ pp: 0, xp: 0 });
     const [weeklyStamps, setWeeklyStamps] = useState(0);
+    const weeklyStampsRef = useRef(0);
+    useEffect(() => { weeklyStampsRef.current = weeklyStamps; }, [weeklyStamps]);
     const [streakShieldAvailable, setStreakShieldAvailable] = useState(true);
     // Faz 6/9 kontrolü: "bu yürüyüşte kazanılan rozet" artık burada, merkezi olarak
     // tutuluyor. Öncesinde WalkQuickSheet ve tracking sayfası kendi yerel state'lerinde
@@ -1129,8 +1133,11 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         const alreadyStampedToday = localStorage.getItem(LAST_STAMP_DATE_KEY) === todayStrForStamp;
         if (!alreadyStampedToday) localStorage.setItem(LAST_STAMP_DATE_KEY, todayStrForStamp);
 
-        if (!alreadyStampedToday) setWeeklyStamps(prev => {
+        if (!alreadyStampedToday) {
+            const prev = weeklyStampsRef.current;
             const next = Math.min(7, prev + 1);
+            weeklyStampsRef.current = next;
+            setWeeklyStamps(next);
 
             // Eğer pul sayısı 6'dan 7'ye ulaşıyorsa haftalık büyük ödülü ver (günlük limite takılmaz)
             if (prev === 6 && next === 7) {
@@ -1166,10 +1173,8 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
                 }, 100);
             }
             
-            const weekData = { weekStart: getWeekStart(), count: next };
-            localStorage.setItem(STAMPS_KEY, JSON.stringify(weekData));
-            return next;
-        });
+            localStorage.setItem(STAMPS_KEY, JSON.stringify({ weekStart: getWeekStart(), count: next }));
+        }
 
         // Toast bildirimi (Limiti aşma durumuna göre özelleştirilmiş)
         setTimeout(() => {
@@ -1197,10 +1202,13 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
 
     // ── Rozet ver ─────────────────────────────────────────────────────────
     const awardBadge = useCallback((badgeId: string) => {
-        setEarnedBadgeIds(prev => {
-            if (prev.includes(badgeId)) return prev;
-            const next = [...prev, badgeId];
-            localStorage.setItem(BADGES_KEY, JSON.stringify(next));
+        // Güncelleyici yerine ref ile karar verilir: güncelleyici iki kez çalışırsa bildirim de iki kez çıkıyordu.
+        if (earnedBadgeIdsRef.current.includes(badgeId)) return;
+        const next = [...earnedBadgeIdsRef.current, badgeId];
+        earnedBadgeIdsRef.current = next;
+        localStorage.setItem(BADGES_KEY, JSON.stringify(next));
+        setEarnedBadgeIds(next);
+        {
             const badge = BADGE_POOL.find(b => b.id === badgeId);
             if (badge) {
                 setTimeout(() => {
@@ -1217,8 +1225,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
                     }));
                 }, 800);
             }
-            return next;
-        });
+        }
     }, []);
 
     // Faz 6/9 kontrolü: yeni bir yürüyüş başladığında (false→true geçişi) önceki

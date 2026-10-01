@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useShare } from '@/context/ShareContext';
+import { openShare } from '@/components/common/ShareSheet';
 import { 
   X, Package, Truck, MapPin, CheckCircle2, 
   Clock, Navigation2, ChevronRight, Share2 

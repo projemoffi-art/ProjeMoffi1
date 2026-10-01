@@ -22,7 +22,7 @@ export function AIWidgetLoader() {
     // Sağlık ve pasaport ekranları: yüzen düğme listelerin sağ tarafını ve alt sayfalardaki
     // kaydet düğmelerini kapatıyordu. Paylaşım/künye sayfaları giriş yapmamış kişiye açılır.
     // Kayıp & Bulunan ve Sahiplendirme: sihirbazdaki "Devam et" ve alttaki sabit ilan düğmelerinin üstüne biniyordu.
-    if (['/health', '/pasaport', '/p/', '/id/', '/verify/', '/kayip', '/sahiplendirme'].some(p => pathname.startsWith(p))) return null;
+    if (['/health', '/pasaport', '/p/', '/id/', '/verify/', '/kayip', '/sahiplendirme', '/community', '/profile'].some(p => pathname.startsWith(p))) return null;
 
     // Check user preference
     const widgetEnabled = user?.settings?.ai?.widgetEnabled ?? true;

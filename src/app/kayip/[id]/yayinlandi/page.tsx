@@ -11,6 +11,7 @@ import { LoadingBlocks, SectionTitle } from '@/components/health/HealthUI';
 import { ListingCard, listingTitle } from '@/components/lost/LostUI';
 import { lostService, type LostListing } from '@/services/lostService';
 import { showToast } from '@/lib/utils';
+import { openShare } from '@/components/common/ShareSheet';
 
 export default function PublishedPage() {
     return <Suspense fallback={null}><Published /></Suspense>;
@@ -32,11 +33,11 @@ function Published() {
 
     const share = async () => {
         const title = listing ? `${listing.kind === 'lost' ? 'Kayıp' : 'Bulundu'}: ${listingTitle(listing)}` : 'Moffi ilanı';
-        try {
-            if (navigator.share) await navigator.share({ title, text: listing?.locationText || '', url });
-            else { await navigator.clipboard.writeText(url); showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
-            lostService.recordEvent(id, 'share');
-        } catch { /* kullanıcı vazgeçti */ }
+        openShare({
+            title, text: listing?.locationText || undefined, url: `/kayip/${id}`, image: listing?.photos[0] || null,
+            badge: listing ? (listing.kind === 'lost' ? 'Acil kayıp' : 'Bulundu') : undefined,
+        });
+        lostService.recordEvent(id, 'share');
     };
 
     const downloadQr = () => {
