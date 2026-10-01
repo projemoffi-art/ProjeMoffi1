@@ -28,6 +28,7 @@ const MENU_GROUPS = [
         group: "EKOSİSTEM",
         items: [
             { title: "Topluluk & Keşfet", icon: Search, path: "/admin/moderation" },
+            { title: "Haftanın Teması", icon: PawPrint, path: "/admin/themes" },
             { title: "Sağlık & SOS", icon: HeartPulse, path: "/admin/health" },
             { title: "Yürüyüş & Oyun", icon: Gamepad2, path: "/admin/activity" },
         ]

@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import { HealthHeader, LoadingBlocks } from '@/components/health/HealthUI';
 import { PersonRow, PostGrid } from '@/components/social/SocialUI';
+import { WeeklyThemeCard } from '@/components/social/WeeklyThemeCard';
 import { useSearchArea } from '@/components/lost/useSearchArea';
 import { AreaSheet } from '@/components/lost/AreaSheet';
 import { haptics } from '@/lib/haptics';
@@ -99,6 +100,8 @@ function Explore() {
                         {area ? <>{area.name} çevresinde 10 km içinde, semt konumu paylaşılmış gönderiler. <button onClick={() => setAreaOpen(true)} className="font-black text-accent">Konumu değiştir</button></> : 'Konumun bulunuyor…'}
                     </p>
                 )}
+
+                {!term && filter === 'all' && <WeeklyThemeCard onBrowse={tag => setQ(`#${tag}`)} />}
 
                 {people.length > 0 && (
                     <section>

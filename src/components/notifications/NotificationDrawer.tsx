@@ -24,7 +24,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'all', label: 'Tümü' }, { id: 'social', label: 'Sosyal' }, { id: 'lost', label: 'Kayıp' }, { id: 'adoption', label: 'Sahiplendirme' },
 ];
 const GROUP: Record<string, Tab> = {
-  like: 'social', comment: 'social', follow: 'social', mention: 'social',
+  like: 'social', comment: 'social', follow: 'social', mention: 'social', paw: 'social', theme: 'social',
   lost: 'lost', lost_sighting: 'lost', sos: 'lost',
   adoption: 'adoption', adoption_application: 'adoption', adoption_update: 'adoption', pet_transfer: 'adoption',
 };
@@ -33,7 +33,7 @@ const GROUP: Record<string, Tab> = {
 const targetOf = (n: { type: string; entity_id?: string | null; actor_id?: string | null }) =>
   n.type === 'health' ? `/health${n.entity_id ? `?pet=${n.entity_id}` : ''}`
     : n.type === 'sos' ? `/pasaport${n.entity_id ? `?pet=${n.entity_id}` : ''}`
-    : (n.type === 'like' || n.type === 'comment' || n.type === 'mention') && n.entity_id ? `/community/gonderi/${n.entity_id}`
+    : ['like', 'comment', 'mention', 'paw', 'theme'].includes(n.type) && n.entity_id ? `/community/gonderi/${n.entity_id}`
     : n.type === 'follow' && n.actor_id ? `/profile/${n.actor_id}`
     : n.type === 'lost' && n.entity_id ? `/kayip/${n.entity_id}`
     : n.type === 'lost_sighting' && n.entity_id ? `/kayip/${n.entity_id}/yonet`
@@ -44,6 +44,7 @@ const targetOf = (n: { type: string; entity_id?: string | null; actor_id?: strin
 
 function TypeBadge({ type }: { type: string }) {
   const icon = type === 'like' ? <Heart className="w-3 h-3 fill-current" />
+    : type === 'paw' || type === 'theme' ? <span className="text-[10px] leading-none" aria-hidden>{type === 'paw' ? '🐾' : '#'}</span>
     : type === 'comment' || type === 'mention' ? <MessageCircle className="w-3 h-3" />
     : type === 'follow' ? <UserPlus className="w-3 h-3" />
     : GROUP[type] === 'lost' ? <ShieldAlert className="w-3 h-3" />
@@ -71,7 +72,7 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
     if (!isOpen || notifications.length === 0) return;
     const list = notifications.slice(0, 60) as any[];
     const actorIds = Array.from(new Set(list.map(n => n.actor_id).filter(Boolean)));
-    const postIds = list.filter(n => ['like', 'comment', 'mention'].includes(n.type) && n.entity_id).map(n => n.entity_id);
+    const postIds = list.filter(n => ['like', 'comment', 'mention', 'paw', 'theme'].includes(n.type) && n.entity_id).map(n => n.entity_id);
     const lostIds = list.filter(n => (n.type === 'lost' || n.type === 'lost_sighting') && n.entity_id).map(n => n.entity_id);
     const adoptIds = list.filter(n => n.type === 'adoption' && n.entity_id).map(n => n.entity_id);
     const uuid = (x: string) => /^[0-9a-f-]{36}$/i.test(x);
@@ -154,7 +155,7 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                           <TypeBadge type={n.type} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm leading-snug"><span className="font-black">{n.title}</span>{n.content && n.type !== 'like' ? <span className="font-semibold text-secondary"> {n.content}</span> : null}</p>
+                          <p className="text-sm leading-snug"><span className="font-black">{n.title}</span>{n.content && n.type !== 'like' && n.type !== 'paw' ? <span className="font-semibold text-secondary"> {n.content}</span> : null}</p>
                           <p className="text-[11px] font-semibold text-secondary mt-0.5">{timeAgo(n.created_at)}</p>
                         </div>
                         {n.type === 'follow' && n.actor_id ? (

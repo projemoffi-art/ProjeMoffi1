@@ -33,6 +33,10 @@ interface ChatContextType {
     toggleReaction: (messageId: string, emoji: string) => Promise<void>;
     /** Açık sohbet için: sessize al / kaldır, ya da sohbeti kendinden temizle. */
     setChatPref: (pref: { muted?: boolean; clear?: boolean }) => Promise<void>;
+    /** Açık sohbet bir mesaj isteğiyse kabul eder. */
+    acceptRequest: () => Promise<void>;
+    /** Tanımadığın kişilerden gelen, henüz kabul edilmemiş sohbet sayısı. */
+    requestCount: number;
 }
 
 export const MESSAGE_REACTIONS = ['❤️', '😂', '😮', '😢', '👍', '🐾'] as const;
@@ -69,6 +73,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
     const [activePartner, setActivePartner] = useState<ChatPartner | null>(null);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [requestCount, setRequestCount] = useState(0);
     const [inboxMessages, setInboxMessages] = useState<any[]>([]);
     const [activeMessages, setActiveMessages] = useState<any[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(false);
@@ -100,6 +105,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setActiveMessages([]);
         setInboxMessages([]);
         setUnreadCount(0);
+        setRequestCount(0);
     }, [user?.id]);
 
     const fetchInbox = useCallback(async () => {
@@ -107,7 +113,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         try {
             const data = await apiService.getChatConversations();
             setInboxMessages(data || []);
-            setUnreadCount((data || []).filter((m: any) => m.unread && !m.muted).length);
+            // İstekler ana sayaçta görünmez; kutuda ayrı sekmede sayılır.
+            setUnreadCount((data || []).filter((m: any) => m.unread && !m.muted && !m.isRequest).length);
+            setRequestCount((data || []).filter((m: any) => m.isRequest).length);
         } catch (err) {
             console.error('Inbox load error:', err);
         }
@@ -361,6 +369,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         await fetchInbox();
     }, [fetchInbox]);
 
+    const acceptRequest = useCallback(async () => {
+        const partner = activeChatUserIdRef.current;
+        if (!partner) return;
+        await apiService.acceptChatRequest(partner);
+        await fetchInbox();
+        scheduleMarkRead();
+    }, [fetchInbox, scheduleMarkRead]);
+
     return (
         <ChatContext.Provider value={{
             isInboxOpen, setIsInboxOpen,
@@ -375,6 +391,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             recallMessage,
             toggleReaction,
             setChatPref,
+            acceptRequest,
+            requestCount,
         }}>
             {children}
         </ChatContext.Provider>

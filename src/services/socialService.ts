@@ -25,10 +25,13 @@ export interface SocialPost {
     commentPrivacy: CommentPrivacy;
     likes: number;
     comments: number;
+    /** Pati tepkisi (beğeniden ayrı, Moffi'ye özgü). */
+    paws: number;
     createdAt: string;
     editedAt: string | null;
     author: { name: string; username: string | null; avatar: string | null; isBusiness: boolean };
     isLiked: boolean;
+    isPawed: boolean;
     isSaved: boolean;
     isMine: boolean;
     followsAuthor: boolean;
@@ -67,6 +70,20 @@ export interface PostInput {
     commentPrivacy: CommentPrivacy;
 }
 
+/** Haftanın teması: yönetici girer; etiketle ilk paylaşımda sunucu bir kez puan verir. */
+export interface WeeklyTheme {
+    id: string; hashtag: string; title: string; description: string | null;
+    startsOn: string; endsOn: string; rewardPoints: number;
+    participantCount?: number; joined?: boolean;
+}
+export type WeeklyThemeInput = Omit<WeeklyTheme, 'id' | 'participantCount' | 'joined'>;
+
+const mapTheme = (r: any): WeeklyTheme => ({
+    id: r.id, hashtag: r.hashtag, title: r.title, description: r.description || null,
+    startsOn: r.starts_on, endsOn: r.ends_on, rewardPoints: r.reward_points ?? 0,
+    participantCount: r.participant_count ?? undefined, joined: r.joined ?? undefined,
+});
+
 export interface UserStory { id: string; mediaUrl: string; caption: string | null; createdAt: string; viewCount: number; isViewed: boolean; isLiked: boolean }
 export interface StoryGroup { userId: string; name: string; avatar: string | null; stories: UserStory[]; hasUnseen: boolean }
 
@@ -87,14 +104,22 @@ const mapPost = (r: any): SocialPost => ({
     id: r.id, userId: r.user_id, content: r.content || '', media: (r.media_urls || []).filter(Boolean), isVideo: !!r.is_video, mediaFilter: r.media_filter || null,
     pets: Array.isArray(r.tagged_pets) ? r.tagged_pets : [],
     locationText: r.location_text, topic: r.topic, commentPrivacy: r.comment_privacy || 'everyone',
-    likes: r.likes_count || 0, comments: r.comments_count || 0, createdAt: r.created_at, editedAt: r.edited_at,
+    likes: r.likes_count || 0, comments: r.comments_count || 0, paws: 0, createdAt: r.created_at, editedAt: r.edited_at,
     author: { name: r.author_name || 'Moffi üyesi', username: r.author_username, avatar: r.author_avatar, isBusiness: !!r.author_is_business },
-    isLiked: !!r.is_liked, isSaved: !!r.is_saved, isMine: !!r.is_mine, followsAuthor: !!r.follows_author,
+    isLiked: !!r.is_liked, isPawed: false, isSaved: !!r.is_saved, isMine: !!r.is_mine, followsAuthor: !!r.follows_author,
 });
 
 const mapGrid = (r: any): GridPost => ({
     id: r.id, media: r.media_url, isVideo: !!r.is_video, mediaFilter: r.media_filter || null, mediaCount: r.media_count || 1, likes: r.likes_count || 0, comments: r.comments_count || 0,
 });
+
+/** Pati sayısı ve benim pati bırakıp bırakmadığım tek sorguda eklenir. */
+async function withPaws(posts: SocialPost[]): Promise<SocialPost[]> {
+    if (!posts.length) return posts;
+    const { data } = await supabase.rpc('post_paw_state', { p_ids: posts.map(p => p.id) });
+    const byId = new Map<string, any>((data || []).map((r: any) => [r.post_id, r]));
+    return posts.map(p => { const r = byId.get(p.id); return r ? { ...p, paws: r.paws_count || 0, isPawed: !!r.is_pawed } : p; });
+}
 
 async function me() {
     const { data } = await supabase.auth.getUser();
@@ -126,13 +151,13 @@ export const socialService = {
     async feed(mode: 'following' | 'for_you', before?: string | null, limit = 12): Promise<SocialPost[]> {
         const { data, error } = await supabase.rpc('get_social_feed', { p_mode: mode, p_before: before || null, p_limit: limit });
         if (error) fail(error, 'Gönderiler yüklenemedi.');
-        return (data || []).map(mapPost);
+        return withPaws((data || []).map(mapPost));
     },
 
     async post(id: string): Promise<SocialPost | null> {
         const { data, error } = await supabase.rpc('social_post_rows', { p_ids: [id] });
         if (error) fail(error, 'Gönderi yüklenemedi.');
-        return data?.[0] ? mapPost(data[0]) : null;
+        return data?.[0] ? (await withPaws([mapPost(data[0])]))[0] : null;
     },
 
     async uploadMedia(files: File[]): Promise<string[]> {
@@ -185,6 +210,43 @@ export const socialService = {
             : await supabase.from('likes').delete().eq('post_id', id).eq('user_id', user.id);
         if (error && error.code !== '23505') fail(error, 'Beğeni kaydedilemedi.');
         if (on && !error) questTrigger('like_toggled');
+    },
+
+    /** Pati bırakır ya da geri alır; sunucunun güncel sayısını döner. */
+    async togglePaw(id: string): Promise<{ pawed: boolean; paws: number }> {
+        const { data, error } = await supabase.rpc('toggle_post_paw', { p_post: id });
+        if (error) fail(error, 'Pati bırakılamadı.');
+        const row = Array.isArray(data) ? data[0] : data;
+        return { pawed: !!row?.pawed, paws: row?.paws_count || 0 };
+    },
+
+    // --- Haftanın teması ----------------------------------------------------------------------------------
+    async currentTheme(): Promise<WeeklyTheme | null> {
+        const { data, error } = await supabase.rpc('get_current_theme');
+        if (error) return null;
+        const row = Array.isArray(data) ? data[0] : data;
+        return row ? mapTheme(row) : null;
+    },
+
+    /** Yönetici paneli: tüm temalar, en yeni önce. */
+    async listThemes(): Promise<WeeklyTheme[]> {
+        const { data, error } = await supabase.from('weekly_themes').select('*').order('starts_on', { ascending: false });
+        if (error) fail(error, 'Temalar yüklenemedi.');
+        return (data || []).map(mapTheme);
+    },
+
+    async saveTheme(input: WeeklyThemeInput, id?: string) {
+        const row = {
+            hashtag: input.hashtag.trim().replace(/^#/, ''), title: input.title.trim(), description: input.description?.trim() || null,
+            starts_on: input.startsOn, ends_on: input.endsOn, reward_points: input.rewardPoints,
+        };
+        const { error } = id ? await supabase.from('weekly_themes').update(row).eq('id', id) : await supabase.from('weekly_themes').insert(row);
+        if (error) fail(error, 'Tema kaydedilemedi.');
+    },
+
+    async deleteTheme(id: string) {
+        const { error } = await supabase.from('weekly_themes').delete().eq('id', id);
+        if (error) fail(error, 'Tema silinemedi.');
     },
 
     async setSave(id: string, on: boolean) {

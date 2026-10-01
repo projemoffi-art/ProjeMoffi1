@@ -2187,13 +2187,17 @@ export class SupabaseApiService implements IApiService {
         if (!partnerIds.length) return [];
 
         // Tek sorguda profiller, tek sorguda okunmamışlar ve son mesajlar (her kayıt için ayrı sorgu yok).
-        const [{ data: profiles }, { data: unreadRows }, { data: lastRows }, { data: prefRows }] = await Promise.all([
+        const [{ data: profiles }, { data: unreadRows }, { data: lastRows }, { data: prefRows }, { data: requestRows }] = await Promise.all([
             supabase.from('profile_cards').select('id, username, full_name, business_name, role, avatar_url').in('id', partnerIds),
             supabase.from('messages').select('conversation_id').in('conversation_id', allIds).eq('is_read', false).neq('sender_id', user.id).limit(1000),
             supabase.from('messages').select('conversation_id, sender_id, content, attachment_url, is_deleted, created_at').in('conversation_id', allIds)
                 .order('created_at', { ascending: false }).limit(Math.min(1000, allIds.length * 3)),
             supabase.from('conversation_prefs').select('conversation_id, muted, cleared_at').in('conversation_id', allIds),
+            scope === 'inbox' ? supabase.rpc('get_chat_request_ids') : Promise.resolve({ data: [] as string[] }),
         ]);
+        // Tanımadığın birinden gelen ilk mesajlar "istek" (sunucu karar verir). Aynı kişiyle istek olmayan bir kayıt
+        // da varsa (ör. kayıp ilanı sohbeti) konuşma normal sayılır.
+        const requestIds = new Set<string>(((requestRows as string[] | null) || []).map(String));
         const prefByConv = new Map((prefRows || []).map((p: any) => [p.conversation_id, p]));
         const profileById = new Map((profiles || []).map((p: any) => [p.id, p]));
         const unreadByConv = new Map<string, number>();
@@ -2215,6 +2219,7 @@ export class SupabaseApiService implements IApiService {
                 : (conv.last_message || '');
             return [{
                 muted: !!pref?.muted,
+                isRequest: ids.every(i => requestIds.has(i)),
                 userId: other,
                 partnerName: chatDisplayName(p),
                 avatar: p?.avatar_url || null,
@@ -2296,6 +2301,12 @@ export class SupabaseApiService implements IApiService {
             p_other: otherUserId, p_muted: pref.muted ?? null, p_clear: !!pref.clear, p_clinic: scope === 'clinic',
         });
         if (error) throw new Error(error.message || 'Ayar kaydedilemedi.');
+    }
+
+    /** Mesaj isteğini kabul eder: sohbet normal kutuya geçer, okundu bilgisi gitmeye başlar. */
+    async acceptChatRequest(otherUserId: string): Promise<void> {
+        const { error } = await supabase.rpc('accept_chat_request', { p_other: otherUserId });
+        if (error) throw new Error(error.message || 'İstek kabul edilemedi.');
     }
 
     async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds' = 'posts', onProgress?: (percent: number) => void): Promise<string> {

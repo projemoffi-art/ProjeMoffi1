@@ -64,6 +64,12 @@ function Composer() {
         setContent(c => c || (age && age > 0 ? `Doğum günün kutlu olsun ${pet.name}! 🎂 Bugün ${age} yaşında 🐾` : `Doğum günün kutlu olsun ${pet.name}! 🎂🐾`));
         setTopic(tp => tp || 'daily');
     }, [birthdayPetId, pets]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Keşfet'teki "Haftanın teması" kartından gelindiyse metin etiketle başlar.
+    const themeTag = params.get('tema');
+    useEffect(() => {
+        if (!themeTag || editId || !/^[\p{L}\p{N}_]{2,30}$/u.test(themeTag)) return;
+        setContent(c => (c.includes(`#${themeTag}`) ? c : `${c ? c + ' ' : ''}#${themeTag} `));
+    }, [themeTag, editId]);
     useEffect(() => { if (!editId) setPrivacy((user as any)?.settings?.default_comment_privacy === 'followers' ? 'followers' : 'everyone'); }, [user, editId]);
 
     useEffect(() => {

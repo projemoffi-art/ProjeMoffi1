@@ -73,6 +73,21 @@ export function LikeHeart({ liked, onToggle, className, burstSize }: { liked: bo
     );
 }
 
+/** Pati tepkisi: beğeniden ayrı, gönderi sahibine "pati bıraktı" bildirimi gider. */
+export function PawButton({ pawed, count, onToggle }: { pawed: boolean; count: number; onToggle: () => void }) {
+    const [pop, setPop] = useState(0);
+    return (
+        <motion.button whileTap={{ scale: 0.82 }} onClick={() => { if (!pawed) { setPop(x => x + 1); haptics.tap(); } onToggle(); }}
+            aria-label={pawed ? 'Patiyi geri al' : 'Pati bırak'} aria-pressed={pawed}
+            className={cn('relative inline-flex items-center gap-1 h-8 pl-2 pr-2.5 rounded-full border text-sm font-bold transition-colors',
+                pawed ? 'bg-accent/12 border-accent/40 text-accent' : 'border-card-border text-foreground')}>
+            <motion.span key={pop} initial={pop ? { scale: 0.3, rotate: -25 } : false} animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 520, damping: 12 }} className={cn('text-base leading-none', !pawed && 'grayscale opacity-70')} aria-hidden>🐾</motion.span>
+            {count > 0 ? <RollingCount value={count} /> : <span className="text-xs">Pati</span>}
+        </motion.button>
+    );
+}
+
 /** Sayı değişince yukarı/aşağı kayarak yenilenir. */
 export function RollingCount({ value, className }: { value: number; className?: string }) {
     const prev = useRef(value);
@@ -259,6 +274,13 @@ export function PostCard({ post, onChange, onRemoved, onBlocked, detail = false 
         update({ ...p, isLiked: on, likes: Math.max(0, p.likes + (on ? 1 : -1)) });
         try { await socialService.setLike(p.id, on); } catch (e: any) { update(prev); showToast(e?.message || 'Beğenilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
     };
+    const paw = async () => {
+        if (needLogin()) return;
+        const prev = p;
+        update({ ...p, isPawed: !p.isPawed, paws: Math.max(0, p.paws + (p.isPawed ? -1 : 1)) });
+        try { const r = await socialService.togglePaw(p.id); update({ ...prev, isPawed: r.pawed, paws: r.paws }); }
+        catch (e: any) { update(prev); showToast(e?.message || 'Pati bırakılamadı.', 'AlertCircle', 'text-red-500 font-bold'); }
+    };
     const save = async () => {
         if (needLogin()) return;
         const prev = p;
@@ -311,6 +333,7 @@ export function PostCard({ post, onChange, onRemoved, onBlocked, detail = false 
                         <MessageCircle className="w-6 h-6" />{p.comments > 0 && <RollingCount value={p.comments} />}
                     </motion.button>
                     <motion.button whileTap={{ scale: 0.82, rotate: -12 }} onClick={() => { haptics.tap(); sharePost(p); }} aria-label="Paylaş"><Send className="w-6 h-6" /></motion.button>
+                    <PawButton pawed={p.isPawed} count={p.paws} onToggle={paw} />
                     <motion.button whileTap={{ scale: 0.8 }} onClick={save} aria-label={p.isSaved ? 'Kaydedilenlerden çıkar' : 'Kaydet'} aria-pressed={p.isSaved} className="ml-auto">
                         <motion.span key={p.isSaved ? 'on' : 'off'} className="inline-flex" initial={p.isSaved ? { scale: 0.4, y: -6 } : { scale: 1 }} animate={{ scale: 1, y: 0 }}
                             transition={{ type: 'spring', stiffness: 520, damping: 13 }}>

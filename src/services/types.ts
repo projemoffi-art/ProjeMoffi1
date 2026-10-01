@@ -386,6 +386,7 @@ export interface IApiService {
     recallChatMessage(messageId: string): Promise<void>;
     toggleMessageReaction(messageId: string, emoji: string): Promise<string | null>;
     setConversationPref(otherUserId: string, pref: { muted?: boolean; clear?: boolean }, scope?: 'inbox' | 'clinic'): Promise<void>;
+    acceptChatRequest(otherUserId: string): Promise<void>;
     
     // Media & Storage
     uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds', onProgress?: (percent: number) => void): Promise<string>;

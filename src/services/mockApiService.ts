@@ -532,6 +532,7 @@ export class MockApiService implements IApiService {
     async recallChatMessage(messageId: string): Promise<void> {}
     async toggleMessageReaction(messageId: string, emoji: string): Promise<string | null> { return emoji; }
     async setConversationPref(otherUserId: string, pref: { muted?: boolean; clear?: boolean }, scope: 'inbox' | 'clinic' = 'inbox'): Promise<void> {}
+    async acceptChatRequest(otherUserId: string): Promise<void> {}
 
 
 

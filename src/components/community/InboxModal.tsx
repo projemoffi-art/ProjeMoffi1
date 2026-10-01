@@ -49,6 +49,7 @@ export function InboxModal() {
         partnerTyping, notifyTyping,
         onlineUserIds,
         recallMessage, refreshInbox, toggleReaction, setChatPref,
+        acceptRequest, requestCount,
     } = useChat();
     const { user } = useAuth();
     const listRef = useRef<HTMLDivElement>(null);
@@ -62,16 +63,24 @@ export function InboxModal() {
     const [reportOpen, setReportOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingOlder, setLoadingOlder] = useState(false);
+    const [box, setBox] = useState<'chats' | 'requests'>('chats');
+    const [accepting, setAccepting] = useState(false);
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const stickToBottom = useRef(true);
 
     const visibleInbox = useMemo(() => {
         const q = searchQuery.trim().toLocaleLowerCase('tr-TR');
-        return q ? inboxMessages.filter(m => (m.partnerName || '').toLocaleLowerCase('tr-TR').includes(q)) : inboxMessages;
-    }, [inboxMessages, searchQuery]);
+        const inBox = inboxMessages.filter(m => !!m.isRequest === (box === 'requests'));
+        return q ? inBox.filter(m => (m.partnerName || '').toLocaleLowerCase('tr-TR').includes(q)) : inBox;
+    }, [inboxMessages, searchQuery, box]);
+    // Son istek de kabul edilince ya da silinince sohbetler sekmesine dön.
+    useEffect(() => { if (box === 'requests' && requestCount === 0) setBox('chats'); }, [box, requestCount]);
+    const chatCount = inboxMessages.length - requestCount;
 
     const partnerName = activePartner?.partnerName || 'Sohbet';
-    const muted = !!inboxMessages.find((m: any) => m.userId === activeChatUserId)?.muted;
+    const activeEntry = inboxMessages.find((m: any) => m.userId === activeChatUserId);
+    const muted = !!activeEntry?.muted;
+    const isRequest = !!activeEntry?.isRequest;
     const byId = useMemo(() => new Map(activeMessages.map((m: any) => [m.id, m])), [activeMessages]);
     useEffect(() => { setReplyingTo(null); setConfirmClear(false); }, [activeChatUserId]);
     const online = !!activeChatUserId && onlineUserIds.has(activeChatUserId);
@@ -91,7 +100,7 @@ export function InboxModal() {
     }, [isInboxOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleClose = () => {
-        setIsInboxOpen(false); setActiveChatUserId(null); setMenuFor(null); setHeaderMenu(false); setSearchQuery(''); setReplyingTo(null);
+        setIsInboxOpen(false); setActiveChatUserId(null); setMenuFor(null); setHeaderMenu(false); setSearchQuery(''); setReplyingTo(null); setBox('chats');
     };
 
     const startLongPress = (m: any) => {
@@ -120,6 +129,21 @@ export function InboxModal() {
         try { await setChatPref(p); showToast(done, 'CheckCircle2', 'text-emerald-500 font-bold'); }
         catch (e: any) { showToast(e?.message || 'Kaydedilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
         setHeaderMenu(false); setConfirmClear(false);
+    };
+
+    const accept = async () => {
+        setAccepting(true);
+        try { await acceptRequest(); haptics.success(); showToast('İstek kabul edildi.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
+        catch (e: any) { showToast(e?.message || 'Kabul edilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
+        setAccepting(false);
+    };
+
+    const deleteRequest = async () => {
+        try {
+            await setChatPref({ clear: true });
+            showToast('İstek silindi.', 'CheckCircle2', 'text-emerald-500 font-bold');
+            setActiveChatUserId(null);
+        } catch (e: any) { showToast(e?.message || 'Silinemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
     };
 
     const block = async () => {
@@ -221,6 +245,18 @@ export function InboxModal() {
                             </div>
                             <div className="border-t border-card-border bg-background px-3 pt-2 pb-[calc(10px+env(safe-area-inset-bottom,0px))]">
                                 <div className="max-w-2xl mx-auto">
+                                    {isRequest && (
+                                        <div className="mb-2 rounded-2xl bg-card border border-card-border p-3 space-y-2.5">
+                                            <p className="text-[13px] font-semibold text-secondary leading-snug">
+                                                <span className="font-black text-foreground">{partnerName}</span> seni ilk kez yazıyor. Kabul edene ya da yanıt verene kadar mesajları okuduğunu görmez.
+                                            </p>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <button onClick={accept} disabled={accepting} className="h-10 rounded-xl bg-accent text-white text-sm font-black disabled:opacity-60">Kabul et</button>
+                                                <button onClick={deleteRequest} className="h-10 rounded-xl bg-background border border-card-border text-sm font-black">Sil</button>
+                                                <button onClick={() => { setConfirmBlock(true); setHeaderMenu(true); }} className="h-10 rounded-xl bg-background border border-card-border text-sm font-black text-red-600">Engelle</button>
+                                            </div>
+                                        </div>
+                                    )}
                                     {replyingTo && (
                                         <div className="mb-2 flex items-center gap-2 rounded-2xl bg-card border border-card-border pl-3 pr-1.5 py-1.5">
                                             <span className="w-1 self-stretch rounded-full bg-accent shrink-0" />
@@ -247,6 +283,20 @@ export function InboxModal() {
                                         {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Temizle"><X className="w-4 h-4 text-secondary" /></button>}
                                     </label>
                                 )}
+                                {(requestCount > 0 || box === 'requests') && (
+                                    <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-card border border-card-border" role="tablist" aria-label="Mesaj kutusu">
+                                        {([['chats', 'Sohbetler', chatCount], ['requests', 'İstekler', requestCount]] as const).map(([key, label, count]) => (
+                                            <button key={key} role="tab" aria-selected={box === key} onClick={() => { haptics.tap(); setBox(key); }}
+                                                className={cn('relative h-9 rounded-xl text-sm font-black', box === key ? 'text-foreground' : 'text-secondary')}>
+                                                {box === key && <motion.span layoutId="inbox-box" className="absolute inset-0 rounded-xl bg-background border border-card-border" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                                                <span className="relative">{label}{count > 0 && <span className="ml-1 tabular-nums text-accent">{count}</span>}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {box === 'requests' && (
+                                    <p className="text-xs font-semibold text-secondary px-1">Takip etmediğin kişilerden gelen ilk mesajlar burada. Kabul edene ya da yanıt verene kadar okuduğunu görmezler.</p>
+                                )}
                                 {inboxMessages.length === 0 ? (
                                     <div className="flex flex-col items-center text-center py-16 gap-3">
                                         <span className="w-16 h-16 rounded-full bg-accent/10 text-accent flex items-center justify-center"><MessageCircle className="w-8 h-8" /></span>
@@ -255,7 +305,9 @@ export function InboxModal() {
                                         <Link href="/community/kesfet" onClick={handleClose} className="mt-1 h-11 px-5 rounded-2xl bg-accent text-white font-black text-sm inline-flex items-center">Keşfet'e göz at</Link>
                                     </div>
                                 ) : visibleInbox.length === 0 ? (
-                                    <p className="text-sm font-semibold text-secondary text-center py-10">"{searchQuery}" ile eşleşen sohbet yok.</p>
+                                    <p className="text-sm font-semibold text-secondary text-center py-10">
+                                        {searchQuery ? `"${searchQuery}" ile eşleşen sohbet yok.` : box === 'requests' ? 'Bekleyen mesaj isteği yok.' : 'Sohbetlerin burada görünecek.'}
+                                    </p>
                                 ) : (
                                     <div className="bg-card border border-card-border rounded-3xl divide-y divide-card-border overflow-hidden">
                                         {visibleInbox.map((m: any) => (

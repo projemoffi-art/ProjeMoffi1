@@ -38,6 +38,10 @@ aksesuar) bir arada.
 
 Komutlar: `npm run dev`, `npm run build` (webpack modunda), `npm run lint`.
 
+**Telefon önizleme:** `npm run dev` açıkken `http://localhost:3000/live` uygulamayı telefon çerçevesinde
+gösterir (Baran bunu Claude panelinin yanındaki tarayıcıda kullanıyor; `src/app/live/route.ts`, sadece
+geliştirmede çalışır). Eskiden geçici klasörde duruyordu ve kayboldu; silme.
+
 ## 3. Git güvenlik kuralı — MUTLAK, İSTİSNASIZ
 
 🔴 Proje kökünde ayrıca bir `AGENTS.md` dosyası var (Antigravity için yazılmış)
@@ -3081,6 +3085,69 @@ mesaj kutusunda. Kendi kendine açılmış eski test sohbetleri listede gösteri
 Doğrulama: authenticated rolüyle SQL (doğrudan ekleme/düzenleme reddi, sınırlar, üçüncü kişinin mesaj/fotoğraf/tepki
 görememesi) + Playwright (gönder, tepki, yanıt, fotoğraf, yenileme sonrası kalıcılık, sessize alma).
 **Yapılmadı:** tanımadığın kişilerden gelen ilk mesajlar için "mesaj istekleri" kutusu.
+
+### 8.52 Native geçiş · giriş · ekonomi yol haritası — Baran'ın kararları (2026-10-01)
+
+Rapor: https://claude.ai/artifact/WShpJDDXspvSTTFhZtPJ6t (ilk sürüm 1 Ekim; rapordan sonraki sohbet
+silindi, kararlar bu yüzden burada tutuluyor). **Bu yol haritasıyla ilgili her yeni karar buraya eklenir.**
+
+- **Hesap = kişi, işletme = ayrı kurum.** Kişi işletmeye sahip/yönetici/personel olarak bağlanır,
+  "işletme paneline geç" ile geçer. Bugünkü işletme verisi kayıpsız taşınacak.
+- **Telefonla (SMS) giriş yok** (şimdilik). Giriş: e-posta + 6 haneli kod doğrulama, Google, Apple.
+- **Ücretli arka plan konum eklentisi (Transistorsoft, ~400$) alınmıyor.** Ücretsiz
+  `@capacitor-community/background-geolocation` kullanılacak; noktaları telefonda biz biriktirip
+  sunucuya yollarız. Tüm konum çağrıları `src/native` ara katmanından geçtiği için ileride eklenti
+  değişirse sadece ara katman değişir.
+- **Prime ve PawCoin uygulama içinden satılacak (Apple/Google ödemesi, RevenueCat).** Ama önce
+  uygulama geneli bir **ekonomi çalışması** yapılacak: PP/PawCoin kazanma-harcama noktaları, yapay zekâ
+  asistanının maliyeti ve kotası, Prime'a hangi özelliklerin tek tek ekleneceği. İlke: Prime olmadan
+  uygulama tam kullanılabilir; Prime göze sokulmadan, kullanıcının zamanla kendisi istemesini sağlar.
+  Kararlar aşağıda ("Ekonomi kararları"), uygulaması 5. fazda.
+  🔴 Bağlantılı açık iş: Prime karşılaştırma tablosundaki 9 sahte vaat (bkz. 8.24) satıştan önce çözülmeli.
+- **Apple ve Google geliştirici hesapları şirket sahibi adına** (kurum hesabı, D-U-N-S gerekiyor).
+- **Plan sırası:** 0) hesaplar + D-U-N-S + projeyi OneDrive dışına taşıma → 1) giriş/hesap yapısı →
+  2) kalan sosyal öneriler (@bahsetme, pati tepkisi, haftanın teması, mesaj istekleri kutusu) →
+  3) native ara katman (`src/native`) → 4) Capacitor + ücretsiz eklentiler → 5) ekonomi çalışması ve
+  kararı → 6) uygulama içi satın alma, widget, mağaza hazırlığı.
+  Bitenler: mesajlaşma v2 (8.51), doğum günü kartı, 404 taraması.
+- **Ekonomi kararları (Baran kararı Claude'a bıraktı, 2026-10-01):**
+  - **Tek para birimi: PawCoin.** Altyapısı bugünkü PP defteri (`point_transactions`, `award_pati_puan`);
+    PP ve `coin_balance` bakiyeleri 1:1 birleşir. Hem kazanılır (yürüyüş, görev, rozet) hem satın alınır.
+    Kazanım günlük üst sınırlı (enflasyon ve maliyet tavanı).
+  - **Kural: PawCoin ile alınan hiçbir şey platforma zarar ettiremez.** Maliyetsiz ürünler (kozmetik,
+    çerçeve, seri kalkanı) serbest. Maliyetli olanlar (yapay zekâ ek hakkı) maliyetinin çok üstünde
+    fiyatlanır. Mağaza indirim kuponu platform komisyonundan karşılanır ve komisyonu asla aşamaz.
+  - **Yapay zekâ:** her çağrı sunucuda kayda geçer (`ai_usage`: kullanıcı, uç nokta, token). Ücretsiz:
+    günde 5 mesaj + 1 fotoğraf analizi. Fazlası PawCoin (mesaj 10, fotoğraf 30). Prime: günde 60 mesaj
+    + 10 fotoğraf. Herkes için günlük sert tavan. **Aylık yapay zekâ bütçe tavanı: 50 $** (Baran); yaklaşınca
+    ücretsiz hak otomatik düşer.
+  - **Prime ilk özellikler:** yüksek yapay zekâ hakkı + fotoğraf analizi, her ay 500 PawCoin, haftada
+    2. seri kalkanı, Prime çerçeveler + profil rozeti. Karşılaştırma tablosundaki diğer sahte vaatler silinir.
+    Prime sadece doğal anlarda önerilir (hak bitti, kilitli çerçeve, 2. kalkan); açılışta pencere/reklam yok.
+  - **İşletme geliri PawCoin'den tamamen ayrı, TL ile:** mağaza satışlarında komisyon (var olan
+    `commissionRate`), sonra web üzerinden PayTR ile "öne çıkma". Randevuya başlangıçta komisyon yok.
+    İşletmeler coin almaz, vermez.
+
+### 8.53 Faz 2 — mesaj istekleri, @bahsetme, pati tepkisi, haftanın teması (2026-10-02)
+
+Migration `20261002100000_social_requests_mentions_paws_theme.sql` (Baran SQL Editor'dan uyguladı; Supabase
+bağlantısının `apply_migration` aracı bu panelden onay alamayıp "declined" dönüyor — claude.ai bağlayıcı izni).
+- **Mesaj istekleri:** `chat_is_request(conv, me)` sunucuda karar verir: genel sohbet + ona hiç yazmadın + onu
+  takip etmiyorsun + kabul etmedin + aranızda randevu/sahiplendirme başvurusu yok. Kayıp ilanı ve klinik sohbeti
+  istek olmaz. `get_chat_request_ids()`, `accept_chat_request(other)`; istek açıkken `mark_chat_read` 0 döner
+  (okundu gitmez). Gelen kutusunda `isRequest`; ana okunmamış sayacına girmez, "İstekler" sekmesinde Kabul/Sil/Engelle.
+- **@bahsetme:** `notify_mentions` (gönderi tetikleyicisi + yorum bildirimi içinde), `social_mentions` ile aynı
+  kaynakta kişi başı bir kez, en fazla 10 kişi, engelli/kendisi hariç; yorum/yanıt bildirimi alan kişiye ayrıca gitmez.
+- **Pati:** `post_paws` + `posts.paws_count`, sadece `toggle_post_paw` RPC (istemci yazamaz), bildirim türü `paw`.
+  Okuma `post_paw_state(ids)` — `socialService.feed/post` sonuçlarına eklenir (`paws`, `isPawed`). Görev motoruna
+  bağlanmadı (beğeni rozetlerini şişirmesin diye bilinçli).
+- **Haftanın teması:** `weekly_themes` (yönetici yazar, tarih çakışması ve en fazla 14 gün sunucuda),
+  `theme_participations`; gönderide etiket (büyük-küçük harf duyarsız) geçince `award_pati_puan_internal` ile bir kez
+  puan + `theme` bildirimi. `get_current_theme()` → Keşfet üstünde `WeeklyThemeCard` (tema yoksa kart yok),
+  "Katıl, paylaş" → `/community/yeni?tema=etiket`. Yönetim: `/admin/themes`.
+- **Telefon önizleme:** `/live` iPhone 17 (402 × 874 nokta) çerçevesi, %92 ölçekte gösterilir.
+- **Doğrulama:** authenticated rolüyle geri alınan SQL işleminde 4 özelliğin tüm senaryoları + yetki redleri geçti;
+  değişen dosyalarda yeni tip hatası yok, sayfalar 200. Tarayıcıda gerçek hesapla tıklama testi henüz yapılmadı.
 
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
