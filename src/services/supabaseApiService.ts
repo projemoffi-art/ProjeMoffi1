@@ -77,6 +77,72 @@ export class SupabaseApiService implements IApiService {
         return promise;
     }
 
+    // --- AKTİF İŞLETME (8.54) ---
+    // Hesap = kişi; işletme ayrı kayıt (`businesses`). İşletme adına yapılan her okuma/yazma kişinin kimliğini değil,
+    // sunucunun `current_business_id()` sonucunu kullanır (kişinin seçtiği, üyesi olduğu işletme). Yetkiyi zaten
+    // veritabanı kuralları üyelikle denetler; burası sadece "hangi işletme adına" sorusunu tek yerden cevaplar.
+    private activeBusinessCache: { userId: string | null; promise: Promise<string | null> | null } = { userId: null, promise: null };
+
+    async getActiveBusinessId(): Promise<string | null> {
+        const user = await this.getSessionUser();
+        if (!user) return null;
+        if (this.activeBusinessCache.promise && this.activeBusinessCache.userId === user.id) {
+            return this.activeBusinessCache.promise;
+        }
+        const promise = (async () => {
+            const { data, error } = await supabase.rpc('current_business_id');
+            if (error) {
+                console.error('current_business_id error:', error);
+                this.activeBusinessCache = { userId: null, promise: null };
+                return null;
+            }
+            return (data as string | null) || null;
+        })();
+        this.activeBusinessCache = { userId: user.id, promise };
+        return promise;
+    }
+
+    /** İşletme adına çalışan fonksiyonlar için: aktif işletme yoksa anlaşılır hata. */
+    private async requireBusinessId(): Promise<string> {
+        const id = await this.getActiveBusinessId();
+        if (!id) throw new Error('Bu işlem için bir işletme hesabına bağlı olman gerekiyor.');
+        return id;
+    }
+
+    async getMyBusinesses(): Promise<{ id: string; name: string; businessType: string | null; approved: boolean; kybStatus: string | null; role: 'owner' | 'manager' | 'staff'; logoUrl: string | null; isActive: boolean }[]> {
+        const user = await this.getSessionUser();
+        if (!user) return [];
+        const { data, error } = await supabase.rpc('my_businesses');
+        if (error) throw error;
+        return (data || []).map((b: any) => ({
+            id: b.id, name: b.name || 'İşletme', businessType: b.business_type, approved: !!b.approved,
+            kybStatus: b.kyb_status, role: b.role, logoUrl: b.logo_url, isActive: !!b.is_active,
+        }));
+    }
+
+    async setActiveBusiness(businessId: string): Promise<void> {
+        const { error } = await supabase.rpc('set_active_business', { p_business: businessId });
+        if (error) throw error;
+        this.activeBusinessCache = { userId: null, promise: null };
+    }
+
+    /** Aktif işletmenin tam kaydı (sadece üyeler okuyabilir). */
+    async getActiveBusiness(): Promise<any | null> {
+        const id = await this.getActiveBusinessId();
+        if (!id) return null;
+        const { data, error } = await supabase.from('businesses').select('*').eq('id', id).maybeSingle();
+        if (error) throw error;
+        return data;
+    }
+
+    /** Aktif işletmenin kaydını günceller (sahip/yönetici; izinli kolonlar veritabanında sınırlı). */
+    async updateActiveBusiness(patch: Record<string, any>): Promise<void> {
+        const id = await this.requireBusinessId();
+        const { data, error } = await supabase.from('businesses').update(patch).eq('id', id).select('id');
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('İşletme bilgisi güncellenemedi (yetkin olmayabilir).');
+    }
+
 
     // --- AUTH & PROFILE ---
     
@@ -199,7 +265,6 @@ export class SupabaseApiService implements IApiService {
         if (updates.birth_date !== undefined) upsertPayload.birth_date = updates.birth_date;
         if (updates.gender !== undefined) upsertPayload.gender = updates.gender;
         if (updates.account_status !== undefined) upsertPayload.account_status = updates.account_status;
-        if (updates.working_hours !== undefined) upsertPayload.working_hours = updates.working_hours;
 
         const { data, error } = await supabase
             .from('profiles')
@@ -721,12 +786,11 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null, businessType?: string): Promise<any[]> {
-        // Since we are no longer using the clinics table, we fetch approved businesses from profiles
+        // Müşteriye görünen işletmeler: onaylı işletme kartları (8.54, `business_cards`; IBAN/vergi no içermez).
         let query = supabase
-            .from('profile_cards')
+            .from('business_cards')
             .select('*')
-            .eq('role', 'business')
-            .eq('business_approved', true);
+            .eq('approved', true);
 
         if (province) {
             query = query.eq('province', province);
@@ -782,8 +846,8 @@ export class SupabaseApiService implements IApiService {
 
         return data.map((profile: any) => {
             const cServices = servicesMap.get(profile.id) || [];
-            const pLat = profile.business_lat ? parseFloat(profile.business_lat) : null;
-            const pLng = profile.business_lng ? parseFloat(profile.business_lng) : null;
+            const pLat = profile.lat != null ? Number(profile.lat) : null;
+            const pLng = profile.lng != null ? Number(profile.lng) : null;
             
             // YENİ 3: Ortalamayı hesapla
             const rStats = reviewsMap.get(profile.id);
@@ -801,15 +865,15 @@ export class SupabaseApiService implements IApiService {
 
             return {
                 id: profile.id,
-                name: profile.business_name || profile.full_name || 'İşletme',
-                imageUrl: profile.cover_url || profile.avatar_url || null,
-                logoUrl: profile.avatar_url || null,
+                name: profile.name || 'İşletme',
+                imageUrl: profile.cover_url || profile.logo_url || null,
+                logoUrl: profile.logo_url || null,
                 rating: avgRating ? parseFloat(avgRating.toFixed(1)) : 0, // B14
                 reviewCount: rCount,
                 address: profile.address || 'Adres bilgisi girilmedi',
                 location: pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null,
-                is_premium: Boolean(profile.is_premium),
-                isVerified: profile.business_approved === true,
+                is_premium: false,
+                isVerified: profile.approved === true,
                 isOpenNow: openMap.get(profile.id)?.is_open === true,
                 closesAt: openMap.get(profile.id)?.closes_at || null,
                 opensAt: openMap.get(profile.id)?.opens_at || null,
@@ -825,15 +889,15 @@ export class SupabaseApiService implements IApiService {
 
     async getClinicDetails(clinicId: string): Promise<any> {
         const { data, error } = await supabase
-            .from('profile_cards')
+            .from('business_cards')
             .select('*')
             .eq('id', clinicId)
-            .single();
+            .maybeSingle();
 
         if (error || !data) return null;
 
-        const pLat = data.business_lat ? parseFloat(data.business_lat) : null;
-        const pLng = data.business_lng ? parseFloat(data.business_lng) : null;
+        const pLat = data.lat != null ? Number(data.lat) : null;
+        const pLng = data.lng != null ? Number(data.lng) : null;
 
         const reviewsRes = await this.getClinicReviews(clinicId);
         const services = await this.getClinicServices(clinicId);
@@ -867,8 +931,8 @@ export class SupabaseApiService implements IApiService {
 
         return {
             id: data.id,
-            name: data.business_name || data.full_name || 'İşletme',
-            imageUrl: data.avatar_url || null,
+            name: data.name || 'İşletme',
+            imageUrl: data.logo_url || null,
             rating: reviewsRes.averageRating ? parseFloat(reviewsRes.averageRating.toFixed(1)) : 0,
             reviewCount: reviewsRes.reviews.length || 0,
             address: data.address || 'Adres bilgisi girilmedi',
@@ -880,10 +944,10 @@ export class SupabaseApiService implements IApiService {
             opensAt: openStatus?.opens_at || null,
             weeklyHours,
             services: services,
-            about: data.bio || null,
+            about: data.description || null,
             website: data.website || null,
             coverUrl: data.cover_url || null,
-            isVerified: data.business_approved === true,
+            isVerified: data.approved === true,
             gallery: (data.gallery_urls || []).filter(Boolean),
             doctors: doctors,
         };
@@ -908,11 +972,10 @@ export class SupabaseApiService implements IApiService {
     async getClinicsByIds(clinicIds: string[]): Promise<any[]> {
         if (clinicIds.length === 0) return [];
         const { data, error } = await supabase
-            .from('profile_cards')
+            .from('business_cards')
             .select('*')
             .in('id', clinicIds)
-            .eq('role', 'business')
-            .eq('business_approved', true);
+            .eq('approved', true);
         if (error || !data) return [];
         return this.mapClinicProfiles(data, null, null);
     }
@@ -933,54 +996,41 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getBusinessProfile(): Promise<BusinessProfileData | null> {
-        const user = await this.getSessionUser();
-        if (!user) return null;
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('business_name, bio, phone, website, address, province, district, business_lat, business_lng, avatar_url, cover_url, gallery_urls')
-            .eq('id', user.id)
-            .maybeSingle();
-        if (error) throw error;
+        const data = await this.getActiveBusiness();
         if (!data) return null;
         return {
-            businessName: data.business_name || '',
-            about: data.bio || '',
+            businessName: data.name || '',
+            about: data.description || '',
             phone: data.phone || '',
             website: data.website || '',
             address: data.address || '',
             province: data.province || '',
             district: data.district || '',
-            lat: data.business_lat != null ? Number(data.business_lat) : null,
-            lng: data.business_lng != null ? Number(data.business_lng) : null,
-            logoUrl: data.avatar_url || null,
+            lat: data.lat != null ? Number(data.lat) : null,
+            lng: data.lng != null ? Number(data.lng) : null,
+            logoUrl: data.logo_url || null,
             coverUrl: data.cover_url || null,
             gallery: data.gallery_urls || [],
         };
     }
 
     async updateBusinessProfile(p: BusinessProfileData): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error('Giriş gerekli');
-        const { data, error } = await supabase
-            .from('profiles')
-            .update({
-                business_name: p.businessName.trim() || null,
-                bio: p.about.trim() || null,
-                phone: p.phone.trim() || null,
-                website: p.website.trim() || null,
-                address: p.address.trim() || null,
-                province: p.province || null,
-                district: p.district || null,
-                business_lat: p.lat,
-                business_lng: p.lng,
-                avatar_url: p.logoUrl,
-                cover_url: p.coverUrl,
-                gallery_urls: p.gallery,
-            })
-            .eq('id', user.id)
-            .select('id');
-        if (error) throw error;
-        if (!data || data.length === 0) throw new Error('Profil güncellenemedi.');
+        const name = p.businessName.trim();
+        if (!name) throw new Error('İşletme adı boş bırakılamaz.');
+        await this.updateActiveBusiness({
+            name,
+            description: p.about.trim() || null,
+            phone: p.phone.trim() || null,
+            website: p.website.trim() || null,
+            address: p.address.trim() || null,
+            province: p.province || null,
+            district: p.district || null,
+            lat: p.lat,
+            lng: p.lng,
+            logo_url: p.logoUrl,
+            cover_url: p.coverUrl,
+            gallery_urls: p.gallery,
+        });
     }
 
     async getMySharedPassports(): Promise<{ id: string; clinicName: string; petName: string; date: string; sharedFields: string[] }[]> {
@@ -995,9 +1045,9 @@ export class SupabaseApiService implements IApiService {
             .limit(50);
         const clinicIds = [...new Set((data || []).map((a: any) => a.clinic_id))];
         const { data: clinics } = clinicIds.length
-            ? await supabase.from('profile_cards').select('id, business_name, full_name').in('id', clinicIds)
+            ? await supabase.from('business_cards').select('id, name').in('id', clinicIds)
             : { data: [] as any[] };
-        const names = new Map((clinics || []).map((c: any) => [c.id, c.business_name || c.full_name || 'İşletme']));
+        const names = new Map((clinics || []).map((c: any) => [c.id, c.name || 'İşletme']));
         return (data || []).map((a: any) => {
             const sp = a.shared_passport || {};
             return {
@@ -1122,7 +1172,7 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getCancellationNoticeHours(clinicId: string): Promise<number> {
-        const { data } = await supabase.from('profile_cards').select('cancellation_notice_hours').eq('id', clinicId).maybeSingle();
+        const { data } = await supabase.from('business_cards').select('cancellation_notice_hours').eq('id', clinicId).maybeSingle();
         return data?.cancellation_notice_hours || 0;
     }
 
@@ -1174,14 +1224,14 @@ export class SupabaseApiService implements IApiService {
         const clinicIds = Array.from(new Set((data || []).map((a: any) => a.clinic_id).filter(Boolean)));
         const clinics: Record<string, any> = {};
         if (clinicIds.length > 0) {
-            const { data: cards } = await supabase.from('profile_cards')
-                .select('id, business_name, avatar_url, address, phone').in('id', clinicIds);
+            const { data: cards } = await supabase.from('business_cards')
+                .select('id, name, logo_url, address, phone').in('id', clinicIds);
             (cards || []).forEach((c: any) => { clinics[c.id] = c; });
         }
         return (data || []).map((a: any) => ({
             ...a,
             clinic: clinics[a.clinic_id]
-                ? { business_name: clinics[a.clinic_id].business_name, avatar_url: clinics[a.clinic_id].avatar_url, address: clinics[a.clinic_id].address, phone: clinics[a.clinic_id].phone }
+                ? { business_name: clinics[a.clinic_id].name, avatar_url: clinics[a.clinic_id].logo_url, address: clinics[a.clinic_id].address, phone: clinics[a.clinic_id].phone }
                 : null,
         }));
     }
@@ -1398,7 +1448,7 @@ export class SupabaseApiService implements IApiService {
     async getClinicSettings(clinicId: string): Promise<any> {
         const [settingsRes, profileRes] = await Promise.all([
             supabase.from('clinic_settings').select('*').eq('clinic_id', clinicId).maybeSingle(),
-            supabase.from('profile_cards').select('working_hours').eq('id', clinicId).maybeSingle()
+            supabase.from('business_cards').select('working_hours').eq('id', clinicId).maybeSingle()
         ]);
 
         if (settingsRes.error) {
@@ -1570,7 +1620,7 @@ export class SupabaseApiService implements IApiService {
         
         // Enrich with clinic info
         const clinicIds = [...new Set(reviewable.map((a: any) => a.clinic_id))];
-        const { data: clinics } = await supabase.from('profile_cards').select('id, business_name, full_name, avatar_url').in('id', clinicIds);
+        const { data: clinics } = await supabase.from('business_cards').select('id, name, logo_url').in('id', clinicIds);
         const clinicMap: Record<string, any> = {};
         if (clinics) {
             clinics.forEach((c: any) => { clinicMap[c.id] = c; });
@@ -1579,8 +1629,8 @@ export class SupabaseApiService implements IApiService {
         return reviewable.map((a: any) => ({
             ...a,
             clinic: clinicMap[a.clinic_id] ? { 
-                name: clinicMap[a.clinic_id].business_name || clinicMap[a.clinic_id].full_name || 'Klinik', 
-                avatar_url: clinicMap[a.clinic_id].avatar_url 
+                name: clinicMap[a.clinic_id].name || 'Klinik', 
+                avatar_url: clinicMap[a.clinic_id].logo_url 
             } : { name: 'Klinik' }
         }));
     }
@@ -2022,12 +2072,12 @@ export class SupabaseApiService implements IApiService {
         const ids = Array.from(new Set((data || []).map((a: any) => a.clinic_id).filter((v: string) => /^[0-9a-f-]{36}$/i.test(v || ''))));
         const cards: Record<string, any> = {};
         if (ids.length > 0) {
-            const { data: rows } = await supabase.from('profile_cards').select('id, full_name, business_name, avatar_url').in('id', ids);
+            const { data: rows } = await supabase.from('business_cards').select('id, name, logo_url').in('id', ids);
             (rows || []).forEach((r: any) => { cards[r.id] = r; });
         }
         return (data || []).map((a: any) => ({
             ...a,
-            profiles: cards[a.clinic_id] ? { full_name: cards[a.clinic_id].full_name, business_name: cards[a.clinic_id].business_name, avatar_url: cards[a.clinic_id].avatar_url } : null,
+            profiles: cards[a.clinic_id] ? { full_name: cards[a.clinic_id].name, business_name: cards[a.clinic_id].name, avatar_url: cards[a.clinic_id].logo_url } : null,
         }));
     }
 

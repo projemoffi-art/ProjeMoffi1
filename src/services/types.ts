@@ -252,6 +252,20 @@ export interface SocialChallenge {
     createdAt: string;
 }
 
+export type BusinessRole = 'owner' | 'manager' | 'staff';
+
+/** Kişinin üyesi olduğu işletme (`my_businesses()`). */
+export interface MyBusiness {
+    id: string;
+    name: string;
+    businessType: string | null;
+    approved: boolean;
+    kybStatus: string | null;
+    role: BusinessRole;
+    logoUrl: string | null;
+    isActive: boolean;
+}
+
 // İşletmenin müşteriye görünen vitrini (klinik detay ekranı + harita pini).
 export interface BusinessProfileData {
     businessName: string;
@@ -332,6 +346,12 @@ export interface IApiService {
     setReminderPrefs(prefs: { h24: boolean; h2: boolean; day: boolean }): Promise<void>;
     getBusinessProfile(): Promise<BusinessProfileData | null>;
     updateBusinessProfile(p: BusinessProfileData): Promise<void>;
+    // Aktif işletme (8.54): kişinin adına çalıştığı işletme; panel her şeyi bu kimlikle yapar.
+    getActiveBusinessId(): Promise<string | null>;
+    getMyBusinesses(): Promise<MyBusiness[]>;
+    setActiveBusiness(businessId: string): Promise<void>;
+    getActiveBusiness(): Promise<any | null>;
+    updateActiveBusiness(patch: Record<string, any>): Promise<void>;
     getClinicOrders(clinicId: string): Promise<ShopOrder[]>;
     getMySharedPassports(): Promise<{ id: string; clinicName: string; petName: string; date: string; sharedFields: string[] }[]>;
     requestReschedule(appointmentId: string, newStart: string): Promise<void>;

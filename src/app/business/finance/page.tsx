@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, TrendingUp, Wallet, Receipt, Calendar } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { useBusinessType } from "@/context/BusinessTypeContext";
+import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
 import { apiService } from "@/services/apiService";
 import { wallParts, todayKey } from "@/lib/appointmentTime";
 import { cn } from "@/lib/utils";
@@ -26,7 +25,7 @@ function serviceNameOf(reason: string | null | undefined) {
 }
 
 export default function BusinessFinancePage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     const typeConfig = useBusinessType();
     const isOrderFlow = typeConfig.primaryFlow === 'order';
     const [entries, setEntries] = useState<Entry[]>([]);
@@ -34,11 +33,11 @@ export default function BusinessFinancePage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!user?.id) { setIsLoading(false); return; }
+        if (!businessId) { setIsLoading(false); return; }
         const load = async () => {
             try {
                 if (isOrderFlow) {
-                    const orders: any[] = await apiService.getClinicOrders(user.id);
+                    const orders: any[] = await apiService.getClinicOrders(businessId);
                     setEntries(orders
                         .filter(o => !UNPAID_ORDER.includes(o.status))
                         .map(o => {
@@ -55,8 +54,8 @@ export default function BusinessFinancePage() {
                         .filter(e => e.amount > 0));
                 } else {
                     const [appts, services] = await Promise.all([
-                        apiService.getClinicAppointments(user.id),
-                        apiService.getClinicServices(user.id),
+                        apiService.getClinicAppointments(businessId),
+                        apiService.getClinicServices(businessId),
                     ]);
                     const priceByName = new Map<string, number>();
                     services.forEach((s: any) => { if (s.price != null) priceByName.set(s.service_name, Number(s.price)); });
@@ -81,7 +80,7 @@ export default function BusinessFinancePage() {
             }
         };
         load();
-    }, [user?.id, isOrderFlow, typeConfig.customerFallbackService]);
+    }, [businessId, isOrderFlow, typeConfig.customerFallbackService]);
 
     const report = useMemo(() => {
         const today = todayKey();

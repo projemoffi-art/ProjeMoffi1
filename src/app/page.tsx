@@ -5,8 +5,17 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { LoginForm, SignupForm, ResetForm } from "@/components/auth/AuthForms";
 import { motion, AnimatePresence } from "framer-motion";
+import { getLastPanel } from "@/hooks/useMyBusinesses";
 
 type FlowStep = 'loading' | 'login' | 'signup' | 'reset';
+
+// Açılışta cihazda en son kullanılan panel; seçim yoksa eski işletme hesapları panele, diğerleri ana sayfaya.
+// Yetki değil: işletme panelinin kapısı ara katmandaki üyelik kontrolü.
+function landingFor(role?: string) {
+  const last = getLastPanel();
+  if (last) return last === 'business' ? '/business/dashboard' : '/home';
+  return role === 'business' ? '/business/dashboard' : '/home';
+}
 
 export default function Home() {
   const router = useRouter();
@@ -18,11 +27,7 @@ export default function Home() {
     if (isLoading) return;
 
     if (user) {
-      if (user.role === 'business') {
-        router.replace('/business/dashboard');
-      } else {
-        router.replace('/home');
-      }
+      router.replace(landingFor(user.role));
     } else if (step === 'loading') {
       // Giriş yapmamış kullanıcıyı direkt Giriş (login) ekranına gönder
       setTimeout(() => setStep('login'), 0);
@@ -30,13 +35,7 @@ export default function Home() {
 
   }, [user, isLoading, router, step]);
 
-  const handleLoginComplete = () => {
-    if (user?.role === 'business') {
-      router.replace('/business/dashboard');
-    } else {
-      router.replace('/home');
-    }
-  };
+  const handleLoginComplete = () => router.replace(landingFor(user?.role));
   const handleSignupComplete = () => router.replace('/home');
 
   if (step === 'loading') {

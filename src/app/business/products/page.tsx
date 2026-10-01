@@ -3,7 +3,7 @@
 import { productEmoji, productImages } from '@/lib/productImage';
 import { useState, useMemo, useEffect } from "react";
 
-import { useAuth } from "@/context/AuthContext";
+import { useActiveBusiness } from "@/context/BusinessTypeContext";
 import { BusinessProduct, ProductStatus, ProductCategory } from "@/types/business";
 import { cn, showToast } from "@/lib/utils";
 import {
@@ -25,7 +25,7 @@ const STATUS_CONFIG: Record<ProductStatus, { label: string; color: string; bg: s
 };
 
 export default function BusinessProductsPage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [search, setSearch] = useState('');
@@ -36,12 +36,10 @@ export default function BusinessProductsPage() {
     const [allProducts, setAllProducts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const businessId = user?.id;
-
     const fetchProducts = async () => {
-        if (user?.id) {
+        if (businessId) {
             try {
-                const products = await apiService.getClinicProducts(user.id);
+                const products = await apiService.getClinicProducts(businessId);
                 // Map real db schema to UI expected schema
                 const mappedProducts = products.map((p: any) => ({
                     ...p,
@@ -61,7 +59,7 @@ export default function BusinessProductsPage() {
 
     useEffect(() => {
         fetchProducts();
-    }, [user?.id]);
+    }, [businessId]);
 
     const filtered = useMemo(() => {
         let result = [...allProducts];
@@ -203,8 +201,8 @@ export default function BusinessProductsPage() {
 
             {/* Edit/Add Modal */}
             <AnimatePresence>
-                {editModal && <ProductModal product={editModal} businessId={user?.id || ''} onClose={() => { setEditModal(null); fetchProducts(); }} />}
-                {showAddModal && <ProductModal product={null} businessId={user?.id || ''} onClose={() => { setShowAddModal(false); fetchProducts(); }} />}
+                {editModal && <ProductModal product={editModal} businessId={businessId || ''} onClose={() => { setEditModal(null); fetchProducts(); }} />}
+                {showAddModal && <ProductModal product={null} businessId={businessId || ''} onClose={() => { setShowAddModal(false); fetchProducts(); }} />}
             </AnimatePresence>
         </div>
     );

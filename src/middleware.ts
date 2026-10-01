@@ -118,12 +118,26 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    // 2. İşletme (Business) Rotaları Koruması
+    // 2. İşletme paneli: kişi en az bir işletmenin üyesi (sahip/yönetici/personel) olmalı (8.54). Rol değil üyelik
+    // belirler; hangi işletmede neyi yapabileceğini veritabanı kuralları ayrıca denetler.
     if (pathname.startsWith("/business")) {
-        if (!role) {
+        if (!userId) {
             return NextResponse.redirect(new URL("/", request.url));
         }
-        if (role !== "business" && role !== "admin") {
+        let isMember = false;
+        try {
+            const supabase = createServerClient(supabaseUrl!, supabaseAnonKey!, {
+                cookies: {
+                    getAll() { return request.cookies.getAll(); },
+                    setAll() { } // Readonly
+                }
+            });
+            const { data } = await supabase.from("business_members").select("business_id").eq("user_id", userId).limit(1);
+            isMember = !!data && data.length > 0;
+        } catch (e) {
+            console.error("[Middleware] Business membership lookup failed:", e);
+        }
+        if (!isMember) {
             return NextResponse.redirect(new URL("/home", request.url));
         }
     }

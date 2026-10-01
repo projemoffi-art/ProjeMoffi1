@@ -3,8 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Loader2, Plus, X } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { useBusinessType } from "@/context/BusinessTypeContext";
+import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
 import { apiService } from "@/services/apiService";
 import { supabase } from "@/lib/supabase";
 import { cn, showToast } from "@/lib/utils";
@@ -47,7 +46,7 @@ function parseService(reason: string | null) {
 }
 
 export default function BusinessCalendarPage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     const { staffLabel, hasMedicalRecords } = useBusinessType();
     const [view, setView] = useState<'day' | 'week'>('day');
     const [anchor, setAnchor] = useState(todayKey());
@@ -62,10 +61,10 @@ export default function BusinessCalendarPage() {
     const [reschedule, setReschedule] = useState<{ dateKey: string; time: string; ignoreHours: boolean } | null>(null);
 
     const load = useCallback(async () => {
-        if (!user?.id) return;
+        if (!businessId) return;
         const [list, docs] = await Promise.all([
-            apiService.getClinicAppointments(user.id),
-            apiService.getAllClinicDoctors(user.id)
+            apiService.getClinicAppointments(businessId),
+            apiService.getAllClinicDoctors(businessId)
         ]);
         setDoctors((docs || []).filter((d: any) => d.is_active !== false).map((d: any) => ({ id: d.id, name: d.name })));
         setItems((list || [])
@@ -92,14 +91,14 @@ export default function BusinessCalendarPage() {
                 };
             }));
         setLoading(false);
-    }, [user?.id]);
+    }, [businessId]);
 
     useEffect(() => {
-        if (!user?.id) return;
+        if (!businessId) return;
         load();
         const channel = supabase
-            .channel(`clinic-calendar-${user.id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${user.id}` }, () => load())
+            .channel(`clinic-calendar-${businessId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${businessId}` }, () => load())
             .subscribe();
         const onVisible = () => { if (document.visibilityState === 'visible') load(); };
         document.addEventListener('visibilitychange', onVisible);
@@ -107,7 +106,7 @@ export default function BusinessCalendarPage() {
             document.removeEventListener('visibilitychange', onVisible);
             supabase.removeChannel(channel);
         };
-    }, [user?.id, load]);
+    }, [businessId, load]);
 
     const weekStart = useMemo(() => {
         const [y, m, d] = anchor.split('-').map(Number);
@@ -377,12 +376,12 @@ export default function BusinessCalendarPage() {
                 </div>
             )}
 
-            {user?.id && (
+            {businessId && (
                 <NewAppointmentModal
                     isOpen={modalOpen}
                     onClose={() => setModalOpen(false)}
                     onCreated={() => { showToast("Randevu oluşturuldu", "CheckCircle2", "text-emerald-500 font-bold"); load(); }}
-                    clinicId={user.id}
+                    clinicId={businessId}
                     staffLabel={staffLabel}
                     prefill={prefill}
                 />

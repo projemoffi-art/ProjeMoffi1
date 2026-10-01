@@ -22,6 +22,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useQuestEngine } from '@/context/QuestEngineContext';
 import { exportUserData } from '@/lib/utils/dataExport';
 import { apiService } from '@/services/apiService';
+import { useMyBusinesses, setLastPanel } from '@/hooks/useMyBusinesses';
 import { adoptionService } from '@/services/adoptionService';
 import { socialService, type PersonCard } from '@/services/socialService';
 import { isFrameUnlocked, formatRemaining, type FrameStyle } from '@/lib/vipFrames';
@@ -353,6 +354,17 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
     );
 };
 
+// Kişi bir işletmenin üyesiyse (sahip/yönetici/personel) panele geçiş — rol değil üyelik (8.54).
+const BusinessPortalSection = () => {
+    const businesses = useMyBusinesses();
+    if (businesses.length === 0) return null;
+    return (
+        <Section title="İşletme Portalı">
+            <ActionRow icon={Building2} label="İşletme Paneline Geç" desc={businesses.length === 1 ? businesses[0].name : `${businesses.length} işletme`} onClick={() => { setLastPanel('business'); window.location.href = '/business/dashboard'; }} />
+        </Section>
+    );
+};
+
 const MainView = ({ user, setView, handleToggle, handleExport, isExporting, exportStatus, onClose, logout, handleResetSystem, updateSettings }: ViewProps) => (
     <motion.div 
         initial={{ x: -20, opacity: 0 }}
@@ -400,11 +412,7 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
             </div>
         )}
 
-        {(user?.role === 'business' || user?.role === 'admin') && (
-            <Section title="İşletme Portalı">
-                <ActionRow icon={Building2} label="İşletme Paneline Geç" desc="Müşterilerinizi ve randevularınızı yönetin." onClick={() => { window.location.href = '/business/dashboard'; }} />
-            </Section>
-        )}
+        <BusinessPortalSection />
 
         <Section title="Hesap Merkezi & Profil">
             <ActionRow icon={User} label="Hesap Ayarları ve Bilgiler" desc="Kişisel detaylar, e-posta, telefon ve bağlantılar." onClick={() => setView('account_settings')} />

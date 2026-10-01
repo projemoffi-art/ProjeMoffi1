@@ -1,16 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
 import { Plus, Users, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Doctor } from "@/types/domain";
-import { useBusinessType } from "@/context/BusinessTypeContext";
+import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
 import { StaffScheduleEditor } from "@/components/business/StaffScheduleEditor";
 
 export default function BusinessDoctorsPage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     // Faz 3 (işletme türü mimarisi) — bu sayfa artık her işletmede "Doktor"
     // demiyor, seçilen türe göre "Bakıcı"/"Eğitmen"/"Gönüllü"/"Personel".
     const { staffLabel, staffLabelPlural } = useBusinessType();
@@ -25,14 +24,14 @@ export default function BusinessDoctorsPage() {
     const [newTitle, setNewTitle] = useState("");
 
     useEffect(() => {
-        if (user?.id) {
+        if (businessId) {
             fetchDoctors();
         }
-    }, [user?.id]);
+    }, [businessId]);
 
     const fetchDoctors = async () => {
         try {
-            const data = await apiService.getAllClinicDoctors(user!.id);
+            const data = await apiService.getAllClinicDoctors(businessId!);
             setDoctors(data || []);
         } catch (err: any) {
             console.error("Doktorlar çekilirken hata:", err);
@@ -44,7 +43,7 @@ export default function BusinessDoctorsPage() {
 
     const handleAddDoctor = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newName.trim() || !user?.id) return;
+        if (!newName.trim() || !businessId) return;
         
         setIsSaving(true);
         setError(null);
@@ -52,7 +51,7 @@ export default function BusinessDoctorsPage() {
 
         try {
             await apiService.createDoctor({
-                clinicId: user.id,
+                clinicId: businessId,
                 name: newName.trim(),
                 title: newTitle.trim() || undefined
             });
@@ -159,8 +158,8 @@ export default function BusinessDoctorsPage() {
                                             </button>
                                         </div>
                                     </div>
-                                    {expandedId === doc.id && user?.id && (
-                                        <StaffScheduleEditor doctorId={doc.id} clinicId={user.id} staffLabel={staffLabel} />
+                                    {expandedId === doc.id && businessId && (
+                                        <StaffScheduleEditor doctorId={doc.id} clinicId={businessId} staffLabel={staffLabel} />
                                     )}
                                     </div>
                                 ))

@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { apiService } from "@/services/apiService";
 import { Plus, Trash2, CheckCircle2, AlertCircle, Save, Loader2, Activity, Store } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useBusinessType } from "@/context/BusinessTypeContext";
+import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
 
 export default function BusinessServicesPage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     // Faz 3 (işletme türü mimarisi) — varsayılan hizmet listesi artık her
     // işletmeye aynı vet listesini göstermiyor, seçilen türe göre geliyor.
     const DEFAULT_SERVICES = useBusinessType().defaultServices;
@@ -25,19 +25,24 @@ export default function BusinessServicesPage() {
     const [customDuration, setCustomDuration] = useState("30");
 
     useEffect(() => {
-        if (user?.id) {
+        if (businessId) {
             fetchServices();
-            supabase.from('profiles').select('cancellation_notice_hours').eq('id', user.id).maybeSingle()
+            supabase.from('businesses').select('cancellation_notice_hours').eq('id', businessId).maybeSingle()
                 .then(({ data }) => setNoticeHours(data?.cancellation_notice_hours || 0));
         }
-    }, [user?.id]);
+    }, [businessId]);
 
     const saveNotice = async () => {
-        if (!user?.id) return;
+        if (!businessId) return;
         setNoticeSaving(true);
-        const { error } = await supabase.from('profiles').update({ cancellation_notice_hours: noticeHours }).eq('id', user.id);
+        let failed = false;
+        try {
+            await apiService.updateActiveBusiness({ cancellation_notice_hours: noticeHours });
+        } catch {
+            failed = true;
+        }
         setNoticeSaving(false);
-        if (error) {
+        if (failed) {
             setError("Randevu kuralı kaydedilemedi.");
             setTimeout(() => setError(null), 3000);
         } else {
@@ -51,7 +56,7 @@ export default function BusinessServicesPage() {
             const { data, error } = await supabase
                 .from('clinic_services')
                 .select('*')
-                .eq('clinic_id', user!.id);
+                .eq('clinic_id', businessId!);
             
             if (error) throw error;
             setServices(data || []);
@@ -75,7 +80,7 @@ export default function BusinessServicesPage() {
             }
             setServices([...services, {
                 id: `temp-${Date.now()}`,
-                clinic_id: user!.id,
+                clinic_id: businessId!,
                 service_name: defService.name,
                 duration_minutes: defService.duration,
                 is_custom: false
@@ -94,7 +99,7 @@ export default function BusinessServicesPage() {
 
         setServices([...services, {
             id: `temp-${Date.now()}`,
-            clinic_id: user!.id,
+            clinic_id: businessId!,
             service_name: customName.trim(),
             duration_minutes: parseInt(customDuration) || 30,
             is_custom: true
@@ -112,7 +117,7 @@ export default function BusinessServicesPage() {
     };
 
     const handleSave = async () => {
-        if (!user?.id) return;
+        if (!businessId) return;
         setIsSaving(true);
         setError(null);
         setSuccess(false);
@@ -121,13 +126,13 @@ export default function BusinessServicesPage() {
             const { error: delError } = await supabase
                 .from('clinic_services')
                 .delete()
-                .eq('clinic_id', user.id);
+                .eq('clinic_id', businessId);
             
             if (delError) throw delError;
 
             if (services.length > 0) {
                 const toInsert = services.map(s => ({
-                    clinic_id: user.id,
+                    clinic_id: businessId,
                     service_name: s.service_name,
                     duration_minutes: Math.min(Math.max(parseInt(s.duration_minutes) || 30, 5), 480),
                     price: s.price === '' || s.price == null ? null : Math.max(Number(s.price), 0),

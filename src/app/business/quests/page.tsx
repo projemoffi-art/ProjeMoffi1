@@ -5,19 +5,19 @@ import { Plus, Search, Trophy, TrendingUp, Users, Target } from "lucide-react";
 import { QuestCard } from "@/components/business/QuestCard";
 import { Quest } from "@/types/game";
 import { motion } from "framer-motion";
-import { useAuth } from "@/context/AuthContext";
+import { useActiveBusiness } from "@/context/BusinessTypeContext";
 import { apiService } from "@/services/apiService";
 
 export default function BusinessQuestsPage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     const [quests, setQuests] = useState<Quest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchQuests = async () => {
-        if (!user?.id) return;
+        if (!businessId) return;
         setIsLoading(true);
         try {
-            const data = await apiService.getClinicQuests(user.id);
+            const data = await apiService.getClinicQuests(businessId);
             const mappedData = data.map((q: any) => ({
                 id: q.id,
                 title: q.title,
@@ -41,7 +41,7 @@ export default function BusinessQuestsPage() {
 
     useEffect(() => {
         fetchQuests();
-    }, [user?.id]);
+    }, [businessId]);
 
     return (
         <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">

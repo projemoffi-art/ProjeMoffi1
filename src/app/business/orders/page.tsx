@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 
-import { useAuth } from "@/context/AuthContext";
+import { useActiveBusiness } from "@/context/BusinessTypeContext";
 import { OrderStatus } from "@/types/business";
 import { cn, showToast } from "@/lib/utils";
 import {
@@ -26,7 +26,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 const STATUS_FLOW: string[] = ['awaiting_payment', 'preparing', 'shipped', 'delivered'];
 
 export default function BusinessOrdersPage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     const statusScroll = useDragScroll();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
@@ -37,16 +37,16 @@ export default function BusinessOrdersPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchOrders = async () => {
-        if (!user?.id) return;
+        if (!businessId) return;
         setIsLoading(true);
         try {
-            const rawOrders = await apiService.getClinicOrders(user.id);
+            const rawOrders = await apiService.getClinicOrders(businessId);
             const mappedOrders = rawOrders.map((order: any) => {
-                const myItems = order.items.filter((i: any) => i.product.owner_id === user.id);
+                const myItems = order.items.filter((i: any) => i.product.owner_id === businessId);
                 
                 return {
                     id: order.id,
-                    businessId: user.id,
+                    businessId: businessId,
                     customerName: order.user?.full_name || "Müşteri",
                     customerEmail: order.user?.email || "-",
                     items: myItems.map((i: any) => ({
@@ -76,8 +76,8 @@ export default function BusinessOrdersPage() {
     };
 
     useEffect(() => {
-        if (user?.id) fetchOrders();
-    }, [user?.id]);
+        if (businessId) fetchOrders();
+    }, [businessId]);
 
     const filtered = useMemo(() => {
         let result = [...allOrders];

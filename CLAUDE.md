@@ -3163,6 +3163,36 @@ bağlantısının `apply_migration` aracı bu panelden onay alamayıp "declined"
 - **Doğrulama:** authenticated rolüyle geri alınan SQL işleminde 4 özelliğin tüm senaryoları + yetki redleri geçti;
   değişen dosyalarda yeni tip hatası yok, sayfalar 200. Tarayıcıda gerçek hesapla tıklama testi henüz yapılmadı.
 
+### 8.54 Faz 1b — işletme ayrı kayıt, kişi üye (2026-10-02)
+
+Migration'lar: `20261002120000_businesses_members.sql` (Baran SQL Editor'dan), `20261002130000_backfill_business_notifications.sql`.
+🔴 **Hesap = kişi. İşletme = `businesses` kaydı; kimin yönetebileceği `business_members` (owner/manager/staff,
+staff için `doctor_id`).** Eski 3 işletme AYNI kimlikle taşındı (randevu/hizmet/sipariş `clinic_id` değerleri değişmedi,
+yabancı anahtarlar artık `businesses`'a bağlı). Eski hesaplar işletmenin sahibi oldu.
+- **Yetki tek yerde:** `is_business_member`, `can_manage_business` (+ metin kolonlar için `*_t`), `staff_doctor_id`,
+  `can_handle_appointment` (personel sadece kendi randevusu). Kişinin adına çalıştığı işletme `current_business_id()`
+  (`profiles.active_business_id`, `set_active_business`), liste `my_businesses()`. 26 kural + ~25 fonksiyon bunlara bağlı.
+- 🔴 **KURAL — istemci:** işletme panelinde kişinin kimliği (`user.id`) ASLA işletme kimliği yerine kullanılmaz.
+  Panel `useActiveBusiness()` (`BusinessTypeContext.tsx`: `businessId`, `business` satırı, `role`, `canManage`,
+  `switchTo`) okur; servis tarafı `apiService.getActiveBusinessId()` / `updateActiveBusiness(patch)`.
+  İşletme bilgisi (ad, açıklama, saatler, iptal kuralı, konum, logo, onboarding) sadece `businesses`'a yazılır.
+- 🔴 **KURAL — okuma:** başka bir işletmeyi gösterirken `business_cards` (onaylılar; IBAN/vergi no yok). Kişi için
+  hâlâ `profile_cards`. Klinik listesi/detayı/adları artık `business_cards`'tan.
+- **Onay:** `businesses.approved/kyb_status/kyb_rejection_reason` sadece yönetici (service_role, `lib/server/reviewBusiness.ts`;
+  eski rotalar `cookies()`'i `await` etmediği için Next 16'da hep 401 veriyordu). Panel düzeni onayı işletme kaydından okur.
+- **Bildirim:** işletmeye giden bildirimler `notify_business` ile tüm sahip/yöneticilere (personele sadece kendi
+  randevusu), `notifications.business_id` dolu, türler `biz_appointment`/`biz_order`. `NotificationContext`
+  kişisel (`notifications`) ve işletme (`businessNotifications`) diye ayırır; işletme zili sadece aktif işletmeninkini gösterir.
+- **Kapı:** `/business` ara katmanda rol değil `business_members` üyeliği ile açılır. Kişisel tarafta "İşletme paneline geç"
+  `useMyBusinesses()` ile (üyeyse). Üst çubukta işletmeler arası geçiş + "Kişisel hesabıma geç". Açılışta cihazdaki son
+  panel (`moffi-last-panel`, sadece kolaylık), seçim yoksa eski `role='business'` hesaplar panele.
+- **Geçiş dönemi (temizlik migration'ına kadar):** `profiles`'taki eski işletme kolonları ve `role='business'` duruyor;
+  sohbet adı, sahiplendirmedeki barınak anahtarı, yönetici kullanıcı listesi hâlâ bunları okuyor. Yönetici onayı iki tarafa da yazar.
+- **Açık:** klinik sohbeti hâlâ işletme sahibinin kişisel kimliğiyle (personel/yeni işletme için çözülmeli, 1c'den önce);
+  randevu Realtime'ı fonksiyonlu kurala geçti — gerçek cihazda doğrulanmalı.
+- **Doğrulama:** authenticated/anon rolleriyle geri alınan SQL (sahip/yabancı/müşteri: okuma, güncelleme, onay değiştirme
+  reddi, randevu → işletme bildirimi → onay → müşteri bildirimi, yabancının işlem reddi); typecheck'te yeni hata yok, build başarılı.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

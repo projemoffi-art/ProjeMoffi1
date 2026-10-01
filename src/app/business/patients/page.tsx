@@ -4,8 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, PawPrint, Loader2, Plus, X } from "lucide-react";
 import { apiService } from "@/services/apiService";
 import type { ClinicClient } from "@/services/types";
-import { useAuth } from "@/context/AuthContext";
-import { useBusinessType } from "@/context/BusinessTypeContext";
+import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
 import { cn, showToast } from "@/lib/utils";
 import { wallParts, formatDateKeyTr } from "@/lib/appointmentTime";
 import { NewAppointmentModal } from "@/components/business/NewAppointmentModal";
@@ -20,7 +19,7 @@ function formatWall(iso: string | null) {
 }
 
 export default function BusinessPatientsPage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     const { hasMedicalRecords, staffLabel } = useBusinessType();
     const [clients, setClients] = useState<ClinicClient[]>([]);
     const [appointments, setAppointments] = useState<any[]>([]);
@@ -33,18 +32,18 @@ export default function BusinessPatientsPage() {
     const [modalOpen, setModalOpen] = useState(false);
 
     const load = useCallback(async () => {
-        if (!user?.id) return;
+        if (!businessId) return;
         try {
             const [clientList, apptList] = await Promise.all([
                 apiService.getClinicClients(),
-                apiService.getClinicAppointments(user.id)
+                apiService.getClinicAppointments(businessId)
             ]);
             setClients(clientList);
             setAppointments(apptList || []);
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id]);
+    }, [businessId]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -71,10 +70,10 @@ export default function BusinessPatientsPage() {
     };
 
     const saveNote = async () => {
-        if (!selected || !user?.id) return;
+        if (!selected || !businessId) return;
         setSavingNote(true);
         try {
-            await apiService.saveClientNote(user.id, selected.client_key, noteDraft.trim());
+            await apiService.saveClientNote(businessId, selected.client_key, noteDraft.trim());
             setClients(prev => prev.map(c => c.client_key === selected.client_key ? { ...c, note: noteDraft.trim() } : c));
             showToast("Not kaydedildi", "CheckCircle2", "text-emerald-500 font-bold");
         } catch {
@@ -232,12 +231,12 @@ export default function BusinessPatientsPage() {
                 </div>
             )}
 
-            {user?.id && (
+            {businessId && (
                 <NewAppointmentModal
                     isOpen={modalOpen}
                     onClose={() => setModalOpen(false)}
                     onCreated={() => { showToast("Randevu oluşturuldu", "CheckCircle2", "text-emerald-500 font-bold"); load(); }}
-                    clinicId={user.id}
+                    clinicId={businessId}
                     staffLabel={staffLabel}
                     prefill={{ client: selected }}
                 />

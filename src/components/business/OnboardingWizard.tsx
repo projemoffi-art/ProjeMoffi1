@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useBusinessType } from "@/context/BusinessTypeContext";
+import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
+import { apiService } from "@/services/apiService";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Sparkles } from "lucide-react";
@@ -11,13 +11,13 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 // onay sonrası ilk girişte, seçilen işletme türüne göre varsayılan hizmet
 // kataloğu ÖNERİLİR (sahibi işaretleri değiştirebilir/hiç eklemeyebilir),
 // hiçbir şey kilitli değil — sonradan "Hizmetlerim" sayfasından serbestçe
-// düzenlenebilir. `profiles.onboarding_completed` gerçek bir DB kolonu
+// düzenlenebilir. `businesses.onboarding_completed` gerçek bir DB kolonu
 // (localStorage DEĞİL — bu projede localStorage-only "tamamlandı" bayrakları
 // defalarca gerçek durumdan sapıp yanlış bilgi vermişti, bkz. CLAUDE.md 8.3).
 // Hizmet kataloğu kavramı olmayan türlerde (petshop/shelter, defaultServices
 // boş) sihirbaz hiç gösterilmez.
 export function OnboardingWizard() {
-    const { user } = useAuth();
+    const { businessId, business, canManage } = useActiveBusiness();
     const typeConfig = useBusinessType();
     const [shouldShow, setShouldShow] = useState(false);
     const [checkedServices, setCheckedServices] = useState<Set<string>>(new Set());
@@ -26,13 +26,8 @@ export function OnboardingWizard() {
     useEffect(() => {
         let cancelled = false;
         const check = async () => {
-            if (!user?.id || typeConfig.defaultServices.length === 0) return;
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('onboarding_completed')
-                .eq('id', user.id)
-                .single();
-            if (cancelled || error || !data || data.onboarding_completed !== false) return;
+            if (!businessId || !business || !canManage || typeConfig.defaultServices.length === 0) return;
+            if (business.onboarding_completed !== false) return;
 
             // Bu migration'dan ÖNCE zaten kurulmuş, gerçek hizmetleri olan bir
             // işletmeyse (bu projede zaten vardı) sihirbazı hiç gösterme —
@@ -41,11 +36,11 @@ export function OnboardingWizard() {
             const { count } = await supabase
                 .from('clinic_services')
                 .select('id', { count: 'exact', head: true })
-                .eq('clinic_id', user.id);
+                .eq('clinic_id', businessId);
 
             if (cancelled) return;
             if (count && count > 0) {
-                await supabase.from('profiles').update({ onboarding_completed: true }).eq('id', user.id);
+                await apiService.updateActiveBusiness({ onboarding_completed: true });
                 return;
             }
 
@@ -54,7 +49,7 @@ export function OnboardingWizard() {
         };
         check();
         return () => { cancelled = true; };
-    }, [user?.id, typeConfig]);
+    }, [businessId, business, canManage, typeConfig]);
 
     const toggleService = (name: string) => {
         setCheckedServices(prev => {
@@ -65,7 +60,7 @@ export function OnboardingWizard() {
     };
 
     const finish = async (withServices: boolean) => {
-        if (!user?.id) return;
+        if (!businessId) return;
         setIsSaving(true);
         try {
             if (withServices && checkedServices.size > 0) {
@@ -73,7 +68,7 @@ export function OnboardingWizard() {
                     .filter(s => checkedServices.has(s.name))
                     .slice(0, 10)
                     .map(s => ({
-                        clinic_id: user.id,
+                        clinic_id: businessId,
                         service_name: s.name,
                         duration_minutes: s.duration,
                         is_custom: false,
@@ -82,7 +77,7 @@ export function OnboardingWizard() {
                     await supabase.from('clinic_services').insert(rows);
                 }
             }
-            await supabase.from('profiles').update({ onboarding_completed: true }).eq('id', user.id);
+            await apiService.updateActiveBusiness({ onboarding_completed: true });
         } catch (e) {
             console.error("Onboarding tamamlanırken hata:", e);
         } finally {

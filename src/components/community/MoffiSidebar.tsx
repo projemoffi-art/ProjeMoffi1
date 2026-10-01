@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useMyBusinesses, setLastPanel } from '@/hooks/useMyBusinesses';
 import { useActivity } from '@/context/ActivityContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useRouter, usePathname } from 'next/navigation';
@@ -31,6 +32,7 @@ interface SidebarWidget {
 
 export function MoffiSidebar() {
     const { user, updateSettings } = useAuth();
+    const myBusinesses = useMyBusinesses();
     const { t } = useTranslation();
     const router = useRouter();
     const pathname = usePathname();
@@ -243,7 +245,7 @@ export function MoffiSidebar() {
         { id: 'search', label: t('sidebar.search'), icon: Search, color: 'from-gray-400 to-gray-600', iconColor: 'text-zinc-400', action: () => window.dispatchEvent(new CustomEvent('open-moffi-spotlight')) },
         { id: 'adoption', label: t('sidebar.adoption'), icon: HeartHandshake, color: 'from-rose-400 to-pink-600', iconColor: 'text-rose-400', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'adoption' })) },
         { id: 'lost_report', label: t('sidebar.lost_report'), icon: Megaphone, color: 'from-orange-400 to-red-500', iconColor: 'text-orange-450', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'lost_pet' })) },
-        { id: 'business', label: 'İşletme Paneli', icon: Building2, color: 'from-indigo-600 to-violet-700', iconColor: 'text-indigo-400', action: () => { setIsOpen(false); router.push('/business/dashboard'); } }
+        { id: 'business', label: 'İşletme Paneli', icon: Building2, color: 'from-indigo-600 to-violet-700', iconColor: 'text-indigo-400', action: () => { setIsOpen(false); setLastPanel('business'); router.push('/business/dashboard'); } }
     ];
 
     const currentWidgets = useMemo(() => {
@@ -258,12 +260,12 @@ export function MoffiSidebar() {
     const pinnedWidgets = useMemo(() => {
         if (searchTerm.trim()) return [];
         const pins = ALL_WIDGETS.filter(w => ['ai', 'sos', 'steps', 'qr'].includes(w.id));
-        if (user?.role === 'business' || user?.role === 'admin') {
+        if (myBusinesses.length > 0) {
             const biz = ALL_WIDGETS.find(w => w.id === 'business');
             if (biz) pins.push(biz);
         }
         return pins;
-    }, [searchTerm, user?.role]);
+    }, [searchTerm, myBusinesses.length]);
 
     const dynamicWidgets = useMemo(() => {
         return currentWidgets.filter(w => !pinnedWidgets.some(p => p.id === w.id));

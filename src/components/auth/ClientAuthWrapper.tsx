@@ -35,8 +35,7 @@ export function ClientAuthWrapper({ children }: Props) {
     const router = useRouter();
 
     const isDemoRoute = pathname.startsWith("/demo");
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute || PUBLIC_PREFIXES.some(p => pathname.startsWith(p)) || PUBLIC_PATTERNS.some(r => r.test(pathname));
-    const isBusinessRoute = pathname.startsWith(BUSINESS_ROUTES_PREFIX);
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute || PUBLIC_PREFIXES.some(p => pathname.startsWith(p)) || PUBLIC_PATTERNS.some(r => r.test(pathname));
     const isAdminRoute = pathname.startsWith(ADMIN_ROUTES_PREFIX);
 
     useEffect(() => {
@@ -51,15 +50,8 @@ export function ClientAuthWrapper({ children }: Props) {
             return;
         }
 
-        // Business routes → need business role + approval
-        if (isBusinessRoute) {
-            if (user.role !== 'business' && user.role !== 'admin') {
-                router.replace("/home");
-                return;
-            }
-            // Business user but not approved → show pending page (handled within business layout)
-        }
-    }, [user, isLoading, isPublicRoute, isBusinessRoute, isAdminRoute, pathname, router]);
+        // İşletme paneli: üyelik ara katmanda ve panel düzeninde denetlenir (bağlı işletme yoksa orada anlatılır).
+    }, [user, isLoading, isPublicRoute, isAdminRoute, pathname, router]);
 
     // Public routes always render immediately
     if (isPublicRoute) {
@@ -80,9 +72,6 @@ export function ClientAuthWrapper({ children }: Props) {
 
     // Not authenticated
     if (!user) return null;
-
-    // Wrong role for business routes
-    if (isBusinessRoute && user.role !== 'business' && user.role !== 'admin') return null;
 
     return <>{children}</>;
 }

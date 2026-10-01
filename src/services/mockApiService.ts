@@ -402,6 +402,11 @@ export class MockApiService implements IApiService {
     async setReminderPrefs(prefs: { h24: boolean; h2: boolean; day: boolean }): Promise<void> {}
     async getBusinessProfile(): Promise<any> { return null; }
     async updateBusinessProfile(p: any): Promise<void> {}
+    async getActiveBusinessId(): Promise<string | null> { return null; }
+    async getMyBusinesses(): Promise<any[]> { return []; }
+    async setActiveBusiness(businessId: string): Promise<void> {}
+    async getActiveBusiness(): Promise<any | null> { return null; }
+    async updateActiveBusiness(patch: Record<string, any>): Promise<void> {}
     async getClinicOrders(clinicId: string): Promise<ShopOrder[]> { return []; }
     async getMySharedPassports(): Promise<any[]> { return []; }
     async requestReschedule(appointmentId: string, newStart: string): Promise<void> { throw new Error('Demo modunda erteleme yapılamaz.'); }

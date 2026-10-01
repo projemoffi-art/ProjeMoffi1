@@ -6,10 +6,14 @@ import { useAuth } from "./AuthContext";
 import { Notification } from "@/types/notifications";
 
 interface NotificationContextType {
+  /** Kişisel bildirimler (işletme bildirimleri hariç). */
   notifications: Notification[];
   unreadCount: number;
+  /** İşletme bildirimleri (8.54) — kişinin üyesi olduğu tüm işletmeler; panel aktif işletmeye göre süzer. */
+  businessNotifications: Notification[];
   markAsRead: (id: string) => Promise<void>;
-  markAllAsRead: () => Promise<void>;
+  /** Parametresiz: kişisel bildirimleri; işletme kimliğiyle: o işletmenin bildirimlerini okundu sayar. */
+  markAllAsRead: (businessId?: string) => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   isLoading: boolean;
 }
@@ -18,9 +22,12 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // Tek liste tutulur, kişisel/işletme ayrımı türetilir (iki ayrı kaynak yok).
+  const [allNotifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const notifications = React.useMemo(() => allNotifications.filter(n => !n.business_id), [allNotifications]);
+  const businessNotifications = React.useMemo(() => allNotifications.filter(n => !!n.business_id), [allNotifications]);
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const fetchNotifications = useCallback(async () => {
@@ -28,17 +35,23 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Kişisel ve işletme bildirimleri ayrı sayfalanır; biri diğerini 50'lik sınırdan itmesin.
+      const base = () => supabase
         .from("notifications")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
+      const [personal, business] = await Promise.all([
+        base().is("business_id", null),
+        base().not("business_id", "is", null),
+      ]);
 
-      if (error) {
-        console.error("Error fetching notifications:", error);
+      if (personal.error || business.error) {
+        console.error("Error fetching notifications:", personal.error || business.error);
       } else {
-        setNotifications(data || []);
+        setNotifications([...(personal.data || []), ...(business.data || [])]
+          .sort((a, b) => b.created_at.localeCompare(a.created_at)));
       }
     } finally {
       setIsLoading(false);
@@ -128,15 +141,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const markAllAsRead = useCallback(async () => {
+  const markAllAsRead = useCallback(async (businessId?: string) => {
     if (!user?.id) return;
-    const { error } = await supabase
+    let q = supabase
       .from("notifications")
       .update({ is_read: true })
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+    q = businessId ? q.eq("business_id", businessId) : q.is("business_id", null);
+    const { error } = await q;
 
     if (!error) {
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotifications(prev => prev.map(n =>
+        (businessId ? n.business_id === businessId : !n.business_id) ? { ...n, is_read: true } : n));
     }
   }, [user?.id]);
 
@@ -151,14 +168,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const value = React.useMemo(() => ({ 
-    notifications, 
-    unreadCount, 
-    markAsRead, 
+  const value = React.useMemo(() => ({
+    notifications,
+    unreadCount,
+    businessNotifications,
+    markAsRead,
     markAllAsRead, 
     deleteNotification,
     isLoading 
-  }), [notifications, unreadCount, isLoading, markAsRead, markAllAsRead, deleteNotification]);
+  }), [notifications, unreadCount, businessNotifications, isLoading, markAsRead, markAllAsRead, deleteNotification]);
 
   return (
     <NotificationContext.Provider value={value}>

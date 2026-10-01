@@ -3,35 +3,70 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Clock, XCircle, LogOut } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { BusinessSidebar } from "@/components/business/Sidebar";
 import { BusinessHeader } from "@/components/business/Header";
-import { BusinessTypeProvider } from "@/context/BusinessTypeContext";
+import { BusinessTypeProvider, useActiveBusiness } from "@/context/BusinessTypeContext";
 import { OnboardingWizard } from "@/components/business/OnboardingWizard";
+import { setLastPanel } from "@/hooks/useMyBusinesses";
+
+const Spinner = () => (
+    <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+    </div>
+);
 
 export default function BusinessLayout({ children }: { children: React.ReactNode }) {
-    const { user, isLoading, logout } = useAuth();
+    const { user, isLoading } = useAuth();
+
+    if (isLoading) return <Spinner />;
+    if (!user) return null;
+
+    return (
+        <BusinessTypeProvider>
+            <BusinessShell>{children}</BusinessShell>
+        </BusinessTypeProvider>
+    );
+}
+
+// Panel, kişinin aktif işletmesine göre açılır (8.54): üyesi olduğu işletme yoksa panel yok; işletme onaylı
+// değilse inceleme/ret ekranı. Onay bilgisi kişinin profilinden değil işletme kaydından okunur.
+function BusinessShell({ children }: { children: React.ReactNode }) {
+    const { logout } = useAuth();
+    const { business, loading } = useActiveBusiness();
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    if (isLoading) {
+    useEffect(() => {
+        if (business) setLastPanel('business');
+    }, [business]);
+
+    if (loading) return <Spinner />;
+
+    if (!business) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+            <div className="min-h-screen flex items-center justify-center p-6 font-sans">
+                <div className="bg-card dark:bg-[#121212] rounded-[2.5rem] p-10 border border-card-border dark:border-[#27272a] shadow-xl text-center max-w-md w-full space-y-4">
+                    <h2 className="text-xl font-black text-foreground dark:text-white">Bağlı bir işletmen yok</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        İşletme paneli, sahibi ya da çalışanı olduğun bir işletme için açılır.
+                    </p>
+                    <button
+                        onClick={() => router.push('/home')}
+                        className="w-full py-3.5 rounded-2xl bg-gray-100 dark:bg-white/5 border border-card-border dark:border-[#27272a] text-gray-700 dark:text-gray-300 font-bold text-sm hover:bg-gray-200 transition-colors"
+                    >
+                        Ana sayfaya dön
+                    </button>
+                </div>
             </div>
         );
     }
 
-    if (!user) {
-        return null;
-    }
+    const isApproved = business.approved === true;
+    const kybStatus = business.kyb_status || 'pending';
+    const rejectionReason = business.kyb_rejection_reason || '';
 
-    // Check approval status
-    const isApproved = user.businessApproved === true || (user as any).business_approved === true || user.role === 'admin';
-    const kybStatus = user.kybStatus || (user as any).kyb_status || 'pending';
-    const rejectionReason = (user as any).kyb_rejection_reason || '';
-    
-    if (user.role === 'business' && !isApproved) {
+    if (!isApproved) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center p-6 font-sans">
                 <div className="bg-card dark:bg-[#121212] rounded-[2.5rem] p-10 border border-card-border dark:border-[#27272a] shadow-xl text-center max-w-lg w-full space-y-6">
@@ -64,10 +99,10 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
                             <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl text-left space-y-2">
                                 <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300">İNCELEMEDEKİ BİLGİLERİNİZ:</div>
                                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                    <div><strong>İşletme:</strong> {user.businessName}</div>
-                                    <div><strong>Sahip:</strong> {user.ownerName}</div>
-                                    <div><strong>Telefon:</strong> {user.phone}</div>
-                                    <div><strong>Vergi No:</strong> {user.taxId}</div>
+                                    <div><strong>İşletme:</strong> {business.name}</div>
+                                    <div><strong>Sahip:</strong> {business.owner_name}</div>
+                                    <div><strong>Telefon:</strong> {business.phone}</div>
+                                    <div><strong>Vergi No:</strong> {business.tax_id}</div>
                                 </div>
                             </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">Ortalama onaylanma süresi 1-2 iş günüdür.</p>
@@ -97,7 +132,7 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
     }
 
     return (
-        <BusinessTypeProvider>
+        <>
             <OnboardingWizard />
             <div className="flex bg-[#F8F9FC] dark:bg-[#0a0a0a] min-h-screen">
                 <BusinessSidebar
@@ -111,6 +146,6 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
                     </main>
                 </div>
             </div>
-        </BusinessTypeProvider>
+        </>
     );
 }

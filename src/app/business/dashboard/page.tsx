@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import React from "react";
 
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
-import { useBusinessType } from "@/context/BusinessTypeContext";
+import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
 import { TodaySummary } from "@/components/business/TodaySummary";
 
 // Faz 1 (işletme türü mimarisi, 2026-09-25) — bu sayfa daha önce iki gerçek
@@ -24,6 +24,7 @@ import { TodaySummary } from "@/components/business/TodaySummary";
 // kaldırıldı — CLAUDE.md Bölüm 7'nin "işlevsiz UI" hassasiyeti.
 export default function BusinessDashboard() {
     const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     const router = useRouter();
     const { primaryFlow } = useBusinessType();
 
@@ -39,25 +40,25 @@ export default function BusinessDashboard() {
 
     React.useEffect(() => {
         const fetchStats = async () => {
-            if (isSupabaseEnabled && user?.id) {
-                const stats = await apiService.getClinicDashboardStats(user.id);
+            if (isSupabaseEnabled && businessId) {
+                const stats = await apiService.getClinicDashboardStats(businessId);
                 setDashboardStats(stats);
             }
         };
         fetchStats();
-    }, [user?.id, isSupabaseEnabled]);
+    }, [businessId, isSupabaseEnabled]);
 
     const [activeCampaignsCount, setActiveCampaignsCount] = React.useState(0);
 
     React.useEffect(() => {
         const fetchCampaigns = async () => {
-            if (isSupabaseEnabled && user?.id) {
-                const campaigns = await apiService.getClinicCampaigns(user.id);
+            if (isSupabaseEnabled && businessId) {
+                const campaigns = await apiService.getClinicCampaigns(businessId);
                 setActiveCampaignsCount((campaigns || []).filter((c: any) => c.status === 'active').length);
             }
         };
         fetchCampaigns();
-    }, [user?.id, isSupabaseEnabled]);
+    }, [businessId, isSupabaseEnabled]);
 
     // Prepare data for chart (Empty state until we have real traffic tracking)
     const chartData = [0, 0, 0, 0, 0, 0, 0];
@@ -86,7 +87,7 @@ export default function BusinessDashboard() {
                 </button>
             </div>
 
-            {isSupabaseEnabled && user?.id && primaryFlow === 'appointment' && <TodaySummary clinicId={user.id} />}
+            {isSupabaseEnabled && businessId && primaryFlow === 'appointment' && <TodaySummary clinicId={businessId} />}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePet } from "@/context/PetContext";
-import { useAuth } from "@/context/AuthContext";
 import { showToast, cn } from "@/lib/utils";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
 import { uploadChatImage } from "@/lib/chatMedia";
@@ -16,7 +15,7 @@ import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { supabase } from "@/lib/supabase";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { NoShowBadge } from "@/components/business/NoShowBadge";
-import { useBusinessType } from "@/context/BusinessTypeContext";
+import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
 import { wallParts, todayKey, addDaysKey } from "@/lib/appointmentTime";
 import { CHAT_MESSAGE_EVENT, type ChatMessageEventDetail } from "@/context/ChatContext";
 import { healthService } from "@/services/healthService";
@@ -24,7 +23,6 @@ import type { VaccineDefinition } from "@/types/health";
 
 export default function BusinessAppointmentsPage() {
     const { customRecords, setCustomRecords, updatePet } = usePet();
-    const { user } = useAuth();
     // Faz 3.1 (işletme türü mimarisi, 2026-09-25) — muayene/aşı/reçete (EMR)
     // akışı artık SADECE hasMedicalRecords=true olan türlerde (bugün: vet)
     // gösteriliyor. Diğer türler (kuaför/eğitmen/gönüllü/personel) için
@@ -32,6 +30,7 @@ export default function BusinessAppointmentsPage() {
     // tamamla" akışına düşüyor — ama randevu durumunun kendisi (pending/
     // confirmed/completed/rejected/cancelled) hiç değişmedi.
     const { hasMedicalRecords: typeHasMedicalRecords, staffLabel } = useBusinessType();
+    const { businessId } = useActiveBusiness();
 
     const checkAccessGranted = (apt: any) => {
         if (!apt.sharedPassport) return false;
@@ -153,7 +152,7 @@ export default function BusinessAppointmentsPage() {
     const exceptionsScrollProps = useDragScroll();
 
     const fetchExceptions = async () => {
-        if (!user?.id || !isSupabaseEnabled) return;
+        if (!businessId || !isSupabaseEnabled) return;
         try {
             const today = new Date();
             const endDate = new Date(today);
@@ -162,7 +161,7 @@ export default function BusinessAppointmentsPage() {
             const todayStr = today.toLocaleDateString('sv-SE');
             const endStr = endDate.toLocaleDateString('sv-SE');
             
-            const list = await apiService.getClinicExceptions(user.id, todayStr, endStr);
+            const list = await apiService.getClinicExceptions(businessId, todayStr, endStr);
             setExceptions(list);
         } catch (e) {
             console.error("Error fetching exceptions:", e);
@@ -170,7 +169,7 @@ export default function BusinessAppointmentsPage() {
     };
 
     const handleSaveException = async () => {
-        if (!user?.id || !selectedExceptionDate) return;
+        if (!businessId || !selectedExceptionDate) return;
         try {
             const dateObj = new Date(selectedExceptionDate);
             const dayKey = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
@@ -203,11 +202,11 @@ export default function BusinessAppointmentsPage() {
                 }
 
                 if (isSameAsDefault) {
-                    await apiService.deleteClinicException(user.id, selectedExceptionDate);
+                    await apiService.deleteClinicException(businessId, selectedExceptionDate);
                     showToast("Gün varsayılan saatlere döndürüldü! ✨", "CheckCircle2", "text-emerald-500 font-bold");
                 } else {
                     await apiService.upsertClinicException(
-                        user.id,
+                        businessId,
                         selectedExceptionDate,
                         exceptionForm.isClosed,
                         exceptionForm.isClosed ? null : exceptionForm.open,
@@ -238,9 +237,9 @@ export default function BusinessAppointmentsPage() {
     };
 
     const handleDeleteException = async (date: string) => {
-        if (!user?.id) return;
+        if (!businessId) return;
         try {
-            await apiService.deleteClinicException(user.id, date);
+            await apiService.deleteClinicException(businessId, date);
             showToast("İstisna kaldırıldı, gün normale döndü! ✨", "CheckCircle2", "text-emerald-500 font-bold");
             setSelectedExceptionDate(null);
             fetchExceptions();
@@ -251,12 +250,12 @@ export default function BusinessAppointmentsPage() {
     };
 
     const fetchAppointmentsFromDb = async () => {
-        if (!user?.id) {
+        if (!businessId) {
             console.warn("Klinik ID'si bulunamadı, kullanıcı oturumu yüklenmemiş olabilir.");
             return;
         }
         try {
-            const clinicId = user.id;
+            const clinicId = businessId;
             const list = await apiService.getClinicAppointments(clinicId);
             const mapped = list.map((item: any) => {
                 let time = "00:00";
@@ -324,14 +323,14 @@ export default function BusinessAppointmentsPage() {
         if (typeof window === 'undefined') return;
         
         const loadSettings = async () => {
-            if (!user?.id) return;
+            if (!businessId) return;
             
             if (isSupabaseEnabled) {
                 try {
-                    const clinicId = user.id;
+                    const clinicId = businessId;
                     const [settings, profile] = await Promise.all([
                         apiService.getClinicSettings(clinicId),
-                        apiService.getUserProfile(clinicId)
+                        apiService.getActiveBusiness()
                     ]);
                     
                     if (profile?.working_hours) {
@@ -353,7 +352,7 @@ export default function BusinessAppointmentsPage() {
             }
 
             try {
-                const clinicId = user?.id;
+                const clinicId = businessId;
                 if (!clinicId) return;
                 const { data: advices } = await supabase.from('vet_advices').select('*');
                 const myAdvice = (advices || []).find((item: any) => item.clinic_id === clinicId);
@@ -368,10 +367,10 @@ export default function BusinessAppointmentsPage() {
 
         loadSettings();
         fetchExceptions();
-    }, [user?.id]);
+    }, [businessId]);
 
     const loadConversations = async () => {
-        if (!user?.id || !isSupabaseEnabled) return;
+        if (!businessId || !isSupabaseEnabled) return;
         try {
             const convs = await apiService.getChatConversations('clinic');
             setConversations(convs);
@@ -381,7 +380,7 @@ export default function BusinessAppointmentsPage() {
     };
 
     const loadChatHistory = async (userId: string) => {
-        if (!user?.id || !isSupabaseEnabled) return;
+        if (!businessId || !isSupabaseEnabled) return;
         try {
             const history = await apiService.getChatMessages(userId, 'clinic');
             setChatMessages(history);
@@ -392,12 +391,12 @@ export default function BusinessAppointmentsPage() {
 
     // Mesajlar ChatContext'in tek Realtime kanalından gelen olayla tazelenir (yoklama yok).
     useEffect(() => {
-        if (!user?.id || !isSupabaseEnabled) return;
+        if (!businessId || !isSupabaseEnabled) return;
         loadConversations();
         const onChat = () => loadConversations();
         window.addEventListener(CHAT_MESSAGE_EVENT, onChat);
         return () => window.removeEventListener(CHAT_MESSAGE_EVENT, onChat);
-    }, [user?.id]);
+    }, [businessId]);
 
     useEffect(() => {
         if (activeTab !== 'messages' || !selectedConv) return;
@@ -411,7 +410,7 @@ export default function BusinessAppointmentsPage() {
     }, [activeTab, selectedConv]);
 
     const handleSendMessage = async (text: string, attachmentUrl?: string) => {
-        if ((!text.trim() && !attachmentUrl) || !selectedConv || !user?.id || isSendingMessage) return;
+        if ((!text.trim() && !attachmentUrl) || !selectedConv || !businessId || isSendingMessage) return;
         setIsSendingMessage(true);
         try {
             await apiService.sendChatMessage(selectedConv.userId, text.trim(), 'clinic', undefined, attachmentUrl);
@@ -435,11 +434,11 @@ export default function BusinessAppointmentsPage() {
     };
 
     const loadReviews = async () => {
-        if (!user?.id || !isSupabaseEnabled) return;
+        if (!businessId || !isSupabaseEnabled) return;
         setIsLoadingReviews(true);
         try {
-            console.log("Loading reviews for clinic ID:", user.id);
-            const data = await apiService.getClinicReviews(user.id);
+            console.log("Loading reviews for clinic ID:", businessId);
+            const data = await apiService.getClinicReviews(businessId);
             console.log("Returned data from getClinicReviews:", data);
             setReviewsData({
                 reviews: data.reviews || [],
@@ -456,15 +455,15 @@ export default function BusinessAppointmentsPage() {
         if (activeTab === 'reviews') {
             loadReviews();
         }
-    }, [activeTab, user?.id]);
+    }, [activeTab, businessId]);
 
     const handleReplySubmit = async (reviewId: string) => {
         const text = replyText[reviewId];
-        if (!text || !text.trim() || !user?.id) return;
+        if (!text || !text.trim() || !businessId) return;
         
         setIsSubmittingReply(prev => ({ ...prev, [reviewId]: true }));
         try {
-            const success = await apiService.replyToReview(reviewId, user.id, text.trim());
+            const success = await apiService.replyToReview(reviewId, businessId, text.trim());
             if (success) {
                 setEditingReplyId(null);
                 await loadReviews();
@@ -497,19 +496,19 @@ export default function BusinessAppointmentsPage() {
         } catch (e) {
             console.error("Storage Load Error:", e);
         }
-    }, [user?.id]);
+    }, [businessId]);
 
-    // Randevu değişiklikleri Supabase Realtime ile anında gelir (RLS: clinic_id = auth.uid()).
+    // Randevu değişiklikleri Supabase Realtime ile anında gelir (RLS: üyelik — is_business_member).
     useEffect(() => {
-        if (!isSupabaseEnabled || !user?.id) return;
+        if (!isSupabaseEnabled || !businessId) return;
 
         const channel = supabase
-            .channel(`clinic-appointments-${user.id}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${user.id}` }, () => {
+            .channel(`clinic-appointments-${businessId}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${businessId}` }, () => {
                 fetchAppointmentsFromDb();
                 showToast("Yeni randevu talebi geldi 🐾", "Bell", "text-orange-500 font-bold");
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${user.id}` }, () => {
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${businessId}` }, () => {
                 fetchAppointmentsFromDb();
             })
             .subscribe();
@@ -524,7 +523,7 @@ export default function BusinessAppointmentsPage() {
             document.removeEventListener('visibilitychange', handleVisibility);
             supabase.removeChannel(channel);
         };
-    }, [user?.id]);
+    }, [businessId]);
 
     const saveAppointments = (updated: any[]) => {
         setAppointments(updated);
@@ -749,7 +748,7 @@ export default function BusinessAppointmentsPage() {
     };
 
     const handleSaveSettings = async () => {
-        if (!user?.id) {
+        if (!businessId) {
             showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertCircle", "text-amber-500 font-bold");
             return;
         }
@@ -801,10 +800,10 @@ export default function BusinessAppointmentsPage() {
 
             if (isSupabaseEnabled) {
                 try {
-                    const clinicId = user.id;
+                    const clinicId = businessId;
                     await Promise.all([
                         apiService.saveClinicSettings(clinicId, settings),
-                        apiService.updateProfile({ working_hours: workingHours })
+                        apiService.updateActiveBusiness({ working_hours: workingHours })
                     ]);
                     setOriginalWorkingHours(workingHours);
                 } catch (e) {
@@ -831,7 +830,7 @@ export default function BusinessAppointmentsPage() {
     };
 
     const handleSaveAdvice = async () => {
-        if (!user?.id) {
+        if (!businessId) {
             showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertCircle", "text-amber-500 font-bold");
             return;
         }
@@ -842,7 +841,7 @@ export default function BusinessAppointmentsPage() {
         setIsSavingAdvice(true);
         try {
             if (isSupabaseEnabled) {
-                const clinicId = user.id;
+                const clinicId = businessId;
                 await apiService.saveClinicAdvice(clinicId, vetAdviceText.trim(), vetAdviceBadge.trim());
             } else {
                 localStorage.setItem('moffi_clinic_advice', JSON.stringify({ content: vetAdviceText.trim(), badge: vetAdviceBadge.trim() }));

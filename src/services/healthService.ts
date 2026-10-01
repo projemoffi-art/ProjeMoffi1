@@ -84,8 +84,8 @@ function mapRecordRow(r: any, c: any): MedicalRecord {
     return {
         id: r.id, petId: r.pet_id, source: r.source === 'owner' ? 'owner' : 'clinic',
         appointmentId: r.appointment_id, clinicId: r.clinic_id,
-        clinicName: c?.business_name || c?.full_name || r.clinic_name || r.external_clinic_name || null,
-        clinicAvatar: c?.avatar_url || null,
+        clinicName: c?.name || r.clinic_name || r.external_clinic_name || null,
+        clinicAvatar: c?.logo_url || null,
         clinicAddress: c ? [c.district, c.province].filter(Boolean).join(', ') || c.address || null : null,
         vetName: r.vet_name, diagnosis: r.diagnosis, criticalNotes: r.critical_notes,
         weightKg: r.weight_kg != null ? Number(r.weight_kg) : null,
@@ -101,8 +101,8 @@ async function mapRecords(rows: any[]): Promise<MedicalRecord[]> {
     const clinicIds = Array.from(new Set(rows.map(r => r.clinic_id).filter((id: string) => /^[0-9a-f-]{36}$/i.test(id || ''))));
     const clinics: Record<string, any> = {};
     if (clinicIds.length > 0) {
-        const { data } = await supabase.from('profile_cards')
-            .select('id, business_name, full_name, avatar_url, address, district, province')
+        const { data } = await supabase.from('business_cards')
+            .select('id, name, logo_url, address, district, province')
             .in('id', clinicIds);
         (data || []).forEach((c: any) => { clinics[c.id] = c; });
     }

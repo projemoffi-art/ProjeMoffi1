@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Megaphone, Trash2, Calendar, Tag, BarChart3, Clock, Loader2, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@/context/AuthContext";
+import { useActiveBusiness } from "@/context/BusinessTypeContext";
 import { apiService } from "@/services/apiService";
 import { PET_TYPES, getPetTypeConfig } from "@/constants/petTypes";
 import { showToast } from "@/lib/utils";
@@ -23,7 +23,7 @@ interface Deal {
 }
 
 export default function BusinessCampaignsPage() {
-    const { user } = useAuth();
+    const { businessId } = useActiveBusiness();
     const [deals, setDeals] = useState<Deal[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -42,10 +42,10 @@ export default function BusinessCampaignsPage() {
     });
 
     const fetchDeals = async () => {
-        if (!user?.id) return;
+        if (!businessId) return;
         setIsLoading(true);
         try {
-            const data = await apiService.getClinicCampaigns(user.id);
+            const data = await apiService.getClinicCampaigns(businessId);
             setDeals(data);
         } catch (error) {
             console.error(error);
@@ -56,18 +56,18 @@ export default function BusinessCampaignsPage() {
 
     useEffect(() => {
         fetchDeals();
-    }, [user?.id]);
+    }, [businessId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user?.id) return;
+        if (!businessId) return;
         setIsSubmitting(true);
         try {
             const expires_at = new Date();
             expires_at.setHours(expires_at.getHours() + Number(formData.hours_valid));
 
             await apiService.addClinicCampaign({
-                clinic_id: user.id,
+                clinic_id: businessId,
                 title: formData.title,
                 description: formData.description,
                 media_url: formData.media_url || null,
