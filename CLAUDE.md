@@ -3282,6 +3282,21 @@ sürer), NON_RENEWING_PURCHASE + `pawcoin_*` → PawCoin yüklenir. Uç nokta `/
 telefonda mağaza fiyatıyla satın alma + "geri yükle", web'de "telefon uygulamasından". 🔴 **KURAL:** Prime/PawCoin
 yetkisi asla istemcinin "satın aldım" demesine dayanmaz; sadece webhook → apply_store_event.
 
+### 8.62 Fazlar sonrası genel kontrol — veritabanı fonksiyon yetkileri (2026-10-02)
+
+🔴 Güvenlik tarayıcısı: 48 SECURITY DEFINER fonksiyon anon (giriş yapmamış) tarafından çağrılabiliyordu. İçlerine bakılınca
+gerçek sızıntılar: `get_auth_email(uuid)` (herkesin e-postası), `increment_deal_uses` (kupon sayacı şişirme),
+`request_data_deletion` (eski, başkası adına talep), `check_unclaimed_matches` (telefon numarasıyla klinik/hayvan keşfi),
+`get_user_comment_likes`. Kapatıldı (migration `20261002210000`); tüm tetikleyici fonksiyonlardan doğrudan çağrı yetkisi
+alındı; işletme/talep fonksiyonları sadece `authenticated`. Herkese açık kalanlar bilerek: künye, paylaşılan pasaport, acil
+bilgi, "gördüm"/tag bildirimi, klinik açık/kapalı durumu. 🔴 **KURAL:** yeni SECURITY DEFINER fonksiyonda `revoke ... from
+public, anon` + sadece gereken role `grant` (8.25'teki kuralın aynısı; tarayıcı bunu hâlâ yakalıyor). 🔴 **SQL ders:**
+`execute_sql` tek işlemdir; deneme için sonda bilerek `raise exception` atan blokla AYNI komuta kalıcı değişiklik (revoke,
+alter) koyma, deneme geri alırken onu da geri alır. Önce kalıcı değişikliği ayrı uygula, sonra doğrula.
+Kalanlar bilinçli: `*_cards` görünümleri SECURITY DEFINER (sınırlı alan açmak için tasarım, 8.46), `spatial_ref_sys` PostGIS
+sistem tablosu, `postgis`/`pg_net` public şemada (taşımak eklentiyi bozar), 9 tablo "RLS var politika yok" (istemciye kapalı
+olması istenen tablolar: email_outbox, store_events, vb.), 18 fonksiyonda mutable search_path (Bölüm 9 listesi; düşük risk).
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
