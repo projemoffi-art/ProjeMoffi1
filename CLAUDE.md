@@ -527,8 +527,16 @@ Supabase SMTP gönderen adresi, Vercel `RESEND_FROM_EMAIL`; (3) Supabase Authent
 eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski adrese gider: basmadan ÖNCE taşı.
 
 ### 12.3 Claude'un yapacağı (teknik borç ve bekleyen işler)
-- [ ] **Giriş / ilk karşılama ekranı** (`/` → `AuthForms.tsx`) Baran'a göre "çok berbat ve karmaşık": tek net eylem, sade form (kod adımı ve şifre sıfırlama
-      dahil), marka adı değişeceği için logo/isim yeri kolay değişir olmalı. 🔴 Baran'dan referans/beğendiği örnekler alınmadan başlanmaz (8.8 dersi).
+- [ ] **Giriş + ilk karşılama + pet ekleme yenileme** (`/` → `AuthForms.tsx`; ilk giriş `home/page.tsx` `hasNoPets` + `AddPetModal`).
+      Baran'a göre "çok berbat ve karmaşık"; 2026-10-02 incelemesinin bulguları: (1) **pet ekleme veri kaybı** (ırk/yaş/cinsiyet/telefon-göster
+      kaydedilmiyordu; b00cbd3'te düzeltildi). (2) Yeni kullanıcı boş `/home`'a düşer, `AddPetModal` otomatik açılır: 3 adım, ~20 alan, jargon
+      (Aktivite %, KCAL), zorunlu: ad+ırk(serbest metin)+kilo; ayırt edici özellik hiç kaydedilmez; 5 fotoğraf seçilir ama yalnız ilki yüklenir; doğum
+      tarihi/renk sorulmaz (pasaport `birth_date` ister, aşı takvimi ona dayanır); `drafts/OnboardingFlow` ölü (`NEXT_PUBLIC_ENABLE_ONBOARDING`
+      yok). (3) Kayıtta onay kutuları (şartlar, pazarlama) hiçbir yere kaydedilmez (KVKK kanıtı yok). (4) `handle_new_user`: kullanıcı adı = e-posta
+      başı (20/20 profil, herkese görünen profilde e-posta sızıntısı), varsayılan avatar `i.pravatar.cc` rastgele insan fotoğrafı + kullanıcı
+      kimliği 3. tarafa gider, 8/20 profilde ad boş. (5) Konum izni ana sayfa açılır açılmaz soruluyor (nedeni anlatılmadan). Önerilen tasarım:
+      3 kayıt ekranı + 6 pet kurulum ekranı, geri kalan alanlar Pasaport "tamamla" yüzdesine ertelenir (rapor sohbette). 🔴 Baran'ın örnek/referans
+      ekranları gelmeden UI'ya başlanmaz (8.8 dersi); veri/altyapı düzeltmeleri (onay kaydı, kullanıcı adı, avatar) UI'dan bağımsız yapılabilir.
 - [ ] "Moffi Puanı / PP" yazan arayüz metinleri yeni para birimi adına çevrilecek (isim belli olunca topluca).
 - [ ] `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinecek (içerik 8.45'te taşındı; kolon silme Baran'ın SQL Editor'ından).
 - [ ] Silinen gönderi/hikâyelerin depoda kalan eski dosyaları (8.50).
