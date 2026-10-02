@@ -96,7 +96,7 @@ export default function Home() {
                 {/* Auth Stack */}
                 {step === 'login' && <LoginForm setView={(v) => setStep(v as FlowStep)} onComplete={handleLoginComplete} />}
                 {step === 'signup' && <SignupForm setView={(v) => setStep(v as FlowStep)} onComplete={handleSignupComplete} />}
-                {step === 'reset' && <ResetForm setView={(v) => setStep(v as FlowStep)} />}
+                {step === 'reset' && <ResetForm setView={(v) => setStep(v as FlowStep)} onComplete={handleLoginComplete} />}
             </motion.div>
         </AnimatePresence>
       </div>

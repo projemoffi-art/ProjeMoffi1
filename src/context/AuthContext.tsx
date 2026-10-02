@@ -43,9 +43,10 @@ export interface User {
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-    signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    login: (email: string, password: string) => Promise<{ success: boolean; error?: string; needsVerification?: boolean }>;
+    signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string; needsVerification?: boolean }>;
     forgotPassword: (email: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+    resetPasswordWithCode: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
     logout: () => void;
     updateProfile: (data: Partial<User>) => Promise<void>;
     updateSettings: (category: any, data: any) => Promise<void>;
@@ -362,7 +363,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (email: string, password: string) => {
         if (isSupabaseEnabled) {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) return { success: false, error: error.message };
+            if (error) {
+                // Doğrulanmamış hesap: şifre doğru ama e-posta kodu girilmemiş → yeni kod gönderip kod ekranına geç
+                if ((error as any).code === 'email_not_confirmed' || /email not confirmed/i.test(error.message)) {
+                    await supabase.auth.resend({ type: 'signup', email });
+                    return { success: false, needsVerification: true };
+                }
+                return { success: false, error: error.message };
+            }
             return { success: true };
         } else {
             let loggedUser: User | null = null;
@@ -421,16 +429,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 password,
                 options: {
                     data: { full_name: name },
-                    // Supabase will send OTP to email — works with any SMTP
                     emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
                 }
             });
             if (error) return { success: false, error: error.message };
-            // If user already exists and is confirmed, treat as success
-            if (data.user?.email_confirmed_at) {
-                return { success: true, user: data.user };
+            // Doğrulama açıkken kayıtlı bir adres için Supabase hata yerine kimliksiz kullanıcı döner
+            if (data.user && data.user.identities?.length === 0) {
+                return { success: false, error: 'User already registered' };
             }
-            return { success: true, user: data.user };
+            // Oturum yoksa e-posta doğrulaması açık: 6 haneli kod gönderildi
+            return { success: true, needsVerification: !data.session };
         } else {
             const newUser = MOCK_USER_BASE(email, name);
             setUser(newUser);
@@ -563,6 +571,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return { success: true, message: "Sıfırlama e-postası gönderildi." };
         }
         return { success: true, message: "E-posta simüle edildi." };
+    };
+
+    // Sıfırlama e-postasındaki 6 haneli kod doğrulanınca oturum açılır, ardından yeni şifre kaydedilir.
+    const resetPasswordWithCode = async (email: string, code: string, newPassword: string) => {
+        if (!isSupabaseEnabled) return { success: true };
+        const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' });
+        if (error) return { success: false, error: error.message };
+        const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+        if (updateError) return { success: false, error: updateError.message };
+        return { success: true };
     };
 
     const resendOtp = async (email: string) => {
@@ -882,7 +900,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AuthContext.Provider value={{
-            user, isLoading, login, signup, logout, 
+            user, isLoading, login, signup, logout, resetPasswordWithCode,
             updateProfile, updateSettings, forgotPassword, verifyOtp, resendOtp,
             signInWithGoogle, signInWithApple, getAllUsers, deleteUser, registerBusiness, approveBusiness, rejectBusiness
         }}>

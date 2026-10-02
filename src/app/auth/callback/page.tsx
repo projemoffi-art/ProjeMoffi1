@@ -14,9 +14,10 @@ export default function AuthCallbackPage() {
             const { data, error } = await supabase.auth.getSession();
             
             if (data?.session) {
-                // Başarılı giriş sonrası ana sayfaya yönlendir
-                // page.tsx zaten kullanıcıyı setup'a mı yoksa topluluğa mı atacağını kontrol edecek
-                router.replace('/');
+                // Şifre sıfırlama bağlantısı → yeni şifre ekranı; diğerleri → yönlendirmeyi ana giriş sayfası yapar
+                const isRecovery = new URLSearchParams(window.location.search).get('type') === 'recovery'
+                    || window.location.hash.includes('type=recovery');
+                router.replace(isRecovery ? '/reset-password' : '/');
             } else {
                 console.error('OAuth callback error:', error);
                 router.replace('/?error=oauth_failed');

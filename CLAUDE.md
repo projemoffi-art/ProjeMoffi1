@@ -3210,6 +3210,16 @@ sahip/yöneticilere `biz_staff` bildirimi atar. Çıkarma `remove_business_membe
   izin ver" bunu aşmaz). `ALTER … DROP NOT NULL`, `REVOKE`, `CREATE OR REPLACE` geçiyor. Migration'ı bu kelimeleri
   içermeyen parçalar (Claude uygular) + içeren parça (Baran SQL Editor'dan) diye böl; kelimeyi gizleyerek atlatma.
 
+### 8.56 Faz 1d — e-posta kodlu kayıt/giriş/şifre sıfırlama (2026-10-02)
+
+🔴 Bulgu: Supabase'de "Confirm email" KAPALI (18 hesabın hepsi anında doğrulanmış) → herkes başkasının adresiyle
+hesap açabiliyor; e-posta eşleşmesine dayanan personel daveti de bu yüzden zayıftı. Davet kabulü artık doğrulanmış
+e-posta şartı arıyor (migration `20261002150000`). İstemci her iki duruma hazır: `signup` oturum dönmezse
+`needsVerification` → `CodeStep` (6 haneli kod, 60 sn'de yeni kod); doğrulanmamış hesapla girişte yeni kod gönderilip
+aynı ekran açılır; şifre sıfırlama kodla (`resetPasswordWithCode`). Şifre en az 8 karakter.
+**Açılması için Baran'ın yapacakları (sırası önemli):** Resend + alan adı → Supabase özel SMTP → e-posta
+şablonlarına `{{ .Token }}` → en son "Confirm email" açık. SMTP çalışmadan doğrulamayı açmak yeni kaydı durdurur.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
@@ -3363,3 +3373,13 @@ Antigravity. Karışıklığı önlemek için şu iş bölümü kuruldu:
 - 🔴 **Kilitli Pet Pasaportu tasarımı** (2026-09-28) `design-reference/passport-final/`: 10 ekranlık
   referans + README (ekran → kod eşlemesi, bilinçli farklar). **`/pasaport/*`, künye (`/id`) ve
   paylaşılan pasaport (`/p`) ekranlarında UI değişikliğinden önce okunmalı.**
+
+## 12. YAPILACAKLAR (bekleyen, ertelenmiş işler)
+
+E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i hatırlat.
+
+1. 🔴 **Resend bağlantısı** (8.40'tan beri): Vercel'e `RESEND_API_KEY` + `RESEND_FROM_EMAIL` eklenmeli, Resend'de
+   `moffi.net` alan adı doğrulanmalı. O zamana kadar hiçbir e-posta gitmez (randevu, sağlık, davet, sipariş);
+   hepsi `email_outbox` kuyruğunda bekler, anahtar eklenince gönderilir.
+2. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
+3. Eski silinen gönderi/hikâyelerin depoda kalan dosyaları temizlenmeli (8.50).

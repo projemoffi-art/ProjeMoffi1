@@ -111,6 +111,81 @@ function PetBrandHeader({ title, subtitle }: { title: string; subtitle: string }
 
 
 
+const inputClass = "w-full pl-14 pr-6 py-4 bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-sm text-zinc-800 focus:border-purple-400/80 focus:bg-white focus:shadow-[0_0_0_4px_rgba(168,85,247,0.06)] outline-none transition-all placeholder-zinc-300";
+const primaryButtonClass = "w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-extrabold text-xs uppercase tracking-[0.2em] shadow-[0_10px_25px_-5px_rgba(124,58,237,0.3)] active:scale-[0.99] transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none";
+
+const translateCodeError = (err?: string) => {
+    const msg = (err || '').toLowerCase();
+    if (msg.includes('expired') || msg.includes('invalid') || msg.includes('otp')) return 'Kod hatalı ya da süresi dolmuş. Yeni kod isteyebilirsin.';
+    if (msg.includes('rate') || msg.includes('too many') || msg.includes('seconds')) return 'Çok sık denedin. Biraz bekleyip tekrar dene.';
+    if (msg.includes('same') && msg.includes('password')) return 'Yeni şifre eskisiyle aynı olamaz.';
+    if (msg.includes('password')) return 'Şifre en az 8 karakter olmalı.';
+    return 'Bir sorun oluştu. Lütfen tekrar dene.';
+};
+
+// E-postaya gelen 6 haneli kodu isteyen ortak adım (kayıt, doğrulanmamış giriş).
+function CodeStep({ email, onVerified, onBack }: { email: string; onVerified: () => void; onBack: () => void }) {
+    const { verifyOtp, resendOtp } = useAuth();
+    const [code, setCode] = useState('');
+    const [error, setError] = useState('');
+    const [info, setInfo] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [cooldown, setCooldown] = useState(60);
+
+    React.useEffect(() => {
+        if (cooldown <= 0) return;
+        const t = setTimeout(() => setCooldown(c => c - 1), 1000);
+        return () => clearTimeout(t);
+    }, [cooldown]);
+
+    const submit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (code.length !== 6) return;
+        setError(''); setInfo(''); setLoading(true);
+        const result = await verifyOtp(email, code, 'signup');
+        setLoading(false);
+        if (result.success) onVerified();
+        else setError(translateCodeError(result.error));
+    };
+
+    const resend = async () => {
+        setError(''); setInfo('');
+        const result = await resendOtp(email);
+        if (result.success) { setInfo('Yeni kod gönderildi.'); setCooldown(60); }
+        else setError(translateCodeError(result.error));
+    };
+
+    return (
+        <form onSubmit={submit} className="space-y-5">
+            <p className="text-sm text-zinc-600 text-center leading-relaxed">
+                <span className="font-bold text-zinc-800">{email}</span> adresine 6 haneli bir kod gönderdik. Gelen kutunu (ve gereksiz klasörünü) kontrol et.
+            </p>
+            <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="••••••"
+                aria-label="Doğrulama kodu"
+                className="w-full py-4 text-center text-2xl font-bold tracking-[0.6em] bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-zinc-800 focus:border-purple-400/80 focus:bg-white outline-none transition-all placeholder-zinc-300"
+            />
+            {error && <div className="bg-red-500/10 text-red-600 text-xs p-3 rounded-xl border border-red-500/20 font-semibold text-center">{error}</div>}
+            {info && <div className="bg-emerald-500/10 text-emerald-700 text-xs p-3 rounded-xl border border-emerald-500/20 font-semibold text-center">{info}</div>}
+            <button type="submit" disabled={loading || code.length !== 6} className={primaryButtonClass}>
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Doğrula'}
+            </button>
+            <div className="flex items-center justify-between text-xs font-semibold">
+                <button type="button" onClick={onBack} className="text-zinc-400 hover:text-zinc-700">Geri dön</button>
+                <button type="button" onClick={resend} disabled={cooldown > 0} className="text-purple-600 disabled:text-zinc-400">
+                    {cooldown > 0 ? `Yeni kod (${cooldown} sn)` : 'Yeni kod gönder'}
+                </button>
+            </div>
+        </form>
+    );
+}
+
 // --- Login Form ---
 export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => void, onComplete: () => void }) {
     const { t } = useTranslation();
@@ -119,19 +194,21 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [verifying, setVerifying] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        const result = await login(formData.email, formData.password);
+        const result = await login(formData.email.trim(), formData.password);
         setLoading(false);
 
         if (result.success) {
             onComplete();
+        } else if (result.needsVerification) {
+            setVerifying(true);
         } else {
-            console.error("LOGIN ERROR FROM SUPABASE:", result.error);
             setError(translateError(result.error));
         }
     };
@@ -153,11 +230,14 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
             exit="exit"
             className="flex flex-col h-full p-8 pt-10 bg-transparent overflow-y-auto custom-scrollbar"
         >
-            <PetBrandHeader 
-                title={t('auth.login.title')} 
-                subtitle={t('auth.login.subtitle')} 
+            <PetBrandHeader
+                title={verifying ? 'E-postanı doğrula' : t('auth.login.title')}
+                subtitle={verifying ? 'Son bir adım' : t('auth.login.subtitle')}
             />
 
+            {verifying ? (
+                <CodeStep email={formData.email.trim()} onVerified={onComplete} onBack={() => setVerifying(false)} />
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-1.5">
                     <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">{t('auth.login.email')}</label>
@@ -239,6 +319,7 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
                     </button>
                 </div>
             </form>
+            )}
 
             <div className="mt-auto text-center pt-6">
                 <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
@@ -260,6 +341,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [marketingConsent, setMarketingConsent] = useState(false);
     const [legalType, setLegalType] = useState<'terms' | 'privacy' | null>(null);
+    const [verifying, setVerifying] = useState(false);
 
     const validateEmail = (email: string) => {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -299,18 +381,19 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
             return;
         }
 
-        if (formData.password.length < 6) {
-            setError('Şifre en az 6 karakter olmalıdır.');
+        if (formData.password.length < 8) {
+            setError('Şifre en az 8 karakter olmalıdır.');
             return;
         }
 
         setLoading(true);
-        const result = await signup(formData.name, formData.email, formData.password);
+        const result = await signup(formData.name.trim(), formData.email.trim(), formData.password);
         setLoading(false);
 
         if (result.success) {
-            if (setEmail) setEmail(formData.email);
-            onComplete(); // OTP'yi atlayıp doğrudan onboarding/setup aşamasına geçiş yap!
+            if (setEmail) setEmail(formData.email.trim());
+            if (result.needsVerification) setVerifying(true);
+            else onComplete();
         } else {
             setError(translateSignupError(result.error));
         }
@@ -332,11 +415,14 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
             exit="exit"
             className="flex flex-col h-full p-8 pt-10 bg-transparent overflow-y-auto custom-scrollbar"
         >
-            <PetBrandHeader 
-                title={t('auth.signup.title')} 
-                subtitle={t('auth.signup.subtitle')} 
+            <PetBrandHeader
+                title={verifying ? 'E-postanı doğrula' : t('auth.signup.title')}
+                subtitle={verifying ? 'Son bir adım' : t('auth.signup.subtitle')}
             />
 
+            {verifying ? (
+                <CodeStep email={formData.email.trim()} onVerified={onComplete} onBack={() => setVerifying(false)} />
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1">
                     <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">{t('auth.signup.full_name')}</label>
@@ -498,6 +584,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                     </p>
                 </div>
             </form>
+            )}
 
             <LegalModal 
                 isOpen={!!legalType} 
@@ -509,27 +596,37 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
 }
 
 // --- Reset Password Form ---
-export function ResetForm({ setView }: { setView: (v: AuthView) => void }) {
-    const { forgotPassword } = useAuth();
+export function ResetForm({ setView, onComplete }: { setView: (v: AuthView) => void, onComplete?: () => void }) {
+    const { forgotPassword, resetPasswordWithCode } = useAuth();
     const [sent, setSent] = useState(false);
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
+    const [code, setCode] = useState('');
+    const [password, setPassword] = useState('');
+    const [password2, setPassword2] = useState('');
     const [error, setError] = useState('');
 
     const handleReset = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
-
-        const result = await forgotPassword(email);
+        const result = await forgotPassword(email.trim());
         setLoading(false);
+        // Hesabın var olup olmadığı açığa çıkmasın diye her durumda aynı adıma geçilir
+        if (result.success || !/rate|too many|seconds/i.test(result.error || '')) setSent(true);
+        else setError('Çok sık denedin. Biraz bekleyip tekrar dene.');
+    };
 
-        if (result.success) {
-            setSent(true);
-            // After 5s go back to login, but with a nice transition
-        } else {
-            setError('E-posta bulunamadı veya bir hata oluştu. Lütfen kontrol et! 🐾');
-        }
+    const handleNewPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        if (password.length < 8) { setError('Şifre en az 8 karakter olmalı.'); return; }
+        if (password !== password2) { setError('Şifreler eşleşmiyor.'); return; }
+        setLoading(true);
+        const result = await resetPasswordWithCode(email.trim(), code, password);
+        setLoading(false);
+        if (result.success) onComplete ? onComplete() : setView('login');
+        else setError(translateCodeError(result.error));
     };
 
     return (
@@ -549,7 +646,7 @@ export function ResetForm({ setView }: { setView: (v: AuthView) => void }) {
 
             <PetBrandHeader 
                 title="Şifremi Unuttum" 
-                subtitle="Güvenli Bağlantı Gönderilecek" 
+                subtitle="E-postana kod göndereceğiz"
             />
 
             {!sent ? (
@@ -580,19 +677,42 @@ export function ResetForm({ setView }: { setView: (v: AuthView) => void }) {
                         disabled={loading}
                         className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-extrabold text-xs uppercase tracking-[0.2em] shadow-[0_10px_25px_-5px_rgba(124,58,237,0.3)] hover:shadow-[0_20px_35px_-5px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-300"
                     >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Bağlantıyı Gönder'}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Kod Gönder'}
                     </button>
                 </form>
             ) : (
-                <div className="flex flex-col items-center justify-center py-12 bg-emerald-50 border border-emerald-100 rounded-[2rem] animate-in fade-in zoom-in">
-                    <div className="w-16 h-16 bg-emerald-100 border border-emerald-200 rounded-full flex items-center justify-center mb-5 text-emerald-600">
-                        <ShieldCheck className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-lg font-black text-zinc-800 uppercase tracking-tight">Kanal Açıldı</h3>
-                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest mt-2 px-6 text-center leading-relaxed">
-                        Şifre sıfırlama bağlantısı e-posta kutunuza gönderildi.
+                <form onSubmit={handleNewPassword} className="space-y-4">
+                    <p className="text-sm text-zinc-600 text-center leading-relaxed">
+                        Bu adres kayıtlıysa <span className="font-bold text-zinc-800">{email.trim()}</span> adresine 6 haneli bir kod gönderdik.
                     </p>
-                </div>
+                    <input
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="••••••"
+                        aria-label="Doğrulama kodu"
+                        className="w-full py-4 text-center text-2xl font-bold tracking-[0.6em] bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-zinc-800 focus:border-purple-400/80 focus:bg-white outline-none transition-all placeholder-zinc-300"
+                    />
+                    <div className="relative">
+                        <Lock className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
+                        <input type="password" autoComplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" className={inputClass}
+                            value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    </div>
+                    <div className="relative">
+                        <Lock className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
+                        <input type="password" autoComplete="new-password" placeholder="Yeni şifre (tekrar)" className={inputClass}
+                            value={password2} onChange={(e) => setPassword2(e.target.value)} required />
+                    </div>
+                    {error && <div className="bg-red-500/10 text-red-600 text-xs p-3 rounded-xl border border-red-500/20 font-semibold text-center">{error}</div>}
+                    <button type="submit" disabled={loading || code.length !== 6} className={primaryButtonClass}>
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Şifreyi Güncelle'}
+                    </button>
+                    <button type="button" onClick={() => { setSent(false); setCode(''); setError(''); }} className="w-full text-xs font-semibold text-zinc-400 hover:text-zinc-700">
+                        Kod gelmedi mi? Tekrar gönder
+                    </button>
+                </form>
             )}
         </motion.div>
     );
