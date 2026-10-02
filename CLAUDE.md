@@ -376,6 +376,9 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.44 Sağlık tek kayıt.** Yazma/okuma `src/services/healthService.ts`, durum hesapları `src/lib/health/derive.ts`, tipler `types/health.ts`. Yeni ekran
   kendi hesabını yazmaz. İşletme muayenesi `record_consultation()` ile atomik. Tıbbi belge alanı özel (yalnız sahibi). Karne için
   `loadBundle`/`usePetHealthBundle` (doğrudan `getBundle` değil). Tasarım: `design-reference/health-final/`.
+- **8.45a 🔴 Tetikleyici + sayaç dersi (2026-10-03).** `pets_passport_no_guard` kullanıcının yetkisiyle `pet_passport_seq`'i
+  çağırdığı için 28 Eylül–3 Ekim arası istemciden HİÇ hayvan eklenemedi (yeni kurulum akışı dahil); `security definer` yapıldı.
+  Bir tetikleyici sayaç/başka tablo kullanıyorsa ya `security definer` olmalı ya da yetki verilmeli; gerçek kullanıcı rolüyle test et.
 - **8.45 Pasaport.** Bir bilgiyi SADECE sahibi olan ekran yazar: kimlik → `/pasaport/kimlik`; alerji/hastalık/not/acil → `/health/acil`
   (`pet_health_profile`); aşı/ilaç/kilo/muayene → `/health/*`. Paylaşım `pet_share_links` + `get_shared_passport` + `/p/[token]`, varsayılan KAPALI.
   Künye `/id/[petId]` (`get_pet_tag_info`, `submit_tag_report`). 🔴 `pets` başkalarına kapalı; başkasına gereken alanlar `pet_cards` görünümünden.

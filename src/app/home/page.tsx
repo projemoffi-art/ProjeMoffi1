@@ -17,7 +17,7 @@ import {
     Bell, Search, MessageCircle, User, Home, Plus, MapPin, Calendar, 
     Syringe, AlertTriangle, ShieldAlert, Heart, HeartHandshake, Stethoscope, 
     ShoppingBag, ShoppingCart, Scissors, Sparkles, ChevronRight, Bone,
-    Users, Play, Navigation, Flame, Droplets, Compass, Radio, 
+    Users, Play, Navigation, Flame, Droplets, Radio, 
     Battery, Volume2, Wifi, Coins, Star, Shirt, ArrowUpRight, 
     TrendingUp, CheckCircle2, X, Shield, TrendingDown, 
     Sliders, VolumeX, Maximize2, RefreshCw, ChevronLeft, CreditCard, Zap, 
@@ -374,7 +374,7 @@ export default function LegendaryLightDashboard() {
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading } = useWalk();
     const { cart, cartCount, cartTotal, updateCartItem, addToCart, products, clearCart } = usePetShop();
-    const { currentStreak, weeklyStamps, totalPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm, todaySteps, dailyGoal } = useQuestEngine();
+    const { currentStreak, weeklyStamps, totalPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm, todayDurationMin, todaySteps, dailyGoal } = useQuestEngine();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -903,9 +903,6 @@ export default function LegendaryLightDashboard() {
         return userPets.find(p => String(p.id) === String(activeSession.petId)) || null;
     }, [activeSession?.petId, userPets]);
     const walkingPetName = activeSession ? (activeSession.petName || walkingPet?.name || pet.name) : pet.name;
-    const walkingPetActivityTarget = activeSession && walkingPet
-        ? (typeof walkingPet.activity_target === 'number' ? walkingPet.activity_target : (walkingPet.sos_settings?.activity_target ?? pet.ringProgress.activity))
-        : pet.ringProgress.activity;
 
     // "Bugünkü Yürüyüş" kartının duruma göre değişen 3 hâli — daha önce
     // design-reference/home-final/README.md'de "AÇIK İŞ, karara bağlanmadı"
@@ -1107,25 +1104,6 @@ export default function LegendaryLightDashboard() {
 
 
 
-    // Yürüyüş canlı zamanlayıcı
-    const [walkElapsedSeconds, setWalkElapsedSeconds] = useState(0);
-    const walkTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-    useEffect(() => {
-        if (activeSession) {
-            // Başlangıç zamanından geçen süreyi hesapla
-            const startMs = new Date(activeSession.startTime || Date.now()).getTime();
-            setWalkElapsedSeconds(Math.floor((Date.now() - startMs) / 1000));
-            
-            walkTimerRef.current = setInterval(() => {
-                setWalkElapsedSeconds(Math.floor((Date.now() - startMs) / 1000));
-            }, 1000);
-        } else {
-            if (walkTimerRef.current) clearInterval(walkTimerRef.current);
-            setWalkElapsedSeconds(0);
-        }
-        return () => { if (walkTimerRef.current) clearInterval(walkTimerRef.current); };
-    }, [activeSession?.id]);
 
     // Maskot göz kırpma efekti (Blinking effect)
     useEffect(() => {
@@ -1674,7 +1652,7 @@ export default function LegendaryLightDashboard() {
                                 <div className="grid grid-cols-2 gap-1.5 flex-1 min-w-0">
                                     <div className="bg-white/15 backdrop-blur-md rounded-lg px-2.5 py-1.5 text-white min-w-0">
                                         <div className="flex items-center gap-1 text-[10px] font-black">
-                                            <Clock className="w-3 h-3 shrink-0" /> {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
+                                            <Clock className="w-3 h-3 shrink-0" /> {activeSession ? formatWalkTime(activeSession.activeSeconds) : `${Math.round(todayDurationMin)} dk`}
                                         </div>
                                         <div className="text-[7.5px] font-bold text-white/70 mt-0.5">Süre</div>
                                     </div>
@@ -2089,151 +2067,6 @@ export default function LegendaryLightDashboard() {
                     </motion.div>
                 </div>
 
-
-                {/* 3. Live Walk Tracking Widget - useWalk hook ile canlı */}
-                <section className="mb-6">
-                    <BentoCard className="bg-white !p-4 flex flex-col gap-4 relative overflow-hidden border border-gray-100/50 shadow-sm transition-all">
-                        <div className="absolute right-[-20px] top-[-20px] w-48 h-48 bg-green-500/[0.03] rounded-full pointer-events-none" />
-                        
-                        <div className="flex justify-between items-start relative z-10">
-                            <div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className={`w-2 h-2 rounded-full ${activeSession ? 'bg-green-500 animate-ping' : 'bg-gray-300'}`} />
-                                    <span className={`text-[10px] font-black tracking-wider uppercase ${activeSession ? 'text-green-700' : 'text-gray-500'}`}>
-                                        {activeSession ? 'CANLI • YÜRÜYÜŞTESİN' : 'YÜRÜYÜŞ RADARI'}
-                                    </span>
-                                </div>
-                                <h4 className="text-base font-black text-gray-800 mt-1">
-                                    {activeSession ? `${walkingPetName} Yürüyor! 🐾` : 'Yürüyüşü Başlat'}
-                                </h4>
-                                <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-0.5">
-                                    {activeSession
-                                        ? `GPS aktif • ${walkStats?.totalWalks || 0} toplam yürüyüş`
-                                        : `${pet.name}'in günlük gezi hedefini tamamlayın`}
-                                </p>
-                            </div>
-                            {activeSession && (
-                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border bg-green-500 text-white border-green-400">
-                                    <Navigation className="w-5 h-5" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Rota Haritası */}
-                        <div className="h-20 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center p-3 relative overflow-hidden shadow-inner">
-                            <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]" />
-                            <svg className="w-full h-full relative z-10" viewBox="0 0 300 60">
-                                {/* Zemin yolu */}
-                                <path d="M 10 30 Q 80 10 150 40 T 290 20" fill="none" stroke="#E5E7EB" strokeWidth="4" strokeLinecap="round" />
-                                {/* Tamamlanan yol — mesafeye göre dolduruluyor */}
-                                <path 
-                                    d="M 10 30 Q 80 10 150 40 T 290 20" 
-                                    fill="none" 
-                                    stroke="#22C55E" 
-                                    strokeWidth="4" 
-                                    strokeLinecap="round" 
-                                    strokeDasharray={`${Math.min(280, (activeSession?.distanceKm || 0) * 80)}, 300`}
-                                    style={{ transition: 'stroke-dasharray 1s ease' }}
-                                />
-                                {/* Başlangıç noktası */}
-                                <circle cx="10" cy="30" r="4" fill="#22C55E" stroke="white" strokeWidth="2" />
-                                {/* Canlı konum noktası */}
-                                {activeSession ? (
-                                    <>
-                                        <circle 
-                                            cx={Math.min(280, 10 + (activeSession.distanceKm || 0) * 80)} 
-                                            cy={30 - Math.sin((activeSession.distanceKm || 0) * 1.5) * 10}
-                                            r="6" fill="#22C55E" stroke="white" strokeWidth="3" 
-                                        />
-                                        <circle 
-                                            cx={Math.min(280, 10 + (activeSession.distanceKm || 0) * 80)} 
-                                            cy={30 - Math.sin((activeSession.distanceKm || 0) * 1.5) * 10}
-                                            r="12" fill="none" stroke="#22C55E" strokeWidth="1.5" 
-                                            className="animate-ping" 
-                                        />
-                                    </>
-                                ) : (
-                                    <circle cx="10" cy="30" r="5" fill="#D1D5DB" stroke="white" strokeWidth="2" />
-                                )}
-                            </svg>
-                            <span className="absolute right-4 bottom-2.5 text-[9px] font-bold text-gray-500 dark:text-gray-400">
-                                {activeSession
-                                    ? `${(activeSession.distanceKm || 0).toFixed(2)} / ${walkingPetActivityTarget > 0 ? (walkingPetActivityTarget / 28).toFixed(1) : '3.5'} KM`
-                                    : 'GPS ile canlı takip'}
-                            </span>
-                        </div>
-
-                        {/* İstatistikler & Buton */}
-                        <div className="flex justify-between items-center gap-3">
-                            <div className="flex gap-4">
-                                <div>
-                                    <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Süre</span>
-                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-500 dark:text-gray-400'}`}>
-                                        {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
-                                    </h5>
-                                </div>
-                                <div>
-                                    <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Mesafe</span>
-                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-500 dark:text-gray-400'}`}>
-                                        {activeSession ? `${(activeSession.distanceKm || 0).toFixed(2)} KM` : '— KM'}
-                                    </h5>
-                                </div>
-                                {walkStats && walkStats.totalWalks > 0 && (
-                                    <div>
-                                        <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Toplam</span>
-                                        <h5 className="text-[13px] font-black text-gray-700 mt-0.5">{walkStats.totalDistanceKm?.toFixed(1) || '0'} KM</h5>
-                                    </div>
-                                )}
-                            </div>
-                            {activeSession ? (
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
-                                    className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-red-900/10 transition-colors cursor-pointer"
-                                >
-                                    <span className="w-3.5 h-3.5 bg-white rounded-sm block shrink-0" />
-                                    <span>Bitir</span>
-                                </button>
-                            ) : (
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
-                                    className="flex items-center gap-2 bg-[#527958] hover:bg-[#436448] text-white text-[11px] font-black px-4.5 py-2.5 rounded-2xl shadow-md shadow-green-900/10 transition-all hover:scale-[1.02] cursor-pointer"
-                                >
-                                    <Compass className="w-3.5 h-3.5" />
-                                    <span>Yürüyüşe Başla</span>
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Geçmiş yürüyüşler özeti */}
-                        {walkHistory.length > 0 && !activeSession && (
-                            <div className="pt-3 border-t border-gray-100 flex gap-3 overflow-x-auto no-scrollbar">
-                                {walkHistory.slice(0, 3).map((w: any, i: number) => (
-                                    <div key={w.id || i} className="shrink-0 bg-gray-50 rounded-2xl px-3 py-2 flex items-center gap-2 border border-gray-100">
-                                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                                            <Navigation className="w-3 h-3 text-green-600" />
-                                        </div>
-                                        <div>
-                                            <span className="text-[10px] font-black text-gray-700 block">
-                                                {((w.distance_meters || 0) / 1000).toFixed(2)} KM
-                                            </span>
-                                            <span className="text-[8px] font-semibold text-gray-500 dark:text-gray-400">
-                                                {w.ended_at ? (() => {
-                                                    try {
-                                                        const d = new Date(w.ended_at);
-                                                        if (isNaN(d.getTime())) return 'Tamamlandı';
-                                                        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
-                                                    } catch {
-                                                        return 'Tamamlandı';
-                                                    }
-                                                })() : 'Tamamlandı'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </BentoCard>
-                </section>
 
                 {/* 4. Mini Trends & Comparison Chart (Sağlık Gelişim) */}
                 <section className="mb-6">

@@ -16,6 +16,8 @@ export function useWalk() {
         id: walkData.sessionId || 'current-active-session',
         distanceKm: walkData.distance / 1000,
         startTime: new Date(Date.now() - walkData.time * 1000).toISOString(),
+        // Duraklamalar hariç geçen süre (takip ekranıyla aynı sayaç).
+        activeSeconds: walkData.time,
         isPaused: walkData.isPaused,
         route: walkData.path,
         // Baran'ın gerçek bulgusu: ana sayfa kartı hangi pet'in yürüyüşte olduğunu
