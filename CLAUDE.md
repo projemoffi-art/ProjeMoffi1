@@ -3445,8 +3445,7 @@ E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i 
    `email_outbox`'a doğrudan yazma yetkisi yok: sonuç `finish_email_outbox` ile yazılır, takılan işler 15 dk sonra yeniden alınır.
    Supabase'de kod 8 hane; giriş kutusu 6-8 haneyi kabul eder. "Leaked password protection" Supabase Pro planında; Pro'ya
    geçilince açılmalı (şimdilik sadece en az 8 karakter kuralı var).
-2. 🔴 **Hesap silme bağlantı düzeltmeleri** (8.57): `supabase/migrations/20261002171000_account_deletion_foreign_keys.sql`
-   SQL Editor'dan çalıştırılmalı. İlk silme talebinin 30 günü dolmadan (en erken 2026-11-01) yapılmalı.
+2. ✅ **Hesap silme bağlantı düzeltmeleri** (8.57) 2026-10-02'de uygulandı ve doğrulandı (silmeyi engelleyen bağ kalmadı).
    🔴 **Yönetici iki adımlı doğrulama:** Baran app.moffi.net/admin'e girip doğrulama uygulamasını kurmalı, sonra Claude
    `20261002180000_admin_requires_mfa.sql`'i uygular (sıra ters olursa yönetici verisine erişim kapanır).
 3. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
