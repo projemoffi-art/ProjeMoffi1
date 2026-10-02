@@ -3440,10 +3440,11 @@ Antigravity. Karışıklığı önlemek için şu iş bölümü kuruldu:
 
 E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i hatırlat.
 
-1. **Resend** — 2026-10-02 bağlandı, uygulama e-postaları gidiyor (Vercel anahtarları + Supabase SMTP + şablonlar tamam).
-   Kalan: Hostinger'da `send` adına TXT `v=spf1 include:amazonses.com ~all` (yoksa spam riski), ve doğrulama
-   test edildikten sonra Supabase'de "Confirm email" açılması (Faz 1d, 8.56). Servis rolünün `email_outbox`'a
-   doğrudan yazma yetkisi yok: sonuç `finish_email_outbox` ile yazılır, takılan işler 15 dk sonra yeniden alınır.
+1. ✅ **Resend + e-posta doğrulaması** — 2026-10-02 tamamlandı: uygulama e-postaları, kodlu kayıt ("Confirm email" açık,
+   Moffi <no-reply@moffi.net> ile gelen kod, giriş) uçtan uca denendi; `send` SPF kaydı yerinde. Servis rolünün
+   `email_outbox`'a doğrudan yazma yetkisi yok: sonuç `finish_email_outbox` ile yazılır, takılan işler 15 dk sonra yeniden alınır.
+   Supabase'de kod 8 hane; giriş kutusu 6-8 haneyi kabul eder. "Leaked password protection" Supabase Pro planında; Pro'ya
+   geçilince açılmalı (şimdilik sadece en az 8 karakter kuralı var).
 2. 🔴 **Hesap silme bağlantı düzeltmeleri** (8.57): `supabase/migrations/20261002171000_account_deletion_foreign_keys.sql`
    SQL Editor'dan çalıştırılmalı. İlk silme talebinin 30 günü dolmadan (en erken 2026-11-01) yapılmalı.
    🔴 **Yönetici iki adımlı doğrulama:** Baran app.moffi.net/admin'e girip doğrulama uygulamasını kurmalı, sonra Claude
@@ -3460,6 +3461,13 @@ Supabase (anon, service role, cron gizli anahtarı), Vercel (`EMAIL_CRON_SECRET`
 Firebase, Apple, PayTR) anahtarlarının her biri için: adı, hangi servisten alındığı, nerede kullanıldığı, ne zaman
 oluşturulduğu, sızarsa ne yapılacağı. Değerler ASLA CLAUDE.md'ye yazılmaz (sadece parola yöneticisine). Sonunda eski/kullanılmayan
 anahtarlar iptal edilir ve her anahtar için yenileme tarihi konur. Önerilen: bir parola yöneticisi (Bitwarden vb.).
+
+### 12.2 Yapılacaklar — Diğer modüller (faz planı dışı, sırası Baran'la belirlenir)
+
+- [ ] **Giriş / ilk karşılama ekranı** (`/` → `LoginForm`/`SignupForm`, `components/auth/AuthForms.tsx`): Baran'a göre "çok
+      berbat ve karmaşık". Yeniden tasarlanacak: tek net eylem, sade form, kod adımı ve şifre sıfırlama dahil; marka adı
+      değişeceği için logo/isim yeri sonradan değiştirilebilir kurulmalı. Başlamadan önce Baran'dan referans ya da
+      beğendiği örnek uygulamalar istenir (UI'ya sıkı bağlı iş: referans olmadan başlanmaz, bkz. 8.8 dersi).
 
 ### 12.1 BARAN'A SORULACAKLAR / BARAN'IN YAPACAKLARI (Claude'un otonom çalışması sırasında biriken, 2026-10-02)
 
