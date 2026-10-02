@@ -44,13 +44,16 @@ aksesuar) bir arada.
 
 Komutlar: `npm run dev`, `npm run build` (webpack modunda), `npm run lint`.
 
-**Proje konumu (2026-10-02):** `C:\dev\moffi` (OneDrive dışı). Eski `OneDrive\Masaüstü\ProjeMoffi1` kopyası
-artık kullanılmıyor; Bölüm 5.6'daki OneDrive/Turbopack ikon çökmeleri ve "yalnızca bulutta" `node_modules` sorunu
-bu taşımayla kök nedeninden çözüldü. C: diski neredeyse dolu (~1 GB boş) — büyük indirmelerden önce yer kontrol et.
+**Proje konumu (2026-10-02):** `D:\Dev\moffi` (OneDrive dışı). Eski `OneDrive\Masaüstü\ProjeMoffi1` ve
+`C:\Dev\moffi` kopyaları artık kullanılmıyor. D: diskine taşıma hem Bölüm 5.6'daki OneDrive/Turbopack ikon
+çökmelerini ve "yalnızca bulutta" `node_modules` sorununu hem de C: diskindeki yer darlığını çözdü.
 
-**Telefon önizleme:** `npm run dev` açıkken `http://localhost:3000/live` uygulamayı telefon çerçevesinde
+**Telefon önizleme:** `npm run dev` açıkken `http://localhost:<port>/live` uygulamayı telefon çerçevesinde
 gösterir (Baran bunu Claude panelinin yanındaki tarayıcıda kullanıyor; `src/app/live/route.ts`, sadece
 geliştirmede çalışır). Eskiden geçici klasörde duruyordu ve kayboldu; silme. Canlı sitede (production) 404 döner.
+Port normalde 3000'dir; doluysa Next.js 3001, 3002… seçer, gerçek adres sunucu penceresinde yazar. Sunucuyu
+Claude'un arka plan komutuyla değil (en fazla 2 saat yaşar), kendi penceresinde aç:
+`Start-Process cmd -ArgumentList '/k','npm run dev' -WorkingDirectory D:\Dev\moffi` — pencere kapanınca sunucu da kapanır.
 
 ## 3. Git güvenlik kuralı — MUTLAK, İSTİSNASIZ
 
@@ -288,14 +291,22 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   hazırlık kontrol listesi (poşet/su/tasma) state machine'e bağlı değil; `LiveMap.tsx` içine gömülü sahte POI/hazine avı 4 ekranda
   paylaşılıyor, bilerek dokunulmadı; `bluetoothManager.ts` orphan (gerçek kod, kullanılmıyor); "Bu Yürüyüşü Kaydet" gerçek bir onay
   kapısı değil (kayıt zaten yapılmış); `LiveMap` Carto altlığı API anahtarı filigranı gösteriyor (veteriner haritası OSM'e geçti).
-- **8.2 Puan sistemi.** `point_transactions` + `award_pati_puan` (istemci) / `award_pati_puan_internal` (sadece sunucu fonksiyonları).
-  Tek para birimi PP = **PawCoin** (8.52); `profiles.coin_balance` eskiden kalma, 0. `addBalance()` bilerek devre dışı: bakiye sadece
-  sunucuda artar. Görev/rozet tamamlanma kararı hâlâ istemcide (bilinen, bilinçli client-trust sınırı).
+- **8.2 Puan sistemi (2026-10-03 kilitlendi).** 🔴 İstemci puan MİKTARI söyleyemez: `award_pati_puan` istemciye kapalı (sadece
+  sunucu fonksiyonları sahibi olarak çağırır), yeni ödül `claim_reward(key)` ile. Miktar/dönem (günlük-haftalık-aylık)/günlük 200 sınırı
+  `reward_rules` tablosunda; aynı ödül aynı dönemde bir kez (`point_transactions` source='quest', reference_id `kural@dönem`). Yeni ödül
+  eklerken önce `reward_rules`'a satır, istemcide `awardReward('<kural>', xp, ...)`. Puan harcama da sadece fiyatı sunucuda olan
+  fonksiyonlarla (`redeem_cosmetic_item`, `redeem_vip_perk`); istemcide "puan düş" fonksiyonu YOK. Tek para birimi PP = **PawCoin**
+  (8.52). Görev tamamlanma kararı hâlâ istemcide (C aşamasında sunucuya taşınacak); kötüye kullanım en fazla günlük sınır kadar.
+  Kupon (`reward_products`) satıştan kaldırıldı: kupon kaydı/ödemede uygulama altyapısı yoktu.
 - **8.3 Seri.** `streak_shield_uses` + `use_streak_shield` (haftada 1, Prime 2). Günler YEREL tarihle karşılaştırılır (UTC `startsWith`
   hatası vardı). `bestStreak` 365 günün tamamını tarar. Haftalık pul günde en fazla 1.
 - **8.4/8.5/8.14 Hub ve bağlam.** "Bugün" değerleri tek kaynaktan: `QuestEngineContext.todayDistanceKm/todaySteps/walkPpEarned`
   (iki paralel hesap yapma). Rozet takibi `QuestEngineContext`'te (panel unmount olunca yerel state kaybolur). "Tüm Zamanlar" ile
   "Son 7 Gün" aynı kartta etiketsiz karıştırılmaz.
+- **8.6a Yürüyüş kaydı (2026-10-03).** 🔴 `walk_sessions`'a istemci yazamaz (sadece SELECT): `start_walk`, `append_walk_points`
+  (noktalar ActivityContext'te tamponda birikir, 10 sn'de bir toplu; çevrimdışı kuyruk aynı tampon), `finish_walk` (aktif süre
+  `active_seconds`, gerçek adım ya da boş, kurtarmada bitiş son nokta), `add_walk_photo`. Mesafe sunucuda (25 km/sa üstü sıçrama sayılmaz).
+  Yolu ve adımı olmayan yürüyüş `status='discarded'` (geçmişe/sıralamaya girmez). Canlı konum: tablo herkese kapalı, `get_walk_beacon(id)`.
 - **8.6 Geçmiş.** `walk_sessions` RLS sadece sahibi. `walk_sessions.pet_id` text, FK yok → PostgREST `pet:pets(...)` embed'i KULLANMA
   (yürüyüş geçmişi bu yüzden hiç çalışmamıştı). `path_coordinates` DB'de `{lat,lng,timestamp}[]`; ekranlar tuple bekler →
   `normalizePathToTuples()` (`lib/utils.ts`). Adım katsayısı 1.3.
@@ -484,6 +495,8 @@ ilgili maddeyi tek satırla hatırlat.
 ### 12.1 Baran'ın yapacakları ve kararları
 
 **Hemen**
+- [ ] SQL Editor'da `supabase/migrations/20261003102000_walk_cleanup_MANUAL_sql_editor.sql` çalıştır (acil değil, tekrar eden
+      politika/index temizliği; DROP içerdiği için bağlayıcıdan uygulanamıyor).
 - [ ] 🔴 **`GEMINI_API_KEY`** (Google AI Studio) → Vercel Production + yeniden yayın. Yok: yapay zekâ canlıda çalışmıyor ("API Key not configured").
       Google tarafında da faturalandırma limiti/uyarısı önerilir (kod tarafında aylık 50 $ tavan var).
 - [ ] 🔴 **Yönetici iki adımlı doğrulama kurulumu:** `/admin` şu an KİLİTLİ (doğrulama olmadan açılmaz, işletme başvuru onayı dahil). Yönetici

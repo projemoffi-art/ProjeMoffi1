@@ -374,7 +374,7 @@ export default function LegendaryLightDashboard() {
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading } = useWalk();
     const { cart, cartCount, cartTotal, updateCartItem, addToCart, products, clearCart } = usePetShop();
-    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm, todaySteps, dailyGoal } = useQuestEngine();
+    const { currentStreak, weeklyStamps, totalPatiPuan, level, levelXpCurrent, levelXpRequired, todayDistanceKm, todaySteps, dailyGoal } = useQuestEngine();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -721,124 +721,6 @@ export default function LegendaryLightDashboard() {
         }
     };
 
-    const handleSelectApparel = (category: keyof typeof selectedApparel, item: any) => {
-        const itemId = item?.id;
-        const cost = item?.cost || 0;
-
-        if (itemId && !unlockedApparel.includes(itemId)) {
-            if (totalPatiPuan >= cost) {
-                spendPatiPuan(cost);
-                setUnlockedApparel(prev => [...prev, itemId]);
-                setToastMsg(`🎉 Tebrikler! "${item.label}" açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
-                triggerSpeechBubble("Yeni kıyafetime bayıldım! 😍");
-            } else {
-                setToastMsg(`❌ Yetersiz MoffiCoin! Bu kıyafet için ${cost} Coin gerekiyor.`);
-                return;
-            }
-        }
-
-        setSelectedApparel(prev => {
-            const next = { ...prev, [category]: itemId };
-
-            // Synchronize with selectedAccessories so that bonuses, daily theme, and polaroid details work!
-            const newAccs: string[] = [];
-            
-            // Map body items
-            if (next.body === 'sweatshirt') newAccs.push('scarf');
-            if (next.body === 'pajamas') newAccs.push('bowtie');
-            
-            // Map head items
-            if (next.head === 'crown') newAccs.push('crown');
-            if (next.head === 'pirate_hat') newAccs.push('hat');
-            if (next.head === 'top_hat') newAccs.push('hat');
-            if (next.head === 'beanie') newAccs.push('hat');
-            
-            // Map eye items
-            if (next.eyes === 'glasses') newAccs.push('glasses');
-            if (next.eyes === 'sunglasses') newAccs.push('glasses');
-            if (next.eyes === 'eyepatch') newAccs.push('pirate');
-            
-            // Map hands
-            if (next.hands === 'gloves') newAccs.push('bowtie');
-            if (next.hands === 'boxing') newAccs.push('pirate');
-            
-            // Map feet
-            if (next.feet === 'sneakers') newAccs.push('glasses');
-            if (next.feet === 'boots') newAccs.push('hat');
-
-            const uniqueAccs = Array.from(new Set(newAccs));
-            setSelectedAccessories(uniqueAccs);
-
-            // Speech reactions
-            if (category === 'body') {
-                if (itemId === 'sweatshirt') triggerSpeechBubble("Turuncu sweatshirtüm harika! 🧡");
-                else if (itemId === 'singlet') triggerSpeechBubble("Atletle çok rahatım! 🎽");
-                else if (itemId === 'pajamas') triggerSpeechBubble("Pijama partisi başlasın! 💤");
-                else triggerSpeechBubble("Biraz serinledim sanki! 🥶");
-            } else if (category === 'head') {
-                if (itemId === 'crown') triggerSpeechBubble("Taçsız kral olur mu hiç! 👑");
-                else if (itemId === 'pirate_hat') triggerSpeechBubble("Korsan şapkam hazır! 🏴‍☠️");
-                else if (itemId === 'top_hat') triggerSpeechBubble("Sihirli bir numara ister misin? 🎩");
-                else if (itemId === 'beanie') triggerSpeechBubble("Sıcacık tutuyor! 🧶");
-                else triggerSpeechBubble("Şapkamı çıkardım.");
-            } else if (category === 'eyes') {
-                if (itemId === 'sunglasses') triggerSpeechBubble("Geleceğim çok parlak! 😎");
-                else if (itemId === 'eyepatch') triggerSpeechBubble("Kaptan Moffi denizlerde! 🏴‍☠️");
-                else if (itemId === 'glasses') triggerSpeechBubble("Şimdi daha net görüyorum! 🤓");
-            } else if (category === 'hands') {
-                if (itemId === 'boxing') triggerSpeechBubble("Hazır ol, sol kroşe geliyor! 🥊");
-                else if (itemId === 'gloves') triggerSpeechBubble("Kışa hazırım! 🧤");
-            } else if (category === 'feet') {
-                if (itemId === 'sneakers') triggerSpeechBubble("Koşuya hazırız! 👟");
-                else if (itemId === 'boots') triggerSpeechBubble("Çamurlara basabilirim! 🥾");
-            }
-
-            return next;
-        });
-    };
-
-    const handleOpenChest = () => {
-        if (totalPatiPuan < 100) {
-            setToastMsg("❌ Sandık açmak için 100 MoffiCoin gerekiyor! Yetersiz bakiye.");
-            return;
-        }
-
-        spendPatiPuan(100);
-        setIsChestOpening(true);
-        setChestResult(null);
-
-        // After 1.5 seconds shaking animation, roll reward item
-        setTimeout(() => {
-            setIsChestOpening(false);
-            const availableDrops = [];
-            if (!unlockedAccessories.includes('pirate')) availableDrops.push('pirate');
-            if (!unlockedAccessories.includes('bowtie')) availableDrops.push('bowtie');
-
-            let reward = '';
-            if (availableDrops.length > 0) {
-                reward = availableDrops[Math.floor(Math.random() * availableDrops.length)];
-            } else {
-                reward = Math.random() > 0.5 ? 'pirate' : 'bowtie';
-            }
-
-            setUnlockedAccessories(prev => {
-                if (prev.includes(reward)) return prev;
-                return [...prev, reward];
-            });
-
-            setChestResult(reward);
-            
-            if (reward === 'pirate') {
-                triggerSpeechBubble("🏴‍☠️ Ayyay Kaptan! Korsan oldum!");
-                setToastMsg("🏴‍☠️ Tebrikler! Efsanevi Korsan Göz Bandı kazandın! (+140 SP, XP/Like boost)");
-                setUnlockedApparel(prev => [...prev, 'eyepatch', 'pirate_hat']);
-            } else {
-                triggerSpeechBubble("🎀 Çok centilmen bir beyefendi oldum!");
-                setToastMsg("🎀 Tebrikler! Centilmen Papyon kazandın! (+90 SP, Coin/XP boost)");
-                setUnlockedApparel(prev => [...prev, 'bowtie']);
-            }
-        }, 1500);
-    };
 
     const activeBonus = useMemo(() => {
         let xpBonus = 0;
@@ -866,37 +748,6 @@ export default function LegendaryLightDashboard() {
         return { xpBonus, walkCoinBonus, likeBoost, vipActive };
     }, [selectedAccessories]);
 
-    const handleToggleAccessory = (id: string) => {
-        if (!unlockedAccessories.includes(id)) {
-            const costs: Record<string, number> = { hat: 150, crown: 350 };
-            const cost = costs[id] || 0;
-            if (totalPatiPuan >= cost) {
-                spendPatiPuan(cost);
-                setUnlockedAccessories(prev => [...prev, id]);
-                setSelectedAccessories(prev => [...prev, id]);
-                setToastMsg(`🎉 Tebrikler! Premium eşya açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
-                triggerSpeechBubble("Yeni eşyama bayıldım! 😍");
-            } else {
-                setToastMsg(`❌ Yetersiz MoffiCoin! Bu eşya için ${cost} Coin gerekiyor.`);
-            }
-            return;
-        }
-
-        setSelectedAccessories(prev => {
-            const isRemoving = prev.includes(id);
-            const next = isRemoving ? prev.filter(a => a !== id) : [...prev, id];
-
-            // Cute speech reactions when wearing/removing accessories
-            if (id === 'glasses') triggerSpeechBubble(isRemoving ? "Gözlerim kamaşıyordu zaten! 😎" : "Çok havalı oldum! 😎");
-            else if (id === 'scarf') triggerSpeechBubble(isRemoving ? "Boynum rahatladı! 🧣" : "Beni sıcacık tutuyor! 🧣");
-            else if (id === 'hat') triggerSpeechBubble(isRemoving ? "Şapkasız daha iyiyim 🎩" : "Retro tarzı severim! 🎩");
-            else if (id === 'crown') triggerSpeechBubble(isRemoving ? "Kraliyet bitti 👑" : "Kraliyet üyesi gibiyim! 👑");
-            else if (id === 'pirate') triggerSpeechBubble(isRemoving ? "Denizler beni bekler! 🌊" : "Ayyay kaptan! 🏴‍☠️");
-            else if (id === 'bowtie') triggerSpeechBubble(isRemoving ? "Gündelik tarza döndüm 🎀" : "Çok şık bir beyefendiyim! 🎀");
-
-            return next;
-        });
-    };
 
         const handleSaveOutfit = () => {
         let totalSP = 0;
@@ -3488,40 +3339,10 @@ export default function LegendaryLightDashboard() {
 
                                                                 {/* Complete order button */}
                                                                 <button 
-                                                                    onClick={() => {
-                                                                        if (nfcPaymentLocked) {
-                                                                            setToastMsg("❌ Ödeme Başarısız: Pati-Kartınız güvenlik nedeniyle kilitli! (Kilidi profilden açabilirsiniz)");
-                                                                            return;
-                                                                        }
-                                                                        if (cartTotal > dailySpendLimit) {
-                                                                            setToastMsg(`❌ Ödeme Başarısız: Günlük harcama limitinizi (${dailySpendLimit} PATI) aştınız!`);
-                                                                            return;
-                                                                        }
-                                                                        if (totalPatiPuan < cartTotal) {
-                                                                            setToastMsg("❌ Yetersiz Bakiye! Daha fazla görev yaparak PatiPuan kazanın.");
-                                                                            return;
-                                                                        }
-                                                                        
-                                                                        const success = spendPatiPuan(cartTotal);
-                                                                        if (!success) return;
-                                                                        
-                                                                        const newOrder = {
-                                                                            id: `order-${Date.now()}`,
-                                                                            name: cart.map((c: any) => `${products.find((p: any) => p.id === c.productId)?.name} (${c.quantity} ad.)`).join(' + '),
-                                                                            desc: "Moda Dağıtım Noktası • Kurye: Walky Can",
-                                                                            timeRemaining: "12 dk kaldı",
-                                                                            status: "Hazırlanıyor",
-                                                                            progress: 30
-                                                                        };
-                                                                        
-                                                                        setActiveOrders(prev => [newOrder, ...prev]);
-                                                                        clearCart();
-                                                                        setToastMsg(`🎉 Sipariş alındı! Kurye Can yola çıkıyor. -${cartTotal} PatiPuan`);
-                                                                        setProfileOrdersTab('active');
-                                                                    }}
+                                                                    onClick={() => { setExpandedPanel(null); router.push('/petshop?checkout=1'); }}
                                                                     className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-black uppercase tracking-wider rounded-2xl cursor-pointer shadow-md shadow-orange-500/10 hover:opacity-95 transition-opacity text-center"
                                                                 >
-                                                                    Pati-Kart ile Öde ve Siparişi Tamamla
+                                                                    Ödemeye Geç
                                                                 </button>
                                                             </div>
                                                         )}

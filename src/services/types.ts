@@ -1,4 +1,11 @@
 import { Doctor } from '@/types/domain';
+// Sunucuya gönderilen tek GPS noktası (append_walk_points / finish_walk).
+export interface WalkPoint {
+    lat: number;
+    lng: number;
+    timestamp: string;
+}
+
 export interface BusinessAppointmentInput {
     start: string;
     durationMinutes: number;
@@ -317,8 +324,8 @@ export interface IApiService {
     addBalance(amount: number, type: 'fiat' | 'coin'): Promise<void>;
     updateAuraSettings(settings: any): Promise<void>;
 
-    // Faz 7: Moffi Puanı (PP) — transaction-tabanlı, coin_balance/PawCoin'den TAMAMEN AYRI
-    awardPatiPuan(amount: number, reason: string, source: string, referenceId?: string): Promise<number>;
+    // Puan sadece sunucunun ödül kurallarından verilir (claim_reward); miktarı istemci belirlemez.
+    claimReward(key: string): Promise<{ awarded: number; alreadyClaimed: boolean; capped: boolean; balance: number }>;
     getPatiPuanBalance(): Promise<number>;
     getPatiPuanHistory(limit?: number): Promise<Array<{ id: string; amount: number; reason: string | null; source: string; created_at: string }>>;
 
@@ -386,14 +393,14 @@ export interface IApiService {
     savePetDailyStats(petId: string, date: string, stats: any): Promise<void>;
 
     // Walk & Tracking
-    startWalk(userId: string, petId: string): Promise<any>;
-    updateWalkLocation(sessionId: string, lat: number, lng: number): Promise<void>;
+    startWalk(petId?: string): Promise<{ id: string }>;
+    appendWalkPoints(sessionId: string, points: WalkPoint[]): Promise<void>;
     uploadWalkPhoto(sessionId: string, file: File): Promise<string>;
     startBeacon(sessionId: string, petName: string, lat: number, lng: number): Promise<string>;
     updateBeaconLocation(beaconId: string, lat: number, lng: number): Promise<void>;
     stopBeacon(beaconId: string): Promise<void>;
     getBeacon(beaconId: string): Promise<{ lat: number; lng: number; petName: string | null; updatedAt: string; expiresAt: string } | null>;
-    endWalk(sessionId: string, data: any): Promise<any>;
+    finishWalk(sessionId: string, data: { activeSeconds: number; steps: number; points?: WalkPoint[]; endAtLastPoint?: boolean }): Promise<any>;
     getWalkHistory(userId: string, limit?: number): Promise<any[]>;
     getWalkStats(userId: string): Promise<any>;
     getWalkById(id: string): Promise<any>;
@@ -464,10 +471,6 @@ export interface IApiService {
     getDistanceLeaderboard(period: 'week' | 'month' | 'all', userIds?: string[] | null, limit?: number): Promise<{ userId: string; totalMeters: number; walkCount: number }[]>;
     getSameCityUserIds(userId: string): Promise<string[]>;
     getProfilesByIds(ids: string[]): Promise<{ id: string; name: string; avatar?: string; pet: string }[]>;
-
-    // Faz 14: Ödül Marketi — Moffi Puanı (PP) ile satın alınabilen gerçek katalog
-    getRewardProducts(): Promise<{ id: string; name: string; description: string | null; category: 'product' | 'experience' | 'coupon'; pricePp: number; icon: string }[]>;
-    redeemReward(productId: string, name: string, pricePp: number): Promise<number>;
 
     // Faz 22: Kozmetik gardırop — Kombinle prototipinin gerçek, PP-tabanlı sürümü.
     getCosmeticItems(): Promise<{ id: string; slot: 'body' | 'head' | 'eyes' | 'hands' | 'feet'; itemKey: string; name: string; icon: string; pricePp: number; rarity: 'common' | 'rare' | 'epic' | 'legendary'; isStarter: boolean }[]>;

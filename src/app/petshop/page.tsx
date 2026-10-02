@@ -1,7 +1,7 @@
 "use client";
 
 import { isImageUrl } from '@/lib/productImage';
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     Search, ShoppingBag, Heart, Star, ChevronLeft, ChevronRight,
@@ -345,6 +345,20 @@ export default function PetShopPage() {
         setCheckoutMode('paytr');
         setShowCheckout(true);
     };
+
+    // Başka bir ekrandaki sepetten "Ödemeye Geç" ile gelindiyse (?checkout=1) ödeme doğrudan açılır.
+    const checkoutParamHandledRef = useRef(false);
+    useEffect(() => {
+        if (checkoutParamHandledRef.current || cart.length === 0) return;
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('checkout') !== '1') return;
+        checkoutParamHandledRef.current = true;
+        params.delete('checkout');
+        const query = params.toString();
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+        handleCheckoutInit();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cart.length]);
 
     // Dynamic Filter for Quick Buy Bar
     const quickBuyProducts = useMemo(() => {

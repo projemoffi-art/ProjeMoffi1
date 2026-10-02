@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Faz 10 kontrolü: `walk_sessions.path_coordinates` DB'de gerçekte
- * `{lat, lng, timestamp}[]` şeklinde saklanıyor (bkz. updateWalkLocation),
+ * `{lat, lng, timestamp}[]` şeklinde saklanıyor (bkz. append_walk_points),
  * ama uygulamanın her yerinde (WalkRecord.path, LiveMap'in path prop'u,
  * canlı takip sırasındaki bellek-içi hali) `[number, number][]` tuple
  * formatı bekleniyor. Bu ikisi hiç uyuşmuyordu — sadece bugüne kadar hiçbir

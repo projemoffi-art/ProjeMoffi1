@@ -2,7 +2,7 @@
 import {
     Pet, Post, UserProfile, LostPet,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
-    SystemAnnouncement, SystemFeedback, SocialChallenge, BusinessAppointmentInput, ClinicClient, BusinessProfileData
+    SystemAnnouncement, SystemFeedback, SocialChallenge, BusinessAppointmentInput, ClinicClient, BusinessProfileData, WalkPoint
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
@@ -757,18 +757,12 @@ export class SupabaseApiService implements IApiService {
         if (error) throw error;
     }
 
-    // --- FAZ 7: MOFFİ PUANI (PP) — transaction-tabanlı, coin_balance/PawCoin'den TAMAMEN AYRI ---
-    // Yazma işlemleri her zaman SECURITY DEFINER RPC üzerinden gider (award_pati_puan) —
-    // istemci doğrudan point_transactions'a veya profiles.pati_puan_balance'a yazamaz.
-    async awardPatiPuan(amount: number, reason: string, source: string, referenceId?: string): Promise<number> {
-        const { data, error } = await supabase.rpc('award_pati_puan', {
-            p_amount: amount,
-            p_reason: reason,
-            p_source: source,
-            p_reference_id: referenceId ?? null
-        });
+    // Puan miktarını istemci söyleyemez: tutar, dönem (günlük/haftalık/aylık) ve günlük 200 sınırı
+    // sunucudaki reward_rules'tan gelir; aynı ödül aynı dönemde ikinci kez verilmez.
+    async claimReward(key: string): Promise<{ awarded: number; alreadyClaimed: boolean; capped: boolean; balance: number }> {
+        const { data, error } = await supabase.rpc('claim_reward', { p_key: key });
         if (error) throw error;
-        return data as number;
+        return { awarded: data.awarded, alreadyClaimed: data.already_claimed, capped: data.capped, balance: data.balance };
     }
 
     async getPatiPuanBalance(): Promise<number> {
@@ -1789,70 +1783,29 @@ export class SupabaseApiService implements IApiService {
     }
 
     // --- YÜRÜYÜŞ TAKİBİ ---
-    // NOT: walk_sessions tablosunun gerçek kolonları — id, user_id, pet_id, start_time, end_time,
-    // path_coordinates (jsonb), distance_meters, status. Kod önceden var olmayan kolon adları
-    // (route, ended_at, started_at, duration_seconds, calories_burned, steps) kullanıyordu,
-    // bu yüzden her yürüyüş kaydı sessizce (try/catch içinde yutularak) başarısız oluyordu —
-    // hiçbir yürüyüş gerçekten veritabanına kaydedilmiyordu. Süre/kalori/adım gibi türetilmiş
-    // değerler artık ayrı kolonlarda TUTULMUYOR, gerçek verilerden (mesafe, başlangıç/bitiş
-    // zamanı) okuma anında hesaplanıyor — şema değişikliği gerekmiyor.
-    async startWalk(userId: string, petId: string): Promise<any> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error('Giriş gerekli');
-
-        // End any active walks first
-        await supabase
-            .from('walk_sessions')
-            .update({ status: 'completed', end_time: new Date().toISOString() })
-            .eq('user_id', user.id)
-            .eq('status', 'active');
-
-        const { data, error } = await supabase
-            .from('walk_sessions')
-            .insert({
-                user_id: user.id,
-                pet_id: petId || null,
-                status: 'active',
-                path_coordinates: []
-            })
-            .select()
-            .single();
-
+    // walk_sessions'a istemci doğrudan yazamaz; başlat/nokta ekle/bitir sunucu fonksiyonlarıyla.
+    // Mesafe sunucuda gelen noktalardan hesaplanır (25 km/sa üstü sıçramalar sayılmaz).
+    async startWalk(petId?: string): Promise<{ id: string }> {
+        const { data, error } = await supabase.rpc('start_walk', { p_pet_id: petId ?? null });
         if (error) throw error;
         return data;
     }
 
-    async updateWalkLocation(sessionId: string, lat: number, lng: number): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) return;
+    async appendWalkPoints(sessionId: string, points: WalkPoint[]): Promise<void> {
+        const { error } = await supabase.rpc('append_walk_points', { p_session_id: sessionId, p_points: points });
+        if (error) throw error;
+    }
 
-        // Fetch current route and append
-        const { data: session } = await supabase
-            .from('walk_sessions')
-            .select('path_coordinates, distance_meters')
-            .eq('id', sessionId)
-            .single();
-
-        const route: any[] = session?.path_coordinates || [];
-        const lastPoint = route[route.length - 1];
-
-        let additionalDistance = 0;
-        if (lastPoint) {
-            const dLat = (lat - lastPoint.lat) * (Math.PI / 180);
-            const dLng = (lng - lastPoint.lng) * (Math.PI / 180);
-            const a = Math.sin(dLat/2)**2 + Math.cos(lastPoint.lat * Math.PI/180) * Math.cos(lat * Math.PI/180) * Math.sin(dLng/2)**2;
-            additionalDistance = Math.round(6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-        }
-
-        route.push({ lat, lng, timestamp: new Date().toISOString() });
-
-        await supabase
-            .from('walk_sessions')
-            .update({
-                path_coordinates: route,
-                distance_meters: (session?.distance_meters || 0) + additionalDistance
-            })
-            .eq('id', sessionId);
+    async finishWalk(sessionId: string, data: { activeSeconds: number; steps: number; points?: WalkPoint[]; endAtLastPoint?: boolean }): Promise<any> {
+        const { data: row, error } = await supabase.rpc('finish_walk', {
+            p_session_id: sessionId,
+            p_active_seconds: Math.max(0, Math.round(data.activeSeconds)),
+            p_steps: data.steps > 0 ? Math.round(data.steps) : null,
+            p_points: data.points ?? [],
+            p_end_at_last_point: !!data.endAtLastPoint,
+        });
+        if (error) throw error;
+        return row;
     }
 
     // Piyasa araştırması #6: yürüyüş sırasında/sonrasında gerçek fotoğraf ekleme
@@ -1860,7 +1813,7 @@ export class SupabaseApiService implements IApiService {
     // `walk-photos` bucket'ına kullanıcının KENDİ klasörüne (RLS policy'si bunu
     // zorunlu kılıyor) yükleyip, dönen public URL'i walk_sessions.photo_urls
     // dizisine ekliyor — anında commit ediliyor (yürüyüş bitmeden uygulama
-    // kapansa bile fotoğraf kaybolmaz, updateWalkLocation ile aynı dayanıklılık
+    // kapansa bile fotoğraf kaybolmaz, yürüyüş noktalarıyla aynı dayanıklılık
     // deseni).
     async uploadWalkPhoto(sessionId: string, file: File): Promise<string> {
         const user = await this.getSessionUser();
@@ -1877,17 +1830,7 @@ export class SupabaseApiService implements IApiService {
         const { data: publicUrlData } = supabase.storage.from('walk-photos').getPublicUrl(path);
         const url = publicUrlData.publicUrl;
 
-        const { data: session } = await supabase
-            .from('walk_sessions')
-            .select('photo_urls')
-            .eq('id', sessionId)
-            .single();
-        const existing: string[] = session?.photo_urls || [];
-
-        const { error: updateError } = await supabase
-            .from('walk_sessions')
-            .update({ photo_urls: [...existing, url] })
-            .eq('id', sessionId);
+        const { error: updateError } = await supabase.rpc('add_walk_photo', { p_session_id: sessionId, p_url: url });
         if (updateError) throw updateError;
 
         return url;
@@ -1916,57 +1859,13 @@ export class SupabaseApiService implements IApiService {
         await supabase.from('walk_beacons').delete().eq('id', beaconId);
     }
 
-    // Herkese açık — anon anahtarla, oturum gerektirmeden çağrılır (bkz. /beacon/[id]).
+    // Oturumsuz da çalışır (bkz. /beacon/[id]). Tablo herkese kapalı; bağlantıdaki kimliği bilen
+    // sadece o tek, süresi dolmamış kaydı okuyabilir.
     async getBeacon(beaconId: string): Promise<{ lat: number; lng: number; petName: string | null; updatedAt: string; expiresAt: string } | null> {
-        const { data, error } = await supabase
-            .from('walk_beacons')
-            .select('lat, lng, pet_name, updated_at, expires_at')
-            .eq('id', beaconId)
-            .single();
-        if (error || !data) return null;
-        return { lat: data.lat, lng: data.lng, petName: data.pet_name, updatedAt: data.updated_at, expiresAt: data.expires_at };
-    }
-
-    async endWalk(sessionId: string, data: any): Promise<any> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error('Giriş gerekli');
-
-        const endedAt = new Date().toISOString();
-
-        const { data: session } = await supabase
-            .from('walk_sessions')
-            .select('start_time, distance_meters')
-            .eq('id', sessionId)
-            .single();
-
-        const startedAt = session?.start_time ? new Date(session.start_time) : new Date();
-        const durationSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
-        const distanceMeters = session?.distance_meters || 0;
-        const caloriesBurned = Math.round(distanceMeters * 0.06); // ~60 cal/km
-        // Baran'ın telefonda bulduğu kritik hata: adım sayısı SADECE GPS mesafesinden
-        // türetiliyordu, hiçbir zaman DB'ye kalıcı olarak yazılmıyordu. Artık
-        // ActivityContext'teki gerçek ivmeölçer tabanlı sayaç (`realSteps`) buraya
-        // geliyor ve `walk_sessions.steps` kolonuna gerçekten kaydediliyor — geçmiş
-        // yürüyüşler artık gerçek adım verisi gösterebiliyor. Gerçek sayaç 0/eksikse
-        // (ör. çok eski bir çağrı ya da sensör izni reddedildiyse) dürüst bir mesafe
-        // tahminine düşülüyor, sahte bir sıfır değil.
-        const steps = typeof data?.steps === 'number' && data.steps > 0 ? data.steps : Math.round(distanceMeters * 1.3);
-
-        const { data: updated, error } = await supabase
-            .from('walk_sessions')
-            .update({
-                status: 'completed',
-                end_time: endedAt,
-                steps,
-            })
-            .eq('id', sessionId)
-            .eq('user_id', user.id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        // duration/kalori DB'de saklanmıyor — burada hesaplanıp döndürülüyor (ör. bitiş özeti için)
-        return { ...updated, ended_at: updated.end_time, started_at: updated.start_time, duration_seconds: durationSeconds, calories_burned: caloriesBurned, steps };
+        const { data, error } = await supabase.rpc('get_walk_beacon', { p_beacon_id: beaconId });
+        const row = Array.isArray(data) ? data[0] : null;
+        if (error || !row) return null;
+        return { lat: row.lat, lng: row.lng, petName: row.pet_name, updatedAt: row.updated_at, expiresAt: row.expires_at };
     }
 
     async getWalkHistory(userId: string, limit: number = 10): Promise<any[]> {
@@ -3298,35 +3197,6 @@ export class SupabaseApiService implements IApiService {
         }
     }
 
-    // Faz 14: Ödül Marketi kataloğu (gerçek reward_products tablosu).
-    async getRewardProducts(): Promise<{ id: string; name: string; description: string | null; category: 'product' | 'experience' | 'coupon'; pricePp: number; icon: string }[]> {
-        try {
-            const { data, error } = await supabase
-                .from('reward_products')
-                .select('id, name, description, category, price_pp, icon')
-                .eq('is_active', true)
-                .order('price_pp', { ascending: true });
-            if (error) throw error;
-            return (data || []).map(p => ({
-                id: p.id,
-                name: p.name,
-                description: p.description,
-                category: p.category,
-                pricePp: p.price_pp,
-                icon: p.icon,
-            }));
-        } catch (err) {
-            console.error("Supabase getRewardProducts failed:", err);
-            return [];
-        }
-    }
-
-    // Ödül satın alma - mevcut award_pati_puan() RPC'si negatif miktarla çağrılıyor,
-    // yeni bir para birimi/RPC icat edilmedi. Sunucu tarafında bakiye kontrolü zaten
-    // award_pati_puan içinde var (yetersiz bakiye varsa exception fırlatır).
-    async redeemReward(productId: string, name: string, pricePp: number): Promise<number> {
-        return this.awardPatiPuan(-pricePp, `Ödül: ${name}`, 'redemption', productId);
-    }
 
     // Faz 22: Ödül Marketi fiziksel eşya yerine gerçek dijital gardırop —
     // src/integrations-pending/kombinle prototipinin PP-ekonomisine bağlanmış hali.

@@ -5,6 +5,7 @@ import { geolocation, sensors, device } from "@/native";
 import { useAuth } from '@/context/AuthContext';
 import { usePet } from '@/context/PetContext';
 import { apiService } from '@/services/apiService';
+import type { WalkPoint } from '@/services/types';
 import { WalkStats } from '@/types/domain';
 import { normalizePathToTuples } from '@/lib/utils';
 
@@ -220,11 +221,39 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     const lastMovementAtRef = React.useRef<number>(Date.now());
     const stationarySinceRef = React.useRef<number | null>(null);
     const AUTO_PAUSE_IDLE_MS = 25000;
-    // Çevrimdışı GPS kuyruğu (piyasa araştırması bulgusu #8) — sunucuya senkron
-    // başarısız olduğunda konum SESSİZCE kaybolmasın diye burada bekletiliyor,
-    // bağlantı geri gelince (online event'i) sırayla tekrar gönderiliyor.
-    const offlineLocationQueueRef = React.useRef<{ sessionId: string; lat: number; lng: number }[]>([]);
+    // Kabul edilen GPS noktaları burada birikir ve toplu gönderilir (her noktada ayrı istek yok).
+    // Bağlantı yokken ya da gönderim başarısızken de burada kalır: çevrimdışı kuyruk bu tampondur.
+    const pendingPointsRef = React.useRef<WalkPoint[]>([]);
+    // Durum güncelleyicisi (setWalkData) aynı noktayla iki kez çalışabilir; zaman damgası kontrolü
+    // aynı noktanın tampona ikinci kez girmesini engeller.
+    const lastQueuedAtRef = React.useRef<number>(0);
+    const flushingRef = React.useRef(false);
     const recInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const queuePoint = (timestampMs: number, lat: number, lng: number) => {
+        if (timestampMs <= lastQueuedAtRef.current) return;
+        lastQueuedAtRef.current = timestampMs;
+        pendingPointsRef.current.push({ lat, lng, timestamp: new Date(timestampMs).toISOString() });
+    };
+
+    const resetPointBuffer = () => {
+        pendingPointsRef.current = [];
+        lastQueuedAtRef.current = 0;
+    };
+
+    const flushPoints = useCallback(async (sessionId: string | undefined) => {
+        if (!sessionId || flushingRef.current || pendingPointsRef.current.length === 0 || !device.isOnline()) return;
+        flushingRef.current = true;
+        const batch = pendingPointsRef.current.slice(0, 500);
+        try {
+            await apiService.appendWalkPoints(sessionId, batch);
+            pendingPointsRef.current.splice(0, batch.length);
+        } catch (err) {
+            console.error("Yürüyüş noktaları gönderilemedi, tekrar denenecek:", err);
+        } finally {
+            flushingRef.current = false;
+        }
+    }, []);
 
     // Mapper function to support both Local and Backend WalkSession formats
     const mapSessionToRecord = useCallback((session: any): WalkRecord => {
@@ -375,9 +404,10 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         setActiveMode('walk');
         setIsLoading(true);
         let sId = undefined;
-        if (user?.id && activePet?.id) {
+        resetPointBuffer();
+        if (user?.id) {
             try {
-                const session = await apiService.startWalk(user.id, activePet.id);
+                const session = await apiService.startWalk(activePet?.id ? String(activePet.id) : undefined);
                 if (session) sId = session.id;
             } catch (e) {
                 console.error("Failed to start walk on server:", e);
@@ -433,6 +463,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     // Faz 2: kapanış/çökme sonrası bulunan yürüyüşe devam et
     const continueRecoveredWalk = useCallback(() => {
         if (!recoverableWalk) return;
+        resetPointBuffer();
         setActiveMode('walk');
         setWalkData({
             time: recoverableWalk.time,
@@ -460,10 +491,12 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         if (!recoverableWalk) return;
         if (recoverableWalk.sessionId) {
             try {
-                await apiService.endWalk(recoverableWalk.sessionId, {
-                    distanceKm: recoverableWalk.distance / 1000,
-                    durationMinutes: Math.round(recoverableWalk.time / 60),
+                // Bitiş "şu an" değil son kaydedilen konumun zamanı: uygulama saatlerce kapalı kalmışsa
+                // o süre yürüyüşe eklenmez.
+                await apiService.finishWalk(recoverableWalk.sessionId, {
+                    activeSeconds: recoverableWalk.time,
                     steps: recoverableWalk.realSteps || 0,
+                    endAtLastPoint: true,
                 });
             } catch (e) {
                 console.error("Failed to end recovered walk on server:", e);
@@ -492,11 +525,18 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         if (walkData.isActive) {
             if (walkData.sessionId) {
                 try {
-                    await apiService.endWalk(walkData.sessionId, {
-                        distanceKm: walkData.distance / 1000,
-                        durationMinutes: Math.round(walkData.time / 60),
+                    // Bekleyen noktaların fazlası parça parça gider, son 500'ü bitirme çağrısıyla birlikte.
+                    while (pendingPointsRef.current.length > 500 && device.isOnline()) {
+                        const before = pendingPointsRef.current.length;
+                        await flushPoints(walkData.sessionId);
+                        if (pendingPointsRef.current.length === before) break;
+                    }
+                    await apiService.finishWalk(walkData.sessionId, {
+                        activeSeconds: walkData.time,
                         steps: walkData.realSteps,
+                        points: pendingPointsRef.current.slice(0, 500),
                     });
+                    resetPointBuffer();
                 } catch (e) {
                     console.error("Failed to end walk on server:", e);
                 }
@@ -606,18 +646,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
 
                         const { lat: latitude, lng: longitude, speed: gpsSpeed } = fix;
                         const newCoord: [number, number] = [latitude, longitude];
-
-                        const syncLocation = (sessionId: string) => {
-                            if (device.isOnline()) {
-                                apiService.updateWalkLocation(sessionId, latitude, longitude)
-                                    .catch(err => console.error("Error updating GPS location on DB:", err));
-                            } else {
-                                // Piyasa araştırması #8: çevrimdışı kuyruk — bağlantı koptuğunda
-                                // konum sessizce kaybolmasın, bağlantı dönünce sırayla gönderilsin.
-                                offlineLocationQueueRef.current.push({ sessionId, lat: latitude, lng: longitude });
-                                if (offlineLocationQueueRef.current.length > 200) offlineLocationQueueRef.current.shift();
-                            }
-                        };
+                        const fixAt = fix.timestamp || Date.now();
 
                         setWalkData(prev => {
                             // Otomatik duraklatma sırasında GPS izleme AÇIK kalıyor (bkz. yukarısı)
@@ -663,6 +692,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                         lastMovementAtRef.current = Date.now();
                                         stationarySinceRef.current = null;
                                         lastPosTimestampRef.current = fix.timestamp;
+                                        queuePoint(fixAt, latitude, longitude);
                                         return { ...prev, isPaused: false, isAutoPaused: false, path: [...currentPath, newCoord], distance: newDistance + distDelta, speed: gpsSpeed && gpsSpeed > 0 ? gpsSpeed * 3.6 : calcSpeedKmH };
                                     }
                                     return prev;
@@ -697,7 +727,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                         }];
                                     }
 
-                                    if (prev.sessionId) syncLocation(prev.sessionId);
+                                    queuePoint(fixAt, latitude, longitude);
                                 } else {
                                     currentSpeed = 0;
                                     if (stationarySinceRef.current === null) stationarySinceRef.current = Date.now();
@@ -707,7 +737,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                 newPath = [newCoord];
                                 lastPosTimestampRef.current = fix.timestamp;
                                 lastMovementAtRef.current = Date.now();
-                                if (prev.sessionId) syncLocation(prev.sessionId);
+                                queuePoint(fixAt, latitude, longitude);
                             }
 
                             return { ...prev, path: newPath, distance: newDistance, speed: currentSpeed, splits: newSplits, sniffStops: newSniffStops };
@@ -873,21 +903,18 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         };
         const handleOnline = () => {
             setWalkIssue(prev => (prev === 'network_unavailable' ? 'none' : prev));
-            // Piyasa araştırması #8: bağlantı geri gelince çevrimdışıyken biriken
-            // GPS noktalarını SIRAYLA sunucuya gönder — sessizce kaybolmasınlar.
-            const queued = offlineLocationQueueRef.current.splice(0, offlineLocationQueueRef.current.length);
-            (async () => {
-                for (const point of queued) {
-                    try {
-                        await apiService.updateWalkLocation(point.sessionId, point.lat, point.lng);
-                    } catch (err) {
-                        console.error("Çevrimdışı kuyruktaki konum senkronize edilemedi:", err);
-                    }
-                }
-            })();
+            flushPoints(walkData.sessionId);
         };
         return device.onNetworkChange(online => (online ? handleOnline() : handleOffline()));
-    }, [walkData.isActive, walkData.isPaused]);
+    }, [walkData.isActive, walkData.isPaused, walkData.sessionId, flushPoints]);
+
+    // Biriken noktalar 10 sn'de bir gider (bağlantı yoksa tamponda bekler).
+    useEffect(() => {
+        if (!walkData.isActive || !walkData.sessionId) return;
+        const sessionId = walkData.sessionId;
+        const timer = setInterval(() => flushPoints(sessionId), 10000);
+        return () => clearInterval(timer);
+    }, [walkData.isActive, walkData.sessionId, flushPoints]);
 
     // Faz 2: sekme arka plana alındığında (mobil tarayıcılar GPS callback'lerini kısıtlayabilir)
     useEffect(() => {

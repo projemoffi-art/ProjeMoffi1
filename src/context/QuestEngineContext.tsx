@@ -198,7 +198,6 @@ export interface QuestEngineContextType {
     // Tetikleyiciler
     triggerQuestEvent: (type: string, data?: Record<string, unknown>) => void;
     completeManualQuest: (questId: string) => void;
-    spendPatiPuan: (amount: number) => boolean;
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -887,12 +886,17 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     const { user } = useAuth();
 
     const [dailyQuests, setDailyQuests] = useState<Quest[]>([]);
+    // Olay dinleyicileri güncel listeyi buradan okur; ödül çağrısı durum güncelleyicisinin içine girmesin.
+    const dailyQuestsRef = useRef<Quest[]>([]);
+    useEffect(() => { dailyQuestsRef.current = dailyQuests; }, [dailyQuests]);
     const [totalPatiPuan, setTotalPatiPuan] = useState(0);
     const [totalXP, setTotalXP] = useState(0);
     const [earnedBadgeIds, setEarnedBadgeIds] = useState<string[]>([]);
     const earnedBadgeIdsRef = useRef<string[]>([]);
     useEffect(() => { earnedBadgeIdsRef.current = earnedBadgeIds; }, [earnedBadgeIds]);
     const [monthlyResearch, setMonthlyResearch] = useState<MonthlyResearch | null>(null);
+    const monthlyResearchRef = useRef<MonthlyResearch | null>(null);
+    useEffect(() => { monthlyResearchRef.current = monthlyResearch; }, [monthlyResearch]);
     const [todayEarned, setTodayEarned] = useState({ pp: 0, xp: 0 });
     const [weeklyStamps, setWeeklyStamps] = useState(0);
     const weeklyStampsRef = useRef(0);
@@ -1091,114 +1095,59 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     }, [walkStats, weather]); // eslint-disable-line
 
     // ── Puan ver ve kaydet ────────────────────────────────────────────────
-    const awardReward = useCallback((reward: { pp: number; xp: number }, questId: string, questIcon: string, questTitle: string) => {
-        if (notifiedRef.current.has(questId)) return;
-        notifiedRef.current.add(questId);
-
-        const currentLevel = getLevelInfo(totalXP).level;
-        const multiplier = 1 + (currentLevel - 1) * 0.05; // Seviye başına +%5 ödül çarpanı
-        const finalMultiplier = Math.min(2.0, multiplier); // Maksimum 2.0x limit sınırı (Lv.21)
-        const finalPp = Math.round(reward.pp * finalMultiplier);
-        const finalXp = Math.round(reward.xp * finalMultiplier);
-
-        // Günlük 200 PP kazanım sınırı
-        const remainingLimit = Math.max(0, 200 - todayEarned.pp);
-        const awardedPp = Math.min(finalPp, remainingLimit);
-        const isLimitExceeded = finalPp > remainingLimit;
-
-        setTotalPatiPuan(prev => {
-            const next = prev + awardedPp;
-            localStorage.setItem(PUAN_KEY, String(next));
-            return next;
-        });
-        setTotalXP(prev => {
-            const next = prev + finalXp;
-            localStorage.setItem(XP_KEY, String(next));
-            return next;
-        });
-        setTodayEarned(prev => ({ pp: prev.pp + awardedPp, xp: prev.xp + finalXp }));
-        setWalkPpEarned(prev => prev + awardedPp);
-
-        // Faz 7: gerçek, denetlenebilir transaction — arka planda, UI'ı bloklamadan
-        if (isSupabaseEnabled && awardedPp !== 0) {
-            apiService.awardPatiPuan(awardedPp, questTitle, 'quest', questId)
-                .catch(err => console.error('Moffi Puanı sunucuya yazılamadı:', err));
-        }
-
-        // Faz 8 düzeltmesi: pul artık GÜNDE BİR kere ekleniyor (o gün ilk görev tamamlandığında),
-        // görev sayısı kadar değil. Öncesinde bir günde 3 görev bitirince 3 pul birden
-        // ekleniyordu — bu da "7 farklı gün" anlamına gelen haftalık serinin amacını bozuyordu.
-        // NOT: bu sadece pul artışını atlar, aşağıdaki tamamlanma toast'u her zaman gösterilir.
-        const todayStrForStamp = getTodayStr();
-        const alreadyStampedToday = localStorage.getItem(LAST_STAMP_DATE_KEY) === todayStrForStamp;
-        if (!alreadyStampedToday) localStorage.setItem(LAST_STAMP_DATE_KEY, todayStrForStamp);
-
-        if (!alreadyStampedToday) {
-            const prev = weeklyStampsRef.current;
-            const next = Math.min(7, prev + 1);
-            weeklyStampsRef.current = next;
-            setWeeklyStamps(next);
-
-            // Eğer pul sayısı 6'dan 7'ye ulaşıyorsa haftalık büyük ödülü ver (günlük limite takılmaz)
-            if (prev === 6 && next === 7) {
-                const weeklyPp = 250;
-                const weeklyXp = 400;
-                
-                setTimeout(() => {
-                    setTotalPatiPuan(p => {
-                        const n = p + weeklyPp;
-                        localStorage.setItem(PUAN_KEY, String(n));
-                        return n;
-                    });
-                    setTotalXP(x => {
-                        const n = x + weeklyXp;
-                        localStorage.setItem(XP_KEY, String(n));
-                        return n;
-                    });
-                    setTodayEarned(te => ({ pp: te.pp + weeklyPp, xp: te.xp + weeklyXp }));
-                    setWalkPpEarned(p => p + weeklyPp);
-
-                    if (isSupabaseEnabled) {
-                        apiService.awardPatiPuan(weeklyPp, 'Haftalık 7 Pul Ödülü', 'streak')
-                            .catch(err => console.error('Moffi Puanı sunucuya yazılamadı:', err));
-                    }
-
-                    window.dispatchEvent(new CustomEvent('moffi-toast', {
-                        detail: {
-                            message: `🎁 Haftalık 7 Pul Tamamlandı! Büyük Ödül Sandığı Açıldı: +250 PP · +400 XP! 🏆`,
-                            icon: 'Gift',
-                            color: 'text-yellow-400 font-bold',
-                        }
-                    }));
-                }, 100);
-            }
-            
-            localStorage.setItem(STAMPS_KEY, JSON.stringify({ weekStart: getWeekStart(), count: next }));
-        }
-
-        // Toast bildirimi (Limiti aşma durumuna göre özelleştirilmiş)
-        setTimeout(() => {
-            let toastMessage = `${questIcon} ${questTitle} tamamlandı! +${awardedPp} PP · +${finalXp} XP 🎉`;
-            let toastColor = 'text-orange-400';
-            
-            if (isLimitExceeded) {
-                toastColor = 'text-yellow-500 font-bold';
-                if (awardedPp > 0) {
-                    toastMessage = `${questIcon} ${questTitle} tamamlandı! +${awardedPp} PP (Günlük Limit!) · +${finalXp} XP ⚠️`;
-                } else {
-                    toastMessage = `${questIcon} ${questTitle} tamamlandı! +${finalXp} XP (Günlük 200 PP Limiti Doldu!) ⚠️`;
+    // Puan miktarını, dönemini ve günlük 200 sınırını sunucu belirler (claim_reward). Sunucu bu
+    // ödülü bu dönemde zaten verdiyse (ör. uygulama yeniden açıldı) ne puan ne XP ne bildirim olur.
+    const applyClaim = useCallback((
+        res: { awarded: number; alreadyClaimed: boolean; capped: boolean; balance: number },
+        xp: number, icon: string, title: string,
+    ) => {
+        if (res.alreadyClaimed) return false;
+        setTotalPatiPuan(res.balance);
+        localStorage.setItem(PUAN_KEY, String(res.balance));
+        setTotalXP(prev => prev + xp);
+        setTodayEarned(prev => ({ pp: prev.pp + res.awarded, xp: prev.xp + xp }));
+        setWalkPpEarned(prev => prev + res.awarded);
+        window.dispatchEvent(new CustomEvent('moffi-toast', {
+            detail: res.capped
+                ? {
+                    message: res.awarded > 0
+                        ? `${icon} ${title} tamamlandı! +${res.awarded} PP (günlük sınıra ulaştın) · +${xp} XP`
+                        : `${icon} ${title} tamamlandı! +${xp} XP (bugünkü 200 PP sınırı doldu)`,
+                    icon: 'AlertTriangle',
+                    color: 'text-yellow-500 font-bold',
                 }
-            }
+                : { message: `${icon} ${title} tamamlandı! +${res.awarded} PP · +${xp} XP 🎉`, icon: 'Sparkles', color: 'text-orange-400' },
+        }));
+        return true;
+    }, []);
 
-            window.dispatchEvent(new CustomEvent('moffi-toast', {
-                detail: {
-                    message: toastMessage,
-                    icon: isLimitExceeded ? 'AlertTriangle' : 'Sparkles',
-                    color: toastColor,
-                }
-            }));
-        }, 400);
-    }, [totalXP, todayEarned]);
+    const awardReward = useCallback((ruleKey: string, xp: number, icon: string, title: string) => {
+        if (!isSupabaseEnabled || notifiedRef.current.has(ruleKey)) return;
+        notifiedRef.current.add(ruleKey);
+
+        apiService.claimReward(ruleKey).then(res => {
+            if (!applyClaim(res, xp, icon, title)) return;
+
+            // Haftalık pul günde bir kez artar (o gün gerçekten verilen ilk ödülle).
+            const todayStrForStamp = getTodayStr();
+            if (localStorage.getItem(LAST_STAMP_DATE_KEY) === todayStrForStamp) return;
+            localStorage.setItem(LAST_STAMP_DATE_KEY, todayStrForStamp);
+            const prevStamps = weeklyStampsRef.current;
+            const nextStamps = Math.min(7, prevStamps + 1);
+            weeklyStampsRef.current = nextStamps;
+            setWeeklyStamps(nextStamps);
+            localStorage.setItem(STAMPS_KEY, JSON.stringify({ weekStart: getWeekStart(), count: nextStamps }));
+
+            if (prevStamps === 6 && nextStamps === 7) {
+                apiService.claimReward('stamps:weekly')
+                    .then(bonus => applyClaim(bonus, 400, '🎁', 'Haftalık 7 Pul'))
+                    .catch(err => console.error('Haftalık pul ödülü alınamadı:', err));
+            }
+        }).catch(err => {
+            notifiedRef.current.delete(ruleKey);
+            console.error('Ödül alınamadı:', err);
+        });
+    }, [applyClaim]);
 
     // ── Rozet ver ─────────────────────────────────────────────────────────
     const awardBadge = useCallback((badgeId: string) => {
@@ -1284,7 +1233,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
 
             const isNowCompleted = current >= q.target;
             if (isNowCompleted && !q.completedAt) {
-                awardReward(q.reward, q.id, q.icon, q.title);
+                awardReward(`quest:${q.templateId}`, q.reward.xp, q.icon, q.title);
                 // Faz 21: first_step/week_fire/explorer_100/month_fire/social_dog/
                 // first_post artık "Mesafe Ustası"/"Seri Gücü"/"Yürüyüş Sayısı"/
                 // "Beğeni Toplayıcı"/"Paylaşım" ailelerinin bir kademesi — merkezi
@@ -1311,7 +1260,8 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     // "farklı rota" sayısına çeviriyor - tam bir coğrafi kümeleme altyapısı
     // olmadan, ama uydurma değil, gerçek GPS verisinden hesaplanıyor.
     const updateMonthlyResearchProgress = useCallback(() => {
-        setMonthlyResearch(prev => {
+        const next = (() => {
+            const prev = monthlyResearchRef.current;
             if (!prev || prev.completedAt) return prev;
             const stage = prev.stages[prev.currentStageIndex];
             if (!stage) return prev;
@@ -1364,7 +1314,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             let completedAt = prev.completedAt;
 
             if (stageJustCompleted) {
-                awardReward(stage.reward, stage.id, stage.emoji, stage.reward.title || stage.title);
+                awardReward(`research:${stage.id}`, stage.reward.xp, stage.emoji, stage.reward.title || stage.title);
                 if (stage.reward.badgeId) awardBadge(stage.reward.badgeId);
                 if (prev.currentStageIndex + 1 < prev.stages.length) {
                     nextStageIndex = prev.currentStageIndex + 1;
@@ -1373,10 +1323,12 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
                 }
             }
 
-            const next: MonthlyResearch = { ...prev, stages: updatedStages, currentStageIndex: nextStageIndex, completedAt };
-            localStorage.setItem(RESEARCH_KEY, JSON.stringify(next));
-            return next;
-        });
+            return { ...prev, stages: updatedStages, currentStageIndex: nextStageIndex, completedAt } as MonthlyResearch;
+        })();
+        if (!next || next === monthlyResearchRef.current) return;
+        monthlyResearchRef.current = next;
+        localStorage.setItem(RESEARCH_KEY, JSON.stringify(next));
+        setMonthlyResearch(next);
     }, [walkData, walkStats, walkHistory, awardReward, awardBadge]);
 
     // ── Meydan Okumalar (Faz 18) ────────────────────────────────────────────
@@ -1529,7 +1481,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         challenges.forEach(c => {
             if (c.status === 'completed') {
                 awardBadge(c.badgeId);
-                if (c.rewardPp > 0) awardReward({ pp: c.rewardPp, xp: c.rewardPp }, `challenge_${c.id}`, c.icon, c.title);
+                if (c.rewardPp > 0) awardReward(`challenge:${c.id}`, c.rewardPp, c.icon, c.title);
             }
         });
     }, [challenges, awardBadge, awardReward]);
@@ -1654,30 +1606,22 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
                 if (likes >= 50) awardBadge('likes_50');
                 if (likes >= 100) awardBadge('likes_100');
             }
-            else if (type === 'page_visited_petshop') {
-                setDailyQuests(prev => {
-                    const updated = prev.map(q => {
-                        if (q.templateId === 'visit_petshop' && !q.completedAt) {
-                            awardReward(q.reward, q.id, q.icon, q.title);
-                            return { ...q, current: 1, completedAt: new Date().toISOString() };
-                        }
-                        return q;
-                    });
-                    return updated;
-                });
-            } else if (type === 'page_visited_ai') {
-                setDailyQuests(prev => prev.map(q => {
-                    if (q.templateId === 'try_ai' && !q.completedAt) {
-                        awardReward(q.reward, q.id, q.icon, q.title);
-                        return { ...q, current: 1, completedAt: new Date().toISOString() };
-                    }
-                    return q;
-                }));
+            else if (type === 'page_visited_petshop' || type === 'page_visited_ai') {
+                const templateId = type === 'page_visited_petshop' ? 'visit_petshop' : 'try_ai';
+                const target = dailyQuestsRef.current.find(q => q.templateId === templateId && !q.completedAt);
+                if (target) {
+                    awardReward(`quest:${target.templateId}`, target.reward.xp, target.icon, target.title);
+                    const updated = dailyQuestsRef.current.map(q => q.id === target.id ? { ...q, current: 1, completedAt: new Date().toISOString() } : q);
+                    dailyQuestsRef.current = updated;
+                    setDailyQuests(updated);
+                }
             }
 
             // Sosyal görevleri güncelle
             if (['post_added', 'comment_added', 'like_toggled'].includes(type)) {
-                setDailyQuests(prev => updateQuestProgress(prev));
+                const updated = updateQuestProgress(dailyQuestsRef.current);
+                dailyQuestsRef.current = updated;
+                setDailyQuests(updated);
             }
         };
 
@@ -1687,45 +1631,24 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
 
     // ── Manuel görev tamamlama ────────────────────────────────────────────
     const completeManualQuest = useCallback((questId: string) => {
-        setDailyQuests(prev => {
-            const updated = prev.map(q => {
-                if (q.id === questId && q.type === 'manual' && !q.completedAt) {
-                    const newCurrent = q.current + 1;
-                    const isCompleted = newCurrent >= q.target;
-                    if (isCompleted) awardReward(q.reward, q.id, q.icon, q.title);
-                    return { ...q, current: newCurrent, completedAt: isCompleted ? new Date().toISOString() : undefined };
-                }
-                return q;
-            });
-            const todayStr = getTodayStr();
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayStr, quests: updated, todayEarned, socialCounts: socialCountsRef.current }));
-            return updated;
+        const updated = dailyQuestsRef.current.map(q => {
+            if (q.id === questId && q.type === 'manual' && !q.completedAt) {
+                const newCurrent = q.current + 1;
+                const isCompleted = newCurrent >= q.target;
+                if (isCompleted) awardReward(`quest:${q.templateId}`, q.reward.xp, q.icon, q.title);
+                return { ...q, current: newCurrent, completedAt: isCompleted ? new Date().toISOString() : undefined };
+            }
+            return q;
         });
+        dailyQuestsRef.current = updated;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: getTodayStr(), quests: updated, todayEarned, socialCounts: socialCountsRef.current }));
+        setDailyQuests(updated);
     }, [awardReward, todayEarned]);
 
     // ── Genel tetikleyici ─────────────────────────────────────────────────
     const triggerQuestEvent = useCallback((type: string, data?: Record<string, unknown>) => {
         window.dispatchEvent(new CustomEvent('moffi-quest-trigger', { detail: { type, ...data } }));
     }, []);
-
-    // ── Ekonomi ───────────────────────────────────────────────────────────
-    const spendPatiPuan = useCallback((amount: number) => {
-        if (totalPatiPuan >= amount) {
-            setTotalPatiPuan(prev => {
-                const newValue = prev - amount;
-                localStorage.setItem(PUAN_KEY, String(newValue));
-                return newValue;
-            });
-            // Faz 7: gerçek, denetlenebilir transaction — arka planda, mevcut senkron
-            // sözleşmeyi (anında true/false dönüşü) bozmadan
-            if (isSupabaseEnabled) {
-                apiService.awardPatiPuan(-amount, 'Harcama', 'spend')
-                    .catch(err => console.error('Moffi Puanı harcaması sunucuya yazılamadı:', err));
-            }
-            return true;
-        }
-        return false;
-    }, [totalPatiPuan]);
 
     // ── Streak kalkanı ────────────────────────────────────────────────────
     // Faz 8: artık gerçek — sunucu tarafında doğrulanıyor (dünü gerçekten kapsıyor,
@@ -1800,7 +1723,6 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     return (
         <QuestEngineContext.Provider value={{
             dailyQuests,
-            spendPatiPuan,
             completedCount,
             totalCount,
             dailyGoal,

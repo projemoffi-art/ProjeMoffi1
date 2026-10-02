@@ -17,11 +17,10 @@ import { formatRemaining } from "@/lib/vipFrames";
 // Faz 22 — Baran'ın bulgusu: piyasadaki gerçek fiziksel ürünler (bandana, mama
 // kabı vb.) hiçbir teslimat altyapısı olmadan "sepetine eklendi" diyordu — bu
 // projenin "sahte/dürüst olmayan çözüm yok" kuralına aykırıydı. Fiziksel
-// ürünler kaldırıldı (bkz. CLAUDE.md), yerlerine gerçek, teslimat gerektirmeyen
-// iki kategori geldi: (1) Kozmetik — `cosmetic_items`/`redeem_cosmetic_item`
-// üzerinden gerçek gardırop parçası satın alma (Giydirme Stüdyosu'nda
-// kullanılıyor), (2) Kuponlar — Moffi'nin kendi mağazasında geçerli gerçek
-// indirim (gerçek e-ticaret teslimatı zaten var, biz sadece indirimi veriyoruz).
+// ürünler kaldırıldı (bkz. CLAUDE.md), yerine teslimat gerektirmeyen Kozmetik geldi
+// (`cosmetic_items`/`redeem_cosmetic_item`, Giydirme Stüdyosu'nda kullanılıyor).
+// Kuponlar da kaldırıldı: kupon kaydı ve ödemede kupon uygulama altyapısı yoktu, puan
+// düşülüp karşılığında bir şey verilmiyordu.
 //
 // Faz 23 — Baran'ın isteği: ödüller sadece Kombinle'yle sınırlı kalmasın,
 // "VIP gibi" geçici olarak kullanılabilecek başka gerçek şeyler de olsun.
@@ -31,20 +30,19 @@ import { formatRemaining } from "@/lib/vipFrames";
 // bunu kapsıyor. `vip_perks`/`user_active_perks`/`redeem_vip_perk` üzerinden,
 // süresi dolan bir "geçici tadım" (bkz. src/lib/vipFrames.ts).
 
-type TabKey = 'all' | 'cosmetic' | 'coupon' | 'vip';
+type TabKey = 'all' | 'cosmetic' | 'vip';
 
 const TABS: { key: TabKey; label: string }[] = [
     { key: 'all', label: 'Tümü' },
     { key: 'cosmetic', label: 'Kozmetik' },
     { key: 'vip', label: 'VIP' },
-    { key: 'coupon', label: 'Kuponlar' },
 ];
 
 const FEATURED_COUNT = 3;
 
 interface ShopEntry {
     id: string;
-    kind: 'reward' | 'cosmetic' | 'vip';
+    kind: 'cosmetic' | 'vip';
     name: string;
     description: string | null;
     category: TabKey;
@@ -70,8 +68,7 @@ export default function RewardsPage() {
         let cancelled = false;
         (async () => {
             setLoading(true);
-            const [rewardProducts, cosmeticItems, ownedIds, vipPerks, balanceData] = await Promise.all([
-                apiService.getRewardProducts(),
+            const [cosmeticItems, ownedIds, vipPerks, balanceData] = await Promise.all([
                 apiService.getCosmeticItems(),
                 user ? apiService.getOwnedCosmeticItemIds(user.id) : Promise.resolve([] as string[]),
                 apiService.getVipPerks(),
@@ -80,10 +77,6 @@ export default function RewardsPage() {
             if (cancelled) return;
             const ownedSet = new Set(ownedIds);
             const merged: ShopEntry[] = [
-                ...rewardProducts.map(p => ({
-                    id: p.id, kind: 'reward' as const, name: p.name, description: p.description,
-                    category: 'coupon' as TabKey, pricePp: p.pricePp, icon: p.icon, owned: false,
-                })),
                 ...cosmeticItems.map(c => ({
                     id: c.id, kind: 'cosmetic' as const, name: c.name, description: `${c.rarity === 'legendary' ? '✨ Efsanevi' : c.rarity === 'epic' ? '🔷 Epik' : c.rarity === 'rare' ? '🔹 Nadir' : 'Başlangıç'} kozmetik eşya — Giydirme Stüdyosu'nda kullanılabilir.`,
                     category: 'cosmetic' as TabKey, pricePp: c.pricePp, icon: c.icon, owned: c.isStarter || ownedSet.has(c.id),
@@ -119,15 +112,11 @@ export default function RewardsPage() {
                 setBalance(newBalance);
                 setEntries(prev => prev.map(e => e.id === confirmEntry.id ? { ...e, owned: true } : e));
                 successMessage = `👕 ${confirmEntry.name} gardırobuna eklendi!`;
-            } else if (confirmEntry.kind === 'vip') {
+            } else {
                 const newExpiresAt = await apiService.redeemVipPerk(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp);
                 setBalance(prev => prev - confirmEntry.pricePp);
                 await refreshActivePerks();
                 successMessage = `👑 ${confirmEntry.name} aktif! ${formatRemaining(newExpiresAt)}.`;
-            } else {
-                const newBalance = await apiService.redeemReward(confirmEntry.id, confirmEntry.name, confirmEntry.pricePp);
-                setBalance(newBalance);
-                successMessage = `🎟️ ${confirmEntry.name} hesabına tanımlandı!`;
             }
             haptics.success();
             setRedeemed(true);
@@ -307,7 +296,7 @@ export default function RewardsPage() {
                                         </div>
                                         <h3 className="text-base font-black text-foreground text-center">Harika, alındı! 🎉</h3>
                                         <p className="text-[11px] font-bold text-slate-400 text-center mt-1">
-                                            {confirmEntry.kind === 'cosmetic' ? `${confirmEntry.name} gardırobuna eklendi.` : `${confirmEntry.name} hesabına tanımlandı.`}
+                                            {confirmEntry.kind === 'cosmetic' ? `${confirmEntry.name} gardırobuna eklendi.` : `${confirmEntry.name} aktif edildi.`}
                                         </p>
                                     </motion.div>
                                 ) : (

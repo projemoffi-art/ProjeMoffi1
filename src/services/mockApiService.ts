@@ -2,7 +2,7 @@
 import { 
     Pet, Post, UserProfile, LostPet,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
-    SystemAnnouncement, SystemFeedback
+    SystemAnnouncement, SystemFeedback, WalkPoint
 } from './types';
 import { 
     MOCK_PETS,
@@ -297,22 +297,8 @@ export class MockApiService implements IApiService {
         }
     }
 
-    // Faz 7: Moffi Puanı (PP) — offline/mock fallback, coin_balance/PawCoin'den ayrı
-    async awardPatiPuan(amount: number, reason: string, source: string, referenceId?: string): Promise<number> {
-        const balanceKey = `${STORAGE_PREFIX}pati_puan_balance`;
-        const historyKey = `${STORAGE_PREFIX}pati_puan_history`;
-        const current = parseInt(localStorage.getItem(balanceKey) || '0', 10) || 0;
-        if (amount < 0 && current + amount < 0) {
-            throw new Error('Yetersiz Moffi Puanı bakiyesi');
-        }
-        const next = current + amount;
-        localStorage.setItem(balanceKey, String(next));
-        if (amount !== 0) {
-            const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
-            history.unshift({ id: String(Date.now()), amount, reason, source, created_at: new Date().toISOString() });
-            localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 100)));
-        }
-        return next;
+    async claimReward(key: string): Promise<{ awarded: number; alreadyClaimed: boolean; capped: boolean; balance: number }> {
+        return { awarded: 0, alreadyClaimed: false, capped: false, balance: await this.getPatiPuanBalance() };
     }
 
     async getPatiPuanBalance(): Promise<number> {
@@ -449,14 +435,14 @@ export class MockApiService implements IApiService {
     }
 
     // Walk & Tracking
-    async startWalk(userId: string, petId: string): Promise<any> { return {}; }
-    async updateWalkLocation(sessionId: string, lat: number, lng: number): Promise<void> { }
+    async startWalk(petId?: string): Promise<{ id: string }> { return { id: `mock-walk-${Date.now()}` }; }
+    async appendWalkPoints(sessionId: string, points: WalkPoint[]): Promise<void> { }
     async uploadWalkPhoto(sessionId: string, file: File): Promise<string> { return URL.createObjectURL(file); }
     async startBeacon(sessionId: string, petName: string, lat: number, lng: number): Promise<string> { return 'mock-beacon'; }
     async updateBeaconLocation(beaconId: string, lat: number, lng: number): Promise<void> { }
     async stopBeacon(beaconId: string): Promise<void> { }
     async getBeacon(beaconId: string): Promise<{ lat: number; lng: number; petName: string | null; updatedAt: string; expiresAt: string } | null> { return null; }
-    async endWalk(sessionId: string, data: any): Promise<any> { return {}; }
+    async finishWalk(sessionId: string, data: { activeSeconds: number; steps: number; points?: WalkPoint[]; endAtLastPoint?: boolean }): Promise<any> { return {}; }
     async getWalkHistory(userId: string, limit?: number): Promise<any[]> { return []; }
     async getWalkStats(userId: string): Promise<any> {
         return {
@@ -968,17 +954,6 @@ export class MockApiService implements IApiService {
 
     async getSameCityUserIds(userId: string): Promise<string[]> {
         return [];
-    }
-
-    async getRewardProducts(): Promise<{ id: string; name: string; description: string | null; category: 'product' | 'experience' | 'coupon'; pricePp: number; icon: string }[]> {
-        return [
-            { id: 'r1', name: 'Moffi Bandana', description: 'Şık ve rahat pati bandanası', category: 'product', pricePp: 150, icon: '🧣' },
-            { id: 'r2', name: 'Mama Kabı', description: 'Moffi logolu paslanmaz çelik mama kabı', category: 'product', pricePp: 300, icon: '🥣' },
-        ];
-    }
-
-    async redeemReward(productId: string, name: string, pricePp: number): Promise<number> {
-        return 0;
     }
 
     async getCosmeticItems(): Promise<{ id: string; slot: 'body' | 'head' | 'eyes' | 'hands' | 'feet'; itemKey: string; name: string; icon: string; pricePp: number; rarity: 'common' | 'rare' | 'epic' | 'legendary'; isStarter: boolean }[]> {
