@@ -3220,6 +3220,19 @@ aynı ekran açılır; şifre sıfırlama kodla (`resetPasswordWithCode`). Şifr
 **Açılması için Baran'ın yapacakları (sırası önemli):** Resend + alan adı → Supabase özel SMTP → e-posta
 şablonlarına `{{ .Token }}` → en son "Confirm email" açık. SMTP çalışmadan doğrulamayı açmak yeni kaydı durdurur.
 
+### 8.57 Faz 1e (1. kısım) — gerçek hesap silme + şifre/oturum (2026-10-02)
+
+🔴 Ayarlardaki "Hesabı ve Verileri Sil" sahteydi ("30 gün içinde silinecek" deyip hiçbir şey yapmıyordu) ve bulunduğu
+"Gizlilik" ekranı tanımsız `t` yüzünden açılınca çöküyordu; şifre değiştirme ve "Giriş Hareketleri" var olmayan
+fonksiyonlara bağlıydı. Artık: `request_account_deletion` (30 gün, e-posta bildirimi; ekibi olan işletme sahibi
+engellenir) / `cancel_account_deletion`, her sayfada "Silmeyi geri al" şeridi (`components/account/AccountDeletion.tsx`),
+`profiles_guard_deletion` istemcinin tarihi değiştirmesini engeller. Kalıcı silme: cron `account-purge-daily` →
+`/api/cron/account-purge` (servis rolü: `prepare_account_purge` randevuları "Silinmiş kullanıcı" yapar, tek sahipli
+işletmeyi yayından kaldırır → hesap → depodaki `{uid}/` dosyaları). Şifre değiştirme mevcut şifreyi doğrular ve diğer
+oturumları kapatır; "Oturumlar" ekranı diğer cihazlardan çıkış yapar (Supabase cihaz listesi vermez, sahte liste yok).
+**Bekleyen:** `20261002171000_account_deletion_foreign_keys.sql` (DROP içerir, Baran SQL Editor'dan). Uygulanmadan kalıcı
+silme bildirim/yorum/sipariş bağları yüzünden hata verir; sipariş ve randevular da yanlışlıkla silinir.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
@@ -3382,5 +3395,7 @@ E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i 
    Kalan: Hostinger'da `send` adına TXT `v=spf1 include:amazonses.com ~all` (yoksa spam riski), ve doğrulama
    test edildikten sonra Supabase'de "Confirm email" açılması (Faz 1d, 8.56). Servis rolünün `email_outbox`'a
    doğrudan yazma yetkisi yok: sonuç `finish_email_outbox` ile yazılır, takılan işler 15 dk sonra yeniden alınır.
-2. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
-3. Eski silinen gönderi/hikâyelerin depoda kalan dosyaları temizlenmeli (8.50).
+2. 🔴 **Hesap silme bağlantı düzeltmeleri** (8.57): `supabase/migrations/20261002171000_account_deletion_foreign_keys.sql`
+   SQL Editor'dan çalıştırılmalı. İlk silme talebinin 30 günü dolmadan (en erken 2026-11-01) yapılmalı.
+3. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
+4. Eski silinen gönderi/hikâyelerin depoda kalan dosyaları temizlenmeli (8.50).

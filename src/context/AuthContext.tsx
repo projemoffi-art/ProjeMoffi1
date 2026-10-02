@@ -47,6 +47,8 @@ interface AuthContextType {
     signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string; needsVerification?: boolean }>;
     forgotPassword: (email: string) => Promise<{ success: boolean; message?: string; error?: string }>;
     resetPasswordWithCode: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+    changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+    signOutOtherDevices: () => Promise<{ success: boolean; error?: string }>;
     logout: () => void;
     updateProfile: (data: Partial<User>) => Promise<void>;
     updateSettings: (category: any, data: any) => Promise<void>;
@@ -583,6 +585,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: true };
     };
 
+    // Mevcut şifre yeniden doğrulanmadan şifre değiştirilmez (açık kalmış bir oturumu ele geçiren şifreyi değiştiremesin)
+    const changePassword = async (currentPassword: string, newPassword: string) => {
+        if (!isSupabaseEnabled) return { success: true };
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const email = authUser?.email;
+        if (!email) return { success: false, error: 'Oturum bulunamadı, tekrar giriş yap.' };
+        if (!authUser?.identities?.some(i => i.provider === 'email')) {
+            return { success: false, error: 'Bu hesap Google ile açılmış; şifre Google hesabından yönetilir.' };
+        }
+        const { error: authError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+        if (authError) return { success: false, error: 'Mevcut şifre hatalı.' };
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) return { success: false, error: /same/i.test(error.message) ? 'Yeni şifre eskisiyle aynı olamaz.' : 'Şifre güncellenemedi. En az 8 karakter olmalı.' };
+        await supabase.auth.signOut({ scope: 'others' });
+        return { success: true };
+    };
+
+    const signOutOtherDevices = async () => {
+        if (!isSupabaseEnabled) return { success: true };
+        const { error } = await supabase.auth.signOut({ scope: 'others' });
+        return error ? { success: false, error: error.message } : { success: true };
+    };
+
     const resendOtp = async (email: string) => {
         if (!isSupabaseEnabled) return { success: true };
         try {
@@ -900,7 +925,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AuthContext.Provider value={{
-            user, isLoading, login, signup, logout, resetPasswordWithCode,
+            user, isLoading, login, signup, logout, resetPasswordWithCode, changePassword, signOutOtherDevices,
             updateProfile, updateSettings, forgotPassword, verifyOtp, resendOtp,
             signInWithGoogle, signInWithApple, getAllUsers, deleteUser, registerBusiness, approveBusiness, rejectBusiness
         }}>

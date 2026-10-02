@@ -26,6 +26,7 @@ import { useMyBusinesses, setLastPanel } from '@/hooks/useMyBusinesses';
 import { adoptionService } from '@/services/adoptionService';
 import { socialService, type PersonCard } from '@/services/socialService';
 import { isFrameUnlocked, formatRemaining, type FrameStyle } from '@/lib/vipFrames';
+import { DeleteAccountButton } from '@/components/account/AccountDeletion';
 
 interface SettingsDrawerProps {
     isOpen: boolean;
@@ -90,8 +91,7 @@ interface ViewProps {
     handleAddWord?: () => void;
     handleRemoveWord?: (s: string) => void;
     handleUnblock?: (id: string) => void;
-    terminateSession?: (id: string) => void;
-    terminateAllOtherSessions?: () => void;
+    signOutOtherDevices?: () => Promise<{ success: boolean; error?: string }>;
     changePassword?: (old: string, newP: string) => Promise<{ success: boolean; error?: string }>;
     theme?: any;
     setTheme?: (t: any) => void;
@@ -609,30 +609,9 @@ const PrivacyView = ({ user, setView, updateSettings }: ViewProps) => (
             </div>
 
             <div className="space-y-3">
-                <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] px-1">{t('settings.danger_zone')}</p>
+                <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] px-1">Tehlikeli bölge</p>
                 <div className="bg-red-500/5 rounded-[2.5rem] p-2 border border-red-500/10">
-                    <button 
-                        onClick={() => {
-                            if (confirm(t('settings.delete_confirm'))) {
-                                if (confirm(t('settings.delete_final_confirm'))) {
-                                    alert(t('settings.delete_success'));
-                                    window.location.replace('/');
-                                }
-                            }
-                        }}
-                        className="w-full flex items-center justify-between py-4 px-4 hover:bg-red-500/10 transition-all rounded-3xl group text-left"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-2xl bg-red-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Trash2 className="w-5 h-5 text-red-500" />
-                            </div>
-                            <div>
-                                <p className="text-[12px] font-black text-red-500 uppercase tracking-tight">{t('settings.delete_account')}</p>
-                                <p className="text-[9px] text-red-500/40 mt-1 font-bold uppercase tracking-tighter">{t('settings.delete_desc')}</p>
-                            </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-red-500/30 group-hover:translate-x-1 transition-transform" />
-                    </button>
+                    <DeleteAccountButton />
                 </div>
             </div>
         </div>
@@ -964,67 +943,49 @@ const StorySettingsView = ({ user, setView, updateSettings }: ViewProps) => (
     </motion.div>
 );
 
-const LoginActivityView = ({ user, setView, terminateSession, terminateAllOtherSessions }: ViewProps) => (
-    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto pr-2 scroll-smooth custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-        <div className="space-y-8 pb-10 px-2">
-            <div>
-                <div className="flex items-center justify-between mb-8 px-1">
-                    <h3 className="text-[11px] font-black text-secondary uppercase tracking-[0.3em] flex items-center gap-3">
-                        <MapPin className="w-4 h-4 text-emerald-500" /> Aktif Oturumlar
-                    </h3>
-                    <button 
-                        onClick={() => {
-                            if (confirm('Mevcut cihaz dışındaki tüm oturumlar kapatılsın mı?')) {
-                                terminateAllOtherSessions?.();
-                            }
-                        }}
-                        className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all"
-                    >
-                        TÜMÜNÜ KAPAT
-                    </button>
-                </div>
-                <div className="space-y-4">
-                    {user?.loginActivity?.map((sess: any) => (
-                        <div key={sess.id} className="flex items-start gap-5 p-5 rounded-[2.5rem] bg-foreground/[0.03] hover:bg-foreground/[0.06] transition-all border border-card-border relative group">
-                            <div className="w-12 h-12 rounded-2xl bg-foreground/5 flex items-center justify-center text-secondary group-hover:text-emerald-500 group-hover:bg-emerald-500/10 transition-all shrink-0">
-                                {sess.device.includes('PC') ? <Laptop className="w-6 h-6" /> : <Smartphone className="w-6 h-6" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-3 mb-1.5">
-                                    <p className="text-[14px] font-black text-foreground uppercase truncate tracking-tight">{sess.device}</p>
-                                    {sess.isCurrent && <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-[8px] font-black text-white tracking-[0.2em]">BU CİHAZ</span>}
-                                </div>
-                                <p className="text-[11px] text-secondary font-bold uppercase tracking-tight">{sess.city}, {sess.country} • {sess.browser}</p>
-                                <p className="text-[10px] text-secondary/40 font-black italic mt-1.5 uppercase tracking-widest leading-none">{sess.lastActive}</p>
-                            </div>
-                            {!sess.isCurrent && (
-                                <button 
-                                    onClick={() => terminateSession?.(sess.id)}
-                                    className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center text-secondary hover:bg-red-500/20 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                </div>
+const LoginActivityView = ({ setView, signOutOtherDevices }: ViewProps) => {
+    const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
+    const run = async () => {
+        if (!confirm('Bu cihaz dışındaki tüm cihazlarda oturumun kapatılsın mı?')) return;
+        setState('busy');
+        const res = await signOutOtherDevices?.();
+        setState(res?.success ? 'done' : 'error');
+    };
+    return (
+        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 px-2">
+            <div className="space-y-4">
+                <h3 className="text-[15px] font-bold text-foreground flex items-center gap-2"><Smartphone className="w-4 h-4 text-accent" /> Oturumlar</h3>
+                <p className="text-sm text-secondary leading-relaxed">
+                    Hesabın başka bir cihazda açık kaldıysa ya da şüpheli bir giriş fark ettiysen, bu cihaz dışındaki tüm oturumları kapatabilirsin. O cihazlarda tekrar giriş yapmak gerekir.
+                </p>
+                <button onClick={run} disabled={state === 'busy'} className="w-full py-4 rounded-3xl bg-foreground text-background font-semibold text-sm disabled:opacity-50">
+                    {state === 'busy' ? <Activity className="w-4 h-4 animate-spin mx-auto" /> : 'Diğer cihazlardan çıkış yap'}
+                </button>
+                {state === 'done' && <p className="text-sm text-emerald-600">Diğer cihazlardaki oturumlar kapatıldı.</p>}
+                {state === 'error' && <p className="text-sm text-red-600">İşlem yapılamadı, tekrar dene.</p>}
             </div>
-        </div>
-        <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
-    </motion.div>
-);
+            <button onClick={() => setView('main')} className="mt-8 w-full py-4 rounded-3xl bg-foreground/[0.05] text-foreground font-semibold text-sm flex items-center justify-center gap-2"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
+        </motion.div>
+    );
+};
 
 const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
     const [oldPass, setOldPass] = useState('');
     const [newPass, setNewPass] = useState('');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSave = async () => {
         if (!oldPass || !newPass) return;
+        setError('');
+        if (newPass.length < 8) { setError('Yeni şifre en az 8 karakter olmalı.'); return; }
         setLoading(true);
         const res = await changePassword?.(oldPass, newPass);
         setLoading(false);
-        if (res?.success) setView('main');
+        if (res?.success) {
+            showToast('Şifren güncellendi, diğer cihazlardaki oturumlar kapatıldı.', 'CheckCircle2', 'text-emerald-500');
+            setView('main');
+        } else setError(res?.error || 'Şifre güncellenemedi.');
     };
 
     return (
@@ -1059,8 +1020,9 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                         />
                     </div>
                     <p className="text-[10px] text-black/30 dark:text-white/20 font-medium leading-relaxed px-4">
-                        Şifreniz en az 8 karakterden oluşmalı ve büyük/küçük harf içermelidir.
+                        Şifren en az 8 karakter olmalı. Kaydedince diğer cihazlardaki oturumların kapanır.
                     </p>
+                    {error && <p className="text-sm text-red-600 px-4">{error}</p>}
                 </div>
 
                 <button 
@@ -1090,9 +1052,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         seniorMode, setSeniorMode
     } = useTheme();
 
-    const { 
-        terminateSession, terminateAllOtherSessions, changePassword 
-    } = useAuth();
+    const { signOutOtherDevices, changePassword } = useAuth();
     
     const [view, setView] = useState<DrawerView>('main');
     const [isExporting, setIsExporting] = useState(false);
@@ -1194,7 +1154,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         boldText, setBoldText, highContrast, setHighContrast,
         reduceMotion, setReduceMotion, reduceTransparency, setReduceTransparency,
         newWord, setNewWord, handleAddWord, handleRemoveWord,
-        terminateSession, terminateAllOtherSessions, changePassword,
+        signOutOtherDevices, changePassword,
         exportStatus,
         theme, setTheme,
         seniorMode, setSeniorMode

@@ -10,6 +10,7 @@ import { AIWidgetLoader } from "@/components/ai/AIWidgetLoader";
 import { Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
+import { AccountDeletionBanner } from "@/components/account/AccountDeletion";
 import { DynamicNavigation } from "@/components/common/DynamicNavigation";
 import { GlobalIdentitySync } from "@/components/common/GlobalIdentitySync";
 import { GlobalCareModals } from "@/components/common/GlobalCareModals";
@@ -84,6 +85,7 @@ export default function RootLayout({
                                   <ReportProvider>
                                     <ClientAuthWrapper>
                                       <GlobalIdentitySync />
+                                      <AccountDeletionBanner />
                                       <GlobalAuraBackground />
                                       <div id="modal-root" className="pointer-events-none fixed inset-0 z-[99999]"></div>
                                       <div className="min-h-screen relative">

@@ -1613,7 +1613,7 @@ export class SupabaseApiService implements IApiService {
         const reviews = data || [];
         
         // Fetch user profiles manually to avoid PostgREST relationship ambiguity
-        const userIds = [...new Set(reviews.map((r: any) => r.user_id))];
+        const userIds = [...new Set(reviews.map((r: any) => r.user_id).filter(Boolean))];
         let profilesMap: Record<string, any> = {};
         if (userIds.length > 0) {
             const { data: profiles } = await supabase.from('profile_cards').select('id, full_name, username, avatar_url').in('id', userIds);
@@ -1638,7 +1638,7 @@ export class SupabaseApiService implements IApiService {
                 clinic_replied_at: r.clinic_replied_at,
                 created_at: r.created_at,
                 user: {
-                    name: profilesMap[r.user_id]?.full_name || profilesMap[r.user_id]?.username || 'Gizli Kullanıcı',
+                    name: r.user_id ? (profilesMap[r.user_id]?.full_name || profilesMap[r.user_id]?.username || 'Gizli Kullanıcı') : 'Silinmiş kullanıcı',
                     avatar: profilesMap[r.user_id]?.avatar_url || null
                 }
             })), 
