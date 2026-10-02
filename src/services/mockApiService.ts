@@ -419,6 +419,13 @@ export class MockApiService implements IApiService {
     async getAllClinicDoctors(clinicId: string): Promise<any[]> { return []; }
     async createDoctor(dto: any): Promise<any> { return {}; }
     async updateDoctor(id: string, dto: any): Promise<any> { return {}; }
+    async inviteStaff(businessId: string, email: string, role: string, doctorId?: string): Promise<{ id: string }> { throw new Error('Demo modunda davet gönderilemez.'); }
+    async getBusinessInvitations(businessId: string): Promise<any[]> { return []; }
+    async cancelInvitation(invitationId: string): Promise<void> {}
+    async getInvitationByToken(token: string): Promise<any> { return { error: 'not_found' }; }
+    async respondInvitation(token: string, accept: boolean): Promise<any> { throw new Error('Demo modunda davet yanıtlanamaz.'); }
+    async getBusinessMembers(businessId: string): Promise<any[]> { return []; }
+    async removeBusinessMember(businessId: string, userId: string): Promise<void> {}
     async updateAppointmentStatus(appointmentId: string, status: string, rejectReason?: string): Promise<void> { }
     async updateAttendanceStatus(appointmentId: string, status: 'attended' | 'no_show' | null): Promise<void> { }
     async getNoShowCount(userId: string): Promise<number> { return 0; }

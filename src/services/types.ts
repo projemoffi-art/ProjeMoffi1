@@ -352,6 +352,15 @@ export interface IApiService {
     setActiveBusiness(businessId: string): Promise<void>;
     getActiveBusiness(): Promise<any | null>;
     updateActiveBusiness(patch: Record<string, any>): Promise<void>;
+    // Personel daveti (Faz 1c)
+    inviteStaff(businessId: string, email: string, role: string, doctorId?: string): Promise<{ id: string }>;
+    getBusinessInvitations(businessId: string): Promise<any[]>;
+    cancelInvitation(invitationId: string): Promise<void>;
+    getInvitationByToken(token: string): Promise<any>;
+    respondInvitation(token: string, accept: boolean): Promise<any>;
+    getBusinessMembers(businessId: string): Promise<any[]>;
+    removeBusinessMember(businessId: string, userId: string): Promise<void>;
+
     getClinicOrders(clinicId: string): Promise<ShopOrder[]>;
     getMySharedPassports(): Promise<{ id: string; clinicName: string; petName: string; date: string; sharedFields: string[] }[]>;
     requestReschedule(appointmentId: string, newStart: string): Promise<void>;

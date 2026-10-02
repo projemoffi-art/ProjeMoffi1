@@ -1356,6 +1356,82 @@ export class SupabaseApiService implements IApiService {
         return data;
     }
 
+    // ── Personel daveti (Faz 1c) ──────────────────────────────────────────
+
+    async inviteStaff(businessId: string, email: string, role: string, doctorId?: string): Promise<{ id: string }> {
+        const { data, error } = await supabase.rpc('invite_staff', {
+            p_business_id: businessId,
+            p_email: email,
+            p_role: role,
+            p_doctor_id: doctorId || null
+        });
+        if (error) throw new Error(error.message);
+        return data as { id: string };
+    }
+
+    // Davetin gizli anahtarı (token) istemciye hiç verilmez; sadece davetlinin e-postasındaki bağlantıda.
+    async getBusinessInvitations(businessId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('business_invitations')
+            .select('id, business_id, email, role, doctor_id, invited_by, status, accepted_by, expires_at, created_at, doctors(name)')
+            .eq('business_id', businessId)
+            .order('created_at', { ascending: false });
+        if (error) { console.error('getBusinessInvitations error:', error); return []; }
+        return (data || []).map((inv: any) => ({
+            ...inv,
+            doctor_name: inv.doctors?.name || null
+        }));
+    }
+
+    async cancelInvitation(invitationId: string): Promise<void> {
+        const { error } = await supabase.rpc('cancel_staff_invitation', {
+            p_invitation_id: invitationId
+        });
+        if (error) throw new Error(error.message);
+    }
+
+    async getInvitationByToken(token: string): Promise<any> {
+        const { data, error } = await supabase.rpc('get_invitation_by_token', {
+            p_token: token
+        });
+        if (error) throw new Error(error.message);
+        return data;
+    }
+
+    async respondInvitation(token: string, accept: boolean): Promise<any> {
+        const { data, error } = await supabase.rpc('respond_staff_invitation', {
+            p_token: token,
+            p_accept: accept
+        });
+        if (error) throw new Error(error.message);
+        return data;
+    }
+
+    // Ekip üyelerinin profili başkalarına kapalı (8.46); ad/fotoğraf sunucu fonksiyonundan gelir.
+    async getBusinessMembers(businessId: string): Promise<any[]> {
+        const { data, error } = await supabase.rpc('get_business_team', { p_business_id: businessId });
+        if (error) { console.error('getBusinessMembers error:', error); return []; }
+        return (data || []).map((m: any) => ({
+            business_id: businessId,
+            user_id: m.user_id,
+            role: m.role,
+            doctor_id: m.doctor_id,
+            created_at: m.created_at,
+            user_name: m.full_name || null,
+            user_email: m.email || null,
+            user_avatar: m.avatar_url || null,
+            doctor_name: m.doctor_name || null
+        }));
+    }
+
+    async removeBusinessMember(businessId: string, userId: string): Promise<void> {
+        const { error } = await supabase.rpc('remove_business_member', {
+            p_business_id: businessId,
+            p_user_id: userId
+        });
+        if (error) throw new Error(error.message);
+    }
+
     async getClinicDashboardStats(clinicId: string): Promise<any> {
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clinicId);
         if (!isUuid) return { totalBalance: 0, totalPatients: 0, recentPatients: [] };

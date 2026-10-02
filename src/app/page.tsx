@@ -17,6 +17,13 @@ function landingFor(role?: string) {
   return role === 'business' ? '/business/dashboard' : '/home';
 }
 
+// Giriş sonrası dönülecek adres (?next=/invitation/...). Sadece site içi yol kabul edilir (açık yönlendirme olmasın).
+function nextPath(): string | null {
+  if (typeof window === 'undefined') return null;
+  const next = new URLSearchParams(window.location.search).get('next');
+  return next && /^\/(?![\/\\])[^\s]*$/.test(next) ? next : null;
+}
+
 export default function Home() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -27,7 +34,7 @@ export default function Home() {
     if (isLoading) return;
 
     if (user) {
-      router.replace(landingFor(user.role));
+      router.replace(nextPath() ?? landingFor(user.role));
     } else if (step === 'loading') {
       // Giriş yapmamış kullanıcıyı direkt Giriş (login) ekranına gönder
       setTimeout(() => setStep('login'), 0);
@@ -35,8 +42,8 @@ export default function Home() {
 
   }, [user, isLoading, router, step]);
 
-  const handleLoginComplete = () => router.replace(landingFor(user?.role));
-  const handleSignupComplete = () => router.replace('/home');
+  const handleLoginComplete = () => router.replace(nextPath() ?? landingFor(user?.role));
+  const handleSignupComplete = () => router.replace(nextPath() ?? '/home');
 
   if (step === 'loading') {
     return (

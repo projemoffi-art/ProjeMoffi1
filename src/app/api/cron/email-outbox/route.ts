@@ -42,9 +42,12 @@ export async function POST(request: Request) {
     let failed = 0;
     for (const job of jobs || []) {
         try {
-            const { data: userData } = await admin.auth.admin.getUserById(job.user_id);
-            const email = userData?.user?.email;
-            if (!email) throw new Error("Kullanıcının e-posta adresi yok");
+            let email: string | undefined = job.recipient_email || undefined;
+            if (!email && job.user_id) {
+                const { data: userData } = await admin.auth.admin.getUserById(job.user_id);
+                email = userData?.user?.email;
+            }
+            if (!email) throw new Error("E-posta adresi bulunamadı");
 
             const result = await sendEmail({
                 to: email,

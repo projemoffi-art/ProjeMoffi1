@@ -40,7 +40,8 @@ const targetOf = (n: { type: string; entity_id?: string | null; actor_id?: strin
     : n.type === 'adoption' && n.entity_id ? `/sahiplendirme/${n.entity_id}`
     : n.type === 'adoption_application' && n.entity_id ? `/sahiplendirme/basvuru/${n.entity_id}`
     : n.type === 'adoption_update' || n.type === 'pet_transfer' ? '/sahiplendirme/basvurularim'
-    : n.type === 'appointment' ? '/vet?view=appointments' : null;
+    : n.type === 'appointment' ? '/vet?view=appointments'
+    : n.type === 'staff_invitation' && n.entity_id ? `/invitation/${n.entity_id}` : null;
 
 function TypeBadge({ type }: { type: string }) {
   const icon = type === 'like' ? <Heart className="w-3 h-3 fill-current" />

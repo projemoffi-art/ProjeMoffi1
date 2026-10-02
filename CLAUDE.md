@@ -3193,6 +3193,23 @@ yabancı anahtarlar artık `businesses`'a bağlı). Eski hesaplar işletmenin sa
 - **Doğrulama:** authenticated/anon rolleriyle geri alınan SQL (sahip/yabancı/müşteri: okuma, güncelleme, onay değiştirme
   reddi, randevu → işletme bildirimi → onay → müşteri bildirimi, yabancının işlem reddi); typecheck'te yeni hata yok, build başarılı.
 
+### 8.55 Faz 1c — personel daveti (2026-10-02)
+
+Migration `20261002140000_staff_invitations.sql`. Sahip/yönetici Personel sayfasından e-postayla davet eder
+(`invite_staff`; günde 30 davet, süresi dolanlar önce kapanır). Hesabı olan kişiye bildirim + e-posta
+(`staff_invitation`), olmayana sadece e-posta (`email_outbox.recipient_email`, `user_id` boş olabilir).
+Kabul sayfası `/invitation/[token]` (işletme paneli dışında, hesapsız açılır; giriş `/?next=` ile geri döner).
+`respond_staff_invitation` e-posta eşleşmesini sunucuda denetler, üyeliği ekler, işletmeyi aktif yapar,
+sahip/yöneticilere `biz_staff` bildirimi atar. Çıkarma `remove_business_member` (yöneticiyi sadece sahip çıkarır).
+- 🔴 Davet anahtarı (`token`) istemciye kolon yetkisiyle kapalı; davetleri sadece sahip/yönetici okur.
+- Ekip listesi `get_business_team` (profiller başkalarına kapalı; e-postayı sadece sahip/yönetici görür).
+- Bir personel kaydı (`doctors`) en fazla bir hesaba bağlanır (`business_members_one_account_per_doctor`).
+- Hesabı olmayan adrese e-posta: `enqueue_email_address` (istemciye kapalı); `enqueue_email` değişmedi.
+- 🔴 Supabase bağlayıcısı (claude.ai) `DROP` ve `DELETE` geçen her komut için ayrı onay istiyor (fonksiyon gövdesi
+  içinde geçse bile); bu onay VS Code panelinde gösterilemediği için istek "declined" döner (claude.ai'deki "her zaman
+  izin ver" bunu aşmaz). `ALTER … DROP NOT NULL`, `REVOKE`, `CREATE OR REPLACE` geçiyor. Migration'ı bu kelimeleri
+  içermeyen parçalar (Claude uygular) + içeren parça (Baran SQL Editor'dan) diye böl; kelimeyi gizleyerek atlatma.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

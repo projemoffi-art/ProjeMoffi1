@@ -68,6 +68,7 @@ export function BusinessHeader({ onMenuClick }: HeaderProps) {
         setOpen(false);
         if (type === 'biz_appointment' || type === 'appointment') router.push('/business/calendar');
         else if (type === 'biz_order' || type === 'order') router.push('/business/orders');
+        else if (type === 'biz_staff') router.push('/business/doctors');
     };
 
     const selectBusiness = async (id: string) => {

@@ -9,7 +9,7 @@ const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbo
 
 // Uygulama dışındaki kişilere açık sayfalar: künye (/id), paylaşılan pasaport (/p), doğrulama kodu (/verify).
 // Künyeyi okutan kişinin Moffi hesabı olmayabilir; önceden bu sayfalar giriş ekranına atıyordu.
-const PUBLIC_PREFIXES = ["/id/", "/p/", "/verify/"];
+const PUBLIC_PREFIXES = ["/id/", "/p/", "/verify/", "/invitation/"];
 // Paylaşılan kayıp/bulunan ve sahiplendirme ilanları: ilan, "Gördüm" bildirimi ve el ilanı hesapsız açılır.
 // İlan verme, başvuru ve yönetim girişi gerektirir.
 const PUBLIC_PATTERNS = [
@@ -35,7 +35,7 @@ export function ClientAuthWrapper({ children }: Props) {
     const router = useRouter();
 
     const isDemoRoute = pathname.startsWith("/demo");
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute || PUBLIC_PREFIXES.some(p => pathname.startsWith(p)) || PUBLIC_PATTERNS.some(r => r.test(pathname));
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute || PUBLIC_PREFIXES.some(p => pathname.startsWith(p)) || PUBLIC_PATTERNS.some(r => r.test(pathname));
     const isAdminRoute = pathname.startsWith(ADMIN_ROUTES_PREFIX);
 
     useEffect(() => {

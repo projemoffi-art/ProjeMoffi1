@@ -57,6 +57,32 @@ export interface Doctor {
     created_at?: string;
 }
 
+export interface BusinessInvitation {
+    id: string;
+    business_id: string;
+    email: string;
+    role: 'manager' | 'staff';
+    doctor_id: string | null;
+    doctor_name?: string | null;
+    invited_by: string;
+    status: 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
+    accepted_by: string | null;
+    expires_at: string;
+    created_at: string;
+}
+
+export interface BusinessMember {
+    business_id: string;
+    user_id: string;
+    role: 'owner' | 'manager' | 'staff';
+    doctor_id: string | null;
+    created_at: string;
+    user_name?: string | null;
+    user_email?: string | null;
+    user_avatar?: string | null;
+    doctor_name?: string | null;
+}
+
 export interface VetReview {
     id: string;
     userName: string;
