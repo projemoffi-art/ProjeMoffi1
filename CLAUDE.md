@@ -3473,6 +3473,9 @@ Baran PC başına dönünce bu liste birlikte gözden geçirilir; biten madde si
 - [ ] **Karar — paket kaldırma:** `ai` ve `@ai-sdk/google` artık hiçbir yerde kullanılmıyor. Kaldırayım mı? (paket kaldırma onay ister)
 
 **Faz 5 — ekonomi**
+- [ ] 🔴 **Yapay zekâ canlıda hiç çalışmıyor:** Vercel'de `GEMINI_API_KEY` tanımlı değil (canlı yanıt: "API Key not configured").
+      Google AI Studio'dan anahtar alınıp Vercel'e (Production) eklenmeli, sonra yeniden yayın. Aylık 50 $ tavanı kod
+      tarafında var; Google tarafında da faturalandırma limiti/uyarısı kurulması önerilir.
 - [ ] **Karar — Prime'ı web'de de satalım mı?** 8.52'de Prime uygulama içinden (Apple/Google) satılacak dendi. Web'de PayTR ile
       satış Apple'ın %15-30 payını almaz ama uygulama içinde web'e yönlendirmek Apple kurallarına aykırı. Mevcut PayTR abonelik
       kodu (`/api/paytr/subscription` + webhook) var olmayan `is_prime` kolonuna yazmaya çalışıyordu, hiç çalışmamıştı.
