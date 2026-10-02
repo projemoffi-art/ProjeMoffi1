@@ -19,7 +19,7 @@ interface Message {
     id: string;
     role: "user" | "assistant";
     content: string;
-    action?: { type: 'sos' | 'vetline' | 'link'; label: string; url?: string };
+    action?: { type: 'sos' | 'vetline' | 'link' | 'pay'; label: string; url?: string };
     isNew?: boolean;
 }
 
@@ -184,6 +184,37 @@ export function MoffiAssistant() {
         if (!predefinedText) setInput("");
         setIsTyping(true);
 
+        const lowerInput = textToSend.toLowerCase();
+        let quickResponse: Message | null = null;
+
+        if (lowerInput.includes('kayıp') || lowerInput.includes('kayboldu')) {
+            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Çok geçmiş olsun! Radar & Acil Durum Merkezini açarak çevredeki kullanıcılara bildirim gönderebiliriz.', action: { type: 'sos', label: '🚨 Radarı Aç' }, isNew: true };
+        } else if (lowerInput.includes('vetline') || lowerInput.includes('veteriner') || lowerInput.includes('hasta')) {
+            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Yakınındaki veteriner kliniklerini bulup randevu alabilirsin. Acil bir durum varsa açık acil klinikleri de oradan görebilirsin.', action: { type: 'vetline', label: '🩺 Veteriner bul' }, isNew: true };
+        } else if (lowerInput.includes('mama') || lowerInput.includes('yemek')) {
+            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Dostunun yaşına ve kilosuna özel mama seçeneklerini Petshopumuzda bulabilirsin!', action: { type: 'link', label: '🍎 Mamaları Gör', url: '/petshop?category=food' }, isNew: true };
+        }
+
+        if (quickResponse) {
+            setTimeout(() => {
+                appendToSession(currentSessionId!, quickResponse!, currentSessions);
+                setIsTyping(false);
+            }, 800);
+            return;
+        }
+
+        await askAi(currentSessionId, currentSessions, currentSessions[sessionIndex].messages, false);
+    };
+
+    const appendToSession = (sessionId: string, msg: Message, base: ChatSession[]) => {
+        const updated = [...base];
+        const idx = updated.findIndex(s => s.id === sessionId);
+        if (idx === -1) return;
+        updated[idx] = { ...updated[idx], messages: [...updated[idx].messages, msg], updatedAt: Date.now() };
+        saveSessions(updated);
+    };
+
+    const buildPetPayload = async (): Promise<Record<string, unknown> | null> => {
         const activePetObj = activePet || userPets?.[0] || null;
         let petDataPayload: Record<string, unknown> | null = null;
         if (activePetObj) {
@@ -203,90 +234,60 @@ export function MoffiAssistant() {
                 };
             } catch { /* sağlık özeti yüklenemezse asistan sadece ad/ırkla çalışır */ }
         }
+        return petDataPayload;
+    };
 
-        const lowerInput = textToSend.toLowerCase();
-        let quickResponse: Message | null = null;
-        
-        if (lowerInput.includes('kayıp') || lowerInput.includes('kayboldu')) {
-            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Çok geçmiş olsun! Radar & Acil Durum Merkezini açarak çevredeki kullanıcılara bildirim gönderebiliriz.', action: { type: 'sos', label: '🚨 Radarı Aç' }, isNew: true };
-        } else if (lowerInput.includes('vetline') || lowerInput.includes('veteriner') || lowerInput.includes('hasta')) {
-            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Yakınındaki veteriner kliniklerini bulup randevu alabilirsin. Acil bir durum varsa açık acil klinikleri de oradan görebilirsin.', action: { type: 'vetline', label: '🩺 Veteriner bul' }, isNew: true };
-        } else if (lowerInput.includes('mama') || lowerInput.includes('yemek')) {
-            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Dostunun yaşına ve kilosuna özel mama seçeneklerini Petshopumuzda bulabilirsin!', action: { type: 'link', label: '🍎 Mamaları Gör', url: '/petshop?category=food' }, isNew: true };
-        }
-
-        if (quickResponse) {
-            setTimeout(() => {
-                const updatedSessions = [...sessions];
-                const idx = updatedSessions.findIndex(s => s.id === currentSessionId);
-                if (idx !== -1) {
-                    updatedSessions[idx] = {
-                        ...updatedSessions[idx],
-                        messages: [...updatedSessions[idx].messages, quickResponse!],
-                        updatedAt: Date.now()
-                    };
-                    saveSessions(updatedSessions);
-                }
-                setIsTyping(false);
-            }, 800);
-            return;
-        }
-
+    // Asıl yapay zekâ çağrısı. Günlük hak bittiyse sunucu 402 döner; kullanıcı PawCoin ile devam edebilir.
+    const askAi = async (sessionId: string, base: ChatSession[], history: Message[], pay: boolean) => {
+        setIsTyping(true);
+        const petDataPayload = await buildPetPayload();
         try {
             const response = await fetch('/api/ai/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: [...currentSessions[sessionIndex].messages].map(m => ({
-                        role: m.role,
-                        content: m.content
-                    })),
+                    messages: history.filter(m => m.action?.type !== 'pay').map(m => ({ role: m.role, content: m.content })),
                     context: `AI Settings: personality=${aiSettings.personality}, detail=${aiSettings.detailLevel}`,
-                    petData: petDataPayload
+                    petData: petDataPayload,
+                    pay,
                 })
             });
             const data = await response.json();
-            
-            const updatedSessions = [...sessions];
-            const idx = updatedSessions.findIndex(s => s.id === currentSessionId);
-            
-            if (data.success && data.message && idx !== -1) {
-                const aiMsg: Message = {
-                    id: Date.now().toString(),
-                    role: 'assistant',
-                    content: data.message || "Yanıt boş.",
-                    isNew: true
-                };
-                updatedSessions[idx] = {
-                    ...updatedSessions[idx],
-                    messages: [...updatedSessions[idx].messages, aiMsg],
-                    updatedAt: Date.now()
-                };
-                saveSessions(updatedSessions);
+
+            if (response.status === 402) {
+                const canPay = data.reason === 'quota' || data.reason === 'balance';
+                const extra = data.reason === 'quota'
+                    ? ` İstersen bu soruyu ${data.price} PawCoin ile yanıtlayabilirim (bakiyen: ${data.balance}).${data.prime ? '' : ' Prime üyelerin günde 60 hakkı var.'}`
+                    : data.reason === 'balance' ? ` Gereken: ${data.price}, bakiyen: ${data.balance}. Yürüyüş ve görevlerle PawCoin kazanabilirsin.` : '';
+                appendToSession(sessionId, {
+                    id: Date.now().toString(), role: 'assistant', content: `${data.message}${extra}`, isNew: true,
+                    ...(canPay && data.reason === 'quota' ? { action: { type: 'pay' as const, label: `🐾 ${data.price} PawCoin ile yanıtla` } } : {}),
+                }, base);
+                return;
+            }
+            if (data.success && data.message) {
+                appendToSession(sessionId, { id: Date.now().toString(), role: 'assistant', content: data.message, isNew: true }, base);
             } else {
-                throw new Error(data.error || "Yanıt alınamadı");
+                throw new Error(data.message || data.error || "Yanıt alınamadı");
             }
         } catch (apiError) {
-            console.warn("Moffi AI API Failed, falling back to simulated response:", apiError);
-            const updatedSessions = [...sessions];
-            const idx = updatedSessions.findIndex(s => s.id === currentSessionId);
-            if (idx !== -1) {
-                const aiMsg: Message = {
-                    id: Date.now().toString(),
-                    role: 'assistant',
-                    content: `Üzgünüm, şu an sunucuya bağlanamıyorum. ${petDataPayload?.name || 'Dostun'} için kısa süre sonra tekrar dener misin? 🐾`,
-                    isNew: true
-                };
-                updatedSessions[idx] = {
-                    ...updatedSessions[idx],
-                    messages: [...updatedSessions[idx].messages, aiMsg],
-                    updatedAt: Date.now()
-                };
-                saveSessions(updatedSessions);
-            }
+            console.warn("Moffi AI API Failed:", apiError);
+            appendToSession(sessionId, {
+                id: Date.now().toString(), role: 'assistant',
+                content: `Üzgünüm, şu an sunucuya bağlanamıyorum. ${petDataPayload?.name || 'Dostun'} için kısa süre sonra tekrar dener misin? 🐾`,
+                isNew: true
+            }, base);
         } finally {
             setIsTyping(false);
         }
+    };
+
+    // "PawCoin ile yanıtla": aynı soruyu ödemeli olarak tekrar sor
+    const payAndRetry = (sessionId: string) => {
+        const session = sessions.find(s => s.id === sessionId);
+        if (!session || isTyping) return;
+        const history = session.messages.filter(m => m.action?.type !== 'pay');
+        askAi(sessionId, sessions.map(s => s.id === sessionId ? { ...s, messages: history } : s), history, true);
     };
 
     const deleteSession = (e: React.MouseEvent, id: string) => {
@@ -582,6 +583,7 @@ export function MoffiAssistant() {
                                                         animate={{ opacity: 1, scale: 1 }}
                                                         transition={{ delay: 0.5 }}
                                                         onClick={() => {
+                                                            if (msg.action?.type === 'pay') { if (activeSessionId) payAndRetry(activeSessionId); return; }
                                                             if (msg.action?.type === 'link') router.push(msg.action.url!);
                                                             else if (msg.action?.type === 'sos') router.push('/kayip');
                                                             else if (msg.action?.type === 'vetline') router.push('/vet');

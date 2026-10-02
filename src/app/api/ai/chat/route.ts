@@ -1,14 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { startAi, AI_MODEL } from "@/lib/server/aiGuard";
 
 const API_KEY = process.env.GEMINI_API_KEY || "";
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 export async function POST(req: Request) {
     try {
-        const { messages, context, petData } = await req.json(); // Expecting array of messages
+        const { messages, context, petData, pay } = await req.json(); // Expecting array of messages
 
         if (!API_KEY || !genAI) {
             return NextResponse.json(
@@ -17,27 +16,11 @@ export async function POST(req: Request) {
             );
         }
 
-        // KİMLİK DOĞRULAMA (Spam / Maliyet Engeli)
-        const cookieStore = cookies();
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                cookies: {
-                    get(name: string) { return cookieStore.get(name)?.value; },
-                    set() {},
-                    remove() {}
-                }
-            }
-        );
+        // Giriş + günlük hak (ücretsiz/Prime, bitince PawCoin ile ek hak)
+        const gate = await startAi('message', 'ai/chat', !!pay);
+        if (!gate.ok) return gate.response;
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        // Upgraded to Gemini 2.5 Flash Lite for stable quota and high availability
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        const model = genAI.getGenerativeModel({ model: AI_MODEL });
 
         // Construct history/prompt
         let systemInstruction = "You are Moffi AI, a friendly and helpful assistant for the MoffiPet Super App. You help users with pet care, app navigation, and creative ideas. Keep answers concise, and use emojis. Always answer in Turkish.";
@@ -83,10 +66,14 @@ export async function POST(req: Request) {
                 },
             });
 
-            const lastMessage = messages[messages.length - 1].content;
+            const lastMessage = String(messages[messages.length - 1].content || '').slice(0, 2000);
             const result = await chat.sendMessage(lastMessage);
             const response = await result.response;
             const text = response.text();
+            await gate.finish(true, {
+                inputTokens: response.usageMetadata?.promptTokenCount,
+                outputTokens: response.usageMetadata?.candidatesTokenCount,
+            });
 
             return NextResponse.json({
                 success: true,
@@ -94,6 +81,8 @@ export async function POST(req: Request) {
             });
         } catch (apiError) {
             console.error("Gemini API Failed, switching to Offline Mode:", apiError);
+            // Model yanıt vermedi: hak geri verilir (PawCoin ile alındıysa iade edilir)
+            await gate.finish(false);
 
             // OFFLINE FALLBACK MODE
             const lastMessage = messages[messages.length - 1].content.toLowerCase();

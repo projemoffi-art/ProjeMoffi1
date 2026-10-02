@@ -2,23 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Check, X, Sparkles, Shield, Rocket, Palette, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Crown, Check, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { paymentService } from '@/services/paymentService';
 
+// Prime: sadece gerçekten çalışan ayrıcalıklar listelenir (8.52). Satın alma uygulama mağazası üzerinden
+// (Faz 6, RevenueCat); o zamana kadar düğme dürüstçe "çok yakında" der, ödeme simüle edilmez.
 export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }: { isOpen?: boolean, onClose?: () => void }) {
     const [isOpenInternal, setIsOpenInternal] = useState(false);
-    const [isBuying, setIsBuying] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
 
     // Support both controlled (props) and uncontrolled (event) modes
     const isOpen = isOpenProp !== undefined ? isOpenProp : isOpenInternal;
-    const handleClose = onCloseProp !== undefined ? onCloseProp : () => {
-        if (isBuying) return;
-        setIsOpenInternal(false);
-        setIsSuccess(false);
-    };
+    const handleClose = onCloseProp !== undefined ? onCloseProp : () => setIsOpenInternal(false);
 
     useEffect(() => {
         const handleOpen = () => setIsOpenInternal(true);
@@ -26,43 +20,15 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
         return () => window.removeEventListener('open-premium-modal', handleOpen);
     }, []);
 
-    const { user, refreshUser } = useAuth();
+    const { user } = useAuth();
+    const isPrime = !!user?.is_prime;
 
-    const handleUpgrade = async () => {
-        if (!user?.id) return;
-        setIsBuying(true);
-        
-        // Simülasyon: Iyzico Checkout oluşturuluyor (Gerçekte paymentService.createSubscriptionCheckout çağrılıp yönlendirilecek)
-        const checkout = await paymentService.createSubscriptionCheckout("prime_monthly", user.id);
-        
-        // Şimdilik ödemeyi anında başarılı varsayıyoruz (Gerçekte webhook ile çalışacak)
-        const result = await paymentService.completeSubscription(user.id, "prime_monthly");
-        
-        setIsBuying(false);
-        if (result.success) {
-            setIsSuccess(true);
-            if (refreshUser) refreshUser(); // Context'i güncelle
-            
-            setTimeout(() => {
-                handleClose();
-            }, 2500);
-        } else {
-            window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: result.error || 'Satın alma başarısız.', icon: 'AlertTriangle' } }));
-        }
-    };
-
-    // Karşılaştırma Tablosu Verileri (Tüm Prime Özellikleri)
-    const comparisonFeatures = [
-        { name: "Reklamsız Deneyim", free: false, prime: true },
-        { name: "Temassız (NFC) Ödeme Limiti", free: "Max 5 İşlem/Ay", prime: "Sınırsız" },
-        { name: "Moffi AI Asistan", free: "Günlük 5 Soru", prime: "Aylık 500 Gelişmiş Sorgu" },
-        { name: "AI Görüntü Analizi (Veteriner)", free: false, prime: true },
-        { name: "Stüdyo Kargo Hakkı", free: "Ücretli", prime: "Ayda 3 Kez (Max 30 Desi)" },
-        { name: "Sınırsız Günlük Adım Puanı", free: "Limitli", prime: "Limitsiz (Cap Yok)" },
-        { name: "Profil Ziyaretçilerini Görme", free: false, prime: true },
-        { name: "Profil Aura & Neon Çerçeveleri", free: false, prime: true },
-        { name: "Prime Özel Elite Rozet", free: false, prime: true },
-        { name: "Öncelikli Müşteri Desteği", free: false, prime: true }
+    const comparisonFeatures: { name: string; free: string | false; prime: string | true }[] = [
+        { name: "Moffi AI asistanı", free: "Günde 5 mesaj", prime: "Günde 60 mesaj" },
+        { name: "Her ay PawCoin hediyesi", free: false, prime: "500 PawCoin" },
+        { name: "Seri kalkanı", free: "Haftada 1", prime: "Haftada 2" },
+        { name: "Neon Aura ve Dark Metal profil çerçeveleri", free: false, prime: true },
+        { name: "Profilinde Prime rozeti", free: false, prime: true },
     ];
 
     return (
@@ -114,7 +80,7 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
                                 Moffi <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-[#B8860B]">Prime</span>
                             </h2>
                             <p className="text-secondary font-medium leading-relaxed mb-10 max-w-sm">
-                                Ekosistemin en prestijli kulübüne katıl. Moffi evrenindeki gücünü zirveye taşı.
+                                Moffi'yi Prime olmadan da tamamen kullanabilirsin. Prime, asistanı daha çok kullanmak ve küçük ayrıcalıklar isteyenler için.
                             </p>
 
                             <div className="w-full mb-10 bg-foreground/5 border border-glass-border rounded-2xl overflow-hidden shadow-lg">
@@ -140,30 +106,20 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
                                 </div>
                             </div>
 
-                            <motion.div className="w-full" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                                <button 
-                                    onClick={handleUpgrade}
-                                    disabled={isBuying || isSuccess}
-                                    className={cn(
-                                        "w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-[0_15px_40px_rgba(212,175,55,0.3)] transition-all flex items-center justify-center gap-3",
-                                        isSuccess 
-                                            ? "bg-green-500 text-white shadow-[0_15px_40px_rgba(34,197,94,0.4)]"
-                                            : "bg-gradient-to-r from-[#FFD700] via-[#FDB931] to-[#D4AF37] text-black hover:brightness-110"
-                                    )}
-                                >
-                                    {isBuying ? (
-                                        <><Loader2 className="w-5 h-5 animate-spin" /> Ödeme Bekleniyor</>
-                                    ) : isSuccess ? (
-                                        <><Check className="w-5 h-5" /> Prime Aktif Edildi</>
-                                    ) : (
-                                        <>299₺ / Ay ile Başla <Sparkles className="w-5 h-5" /></>
-                                    )}
-                                </button>
-                            </motion.div>
-
-                            <p className="text-[10px] text-gray-600 mt-6 font-medium">
-                                İstediğiniz zaman iptal edebilirsiniz. İyzico güvencesiyle 256-bit şifrelenmiştir.
-                            </p>
+                            {isPrime ? (
+                                <div className="w-full py-5 rounded-2xl font-bold text-sm bg-foreground/5 flex items-center justify-center gap-2">
+                                    <Check className="w-5 h-5 text-[#D4AF37]" /> Prime üyeliğin aktif
+                                </div>
+                            ) : (
+                                <>
+                                    <button disabled className="w-full py-5 rounded-2xl font-bold text-sm bg-foreground/10 text-foreground/60 cursor-not-allowed">
+                                        Çok yakında
+                                    </button>
+                                    <p className="text-xs text-secondary mt-4">
+                                        Prime, Moffi uygulaması mağazalara çıktığında App Store ve Google Play üzerinden satın alınabilecek.
+                                    </p>
+                                </>
+                            )}
                         </div>
                     </motion.div>
                 </>

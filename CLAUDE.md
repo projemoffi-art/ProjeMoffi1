@@ -3249,6 +3249,29 @@ onForegroundChange/onNetworkChange/isOnline), `push`, `haptics`, `isNative()/pla
 klasörün içi değişir. 40 kullanım yeri taşındı, ölü `lib/shareUtils.ts` silindi, `lib/haptics` → `native/haptics`.
 Tip hataları değişmedi (146 → 146, liste birebir aynı), 14 sayfa yerelde 200.
 
+### 8.59 Faz 4 — Capacitor (2026-10-02)
+
+`capacitor.config.ts`: `appId net.moffi.app`, uygulama `server.url = https://app.moffi.net` ile canlı siteyi açar (sunucu
+tarafı olduğu için statik dışa aktarım yok); `capacitor-shell/index.html` sadece bağlantı yokken. `android/` ve `ios/`
+commit'lenir (kök .gitignore'daki eski Expo kuralı kaldırıldı). İzinler + Türkçe açıklamalar AndroidManifest / Info.plist'te.
+`src/native` telefonda eklentileri dinamik yükler: arka plan konum (`@capacitor-community/background-geolocation`,
+yürüyüşte `watch(..., { background: true })`, kalıcı bildirimli), Haptics, Share, Clipboard, KeepAwake, Browser, App, Network.
+Telefonda bildirim aboneliği Firebase/APNs gelene kadar bilerek kapalı. Eklenti eklenince `npx cap sync` çalıştırılır.
+
+### 8.60 Faz 5 — ekonomi: yapay zekâ kotası, Prime (2026-10-02)
+
+🔴 **KURAL: yapay zekâ çağıran her uç nokta `startAi()` (`lib/server/aiGuard.ts`) ile başlar ve `finish()` ile biter.**
+`ai_usage` tablosu + `ai_consume(kind, endpoint, pay)` (çağrıdan önce hak ayırır; hak yoksa 402, `pay` ile PawCoin düşer),
+`ai_finish` (servis rolü; maliyet, başarısızsa PawCoin iadesi), `ai_quota_status`, limitler tek yerde `ai_limits()`
+(ücretsiz 5 mesaj + 1 fotoğraf, Prime 60 + 10, ek hak 10 / 30 PawCoin, günlük sert tavan 100/20, aylık 50 $; 40 $'da
+ücretsiz hak 2/0'a düşer). PawCoin = PP defteri (`coin_balance` herkeste 0'dı, birleştirilecek bakiye yoktu).
+Prime: `profiles.prime_until` (istemci yazamaz), `has_prime()`, `profile_cards.is_prime`; haftada 2 seri kalkanı,
+her ayın 1'i 500 PawCoin (`prime-monthly-pawcoin` cron), Prime çerçeve/rozet. Prime ekranı sadece gerçek ayrıcalıkları
+gösterir, satın alma "çok yakında" (Faz 6). Bulunan: dört yapay zekâ uç noktasının girişi Next 16'da bozuktu
+(`cookies()` beklenmiyordu); fotoğraf analizi kapatılmış modeli kullanıyor ve hata olunca uydurma "sağlık sorunu yok"
+diyordu; `/api/ai/generate` rastgele stok foto dönüyordu; mağaza danışmanı "bugün aktif yürüyüş yaptı" diye uyduruyordu.
+Kullanılmayan `/api/ai/generate`, `/api/chat`, `services/studio/AIService.ts` silindi.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
@@ -3437,6 +3460,20 @@ Baran PC başına dönünce bu liste birlikte gözden geçirilir; biten madde si
 - [ ] **Bilgi — Apple kural 4.2:** uygulama canlı siteyi kendi içinde açıyor (Moffi'nin sunucu tarafı olduğu için tek yol).
       Arka plan konum, bildirim, satın alma, widget gibi gerçek telefon özellikleri bu riski karşılıyor ama Apple
       incelemesinde soru gelebilir.
+- [ ] **Karar — paket kaldırma:** `ai` ve `@ai-sdk/google` artık hiçbir yerde kullanılmıyor. Kaldırayım mı? (paket kaldırma onay ister)
+
+**Faz 5 — ekonomi**
+- [ ] **Karar — Prime'ı web'de de satalım mı?** 8.52'de Prime uygulama içinden (Apple/Google) satılacak dendi. Web'de PayTR ile
+      satış Apple'ın %15-30 payını almaz ama uygulama içinde web'e yönlendirmek Apple kurallarına aykırı. Mevcut PayTR abonelik
+      kodu (`/api/paytr/subscription` + webhook) var olmayan `is_prime` kolonuna yazmaya çalışıyordu, hiç çalışmamıştı.
+      Öneri: sadece mağaza (RevenueCat) — tek kaynak, iade/yenileme mağazada.
+- [ ] **Karar — Prime fiyatı:** eski ekranda "299 ₺/ay" yazıyordu (gerçek değildi). Mağaza fiyatı ne olsun?
+- [ ] **Bilgi — fotoğraf analizi:** Prime ayrıcalığı olarak kararlaştırıldı ve uç noktası (`/api/ai/vision`) hazır, ama
+      arayüzde onu açan bir ekran yok. Nereye konsun (Sağlık Merkezi "fotoğrafla sor", mama etiketi okuma)? O yüzden Prime
+      ekranında şimdilik listelenmiyor.
+- [ ] **Bilgi — "PawCoin" adı:** tek para birimi PawCoin oldu ama arayüzde hâlâ "Moffi Puanı / PP" yazan yerler var; isim
+      değişikliği ayrı bir metin işi. Onaylarsan topluca değiştiririm.
+
 - [ ] **Bilgi — adım sayar:** ücretsiz, güvenilir bir telefon adım sayar eklentisi yok; telefon uygulamasında da sensör
       (devicemotion) kullanılıyor, ekran kapalıyken adım sayılmaz (mesafe GPS'ten sayılmaya devam eder). İleride Apple
       Sağlık / Health Connect bağlantısı ayrı iş.

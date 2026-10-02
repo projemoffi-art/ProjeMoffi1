@@ -27,7 +27,7 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
     useEffect(() => {
         if (isOpen && messages.length === 0) {
             const initialMsg = isSmartEnabled 
-                ? `Selam! Ben Moffi AI Beslenme Danışmanı. ${petName}'nun bugünkü verilerine baktım, oldukça hareketli bir gün geçirmiş. Ona nasıl yardımcı olabilirim? ✨`
+                ? `Selam! Ben Moffi AI Beslenme Danışmanı. ${petName} için mama, ödül ve bakım ürünleri konusunda yardımcı olabilirim. Ne merak ediyorsun? ✨`
                 : `Selam! Ben Moffi AI. Gizlilik tercihlerinden dolayı şu an ${petName}'nun verilerine erişemiyorum ama sana genel ürün tavsiyeleri vermekten mutluluk duyarım. 😊`;
             setMessages([{ role: "ai", content: initialMsg }]);
         }
@@ -42,12 +42,16 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
         }
     }, [messages]);
 
-    const handleSend = async (text: string) => {
-        if (!text.trim()) return;
-        
-        const newMessages: Message[] = [...messages, { role: "user", content: text }];
+    // Günlük ücretsiz hak bitince: aynı soru PawCoin ile tekrar sorulabilir
+    const [payOffer, setPayOffer] = useState<{ price: number; history: Message[] } | null>(null);
+
+    const handleSend = async (text: string, paidHistory?: Message[]) => {
+        if (!paidHistory && !text.trim()) return;
+
+        const newMessages: Message[] = paidHistory || [...messages, { role: "user", content: text }];
         setMessages(newMessages);
         setInput("");
+        setPayOffer(null);
         setIsTyping(true);
 
         try {
@@ -60,8 +64,7 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                           `- Irk: ${activePet.breed || "Bilinmiyor"}\n` +
                           `- Yaş: ${activePet.age || "Bilinmiyor"} yaşında\n` +
                           `- Kilo: ${activePet.weight || "Bilinmiyor"} kg\n` +
-                          `- Cinsiyet: ${activePet.gender || "Bilinmiyor"}\n` +
-                          `Analiz: Bugün aktif bir yürüyüş yaptı ve oldukça hareketliydi.`;
+                          `- Cinsiyet: ${activePet.gender || "Bilinmiyor"}`;
             } else {
                 petInfo = `Kullanıcı gizlilik nedeniyle akıllı mağaza entegrasyonunu kapattı veya pet kaydı yok. Evcil hayvanın özel sağlık verilerine erişimin yok. Sadece genel beslenme ve sağlık önerileri yapmalısın.`;
             }
@@ -78,33 +81,26 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                         role: m.role === 'ai' ? 'model' : 'user',
                         content: m.content
                     })),
-                    context: contextString
+                    context: contextString,
+                    pay: !!paidHistory,
                 })
             });
 
             const data = await response.json();
 
-            if (data.success && data.message) {
+            if (response.status === 402) {
+                const extra = data.reason === 'quota' ? ` İstersen bu soruyu ${data.price} PawCoin ile yanıtlayabilirim (bakiyen: ${data.balance}).`
+                    : data.reason === 'balance' ? ` Gereken: ${data.price}, bakiyen: ${data.balance}.` : '';
+                setMessages(prev => [...prev, { role: "ai", content: `${data.message}${extra}` }]);
+                if (data.reason === 'quota') setPayOffer({ price: data.price, history: newMessages });
+            } else if (data.success && data.message) {
                 setMessages(prev => [...prev, { role: "ai", content: data.message }]);
             } else {
-                throw new Error(data.error || "Yanıt alınamadı");
+                throw new Error(data.message || data.error || "Yanıt alınamadı");
             }
         } catch (apiError) {
-            console.error("Advisor AI Failed, switching to fallback:", apiError);
-            
-            // Safe Fallback simulation logic
-            let aiResponse = "";
-            if (!isSmartEnabled) {
-                aiResponse = `${petName}'nun özel verilerine erişemediğim için genel bir öneri yapabilirim: 'Pro Plan' serisi çoğu evcil hayvan için dengeli bir başlangıçtır. Daha spesifik bir öneri istersen ayarlardan akıllı mağazayı açabilirsin!`;
-            } else {
-                aiResponse = `Anlıyorum. ${petName}'nun aktif yaşam tarzı için yüksek proteinli mamalar harika bir seçenek olacaktır. Özellikle 'Acana Wild Prairie' bu ara çok tercih ediliyor.`;
-                if (text.toLocaleLowerCase().includes("yürüdük")) {
-                    aiResponse = `Harika bir yürüyüş! 🐾 ${petName}'nun kas gelişimi ve toparlanması için yüksek enerjili 'Churu Ton Balıklı' gibi ödülleri tavsiye ederim. Antrenman sonrası için idealdir.`;
-                } else if (text.toLocaleLowerCase().includes("tüy")) {
-                    aiResponse = "Mevsim geçişlerinde tüy dökülmesi normaldir, ancak 'Furminator' bakım fırçası ve somon yağlı mamalar bu süreci çok daha konforlu hale getirir.";
-                }
-            }
-            setMessages(prev => [...prev, { role: "ai", content: aiResponse + " (Offline Mod)" }]);
+            console.error("Advisor AI Failed:", apiError);
+            setMessages(prev => [...prev, { role: "ai", content: "Şu an danışmana bağlanamıyorum, biraz sonra tekrar dener misin? 🐾" }]);
         } finally {
             setIsTyping(false);
         }
@@ -164,6 +160,12 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                                     {m.content}
                                 </motion.div>
                             ))}
+                            {payOffer && !isTyping && (
+                                <button onClick={() => handleSend('', payOffer.history)}
+                                    className="mr-auto px-4 py-2 rounded-full bg-orange-500 text-white text-xs font-bold">
+                                    🐾 {payOffer.price} PawCoin ile yanıtla
+                                </button>
+                            )}
                             {isTyping && (
                                 <div className="flex gap-1 ml-2 p-2 bg-card dark:bg-white/5 rounded-2xl w-14 justify-center">
                                     <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />

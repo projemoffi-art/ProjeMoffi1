@@ -203,6 +203,9 @@ export class SupabaseApiService implements IApiService {
             birth_date: data.birth_date,
             gender: data.gender,
             account_status: data.account_status || 'active',
+            // Prime: tek kaynak profiles.prime_until (8.52); başkasının profilinde profile_cards.is_prime
+            is_prime: data.is_prime === true || (!!data.prime_until && new Date(data.prime_until).getTime() > Date.now()),
+            prime_until: data.prime_until ?? null,
             businessType: data.business_type,
             businessName: data.business_name,
             businessApproved: data.business_approved,
