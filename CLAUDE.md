@@ -3451,6 +3451,10 @@ E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i 
 3. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
 4. Eski silinen gönderi/hikâyelerin depoda kalan dosyaları temizlenmeli (8.50).
 
+**Baran kararları (2026-10-02):** Prime web'de satılmaz (sadece App Store / Google Play; PayTR abonelik kodu silindi).
+Uygulama şimdilik `app.moffi.net`'te kalır. Uygulamanın adı değişecek; para birimi adı ("PawCoin"/"Moffi Puanı") yeni ada
+göre sonra belirlenecek. Telefon bildirimleri için Firebase sadece FCM/APNs dağıtım kanalı olarak açılacak (veri Supabase'de).
+
 ### 12.1 BARAN'A SORULACAKLAR / BARAN'IN YAPACAKLARI (Claude'un otonom çalışması sırasında biriken, 2026-10-02)
 
 Baran PC başına dönünce bu liste birlikte gözden geçirilir; biten madde silinir.
