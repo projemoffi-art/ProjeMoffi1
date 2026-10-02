@@ -47,77 +47,9 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Process transaction result
+        // Prime web'de satılmaz (Baran kararı 2026-10-02; sadece App Store/Google Play, bkz. 8.61).
         if (merchant_oid.startsWith("SUB")) {
-            // --- SUBSCRIPTION PROCESSING ---
-            if (status === "success") {
-                const { data: intent, error: intentErr } = await supabaseAdmin
-                    .from("subscription_intents")
-                    .select("*")
-                    .eq("merchant_oid", merchant_oid)
-                    .single();
-
-                if (intentErr || !intent) {
-                    console.error("[PAYTR WEBHOOK] Intent not found for subscription:", merchant_oid);
-                    return new Response("Fail: Intent not found", { status: 400 });
-                }
-
-                if (intent.status === "completed") {
-                    console.log("[PAYTR WEBHOOK] Subscription already processed:", merchant_oid);
-                    return new Response("OK", { status: 200, headers: { "Content-Type": "text/plain" } });
-                }
-
-                // Get current profile
-                const { data: profile, error: profileErr } = await supabaseAdmin
-                    .from("profiles")
-                    .select("is_prime, prime_until")
-                    .eq("id", intent.user_id)
-                    .single();
-
-                if (profileErr) {
-                    console.error("[PAYTR WEBHOOK] Profile fetch failed:", profileErr);
-                    return new Response("Fail: Profile not found", { status: 500 });
-                }
-
-                // Calculate new prime_until (max(now, old_prime_until) + 30 days)
-                const now = new Date();
-                let currentPrimeUntil = now;
-                if (profile.is_prime && profile.prime_until) {
-                    const oldDate = new Date(profile.prime_until);
-                    if (oldDate > now) {
-                        currentPrimeUntil = oldDate;
-                    }
-                }
-                const newPrimeUntil = new Date(currentPrimeUntil.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-                // Update profile
-                await supabaseAdmin
-                    .from("profiles")
-                    .update({
-                        is_prime: true,
-                        subscription_tier: intent.plan_id,
-                        prime_until: newPrimeUntil,
-                        cancel_at_period_end: false
-                    })
-                    .eq("id", intent.user_id);
-
-                // Mark intent as completed
-                await supabaseAdmin
-                    .from("subscription_intents")
-                    .update({ status: "completed" })
-                    .eq("merchant_oid", merchant_oid);
-                
-                console.log(`[PAYTR WEBHOOK] Successfully processed subscription success: ${merchant_oid}`);
-            } else {
-                // Payment failed
-                const failed_reason_code = params.get("failed_reason_code") || "";
-                const failed_reason_msg = params.get("failed_reason_msg") || "Unknown error";
-                console.warn(`[PAYTR WEBHOOK] Payment failed for subscription ${merchant_oid}: ${failed_reason_msg} (${failed_reason_code})`);
-                
-                await supabaseAdmin
-                    .from("subscription_intents")
-                    .update({ status: "failed" })
-                    .eq("merchant_oid", merchant_oid);
-            }
+            console.warn(`[PAYTR WEBHOOK] Web aboneliği artık yok, yok sayıldı: ${merchant_oid}`);
         } else {
             // --- SHOP ORDER PROCESSING ---
             // Stok düşümü, sepet temizliği, müşteri/satıcı bildirimi ve e-posta (kuyruk) tek
