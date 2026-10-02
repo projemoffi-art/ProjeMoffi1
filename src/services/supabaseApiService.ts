@@ -426,9 +426,10 @@ export class SupabaseApiService implements IApiService {
             owner_id: user.id,
             name: pet.name,
             type: pet.type,
-            
-            
-            
+            breed: pet.breed || null,
+            age: pet.age != null && pet.age !== '' ? String(pet.age) : null,
+            gender: pet.gender || null,
+            show_phone: (pet as any).show_phone ?? false,
             avatar_url: pet.image || pet.avatar,
             is_neutered: (pet as any).is_neutered || false,
             size: (pet as any).size,
