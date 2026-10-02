@@ -3446,6 +3446,9 @@ E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i 
    Supabase'de kod 8 hane; giriş kutusu 6-8 haneyi kabul eder. "Leaked password protection" Supabase Pro planında; Pro'ya
    geçilince açılmalı (şimdilik sadece en az 8 karakter kuralı var).
 2. ✅ **Hesap silme bağlantı düzeltmeleri** (8.57) 2026-10-02'de uygulandı ve doğrulandı (silmeyi engelleyen bağ kalmadı).
+   🔴 **Yönetici paneli (`/admin`) KİLİTLİ:** Baran 2026-10-02'de kurulumu erteledi (yönetici hesabının e-postası Baran'a ait
+   değil; domain/hesap devri sürüyor). Kurulana kadar kimse `/admin`'e giremez, işletme başvuru onayı dahil. İlk gerçek
+   işletme başvurusu gelmeden kurulmalı.
    🔴 **Yönetici iki adımlı doğrulama:** Baran app.moffi.net/admin'e girip doğrulama uygulamasını kurmalı, sonra Claude
    `20261002180000_admin_requires_mfa.sql`'i uygular (sıra ters olursa yönetici verisine erişim kapanır).
 3. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
@@ -3460,6 +3463,14 @@ Supabase (anon, service role, cron gizli anahtarı), Vercel (`EMAIL_CRON_SECRET`
 Firebase, Apple, PayTR) anahtarlarının her biri için: adı, hangi servisten alındığı, nerede kullanıldığı, ne zaman
 oluşturulduğu, sızarsa ne yapılacağı. Değerler ASLA CLAUDE.md'ye yazılmaz (sadece parola yöneticisine). Sonunda eski/kullanılmayan
 anahtarlar iptal edilir ve her anahtar için yenileme tarihi konur. Önerilen: bir parola yöneticisi (Bitwarden vb.).
+
+### 12.3 Domain taşıma kontrol listesi (Baran yeni alan adı alıp `moffi.net`'i arkadaşına verecek; Vercel/Supabase/GitHub/Resend Baran'da kalır)
+
+🔴 `moffi.net` devredilmeden ÖNCE taşınmalı; yoksa uygulama adresi, tüm e-postalar ve Resend doğrulaması kapanır. Sıra:
+1. Yeni domain'i Vercel'e ekle + DNS. 2. Resend'e yeni domain + SPF/DKIM, Supabase SMTP gönderen adresi, Vercel `RESEND_FROM_EMAIL`.
+3. Supabase Authentication → URL Configuration (site adresi, yönlendirmeler, Google girişi). 4. Claude: pg_cron adresleri
+(`email-outbox`, `account-purge`), `capacitor.config.ts` `server.url`, koddaki sabit `app.moffi.net` adresleri. 5. Yeni adreste test,
+sonra eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski adrese gider: basmadan ÖNCE taşı.
 
 ### 12.2 Yapılacaklar — Diğer modüller (faz planı dışı, sırası Baran'la belirlenir)
 
