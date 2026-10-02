@@ -3455,6 +3455,12 @@ E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i 
 Uygulama şimdilik `app.moffi.net`'te kalır. Uygulamanın adı değişecek; para birimi adı ("PawCoin"/"Moffi Puanı") yeni ada
 göre sonra belirlenecek. Telefon bildirimleri için Firebase sadece FCM/APNs dağıtım kanalı olarak açılacak (veri Supabase'de).
 
+**Anahtar envanteri (Baran'la birlikte, sıfırdan kayıt tutarak):** Resend (Vercel + Supabase SMTP için ayrı anahtarlar),
+Supabase (anon, service role, cron gizli anahtarı), Vercel (`EMAIL_CRON_SECRET`, `GEMINI_API_KEY`, ileride RevenueCat,
+Firebase, Apple, PayTR) anahtarlarının her biri için: adı, hangi servisten alındığı, nerede kullanıldığı, ne zaman
+oluşturulduğu, sızarsa ne yapılacağı. Değerler ASLA CLAUDE.md'ye yazılmaz (sadece parola yöneticisine). Sonunda eski/kullanılmayan
+anahtarlar iptal edilir ve her anahtar için yenileme tarihi konur. Önerilen: bir parola yöneticisi (Bitwarden vb.).
+
 ### 12.1 BARAN'A SORULACAKLAR / BARAN'IN YAPACAKLARI (Claude'un otonom çalışması sırasında biriken, 2026-10-02)
 
 Baran PC başına dönünce bu liste birlikte gözden geçirilir; biten madde silinir.
