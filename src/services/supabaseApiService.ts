@@ -435,9 +435,12 @@ export class SupabaseApiService implements IApiService {
             size: (pet as any).size,
             character: (pet as any).character || (pet as any).personality,
             birth_date: /^\d{4}-\d{2}-\d{2}$/.test(pet.birthday || '') ? pet.birthday : null,
+            birth_date_estimated: !!(pet as any).birth_date_estimated,
             color: pet.color?.trim() || null,
             microchip_no: (pet as any).microchip_id,
             weight: numericWeight,
+            gallery_urls: Array.isArray((pet as any).gallery_urls) ? (pet as any).gallery_urls : [],
+            features: Array.isArray((pet as any).features) ? (pet as any).features : [],
         };
 
         // sos_settings JSON kolonu varsa ekle — tüm izleme verileri burada

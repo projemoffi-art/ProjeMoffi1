@@ -85,7 +85,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         root.classList.remove(...classesToRemove);
 
         // Determine if current path should force light mode
-        const authPaths = ['/', '/login', '/register', '/business-register', '/reset-password', '/auth/callback'];
+        const authPaths = ['/', '/onboarding', '/login', '/register', '/business-register', '/reset-password', '/auth/callback'];
         const isAuthPage = authPaths.includes(pathname || '');
         const activeTheme = isAuthPage ? 'light' : theme;
 

@@ -206,7 +206,7 @@ export interface QuestEngineContextType {
 const STORAGE_KEY = 'moffi_quest_engine_v2';
 const PUAN_KEY = 'moffi_total_pp_v2';
 const XP_KEY = 'moffi_total_xp_v2';
-const BADGES_KEY = 'moffi_earned_badges_v2';
+const BADGES_KEY = 'moffi_earned_badges_v3';
 const RESEARCH_KEY = 'moffi_research_v2';
 const STAMPS_KEY = 'moffi_weekly_stamps_v2';
 const LAST_STAMP_DATE_KEY = 'moffi_last_stamp_date_v2';

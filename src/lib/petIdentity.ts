@@ -1,4 +1,5 @@
 // Evcil hayvan kimlik alanlarının gösterimi (Pet Pasaportu, paylaşılan pasaport, künye).
+import { getPetTypeConfig } from '@/constants/petTypes';
 
 export function genderMark(g?: string | null): string {
     const s = String(g || '').toLocaleLowerCase('tr-TR');
@@ -19,6 +20,8 @@ export function speciesLabel(type?: string | null): string | null {
     if (s === 'dog' || s === 'köpek' || s === '🐶') return 'Köpek';
     if (s === 'cat' || s === 'kedi' || s === '🐱') return 'Kedi';
     if (s === 'other' || s === 'diğer') return 'Diğer';
+    const configured = getPetTypeConfig(s);
+    if (configured) return configured.label;
     return type?.trim() || null;
 }
 

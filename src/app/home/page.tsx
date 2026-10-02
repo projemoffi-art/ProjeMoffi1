@@ -8,6 +8,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { usePet } from '@/context/PetContext';
 import { useQuestEngine } from '@/context/QuestEngineContext';
 import { PetSettingsModal } from '@/components/profile/PetSettingsModal';
+import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 import { AddPetModal } from '@/components/community/modals/AddPetModal';
 import { PatiKartPolicyModal } from '@/components/community/modals/PatiKartPolicyModal';
 import { TodayForYouEngine } from '@/components/community/TodayForYouEngine';
@@ -1226,11 +1227,14 @@ export default function LegendaryLightDashboard() {
     const [profileOrdersTab, setProfileOrdersTab] = useState<'active' | 'past' | 'cart' | 'settings'>('active');
 
     
+    // Hiç hayvanı olmayan ve ilk kurulumu bitirmemiş kullanıcı kurulum akışına gider (ekranlar 4-9, design-reference/onboarding-final).
+    // Kurulumu atlayan/bitiren kullanıcıya pencere zorla açılmaz; boş durum kartındaki düğmeyle eklenir.
+    const { loading: onboardingLoading, completed: onboardingCompleted } = useOnboardingStatus(authUser?.id);
     useEffect(() => {
-        if (isInitialized && !isPetLoading && userPets.length === 0) {
-            setIsAddPetOpen(true);
+        if (isInitialized && !isPetLoading && !onboardingLoading && userPets.length === 0 && !onboardingCompleted) {
+            router.replace("/onboarding");
         }
-    }, [isInitialized, isPetLoading, userPets.length]);
+    }, [isInitialized, isPetLoading, onboardingLoading, onboardingCompleted, userPets.length, router]);
 
     const [showLiveMap, setShowLiveMap] = useState(false);
     const [geofenceAlerts, setGeofenceAlerts] = useState(true);

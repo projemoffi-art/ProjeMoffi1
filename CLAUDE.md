@@ -474,6 +474,7 @@ Aynı anda üç ajan çalışabilir: bu sohbetteki Claude (Supabase/Vercel'e MCP
 | `health-final/` | `/health/*` sağlık merkezi / karne (+ ilham görseli) |
 | `community-final/` | `/kayip`, `/sahiplendirme`, `/community` (14 + 14 + 12 ekran) |
 | `passport-final/` | `/pasaport/*`, `/id`, `/p` (10 ekran) |
+| `onboarding-final/` | `/` giriş + `/onboarding` pet kurulumu (9 ekran) |
 
 ## 12. Açık işler (2026-10-02)
 
@@ -527,16 +528,16 @@ Supabase SMTP gönderen adresi, Vercel `RESEND_FROM_EMAIL`; (3) Supabase Authent
 eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski adrese gider: basmadan ÖNCE taşı.
 
 ### 12.3 Claude'un yapacağı (teknik borç ve bekleyen işler)
-- [ ] **Giriş + ilk karşılama + pet ekleme yenileme** (`/` → `AuthForms.tsx`; ilk giriş `home/page.tsx` `hasNoPets` + `AddPetModal`).
-      Baran'a göre "çok berbat ve karmaşık"; 2026-10-02 incelemesinin bulguları: (1) **pet ekleme veri kaybı** (ırk/yaş/cinsiyet/telefon-göster
-      kaydedilmiyordu; b00cbd3'te düzeltildi). (2) Yeni kullanıcı boş `/home`'a düşer, `AddPetModal` otomatik açılır: 3 adım, ~20 alan, jargon
-      (Aktivite %, KCAL), zorunlu: ad+ırk(serbest metin)+kilo; ayırt edici özellik hiç kaydedilmez; 5 fotoğraf seçilir ama yalnız ilki yüklenir; doğum
-      tarihi/renk sorulmaz (pasaport `birth_date` ister, aşı takvimi ona dayanır); `drafts/OnboardingFlow` ölü (`NEXT_PUBLIC_ENABLE_ONBOARDING`
-      yok). (3) Kayıtta onay kutuları (şartlar, pazarlama) hiçbir yere kaydedilmez (KVKK kanıtı yok). (4) `handle_new_user`: kullanıcı adı = e-posta
-      başı (20/20 profil, herkese görünen profilde e-posta sızıntısı), varsayılan avatar `i.pravatar.cc` rastgele insan fotoğrafı + kullanıcı
-      kimliği 3. tarafa gider, 8/20 profilde ad boş. (5) Konum izni ana sayfa açılır açılmaz soruluyor (nedeni anlatılmadan). Önerilen tasarım:
-      3 kayıt ekranı + 6 pet kurulum ekranı, geri kalan alanlar Pasaport "tamamla" yüzdesine ertelenir (rapor sohbette). 🔴 Baran'ın örnek/referans
-      ekranları gelmeden UI'ya başlanmaz (8.8 dersi); veri/altyapı düzeltmeleri (onay kaydı, kullanıcı adı, avatar) UI'dan bağımsız yapılabilir.
+- [x] **Giriş + ilk karşılama + pet kurulumu yenilendi (2026-10-02).** Tek kaynak: `design-reference/onboarding-final/` (9 ekran, README'de kararlar).
+      `/` → `components/auth/AuthFlow.tsx` (karşılama/kayıt/kod/giriş/sıfırlama); `/onboarding` → `components/onboarding/PetSetup.tsx` (ekran 4–9, tek
+      kayıt: [Tamamla]'da pet + fotoğraflar + izinler). Sunucu bayrağı `profiles.onboarding_completed_at` (`complete_onboarding` RPC, `useOnboardingStatus`);
+      "Şimdilik atla" da kurulumu bitirir. Onay kaydı `handle_new_user`'da (terms_accepted_at/terms_version/marketing_consent), kullanıcı adı ad+kısa kod,
+      varsayılan avatar boş (baş harf). `addPet` artık ırk/yaş/cinsiyet/doğum tarihi (tahminî işareti)/renk/çip/kilo/galeri/ayırt edici özelliği kaydediyor
+      (`constants/breeds.ts`). Eski `drafts/*` ve `AuthForms.tsx` silindi; `AddPetModal` sadece sonradan eklemelerde (eski tasarım, sıra ona gelince).
+      🔴 Yolda bulunan hata: `ActivityContext` ilk `walkStats` değerleri sahteydi (18 yürüyüş/32 km/7 gün) → yeni kullanıcıya anında 5 "rozet kazandın"
+      bildirimi çıkıyordu; sıfırlandı, rozet anahtarı `moffi_earned_badges_v3`. Çerez bandı kompakt yazıldı, giriş/kurulumda gizli. `/onboarding` açık
+      temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
+      köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
 - [ ] "Moffi Puanı / PP" yazan arayüz metinleri yeni para birimi adına çevrilecek (isim belli olunca topluca).
 - [ ] `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinecek (içerik 8.45'te taşındı; kolon silme Baran'ın SQL Editor'ından).
 - [ ] Silinen gönderi/hikâyelerin depoda kalan eski dosyaları (8.50).

@@ -17,7 +17,7 @@ export function AIWidgetLoader() {
     // Hide AI Assistant on login/landing flows, games, and full-screen walk takeovers
     // (referans mockup'ta bu ekranlarda hiç yok; ayrıca daha önce start/bitir
     // butonlarının üzerine binerek gerçek tıklama sorunlarına yol açtığı görüldü)
-    const hidePaths = ['/', '/login', '/register', '/reset-password', '/walk/tracking', '/walk/summary'];
+    const hidePaths = ['/', '/onboarding', '/login', '/register', '/reset-password', '/walk/tracking', '/walk/summary'];
     if (hidePaths.includes(pathname) || pathname.startsWith('/game')) return null;
     // Sağlık ve pasaport ekranları: yüzen düğme listelerin sağ tarafını ve alt sayfalardaki
     // kaydet düğmelerini kapatıyordu. Paylaşım/künye sayfaları giriş yapmamış kişiye açılır.

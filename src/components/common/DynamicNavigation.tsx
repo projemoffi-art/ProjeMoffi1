@@ -27,7 +27,7 @@ const MoffiUltimateHub = dynamic(() => import("@/components/community/MoffiUltim
 const SubscriptionManagementModal = dynamic(() => import("@/components/community/modals/SubscriptionManagementModal").then(mod => mod.SubscriptionManagementModal), { ssr: false });
 const PremiumUpgradeModal = dynamic(() => import("@/components/community/modals/PremiumUpgradeModal").then(mod => mod.PremiumUpgradeModal), { ssr: false });
 
-const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth', '/walk/tracking', '/walk/summary',
+const HIDDEN_ROUTES = ['/', '/onboarding', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth', '/walk/tracking', '/walk/summary',
     // Paylaşılan pasaport, künye ve doğrulama sayfaları uygulama dışındaki kişilere açılır.
     '/p/', '/id/', '/verify/'];
 // Alt menü, ekranın altına sabit yorum/paylaşım kutusu olan sayfalarda gizlenir (genel pencereler çalışmaya devam eder).

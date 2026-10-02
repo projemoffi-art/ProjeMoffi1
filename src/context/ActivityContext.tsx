@@ -171,13 +171,15 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     });
     const [walkHistory, setWalkHistory] = useState<WalkRecord[]>([]);
     const [walkStats, setWalkStats] = useState<WalkStats | null>({
-        totalWalks: 18,
-        totalDistanceKm: 32.4,
-        totalDurationMinutes: 412,
-        averageDistanceKm: 1.8,
-        longestWalkKm: 4.2,
-        currentStreak: 4,
-        bestStreak: 7
+        // Gerçek istatistikler yüklenene kadar SIFIR (eskiden sahte 18 yürüyüş/32,4 km/7 gün seri vardı: her yeni kullanıcıya
+        // daha ilk saniyede 5 sahte rozet verilip cihaza kaydediliyordu).
+        totalWalks: 0,
+        totalDistanceKm: 0,
+        totalDurationMinutes: 0,
+        averageDistanceKm: 0,
+        longestWalkKm: 0,
+        currentStreak: 0,
+        bestStreak: 0
     });
     const [recTime, setRecTime] = useState(0);
     const [orderStep, setOrderStep] = useState(2); // 1: Prep, 2: Courier, 3: Delivered

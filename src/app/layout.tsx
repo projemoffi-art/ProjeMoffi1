@@ -22,7 +22,6 @@ import { LiveEventsProvider } from "@/context/LiveEventsContext";
 import { QuestRewardEngineLoader } from "@/components/quests/QuestRewardEngineLoader";
 import { Phase2Loader } from "@/components/quests/Phase2Loader";
 import { GlobalToast } from "@/components/common/GlobalToast";
-import { RootOnboardingWrapper } from "@/components/drafts/RootOnboardingWrapper";
 import CookieBanner from "@/components/common/CookieBanner";
 import { ShareSheetHost } from "@/components/common/ShareSheet";
 
@@ -90,9 +89,9 @@ export default function RootLayout({
                                       <div id="modal-root" className="pointer-events-none fixed inset-0 z-[99999]"></div>
                                       <div className="min-h-screen relative">
                                         <ErrorBoundary>
-                                          <RootOnboardingWrapper>
+                                          <>
                                             {children}
-                                          </RootOnboardingWrapper>
+                                          </>
                                         </ErrorBoundary>
                                       </div>
 
