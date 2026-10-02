@@ -17,6 +17,13 @@ function authorized(request: Request) {
     return a.length === b.length && timingSafeEqual(a, b);
 }
 
+// Servis rolünün tabloya doğrudan yazma yetkisi yok; sonuç yetkili fonksiyonla yazılır.
+// Yazılamazsa iş "sending"de kalır ve 15 dk sonra claim_email_outbox tarafından yeniden alınır.
+async function finish(admin: { rpc: (fn: string, args: object) => PromiseLike<{ error: { message: string } | null }> }, id: string, sent: boolean, error?: string) {
+    const { error: rpcError } = await admin.rpc("finish_email_outbox", { p_id: id, p_sent: sent, p_error: error ?? null });
+    if (rpcError) console.error("[email-outbox] Sonuç yazılamadı:", id, rpcError.message);
+}
+
 export async function POST(request: Request) {
     if (!authorized(request)) {
         return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -57,13 +64,10 @@ export async function POST(request: Request) {
             if (!result.success || (result as any).simulated) {
                 throw new Error(String((result as any).error?.message || (result as any).error || "Gönderim başarısız"));
             }
-            await admin.from("email_outbox").update({ status: "sent", sent_at: new Date().toISOString(), last_error: null }).eq("id", job.id);
+            await finish(admin, job.id, true);
             sent++;
         } catch (err: any) {
-            await admin.from("email_outbox").update({
-                status: job.attempts >= 5 ? "failed" : "pending",
-                last_error: String(err?.message || err).slice(0, 500)
-            }).eq("id", job.id);
+            await finish(admin, job.id, false, String(err?.message || err));
             failed++;
         }
     }
