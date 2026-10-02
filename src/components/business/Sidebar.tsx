@@ -11,7 +11,6 @@ import {
     Store,
     Megaphone,
     LogOut,
-    ArrowLeftRight,
     X,
     PawPrint,
     Gift,
@@ -25,6 +24,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 import { useBusinessType } from "@/context/BusinessTypeContext";
 import { SidebarItemKey } from "@/config/businessTypes";
 
@@ -36,6 +36,7 @@ interface SidebarProps {
 export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
     const pathname = usePathname();
     const { t } = useTranslation();
+    const { logout } = useAuth();
     const typeConfig = useBusinessType();
 
     // Faz 2 (işletme türü mimarisi) — bu liste artık TEK kaynak değil, sadece
@@ -116,19 +117,11 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
 
             {/* FOOTER ACTIONS */}
             <div className="border-t border-zinc-200/80 dark:border-card-border/40 pt-4 space-y-1.5">
-                <Link
-                    href="/home"
-                    className="flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-all group"
-                >
-                    <ArrowLeftRight className="w-5 h-5 text-gray-500 dark:text-gray-400 dark:text-gray-500 group-hover:scale-110" />
-                    <span className={cn(isMobile ? "block" : "hidden lg:block")}>{t("business.sidebar.client_mode")}</span>
-                </Link>
+                {/* Kişisel hesaba geçiş tek yerde: üst çubuktaki işletme seçici (Header.tsx). */}
                 <button
-                    onClick={() => {
-                        if (typeof window !== 'undefined') {
-                            localStorage.removeItem('moffi_mock_user');
-                            window.location.href = '/login';
-                        }
+                    onClick={async () => {
+                        await logout();
+                        window.location.href = '/';
                     }}
                     className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-500/10 transition-all group"
                 >

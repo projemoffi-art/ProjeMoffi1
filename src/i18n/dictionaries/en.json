@@ -165,7 +165,6 @@
       "orders": "Order Tracking",
       "products": "Product Management",
       "quests": "Campaigns",
-      "client_mode": "Switch to Client Mode",
       "logout": "Logout"
     },
     "dashboard": {
