@@ -3378,8 +3378,9 @@ Antigravity. Karışıklığı önlemek için şu iş bölümü kuruldu:
 
 E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i hatırlat.
 
-1. 🔴 **Resend bağlantısı** (8.40'tan beri): Vercel'e `RESEND_API_KEY` + `RESEND_FROM_EMAIL` eklenmeli, Resend'de
-   `moffi.net` alan adı doğrulanmalı. O zamana kadar hiçbir e-posta gitmez (randevu, sağlık, davet, sipariş);
-   hepsi `email_outbox` kuyruğunda bekler, anahtar eklenince gönderilir.
+1. **Resend** — 2026-10-02 bağlandı, uygulama e-postaları gidiyor (Vercel anahtarları + Supabase SMTP + şablonlar tamam).
+   Kalan: Hostinger'da `send` adına TXT `v=spf1 include:amazonses.com ~all` (yoksa spam riski), ve doğrulama
+   test edildikten sonra Supabase'de "Confirm email" açılması (Faz 1d, 8.56). Servis rolünün `email_outbox`'a
+   doğrudan yazma yetkisi yok: sonuç `finish_email_outbox` ile yazılır, takılan işler 15 dk sonra yeniden alınır.
 2. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
 3. Eski silinen gönderi/hikâyelerin depoda kalan dosyaları temizlenmeli (8.50).
