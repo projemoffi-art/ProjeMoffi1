@@ -724,7 +724,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                             showToast("GPS Bağlantısı Sağlanamadı! Konum iznini veya HTTP bağlantı sınırlarını kontrol edin. Test için Simülasyon modunu açabilirsiniz.", "X", "text-red-500");
                         });
                     },
-                    { highAccuracy: true }
+                    { highAccuracy: true, background: true }
                 );
             }
         } else {
@@ -889,6 +889,8 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
 
     // Faz 2: sekme arka plana alındığında (mobil tarayıcılar GPS callback'lerini kısıtlayabilir)
     useEffect(() => {
+        // Telefon uygulamasında takip ekran kapalıyken de sürer; uyarı sadece tarayıcıda gerekir
+        if (geolocation.supportsBackground()) return;
         return device.onForegroundChange(inForeground => {
             if (!inForeground && walkData.isActive && !walkData.isPaused) {
                 setWalkIssue(prev => (prev === 'none' || prev === 'gps_weak' ? 'background_permission_required' : prev));

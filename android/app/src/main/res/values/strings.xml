@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Moffi</string>
+    <string name="title_activity_main">Moffi</string>
+    <string name="package_name">net.moffi.app</string>
+    <string name="custom_url_scheme">net.moffi.app</string>
+</resources>

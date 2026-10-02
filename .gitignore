@@ -60,9 +60,7 @@ yarn-error.*
 *.tsbuildinfo
 next-env.d.ts
 
-# generated native folders
-/ios
-/android
+# Capacitor yerel projeleri (android/, ios/) kaynak koddur ve commit'lenir; derleme çıktıları kendi .gitignore'larında.
 
 # scratch and temp folders
 scratch/

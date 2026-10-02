@@ -3417,3 +3417,26 @@ E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i 
    `20261002180000_admin_requires_mfa.sql`'i uygular (sıra ters olursa yönetici verisine erişim kapanır).
 3. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
 4. Eski silinen gönderi/hikâyelerin depoda kalan dosyaları temizlenmeli (8.50).
+
+### 12.1 BARAN'A SORULACAKLAR / BARAN'IN YAPACAKLARI (Claude'un otonom çalışması sırasında biriken, 2026-10-02)
+
+Baran PC başına dönünce bu liste birlikte gözden geçirilir; biten madde silinir.
+
+**Faz 4 — telefon uygulaması (kod hazır, derleme ve hesaplar Baran'da)**
+- [ ] **Karar: uygulama kimliği `net.moffi.app`** (mağazada sonradan değiştirilemez). Onay ya da başka bir kimlik.
+- [ ] **Android derlemesi için bilgisayar:** Android Studio + SDK + Gradle ~10 GB ister; C: diskte ~1 GB boş. Ya yer açılmalı
+      ya da Android Studio başka diske kurulmalı. Sonra: `npx cap open android` → çalıştır.
+- [ ] **iPhone derlemesi:** Mac + Xcode gerekir (Windows'ta derlenemez). Mac yoksa bulut derleme (Ionic Appflow, Codemagic) seçenek.
+- [ ] **Geliştirici hesapları** (8.52: şirket adına, D-U-N-S): durumu nedir?
+- [ ] **Uygulama simgesi** (1024×1024 PNG, köşesiz) ve açılış ekranı görseli. Tasarım yoksa Claude geçici bir tane üretebilir mi?
+- [ ] **Android imza anahtarı (keystore):** mağazaya yüklemeden önce oluşturulmalı ve güvenli yerde saklanmalı (kaybolursa
+      uygulama bir daha güncellenemez). Birlikte yapılmalı.
+- [ ] **Telefon bildirimleri:** Firebase projesi (Android `google-services.json`) + Apple APNs anahtarı gerekiyor. Gelince Claude
+      sunucuda FCM/APNs gönderimini ve `push_subscriptions` tablosuna telefon jetonunu ekler. O zamana kadar telefon
+      uygulamasında bildirim aboneliği bilerek kapalı (web'de çalışıyor).
+- [ ] **Bilgi — Apple kural 4.2:** uygulama canlı siteyi kendi içinde açıyor (Moffi'nin sunucu tarafı olduğu için tek yol).
+      Arka plan konum, bildirim, satın alma, widget gibi gerçek telefon özellikleri bu riski karşılıyor ama Apple
+      incelemesinde soru gelebilir.
+- [ ] **Bilgi — adım sayar:** ücretsiz, güvenilir bir telefon adım sayar eklentisi yok; telefon uygulamasında da sensör
+      (devicemotion) kullanılıyor, ekran kapalıyken adım sayılmaz (mesafe GPS'ten sayılmaya devam eder). İleride Apple
+      Sağlık / Health Connect bağlantısı ayrı iş.

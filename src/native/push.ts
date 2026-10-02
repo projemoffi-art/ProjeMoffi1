@@ -1,12 +1,15 @@
-import { isBrowser } from "./platform";
+import { isBrowser, isNative } from "./platform";
 
-// Anlık bildirim aboneliği. Web: service worker + Web Push (VAPID). Native (Faz 4): APNs/FCM jetonu.
-// Dönen abonelik, sunucudaki push_subscriptions satırına yazılacak bilgidir.
+// Anlık bildirim aboneliği. Web: service worker + Web Push (VAPID). Dönen abonelik, sunucudaki
+// push_subscriptions satırına yazılacak bilgidir.
+// Telefon uygulaması: APNs/FCM jetonu gerekir (Firebase projesi + Apple anahtarı + sunucuda gönderim);
+// bunlar kurulana kadar telefonda bildirim aboneliği "desteklenmiyor" döner (CLAUDE.md Bölüm 12).
 
 export type PushPermission = "granted" | "denied" | "default" | "unsupported";
 export type PushSubscriptionInfo = { endpoint: string; p256dh?: string; auth?: string };
 
 export function isSupported(): boolean {
+    if (isNative()) return false;
     return isBrowser() && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
 
