@@ -3272,6 +3272,16 @@ gösterir, satın alma "çok yakında" (Faz 6). Bulunan: dört yapay zekâ uç n
 diyordu; `/api/ai/generate` rastgele stok foto dönüyordu; mağaza danışmanı "bugün aktif yürüyüş yaptı" diye uyduruyordu.
 Kullanılmayan `/api/ai/generate`, `/api/chat`, `services/studio/AIService.ts` silindi.
 
+### 8.61 Faz 6 — mağaza satın almaları (RevenueCat) (2026-10-02)
+
+`store_products` (ürün kimliği → Prime ya da PawCoin miktarı; fiyat mağazada), `store_events` (istemciye kapalı, aynı
+bildirim iki kez işlenmez), `apply_store_event` (servis rolü): INITIAL_PURCHASE/RENEWAL/PRODUCT_CHANGE/UNCANCELLATION →
+`prime_until` uzar (ilk alımda o ayın 500 PawCoin'i), EXPIRATION → Prime kapanır, CANCELLATION → kayıt (süre sonuna kadar
+sürer), NON_RENEWING_PURCHASE + `pawcoin_*` → PawCoin yüklenir. Uç nokta `/api/revenuecat/webhook` (Authorization =
+`REVENUECAT_WEBHOOK_SECRET`). İstemci `native/purchases` (telefonda; `Purchases.logIn(supabaseUserId)`), Prime ekranı
+telefonda mağaza fiyatıyla satın alma + "geri yükle", web'de "telefon uygulamasından". 🔴 **KURAL:** Prime/PawCoin
+yetkisi asla istemcinin "satın aldım" demesine dayanmaz; sadece webhook → apply_store_event.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la
@@ -3473,6 +3483,23 @@ Baran PC başına dönünce bu liste birlikte gözden geçirilir; biten madde si
       ekranında şimdilik listelenmiyor.
 - [ ] **Bilgi — "PawCoin" adı:** tek para birimi PawCoin oldu ama arayüzde hâlâ "Moffi Puanı / PP" yazan yerler var; isim
       değişikliği ayrı bir metin işi. Onaylarsan topluca değiştiririm.
+
+**Faz 6 — mağaza ve satın alma (kod hazır; hesap/fiyat/derleme Baran'da)**
+- [ ] **RevenueCat hesabı** (ücretsiz başlangıç) aç; App Store Connect ve Google Play Console'u bağla.
+- [ ] **Mağazada ürünleri AYNEN şu kimliklerle aç:** abonelik `moffi_prime_monthly`, `moffi_prime_yearly`; tüketilebilir
+      `pawcoin_500`, `pawcoin_1200`, `pawcoin_3000`. RevenueCat'te `prime` adında bir entitlement + "default" offering.
+- [ ] **Karar — fiyatlar:** Prime aylık/yıllık ve PawCoin paketleri. (Kural 8.52: PawCoin ile alınan hiçbir şey zarar
+      ettirmemeli; yapay zekâ ek hakkı 10/30 PawCoin.)
+- [ ] **Vercel'e eklenecekler:** `REVENUECAT_WEBHOOK_SECRET` (uzun rastgele bir değer; RevenueCat → Webhooks → Authorization
+      header'a aynısı), `NEXT_PUBLIC_REVENUECAT_IOS_KEY`, `NEXT_PUBLIC_REVENUECAT_ANDROID_KEY` (RevenueCat → API keys).
+      Webhook adresi: `https://app.moffi.net/api/revenuecat/webhook`.
+- [ ] **PawCoin paketi satın alma ekranı** henüz yok (katalog ve sunucu hazır). Nerede olsun: Ödül Marketi'nin üstü mü,
+      ayrı "Cüzdan" mı? Karar verince Claude ekler.
+- [ ] **Widget (ana ekran):** iOS WidgetKit (Swift, Mac+Xcode) ve Android AppWidget yerel kod ister; derleme ortamı
+      hazır olunca birlikte yapılmalı (aktif yürüyüş + günlük hedef önerisi).
+- [ ] **Mağaza sayfası:** uygulama açıklaması, ekran görüntüleri, gizlilik politikası adresi (`/privacy`), destek e-postası,
+      Apple "Gizlilik etiketleri" formu (toplanan veriler: konum, sağlık-dışı evcil hayvan verisi, fotoğraf, e-posta).
+      İsterseniz metinleri Claude taslak olarak hazırlar.
 
 - [ ] **Bilgi — adım sayar:** ücretsiz, güvenilir bir telefon adım sayar eklentisi yok; telefon uygulamasında da sensör
       (devicemotion) kullanılıyor, ekran kapalıyken adım sayılmaz (mesafe GPS'ten sayılmaya devam eder). İleride Apple

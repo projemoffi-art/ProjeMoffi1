@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Check, X } from 'lucide-react';
+import { Crown, Check, X, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { purchases } from '@/native';
+import { showToast } from '@/lib/utils';
 
 // Prime: sadece gerçekten çalışan ayrıcalıklar listelenir (8.52). Satın alma uygulama mağazası üzerinden
 // (Faz 6, RevenueCat); o zamana kadar düğme dürüstçe "çok yakında" der, ödeme simüle edilmez.
@@ -22,6 +24,36 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
 
     const { user } = useAuth();
     const isPrime = !!user?.is_prime;
+
+    // Telefon uygulamasında mağaza ürünleri (Prime abonelikleri)
+    const canBuy = purchases.isSupported();
+    const [offers, setOffers] = useState<purchases.StoreOffer[]>([]);
+    const [busy, setBusy] = useState<string | null>(null);
+    useEffect(() => {
+        if (!isOpen || !canBuy || !user?.id) return;
+        purchases.getOffers(user.id).then(list => setOffers(list.filter(o => o.kind === 'subscription'))).catch(() => setOffers([]));
+    }, [isOpen, canBuy, user?.id]);
+
+    const buy = async (productId: string) => {
+        if (!user?.id) return;
+        setBusy(productId);
+        const r = await purchases.purchase(user.id, productId);
+        setBusy(null);
+        if (r === 'purchased') {
+            showToast('Teşekkürler! Prime birkaç saniye içinde açılacak.', 'CheckCircle2', 'text-emerald-500 font-bold');
+            handleClose();
+        } else if (r === 'failed') {
+            showToast('Satın alma tamamlanamadı, tekrar dene.', 'AlertCircle', 'text-red-500 font-bold');
+        }
+    };
+
+    const restore = async () => {
+        if (!user?.id) return;
+        setBusy('restore');
+        const ok = await purchases.restore(user.id);
+        setBusy(null);
+        showToast(ok ? 'Satın alımların kontrol edildi; aktif üyelik varsa birkaç saniye içinde açılır.' : 'Geri yükleme yapılamadı.', ok ? 'CheckCircle2' : 'AlertCircle', ok ? 'text-emerald-500 font-bold' : 'text-red-500 font-bold');
+    };
 
     const comparisonFeatures: { name: string; free: string | false; prime: string | true }[] = [
         { name: "Moffi AI asistanı", free: "Günde 5 mesaj", prime: "Günde 60 mesaj" },
@@ -110,13 +142,26 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
                                 <div className="w-full py-5 rounded-2xl font-bold text-sm bg-foreground/5 flex items-center justify-center gap-2">
                                     <Check className="w-5 h-5 text-[#D4AF37]" /> Prime üyeliğin aktif
                                 </div>
+                            ) : canBuy && offers.length > 0 ? (
+                                <div className="w-full space-y-3">
+                                    {offers.map(o => (
+                                        <button key={o.productId} onClick={() => buy(o.productId)} disabled={!!busy}
+                                            className="w-full py-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-[#FFD700] via-[#FDB931] to-[#D4AF37] text-black disabled:opacity-60 flex items-center justify-center gap-2">
+                                            {busy === o.productId ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{o.title.replace(/\s*\(.*\)$/, '')} · {o.price}</>}
+                                        </button>
+                                    ))}
+                                    <button onClick={restore} disabled={!!busy} className="w-full py-2 text-xs font-semibold text-secondary">
+                                        {busy === 'restore' ? 'Kontrol ediliyor…' : 'Satın alımları geri yükle'}
+                                    </button>
+                                    <p className="text-[11px] text-secondary">Abonelik, iptal edilmedikçe her dönem otomatik yenilenir; mağaza ayarlarından istediğin zaman iptal edebilirsin.</p>
+                                </div>
                             ) : (
                                 <>
                                     <button disabled className="w-full py-5 rounded-2xl font-bold text-sm bg-foreground/10 text-foreground/60 cursor-not-allowed">
                                         Çok yakında
                                     </button>
                                     <p className="text-xs text-secondary mt-4">
-                                        Prime, Moffi uygulaması mağazalara çıktığında App Store ve Google Play üzerinden satın alınabilecek.
+                                        Prime, Moffi telefon uygulaması mağazalara çıktığında App Store ve Google Play üzerinden satın alınabilecek.
                                     </p>
                                 </>
                             )}
