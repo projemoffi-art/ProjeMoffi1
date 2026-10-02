@@ -2,7 +2,7 @@
 -- get_auth_email(uuid): herhangi bir kullanıcının e-postasını kimlik numarasıyla sızdırıyordu.
 -- increment_deal_uses: herkes herhangi bir kuponun kullanım sayısını şişirebiliyordu (sadece sunucu çağırır).
 -- request_data_deletion: başkası adına silme talebi kaydı atılabiliyordu (yerini request_account_deletion aldı).
--- expire_old_unclaimed_patients / purge_expired_unclaimed_patients: bakım işleri, ekran ve zamanlayıcı kullanmıyor.
+-- expire_old_unclaimed_patients / purge_expired_unclaimed_patients: bakım işleri; ekran kullanmaz, zamanlayıcı (cron, sahip yetkisi) kullanır, bu yüzden bozulmaz.
 
 revoke all on function public.get_auth_email(uuid) from public, anon, authenticated;
 revoke all on function public.request_data_deletion(uuid) from public, anon, authenticated;
