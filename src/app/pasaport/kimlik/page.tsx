@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { share as shareApi } from "@/native";
 import { ClipboardList } from 'lucide-react';
 import { useHealth } from '@/components/health/HealthProvider';
 import { PetAvatar } from '@/components/health/PetPicker';
@@ -13,7 +14,7 @@ import { GENDER_OPTIONS, SPECIES_OPTIONS, genderLabel, genderMark, speciesLabel 
 import { showToast } from '@/lib/utils';
 
 function copy(value: string, label: string) {
-    navigator.clipboard?.writeText(value).then(() => showToast(`${label} kopyalandı.`, 'CheckCircle2', 'text-emerald-500 font-bold'));
+    shareApi.copyText(value).then(ok => ok && showToast(`${label} kopyalandı.`, 'CheckCircle2', 'text-emerald-500 font-bold'));
 }
 
 function Row({ label, value, copyable }: { label: string; value?: string | null; copyable?: boolean }) {

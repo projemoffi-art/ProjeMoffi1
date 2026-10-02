@@ -6,6 +6,7 @@
 // mesaj/konum bırakabilir (submit_tag_report → sahibine bildirim ve e-posta).
 
 import React, { useEffect, useState } from 'react';
+import { geolocation } from "@/native";
 import { useParams } from 'next/navigation';
 import { CheckCircle2, MapPin, Phone, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -103,13 +104,12 @@ function ReportForm({ petId, petName }: { petId: string; petName: string }) {
     const [sent, setSent] = useState(false);
 
     const locate = () => {
-        if (!navigator.geolocation) { setError('Cihazın konum paylaşmayı desteklemiyor.'); return; }
+        if (!geolocation.isSupported()) { setError('Cihazın konum paylaşmayı desteklemiyor.'); return; }
         setLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            pos => { setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocating(false); setError(null); },
-            () => { setLocating(false); setError('Konum alınamadı. Tarayıcı izinlerini kontrol et.'); },
-            { enableHighAccuracy: true, timeout: 15000 },
-        );
+        geolocation.getCurrent({ highAccuracy: true, timeoutMs: 15000 })
+            .then(fix => { setCoords({ lat: fix.lat, lng: fix.lng }); setError(null); })
+            .catch(() => setError('Konum alınamadı. Konum iznini kontrol et.'))
+            .finally(() => setLocating(false));
     };
 
     const send = async () => {

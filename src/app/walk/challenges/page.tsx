@@ -12,7 +12,7 @@ import { useQuestEngine } from "@/context/QuestEngineContext";
 import { useAuth } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
 import type { SocialChallenge } from "@/services/types";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 
 // Faz 18 (Görev sistemi denetimi): "Meydan Okumalar" — Faz 11'de referans
 // görsel elde değilken Faz 18'e ertelenmişti (bkz. CLAUDE.md 8.0). Görsel geri

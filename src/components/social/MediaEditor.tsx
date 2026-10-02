@@ -10,7 +10,7 @@ import {
     ADJUST_FIELDS, DEFAULT_ADJUST, MEDIA_FILTERS, applyPixels, filterCss, filterLabel, isDefaultAdjust,
     type Adjust, type FilterId,
 } from '@/lib/mediaFilters';
-import { haptics } from '@/lib/haptics';
+import { haptics } from '@/native/haptics';
 import { cn } from '@/lib/utils';
 
 export type Aspect = 'original' | 'square' | 'portrait';

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { device } from "@/native";
 import {
     CalendarCheck, CheckCircle2,
     User, Bell, X, Syringe, ClipboardList, Pill, AlertTriangle,
@@ -514,13 +515,10 @@ export default function BusinessAppointmentsPage() {
             .subscribe();
 
         // Arka planda kopan bağlantıda kaçan olaylar için sekmeye dönüşte tazele.
-        const handleVisibility = () => {
-            if (document.visibilityState === 'visible') fetchAppointmentsFromDb();
-        };
-        document.addEventListener('visibilitychange', handleVisibility);
+        const stopForeground = device.onForegroundChange(fg => { if (fg) fetchAppointmentsFromDb(); });
 
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibility);
+            stopForeground();
             supabase.removeChannel(channel);
         };
     }, [businessId]);

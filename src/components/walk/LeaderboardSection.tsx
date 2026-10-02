@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 
 // Faz 13 (referans UI'ye göre yeniden inşa edildi, bkz. design-reference/walk-final/):
 // önceki sürüm PP-tabanlı, terfi/düşmeli bir "lig" sistemiydi - Baran'ın gönderdiği

@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
-import { haptics } from "@/lib/haptics";
+import { haptics, sensors, geolocation } from "@/native";
 
 interface WalkQuickSheetProps {
     isOpen: boolean;
@@ -117,29 +117,9 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
 
     // Yürüyüşü başlat
     const handleStartWalk = async () => {
-        // Request gyroscope permission on iOS 13+ if supported
-        if (typeof window !== 'undefined' &&
-            typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-            try {
-                await (DeviceOrientationEvent as any).requestPermission();
-            } catch (err) {
-                console.error("Failed requesting orientation permission on iOS:", err);
-            }
-        }
-        // Baran'ın telefonda bulduğu kritik hata: adım sayısı GPS mesafesinden
-        // türetiliyordu. Artık gerçek ivmeölçer tabanlı sayaç (ActivityContext)
-        // kullanılıyor — iOS 13+ Safari'de bu iznin SENKRON olarak, kullanıcının
-        // dokunuşuyla AYNI çağrı yığınında istenmesi ŞART (bir useEffect
-        // içinden istemek sessizce başarısız olabiliyor), bu yüzden burada.
-        if (typeof window !== 'undefined' &&
-            typeof (window as any).DeviceMotionEvent !== 'undefined' &&
-            typeof (window as any).DeviceMotionEvent.requestPermission === 'function') {
-            try {
-                await (window as any).DeviceMotionEvent.requestPermission();
-            } catch (err) {
-                console.error("Failed requesting motion permission on iOS:", err);
-            }
-        }
+        // Adım sayar (ivmeölçer) izni: iOS 13+ bunu kullanıcının dokunuşuyla AYNI çağrı yığınında
+        // istemeyi şart koşuyor (useEffect içinden istemek sessizce başarısız olur), bu yüzden burada.
+        await sensors.requestPermission();
         haptics.success();
         startWalk();
         // KÖK NEDEN DÜZELTMESİ (bkz. WalkQuickSheetProps.onNavigateAway açıklaması):
@@ -181,16 +161,8 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
     // (kullanıcı ayarlardan izni değiştirip geri dönebilir).
     const [geoPermission, setGeoPermission] = React.useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
     React.useEffect(() => {
-        if (!isOpen || typeof navigator === 'undefined' || !('permissions' in navigator)) return;
-        let cancelled = false;
-        (navigator as any).permissions.query({ name: 'geolocation' as PermissionName })
-            .then((status: PermissionStatus) => {
-                if (cancelled) return;
-                setGeoPermission(status.state as 'granted' | 'denied' | 'prompt');
-                status.onchange = () => { if (!cancelled) setGeoPermission(status.state as 'granted' | 'denied' | 'prompt'); };
-            })
-            .catch(() => { if (!cancelled) setGeoPermission('unknown'); });
-        return () => { cancelled = true; };
+        if (!isOpen) return;
+        return geolocation.watchPermission(setGeoPermission);
     }, [isOpen]);
 
     // Faz 3: panel açılıp kapanırken state machine'i idle <-> ready arasında geçir
@@ -205,17 +177,8 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
 
     const handleContinueRecovered = async () => {
         haptics.tap();
-        // Bkz. handleStartWalk'taki açıklama — iOS 13+'ta senkron/kullanıcı
-        // dokunuşuyla aynı çağrı yığınında istenmesi gerekiyor.
-        if (typeof window !== 'undefined' &&
-            typeof (window as any).DeviceMotionEvent !== 'undefined' &&
-            typeof (window as any).DeviceMotionEvent.requestPermission === 'function') {
-            try {
-                await (window as any).DeviceMotionEvent.requestPermission();
-            } catch (err) {
-                console.error("Failed requesting motion permission on iOS:", err);
-            }
-        }
+        // Bkz. handleStartWalk: iOS 13+'ta izin dokunuşla aynı çağrı yığınında istenmeli
+        await sensors.requestPermission();
         continueRecoveredWalk();
         onNavigateAway?.();
         router.push('/walk/tracking');

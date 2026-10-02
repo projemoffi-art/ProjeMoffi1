@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, useMemo, useRef } from "react";
+import { device } from "@/native";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -454,11 +455,7 @@ function VetPageContent() {
 
     useEffect(() => {
         if (activeModal !== 'appointment') return;
-        const handleVisibility = () => {
-            if (document.visibilityState === 'visible') loadSlots();
-        };
-        document.addEventListener('visibilitychange', handleVisibility);
-        return () => document.removeEventListener('visibilitychange', handleVisibility);
+        return device.onForegroundChange(fg => { if (fg) loadSlots(); });
     }, [activeModal, selectedClinic?.id, selectedDate, selectedSvc?.duration_minutes, selectedDoctor?.id]);
 
     const openAppointment = (clinic: VetClinic) => {

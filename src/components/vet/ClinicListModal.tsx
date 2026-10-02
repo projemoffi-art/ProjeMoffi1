@@ -5,7 +5,7 @@ import { X, Search, MapPin, Star, ChevronRight, ShieldCheck } from "lucide-react
 import { useState, useMemo } from "react";
 import { VetClinic } from "@/types/domain";
 import { cn } from "@/lib/utils";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 
 // Faz 25 — Ekran 2 (bkz. design-reference/vet-final/README.md). Baran'ın
 // "şu anki UI oldukça kaba ve işlevsiz" bulgusu bu bileşenle ilgiliydi —

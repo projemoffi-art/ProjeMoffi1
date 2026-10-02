@@ -13,7 +13,7 @@ import { Avatar } from '@/components/social/SocialUI';
 import { socialService, type PersonCard } from '@/services/socialService';
 import { useAuth } from '@/context/AuthContext';
 import { useChat } from '@/context/ChatContext';
-import { haptics } from '@/lib/haptics';
+import { haptics, share as shareApi, device } from '@/native';
 import { cn, showToast } from '@/lib/utils';
 
 export interface SharePayload {
@@ -125,13 +125,13 @@ export function ShareSheetHost() {
     const message = [p.text || p.title, p.url].filter(Boolean).join('\n');
     const enc = encodeURIComponent;
 
-    const external = (href: string) => { window.open(href, '_blank', 'noopener,noreferrer'); haptics.tap(); };
+    const external = (href: string) => { device.openExternal(href); haptics.tap(); };
     const copy = async () => {
-        try { await navigator.clipboard.writeText(p.url); showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); haptics.success(); }
-        catch { showToast('Kopyalanamadı; bağlantıyı elle seçip kopyala.', 'AlertCircle', 'text-red-500 font-bold'); }
+        if (await shareApi.copyText(p.url)) { showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); haptics.success(); }
+        else showToast('Kopyalanamadı; bağlantıyı elle seçip kopyala.', 'AlertCircle', 'text-red-500 font-bold');
     };
     const native = async () => {
-        try { await navigator.share({ title: p.title, text: p.text, url: p.url }); } catch { /* vazgeçildi */ }
+        await shareApi.share({ title: p.title, text: p.text, url: p.url });
     };
     const send = async () => {
         if (!picked.length || sending) return;
@@ -149,8 +149,8 @@ export function ShareSheetHost() {
         try {
             const blob = await storyCard(p);
             const file = new File([blob], 'moffi-paylasim.png', { type: 'image/png' });
-            if (navigator.canShare?.({ files: [file] })) {
-                await navigator.share({ files: [file], title: p.title }).catch(() => {});
+            if (shareApi.canShare({ files: [file] })) {
+                await shareApi.share({ files: [file], title: p.title });
             } else {
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'moffi-paylasim.png'; a.click();
                 setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -236,7 +236,7 @@ export function ShareSheetHost() {
                     <Target label="E-posta" onClick={() => { window.location.href = `mailto:?subject=${enc(p.title)}&body=${enc(message)}`; }}>@</Target>
                     <Target label="Kopyala" onClick={copy}><ClipboardList className="w-6 h-6" /></Target>
                     <Target label="QR kod" onClick={() => setQr(v => !v)}>▦</Target>
-                    {typeof navigator !== 'undefined' && 'share' in navigator && <Target label="Diğer" onClick={native}><Share2 className="w-6 h-6" /></Target>}
+                    {shareApi.canShare() && <Target label="Diğer" onClick={native}><Share2 className="w-6 h-6" /></Target>}
                 </div>
                 <AnimatePresence>
                     {qr && (

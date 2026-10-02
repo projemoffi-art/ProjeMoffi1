@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { share as shareApi } from "@/native";
 import { useSearchParams } from 'next/navigation';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Check, ClipboardList, Download, Share2, X } from 'lucide-react';
@@ -157,7 +158,7 @@ function ShareContent() {
                                                     {formatDateKeyTr(new Date(l.expiresAt).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' }), { day: 'numeric', month: 'long' })} tarihine kadar açık · {l.viewCount} kez açıldı
                                                 </div>
                                             </div>
-                                            <button onClick={() => { navigator.clipboard?.writeText(linkUrl(l.token)); showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }}
+                                            <button onClick={() => { shareApi.copyText(linkUrl(l.token)); showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }}
                                                 aria-label="Bağlantıyı kopyala" className="w-9 h-9 rounded-xl border border-card-border flex items-center justify-center shrink-0">
                                                 <ClipboardList className="w-4 h-4" />
                                             </button>
@@ -197,12 +198,8 @@ function CreatedLink({ link, petName, onRevoke }: { link: ShareLink; petName: st
     const canvasId = `share-qr-${link.id}`;
 
     const share = async () => {
-        if (navigator.share) {
-            try { await navigator.share({ title: `${petName} — Pet Pasaportu`, url }); } catch { /* kullanıcı vazgeçti */ }
-        } else {
-            navigator.clipboard?.writeText(url);
-            showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold');
-        }
+        const r = await shareApi.shareOrCopy({ title: `${petName} — Pet Pasaportu`, url, copyText: url });
+        if (r === 'copied') showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold');
     };
 
     const downloadQr = () => {

@@ -12,7 +12,7 @@ import { uploadChatImage } from "@/lib/chatMedia";
 import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { VetClinic } from "@/types/domain";
 import { supabase } from "@/lib/supabase";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 import { getBusinessTypeConfig } from "@/config/businessTypes";
 import { CHAT_MESSAGE_EVENT, type ChatMessageEventDetail } from "@/context/ChatContext";
 import type { BusinessType } from "@/context/AuthContext";

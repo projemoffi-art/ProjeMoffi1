@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Footprints, ChevronRight, X } from "lucide-react";
 import { useActivity } from "@/context/ActivityContext";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 
 function formatTime(totalSeconds: number) {
     const m = Math.floor(totalSeconds / 60);

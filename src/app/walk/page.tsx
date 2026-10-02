@@ -13,7 +13,7 @@ import { PetSwitcher } from "@/components/common/PetSwitcher";
 import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 import { showToast, haversineKm } from "@/lib/utils";
 
 // Ekran 10 (Yürüyüş İstatistikleri hub) — 🔴🔴 EN BÜYÜK YAPISAL KARAR

@@ -1,4 +1,5 @@
 import React from "react";
+import { sensors } from "@/native";
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 
 function PineTree({ className, color, snowColor }: { className?: string; color: string; snowColor?: string }) {
@@ -99,7 +100,7 @@ function WeatherSphereEffect({ condition, temp, windSpeed = 5 }: { condition: st
     React.useEffect(() => {
         let hasGyro = false;
 
-        const handleOrientation = (e: DeviceOrientationEvent) => {
+        const handleOrientation = (e: sensors.OrientationSample) => {
             if (e.gamma !== null && e.beta !== null) {
                 hasGyro = true;
                 // gamma is left/right tilt [-90, 90]
@@ -122,18 +123,12 @@ function WeatherSphereEffect({ condition, temp, windSpeed = 5 }: { condition: st
             rawGyroY.set(y);
         };
 
-        if (typeof window !== 'undefined') {
-            if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientation', handleOrientation);
-            }
-            window.addEventListener('mousemove', handleMouseMove);
-        }
+        const stopOrientation = sensors.onOrientation(handleOrientation);
+        window.addEventListener('mousemove', handleMouseMove);
 
         return () => {
-            if (typeof window !== 'undefined') {
-                window.removeEventListener('deviceorientation', handleOrientation);
-                window.removeEventListener('mousemove', handleMouseMove);
-            }
+            stopOrientation();
+            window.removeEventListener('mousemove', handleMouseMove);
         };
     }, [rawGyroX, rawGyroY]);
 

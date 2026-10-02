@@ -16,7 +16,7 @@ import { MessageText } from '@/components/chat/MessageText';
 import { ChatComposer } from '@/components/chat/MessageThread';
 import { Avatar } from '@/components/social/SocialUI';
 import { ReportModal } from '@/components/common/modals/ReportModal';
-import { haptics } from '@/lib/haptics';
+import { haptics, share as shareApi } from "@/native";
 
 const LONG_PRESS_MS = 420;
 
@@ -121,8 +121,8 @@ export function InboxModal() {
     };
 
     const copy = async (text: string) => {
-        try { await navigator.clipboard.writeText(text); showToast('Mesaj kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
-        catch { showToast('Kopyalanamadı.', 'AlertCircle', 'text-red-500 font-bold'); }
+        if (await shareApi.copyText(text)) showToast('Mesaj kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold');
+        else showToast('Kopyalanamadı.', 'AlertCircle', 'text-red-500 font-bold');
     };
 
     const pref = async (p: { muted?: boolean; clear?: boolean }, done: string) => {

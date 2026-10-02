@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { geolocation } from "@/native";
 import { apiService } from "@/services/apiService";
 import { VetClinic, VetAppointment } from "@/types/domain";
 import type { BusinessType } from "@/context/AuthContext";
@@ -37,16 +38,13 @@ export function useVet(businessType: BusinessType = 'vet') {
             let initialLng: number | null = null;
             
             if (typeof window !== 'undefined') {
-                if ("geolocation" in navigator) {
-                    try {
-                        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-                            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000 });
-                        });
-                        initialLat = position.coords.latitude;
-                        initialLng = position.coords.longitude;
+                if (geolocation.isSupported()) {
+                    const fix = await geolocation.getCurrentOrNull({ timeoutMs: 4000 });
+                    if (fix) {
+                        initialLat = fix.lat;
+                        initialLng = fix.lng;
                         setUserLocation([initialLat, initialLng]);
-                    } catch (e) {
-                        console.warn("GPS denied or failed");
+                    } else {
                         setGpsDenied(true);
                     }
                 }

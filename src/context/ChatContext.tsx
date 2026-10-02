@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { device } from "@/native";
 import { apiService } from '@/services/apiService';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -227,14 +228,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         presenceChannelRef.current = presenceChannel;
 
         // Sekme öne gelince: çevrimiçi bilgisini tazele, açık sohbeti okundu yap, kaçırılan mesajları al.
-        const handleVisibilityChange = () => {
-            if (document.visibilityState !== 'visible') return;
+        const handleForeground = (inForeground: boolean) => {
+            if (!inForeground) return;
             presenceChannelRef.current?.track({ online_at: new Date().toISOString() });
             syncOnlineState();
             fetchInbox();
             if (activeChatUserIdRef.current) fetchActiveMessages(activeChatUserIdRef.current);
         };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        const stopForeground = device.onForegroundChange(handleForeground);
         const heartbeat = setInterval(() => {
             presenceChannelRef.current?.track({ online_at: new Date().toISOString() });
             syncOnlineState();
@@ -245,7 +246,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             supabase.removeChannel(presenceChannel);
             channelRef.current = null;
             presenceChannelRef.current = null;
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            stopForeground();
             clearInterval(heartbeat);
         };
     }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps

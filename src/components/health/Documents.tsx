@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import { device } from "@/native";
 import { FileText } from 'lucide-react';
 import { useHealth } from './HealthProvider';
 import { ErrorText, Field, PrimaryButton, SelectInput, Sheet, TextInput } from './HealthUI';
@@ -31,7 +32,7 @@ export function DocumentRow({ doc, onDeleted }: { doc: PetDocument; onDeleted?: 
     const [busy, setBusy] = useState(false);
     const open = async () => {
         setBusy(true);
-        try { window.open(await healthService.getDocumentUrl(doc.storagePath), '_blank', 'noopener'); }
+        try { device.openExternal(await healthService.getDocumentUrl(doc.storagePath)); }
         catch (e: any) { showToast(e.message, 'AlertCircle', 'text-red-500 font-bold'); }
         finally { setBusy(false); }
     };

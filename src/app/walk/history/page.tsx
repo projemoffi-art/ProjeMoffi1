@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
 import { normalizePathToTuples, cn } from "@/lib/utils";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 
 // Ekran 8 (Yürüyüş Geçmişi) yeniden inşası — design-reference/walk-final/'e göre:
 // (a) Tümü/Bu Ay/Bu Yıl dönem sekmeleri, (b) ay bazlı gruplama ("Eylül 2026"),

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { geolocation, haptics } from "@/native";
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Sparkles, Plus, QrCode, Zap, 
@@ -133,33 +134,11 @@ export function MoffiSidebar() {
             if (isWeatherLoading || weatherData) return;
             setIsWeatherLoading(true);
             
-            if (typeof window !== 'undefined' && navigator.geolocation) {
-                if (navigator.permissions && navigator.permissions.query) {
-                    navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(status => {
-                        if (status.state === 'denied') {
-                            console.warn("MoffiWeather: Permission denied via browser settings");
-                            setIsWeatherLoading(false);
-                            return;
-                        }
-                        requestPosition();
-                    }).catch(() => requestPosition());
-                } else {
-                    requestPosition();
-                }
-            } else {
-                setIsWeatherLoading(false);
-            }
-        };
-
-        const requestPosition = () => {
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const data = await getWeather(position.coords.latitude, position.coords.longitude);
-                setWeatherData(data);
-                setIsWeatherLoading(false);
-            }, (error) => {
-                console.error("MoffiWeather: Geolocation error", error);
-                setIsWeatherLoading(false);
-            }, { timeout: 10000 });
+            // İzin önceden reddedildiyse tekrar sorma
+            if (await geolocation.permission() === 'denied') { setIsWeatherLoading(false); return; }
+            const fix = await geolocation.getCurrentOrNull({ timeoutMs: 10000 });
+            if (fix) setWeatherData(await getWeather(fix.lat, fix.lng));
+            setIsWeatherLoading(false);
         };
 
         fetchWeather();
@@ -167,9 +146,7 @@ export function MoffiSidebar() {
 
     const triggerHaptic = useCallback((intensity: number = 10) => {
         if (!hapticsEnabled) return;
-        if (typeof window !== 'undefined' && window.navigator.vibrate) {
-            window.navigator.vibrate(intensity);
-        }
+        haptics.pattern(intensity);
     }, [hapticsEnabled]);
 
     const updateEdgeSetting = async (key: string, value: any) => {

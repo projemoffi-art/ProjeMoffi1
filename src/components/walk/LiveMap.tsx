@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { device } from "@/native";
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -579,7 +580,7 @@ export default function LiveMap({
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`, '_blank');
+                                            device.openExternal(`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`);
                                         }}
                                         className="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest py-2 rounded-lg shadow-md transition-colors flex items-center justify-center gap-1.5"
                                     >

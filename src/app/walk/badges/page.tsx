@@ -7,7 +7,7 @@ import { ArrowLeft, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuestEngine } from "@/context/QuestEngineContext";
 import type { Badge, QuestCategory } from "@/context/QuestEngineContext";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 
 // Faz 12: "Rozetlerim" ekranı daha önce hiç yoktu — rozetler sadece /quests
 // sayfasının içinde, genel görev listesiyle karışık gösteriliyordu. Burada

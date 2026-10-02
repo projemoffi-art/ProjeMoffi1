@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { geolocation, sensors, device } from "@/native";
 import { useAuth } from '@/context/AuthContext';
 import { usePet } from '@/context/PetContext';
 import { apiService } from '@/services/apiService';
@@ -192,7 +193,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     // tarayıcıda çalışıyor (window.setInterval), @types/node'un global Timeout
     // tipiyle karışıp yanlış tip hatası veriyordu.
     const walkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const watchIdRef = React.useRef<number | null>(null);
+    const stopWatchRef = React.useRef<(() => void) | null>(null);
     const lastPosTimestampRef = React.useRef<number>(0);
     const lastFixAtRef = React.useRef<number>(0);
     const staleCheckIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
@@ -577,17 +578,13 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
 
         if (shouldWatchGps) {
             // 2. Start GPS Tracking
-            if (!watchIdRef.current && navigator.geolocation) {
+            if (!stopWatchRef.current && geolocation.isSupported()) {
                 setWalkIssue(prev => (prev === 'none' ? 'gps_searching' : prev));
                 lastFixAtRef.current = Date.now();
 
-                if ('permissions' in navigator) {
-                    navigator.permissions.query({ name: 'geolocation' as PermissionName })
-                        .then(status => {
-                            if (status.state === 'denied') setWalkIssue('location_permission_required');
-                        })
-                        .catch(() => { /* Permissions API desteklenmiyor, watchPosition hata callback'i yakalayacak */ });
-                }
+                geolocation.permission().then(state => {
+                    if (state === 'denied') setWalkIssue('location_permission_required');
+                });
 
                 // Faz 2: canlı GPS sinyali kesilirse (watchPosition callback'i tetiklenmeyi
                 // durdurursa) bunu 15sn içinde fark edip "location_lost" durumuna geç.
@@ -597,19 +594,19 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                     }
                 }, 5000);
 
-                watchIdRef.current = navigator.geolocation.watchPosition(
-                    (pos) => {
-                        lastFixAtRef.current = pos.timestamp || Date.now();
+                stopWatchRef.current = geolocation.watch(
+                    (fix) => {
+                        lastFixAtRef.current = fix.timestamp || Date.now();
                         setWalkIssue(prev => {
                             if (prev === 'location_permission_required') return prev;
-                            return pos.coords.accuracy > 50 ? 'gps_weak' : 'none';
+                            return fix.accuracy > 50 ? 'gps_weak' : 'none';
                         });
 
-                        const { latitude, longitude, speed: gpsSpeed } = pos.coords;
+                        const { lat: latitude, lng: longitude, speed: gpsSpeed } = fix;
                         const newCoord: [number, number] = [latitude, longitude];
 
                         const syncLocation = (sessionId: string) => {
-                            if (navigator.onLine) {
+                            if (device.isOnline()) {
                                 apiService.updateWalkLocation(sessionId, latitude, longitude)
                                     .catch(err => console.error("Error updating GPS location on DB:", err));
                             } else {
@@ -637,7 +634,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                 const lastCoord = currentPath[currentPath.length - 1];
                                 const distDelta = calculateDistance(lastCoord[0], lastCoord[1], latitude, longitude);
 
-                                const timeDeltaMs = pos.timestamp - lastPosTimestampRef.current;
+                                const timeDeltaMs = fix.timestamp - lastPosTimestampRef.current;
                                 let calcSpeedKmH = 0;
                                 if (timeDeltaMs > 0 && lastPosTimestampRef.current > 0) {
                                     calcSpeedKmH = (distDelta / (timeDeltaMs / 1000)) * 3.6;
@@ -655,7 +652,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                 // tabanı olarak kullanmak — iyi sinyalde (ör. 5m) küçük gerçek hareketler
                                 // hemen kabul edilirken, kötü sinyalde (ör. 30m, iç mekan/şehir kanyonu)
                                 // eşik kendiliğinden yükselip gerçek GPS sıçramalarını hâlâ filtreliyor.
-                                const noiseFloorMeters = Math.max(pos.coords.accuracy || 15, 8);
+                                const noiseFloorMeters = Math.max(fix.accuracy || 15, 8);
                                 const isRealMovement = distDelta > noiseFloorMeters && calcSpeedKmH < 25;
 
                                 if (prev.isAutoPaused) {
@@ -663,7 +660,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                     if (isRealMovement) {
                                         lastMovementAtRef.current = Date.now();
                                         stationarySinceRef.current = null;
-                                        lastPosTimestampRef.current = pos.timestamp;
+                                        lastPosTimestampRef.current = fix.timestamp;
                                         return { ...prev, isPaused: false, isAutoPaused: false, path: [...currentPath, newCoord], distance: newDistance + distDelta, speed: gpsSpeed && gpsSpeed > 0 ? gpsSpeed * 3.6 : calcSpeedKmH };
                                     }
                                     return prev;
@@ -673,7 +670,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                     newPath = [...currentPath, newCoord];
                                     newDistance += distDelta;
                                     currentSpeed = gpsSpeed && gpsSpeed > 0 ? (gpsSpeed * 3.6) : calcSpeedKmH;
-                                    lastPosTimestampRef.current = pos.timestamp;
+                                    lastPosTimestampRef.current = fix.timestamp;
                                     lastMovementAtRef.current = Date.now();
 
                                     // Piyasa araştırması #13: kısa duraklama ("durma/koklama") sayacı —
@@ -706,7 +703,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                             } else {
                                 // İlk koordinat
                                 newPath = [newCoord];
-                                lastPosTimestampRef.current = pos.timestamp;
+                                lastPosTimestampRef.current = fix.timestamp;
                                 lastMovementAtRef.current = Date.now();
                                 if (prev.sessionId) syncLocation(prev.sessionId);
                             }
@@ -716,9 +713,9 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                     },
                     (err) => {
                         console.error("GPS Watch Position Error:", err);
-                        if (err.code === err.PERMISSION_DENIED) {
+                        if (err.code === 'denied') {
                             setWalkIssue('location_permission_required');
-                        } else if (err.code === err.POSITION_UNAVAILABLE) {
+                        } else if (err.code === 'unavailable') {
                             setWalkIssue('location_lost');
                         } else {
                             setWalkIssue(prev => (prev === 'location_permission_required' ? prev : 'gps_searching'));
@@ -727,14 +724,14 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                             showToast("GPS Bağlantısı Sağlanamadı! Konum iznini veya HTTP bağlantı sınırlarını kontrol edin. Test için Simülasyon modunu açabilirsiniz.", "X", "text-red-500");
                         });
                     },
-                    { enableHighAccuracy: true }
+                    { highAccuracy: true }
                 );
             }
         } else {
             // Cleanup when GPS watching should stop (inactive, or manually paused)
-            if (watchIdRef.current !== null) {
-                navigator.geolocation.clearWatch(watchIdRef.current);
-                watchIdRef.current = null;
+            if (stopWatchRef.current) {
+                stopWatchRef.current();
+                stopWatchRef.current = null;
             }
             if (staleCheckIntervalRef.current) {
                 clearInterval(staleCheckIntervalRef.current);
@@ -746,7 +743,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
 
         return () => {
             if (walkTimerRef.current) clearInterval(walkTimerRef.current);
-            if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+            if (stopWatchRef.current) { stopWatchRef.current(); stopWatchRef.current = null; }
             if (staleCheckIntervalRef.current) clearInterval(staleCheckIntervalRef.current);
         };
     }, [walkData.isActive, walkData.isPaused, walkData.isAutoPaused, isLoaded, autoPauseEnabled]);
@@ -790,7 +787,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     // Devices pedometre tasarım notu) sabit/yarı-sabit eşikler kullanıyor.
     useEffect(() => {
         const shouldTrackSteps = walkData.isActive && (!walkData.isPaused || walkData.isAutoPaused);
-        if (!shouldTrackSteps || typeof window === 'undefined' || !('DeviceMotionEvent' in window)) return;
+        if (!shouldTrackSteps || !sensors.isMotionSupported()) return;
 
         let filteredMagnitude = 9.81;
         let awaitingValley = false; // histerezis: bir sonraki tepe için "vadi"ye inilmesini bekliyoruz
@@ -806,10 +803,8 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         const INTERVAL_TOLERANCE = 0.35; // ardışık aralıklar birbirinden en fazla %35 sapabilir
         const REQUIRED_CONSISTENT_PEAKS = 4; // gerçekten saymaya başlamadan önce gereken ritim onay sayısı
 
-        const handleMotion = (event: DeviceMotionEvent) => {
-            const acc = event.accelerationIncludingGravity;
-            if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
-            const magnitude = Math.sqrt((acc.x ?? 0) ** 2 + (acc.y ?? 0) ** 2 + (acc.z ?? 0) ** 2);
+        const handleMotion = (acc: sensors.MotionSample) => {
+            const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
             const deviation = Math.abs(magnitude - filteredMagnitude);
 
             // Taban çizgisi SADECE sinyal zaten sakinken (bir adım/sallama darbesinin
@@ -859,18 +854,12 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             }
         };
 
+        // İzin asıl olarak "Yürüyüşe Başla" dokunuşunda istenir (iOS); burası güvenlik ağı
         let cancelled = false;
-        const attach = () => { if (!cancelled) window.addEventListener('devicemotion', handleMotion); };
-        const requestPermissionIfNeeded = (DeviceMotionEvent as any).requestPermission;
-        if (typeof requestPermissionIfNeeded === 'function') {
-            requestPermissionIfNeeded()
-                .then((state: string) => { if (state === 'granted') attach(); })
-                .catch(() => {});
-        } else {
-            attach();
-        }
+        let stop: () => void = () => {};
+        sensors.requestPermission().then(ok => { if (ok && !cancelled) stop = sensors.onMotion(handleMotion); });
 
-        return () => { cancelled = true; window.removeEventListener('devicemotion', handleMotion); };
+        return () => { cancelled = true; stop(); };
     }, [walkData.isActive, walkData.isPaused, walkData.isAutoPaused]);
 
     // Faz 2: ağ bağlantısı koptuğunda (GPS'in kendisi değil, sunucuya senkron) kullanıcıyı bilgilendir
@@ -895,25 +884,18 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                 }
             })();
         };
-        window.addEventListener('offline', handleOffline);
-        window.addEventListener('online', handleOnline);
-        return () => {
-            window.removeEventListener('offline', handleOffline);
-            window.removeEventListener('online', handleOnline);
-        };
+        return device.onNetworkChange(online => (online ? handleOnline() : handleOffline()));
     }, [walkData.isActive, walkData.isPaused]);
 
     // Faz 2: sekme arka plana alındığında (mobil tarayıcılar GPS callback'lerini kısıtlayabilir)
     useEffect(() => {
-        const handleVisibility = () => {
-            if (document.hidden && walkData.isActive && !walkData.isPaused) {
+        return device.onForegroundChange(inForeground => {
+            if (!inForeground && walkData.isActive && !walkData.isPaused) {
                 setWalkIssue(prev => (prev === 'none' || prev === 'gps_weak' ? 'background_permission_required' : prev));
-            } else if (!document.hidden) {
+            } else if (inForeground) {
                 setWalkIssue(prev => (prev === 'background_permission_required' ? 'none' : prev));
             }
-        };
-        document.addEventListener('visibilitychange', handleVisibility);
-        return () => document.removeEventListener('visibilitychange', handleVisibility);
+        });
     }, [walkData.isActive, walkData.isPaused]);
 
     // Global Voice Rec Logic

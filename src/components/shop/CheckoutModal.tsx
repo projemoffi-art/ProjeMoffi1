@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { haptics } from "@/native";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, ShieldCheck, CreditCard, Apple, 
@@ -41,7 +42,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
       setOrderId(result.orderId || "");
       setStep('success');
       // Trigger a celebratory haptic if supported
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      haptics.pattern([100, 50, 100]);
     } else {
       setStep('selection');
       setIsProcessing(false);

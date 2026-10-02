@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { cn, showToast } from '@/lib/utils';
 import { speciesLabel } from '@/lib/petIdentity';
 import { filterCss } from '@/lib/mediaFilters';
-import { haptics } from '@/lib/haptics';
+import { haptics, share as shareApi } from "@/native";
 import { openShare } from '@/components/common/ShareSheet';
 
 export function Avatar({ src, name, className }: { src?: string | null; name: string; className?: string }) {
@@ -368,7 +368,7 @@ export function PostActionsSheet({ open, onClose, post, onChange, onRemoved, onB
     useEffect(() => { if (open) setConfirm(null); }, [open]);
 
     const copy = async () => {
-        await navigator.clipboard.writeText(postUrl(post.id)).catch(() => {});
+        await shareApi.copyText(postUrl(post.id));
         showToast('Bağlantı kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold');
         onClose();
     };

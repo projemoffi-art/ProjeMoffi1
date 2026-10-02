@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { device } from "@/native";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Loader2, Plus, X } from "lucide-react";
 import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
@@ -100,10 +101,9 @@ export default function BusinessCalendarPage() {
             .channel(`clinic-calendar-${businessId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `clinic_id=eq.${businessId}` }, () => load())
             .subscribe();
-        const onVisible = () => { if (document.visibilityState === 'visible') load(); };
-        document.addEventListener('visibilitychange', onVisible);
+        const stopForeground = device.onForegroundChange(fg => { if (fg) load(); });
         return () => {
-            document.removeEventListener('visibilitychange', onVisible);
+            stopForeground();
             supabase.removeChannel(channel);
         };
     }, [businessId, load]);

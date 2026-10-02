@@ -14,7 +14,7 @@ import { usePet } from "@/context/PetContext";
 import { useWeather } from "@/context/WeatherContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
 import { WALK_ISSUE_LABELS } from "@/lib/walkIssueLabels";
-import { haptics } from "@/lib/haptics";
+import { haptics, share, device } from "@/native";
 import { audioCues } from "@/lib/audioCues";
 import { apiService } from "@/services/apiService";
 
@@ -171,12 +171,8 @@ function TrackingContent() {
             const id = await apiService.startBeacon(walkData.sessionId, activePet?.name || 'Dostum', userPos[0], userPos[1]);
             setBeaconId(id);
             const url = `${window.location.origin}/beacon/${id}`;
-            if (navigator.share) {
-                await navigator.share({ title: 'Canlı Konumum', text: `${activePet?.name || 'Dostum'} ile yürüyorum, canlı konumumu takip edebilirsin:`, url }).catch(() => {});
-            } else if (navigator.clipboard) {
-                await navigator.clipboard.writeText(url);
-                showToast('Canlı konum bağlantısı kopyalandı! Güvendiğin biriyle paylaşabilirsin.', 'Share2');
-            }
+            const r = await share.shareOrCopy({ title: 'Canlı Konumum', text: `${activePet?.name || 'Dostum'} ile yürüyorum, canlı konumumu takip edebilirsin:`, url, copyText: url });
+            if (r === 'copied') showToast('Canlı konum bağlantısı kopyalandı! Güvendiğin biriyle paylaşabilirsin.', 'Share2');
         } catch (err) {
             console.error('Beacon başlatılamadı:', err);
             showToast('Canlı konum paylaşımı başlatılamadı.', 'AlertCircle');
@@ -250,11 +246,11 @@ function TrackingContent() {
     // Faz 4 (referans revizyonu): Ekranı Açık Tut — gerçek Wake Lock API, GPS takibi
     // sırasında ekranın kararıp kilitlenmesi çok yaygın bir şikayet olduğu için eklendi.
     useEffect(() => {
-        let wakeLock: any = null;
-        if (screenAwake && typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
-            (navigator as any).wakeLock.request('screen').then((lock: any) => { wakeLock = lock; }).catch(() => {});
-        }
-        return () => { if (wakeLock) wakeLock.release().catch(() => {}); };
+        if (!screenAwake) return;
+        let release: (() => void) | null = null;
+        let cancelled = false;
+        device.keepScreenAwake().then(r => { if (cancelled) r(); else release = r; });
+        return () => { cancelled = true; release?.(); };
     }, [screenAwake]);
 
     // Piyasa araştırması #3: sesli geri bildirim tetikleyicileri — sadece
@@ -793,7 +789,7 @@ function TrackingContent() {
                                     kısayol: kullanıcının kendi Spotify'ını açıyor, uygulama içinde
                                     "çalıyormuş gibi" sahte bir oynatıcı GÖSTERMİYORUZ. */}
                                 <button
-                                    onClick={() => { haptics.tap(); window.open('https://open.spotify.com', '_blank'); }}
+                                    onClick={() => { haptics.tap(); device.openExternal('https://open.spotify.com'); }}
                                     className="w-full flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5"
                                 >
                                     <div className="pr-4 text-left">

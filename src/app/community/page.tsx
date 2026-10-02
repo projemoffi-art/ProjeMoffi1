@@ -23,7 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useChat } from '@/context/ChatContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { cn } from '@/lib/utils';
-import { haptics } from '@/lib/haptics';
+import { haptics } from '@/native/haptics';
 
 type Mode = 'following' | 'for_you';
 const PAGE = 12;

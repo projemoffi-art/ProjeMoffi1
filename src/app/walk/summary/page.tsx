@@ -8,7 +8,8 @@ import { X, Share2, Clock, Flame, Footprints, Check } from "lucide-react";
 import { usePet } from "@/context/PetContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
 import { useActivity } from "@/context/ActivityContext";
-import { haptics } from "@/lib/haptics";
+import { haptics, share } from "@/native";
+import { showToast } from "@/lib/utils";
 
 // Faz 6 (referans revizyonu): Yürüyüş Sonucu ekranı — WalkQuickSheet ve /walk/tracking'in
 // ikisi de buraya, gerçek anlık görüntü değerleriyle (query param) yönlendiriyor. Layout
@@ -101,11 +102,8 @@ function WalkSummaryContent() {
     }, []);
 
     const handleShare = async () => {
-        if (typeof navigator !== 'undefined' && navigator.share) {
-            try { await navigator.share({ text: shareText }); } catch {}
-        } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-            await navigator.clipboard.writeText(shareText);
-        }
+        const r = await share.shareOrCopy({ text: shareText, copyText: shareText });
+        if (r === 'copied') showToast('Yürüyüş özeti kopyalandı.', 'CheckCircle2', 'text-emerald-500');
     };
 
     return (
@@ -118,7 +116,8 @@ function WalkSummaryContent() {
                 >
                     <X className="w-4.5 h-4.5 text-slate-500" />
                 </motion.button>
-                {(typeof navigator !== 'undefined' && (navigator.share || navigator.clipboard)) && (
+                {(
+
                     <motion.button
                         whileTap={{ scale: 0.9 }}
                         onClick={() => { haptics.tap(); handleShare(); }}

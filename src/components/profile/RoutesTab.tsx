@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ChevronRight, MapPin, Footprints, Clock, TrendingUp, Crown } from 'lucide-react';
 import { useActivity } from '@/context/ActivityContext';
-import { haptics } from '@/lib/haptics';
+import { haptics } from '@/native/haptics';
 
 // Faz 9/13 düzeltmesi (bkz. design-reference/walk-final/, "8. Profil – Yürüyüş
 // İstatistikleri"): bu bileşen tamamen sahteydi — hardcoded "12.4 km"/"8.2 saat"

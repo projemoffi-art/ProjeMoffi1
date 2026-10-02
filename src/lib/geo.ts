@@ -1,4 +1,5 @@
 // Konum yardımcıları (kayıp ilanları, sahiplendirme). Harici API anahtarı gerektirmez.
+import { getCurrentOrNull } from '@/native/location';
 
 export type LatLng = { lat: number; lng: number };
 
@@ -16,16 +17,10 @@ export function distanceText(km: number | null | undefined): string | null {
     return `${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km`;
 }
 
-/** Tarayıcının konumu (izin istenir); alınamazsa null. */
-export function currentPosition(timeoutMs = 10000): Promise<LatLng | null> {
-    return new Promise(resolve => {
-        if (typeof navigator === 'undefined' || !navigator.geolocation) return resolve(null);
-        navigator.geolocation.getCurrentPosition(
-            p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-            () => resolve(null),
-            { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 5 * 60 * 1000 },
-        );
-    });
+/** Cihazın konumu (izin istenir); alınamazsa null. */
+export async function currentPosition(timeoutMs = 10000): Promise<LatLng | null> {
+    const fix = await getCurrentOrNull({ timeoutMs, maxAgeMs: 5 * 60 * 1000 });
+    return fix ? { lat: fix.lat, lng: fix.lng } : null;
 }
 
 /** Koordinat → "Moda Caddesi, Kadıköy" gibi kısa adres (OpenStreetMap Nominatim). */

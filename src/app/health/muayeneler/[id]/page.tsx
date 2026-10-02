@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { share as shareApi } from "@/native";
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronRight, Share2 } from 'lucide-react';
@@ -56,10 +57,8 @@ export default function VisitDetailPage() {
             procedures.length ? `Yapılan işlemler: ${procedures.join(', ')}` : null,
             ...measures.map(m => `${m.label}: ${m.value}`),
         ].filter(Boolean).join('\n');
-        try {
-            if (navigator.share) await navigator.share({ title: 'Muayene kaydı', text });
-            else { await navigator.clipboard.writeText(text); showToast('Kayıt panoya kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
-        } catch { /* kullanıcı paylaşımı kapattı */ }
+        const r = await shareApi.shareOrCopy({ title: 'Muayene kaydı', text, copyText: text });
+        if (r === 'copied') showToast('Kayıt panoya kopyalandı.', 'CheckCircle2', 'text-emerald-500 font-bold');
     };
 
     return (

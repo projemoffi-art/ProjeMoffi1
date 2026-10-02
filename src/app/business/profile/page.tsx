@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { geolocation } from "@/native";
 import dynamic from "next/dynamic";
 import { Loader2, MapPin, X } from "lucide-react";
 import { apiService } from "@/services/apiService";
@@ -64,13 +65,12 @@ export default function BusinessProfilePage() {
     };
 
     const useMyLocation = () => {
-        if (!navigator.geolocation) { showToast("Tarayıcın konum desteklemiyor.", "AlertCircle", "text-red-500 font-bold"); return; }
+        if (!geolocation.isSupported()) { showToast("Cihazın konum desteklemiyor.", "AlertCircle", "text-red-500 font-bold"); return; }
         setLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            pos => { set('lat', pos.coords.latitude); set('lng', pos.coords.longitude); setLocating(false); },
-            () => { setLocating(false); showToast("Konum alınamadı; haritaya dokunarak işaretleyebilirsin.", "AlertCircle", "text-amber-500 font-bold"); },
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
+        geolocation.getCurrent({ highAccuracy: true, timeoutMs: 10000 })
+            .then(fix => { set('lat', fix.lat); set('lng', fix.lng); })
+            .catch(() => showToast("Konum alınamadı; haritaya dokunarak işaretleyebilirsin.", "AlertCircle", "text-amber-500 font-bold"))
+            .finally(() => setLocating(false));
     };
 
     const save = async () => {

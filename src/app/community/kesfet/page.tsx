@@ -12,7 +12,7 @@ import { PersonRow, PostGrid } from '@/components/social/SocialUI';
 import { WeeklyThemeCard } from '@/components/social/WeeklyThemeCard';
 import { useSearchArea } from '@/components/lost/useSearchArea';
 import { AreaSheet } from '@/components/lost/AreaSheet';
-import { haptics } from '@/lib/haptics';
+import { haptics } from '@/native/haptics';
 import { socialService, EXPLORE_FILTERS, type ExploreFilter, type GridPost, type PersonCard } from '@/services/socialService';
 import { cn } from '@/lib/utils';
 

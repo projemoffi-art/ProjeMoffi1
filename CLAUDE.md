@@ -3237,6 +3237,18 @@ yönetici, bu yüzden ara katmandaki bakım modu kontrolü normal kullanıcılar
 **Bekleyen:** `20261002171000_account_deletion_foreign_keys.sql` (DROP içerir, Baran SQL Editor'dan). Uygulanmadan kalıcı
 silme bildirim/yorum/sipariş bağları yüzünden hata verir; sipariş ve randevular da yanlışlıkla silinir.
 
+### 8.58 Faz 3 — native ara katman `src/native` (2026-10-02)
+
+🔴 **KURAL: telefon özelliklerine sadece `@/native` üzerinden erişilir** — `navigator.geolocation/clipboard/share/vibrate/
+wakeLock/permissions`, `DeviceMotionEvent/DeviceOrientationEvent`, `visibilitychange`, `online/offline`, `window.open`
+(dış adres), Web Push doğrudan kullanılmaz. Modüller: `geolocation` (getCurrent/getCurrentOrNull/watch/permission/
+watchPermission; sürekli takipte varsayılan zaman aşımı YOK), `sensors` (requestPermission — iOS'ta dokunuşla aynı çağrı
+yığınında; onMotion/onOrientation), `share` (share/canShare/copyText/shareOrCopy), `device` (keepScreenAwake/openExternal/
+onForegroundChange/onNetworkChange/isOnline), `push`, `haptics`, `isNative()/platform()`. İsimler bilerek `location`/
+`motion` değil (tarayıcının `location`'ı ve framer-motion `motion`'ı ile çakışıyordu). Faz 4'te (Capacitor) sadece bu
+klasörün içi değişir. 40 kullanım yeri taşındı, ölü `lib/shareUtils.ts` silindi, `lib/haptics` → `native/haptics`.
+Tip hataları değişmedi (146 → 146, liste birebir aynı), 14 sayfa yerelde 200.
+
 ## 9. Bilinen, henüz ele alınmamış güvenlik notları (acil değil, ama unutulmasın)
 
 Supabase advisor taraması şunları buldu (henüz düzeltilmedi, Baran'la

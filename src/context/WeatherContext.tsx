@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { geolocation } from "@/native";
 
 // Open-Meteo WMO weather code mapping
 function getWeatherInfo(code: number, temp: number): {
@@ -151,18 +152,10 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
 
             // 1. Try browser Geolocation first
             try {
-                const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-                    if (!navigator.geolocation) {
-                        reject(new Error('Geolocation not supported'));
-                        return;
-                    }
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        timeout: 3000, // short timeout so it doesn't hang the loading state
-                        maximumAge: 5 * 60 * 1000,
-                    });
-                });
-                lat = pos.coords.latitude;
-                lon = pos.coords.longitude;
+                // Kısa süre: yükleme ekranı konum beklerken takılmasın
+                const fix = await geolocation.getCurrent({ timeoutMs: 3000, maxAgeMs: 5 * 60 * 1000 });
+                lat = fix.lat;
+                lon = fix.lng;
                 locationSource = 'gps';
             } catch (gpsErr) {
                 console.warn('GPS geolocation failed/denied, trying IP geolocation...', gpsErr);

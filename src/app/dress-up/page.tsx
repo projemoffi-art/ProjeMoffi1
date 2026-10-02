@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
 import { usePet } from "@/context/PetContext";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 import { MascotSVG, type ApparelState } from "@/components/cosmetics/MascotSVG";
 
 // Faz 22 — "Giydirme Stüdyosu": src/integrations-pending/kombinle prototipinin

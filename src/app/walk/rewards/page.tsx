@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
-import { haptics } from "@/lib/haptics";
+import { haptics } from "@/native/haptics";
 import { formatRemaining } from "@/lib/vipFrames";
 
 // Faz 14: "Ödül Marketi" — daha önce hiç yoktu, referans görselin ("7. Ödül /

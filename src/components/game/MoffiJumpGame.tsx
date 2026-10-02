@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { sensors } from "@/native";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, X, Play, Coins, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -381,20 +382,16 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
         };
 
         // Device Tilt (Gyroscope)
-        const handleOrientation = (e: DeviceOrientationEvent) => {
-            const gamma = e.gamma; // left-to-right tilt in degrees
-            if (gamma !== null) {
-                player.current.vx = gamma / 4; // Sensitivity tweak
-            }
-        };
-
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
-        window.addEventListener('deviceorientation', handleOrientation);
+        // Telefonu sağa/sola eğerek yönlendirme
+        const stopOrientation = sensors.onOrientation(({ gamma }) => {
+            if (gamma !== null) player.current.vx = gamma / 4;
+        });
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
-            window.removeEventListener('deviceorientation', handleOrientation);
+            stopOrientation();
         };
     }, []);
 

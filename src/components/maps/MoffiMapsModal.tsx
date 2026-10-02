@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { geolocation } from "@/native";
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, MapPin, Search, Navigation, 
@@ -35,12 +36,8 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
 
     // SYNC USER LOCATION
     useEffect(() => {
-        if (isOpen && "geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
-                (err) => console.error("Map Geo Error:", err),
-                { enableHighAccuracy: true }
-            );
+        if (isOpen) {
+            geolocation.getCurrentOrNull({ highAccuracy: true }).then(fix => { if (fix) setUserPos([fix.lat, fix.lng]); });
         }
     }, [isOpen]);
 

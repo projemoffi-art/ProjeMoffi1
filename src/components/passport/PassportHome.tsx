@@ -4,6 +4,7 @@
 // Hem /pasaport sayfası hem profildeki Pasaport sekmesi bunu gösterir.
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { share as shareApi } from "@/native";
 import Link from 'next/link';
 import { QRCodeCanvas } from 'qrcode.react';
 import { AlertCircle, CheckCircle2, ChevronRight, MapPin, Share2, X } from 'lucide-react';
@@ -172,7 +173,7 @@ function TagSection({ petId, petName, isLost }: { petId: string; petName: string
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                     <button onClick={download} className="h-10 rounded-xl border border-card-border text-xs font-black">QR'ı indir</button>
-                    <button onClick={() => { navigator.clipboard?.writeText(url); showToast('Künye adresi kopyalandı. NFC etikete bu adresi yazabilirsin.', 'CheckCircle2', 'text-emerald-500 font-bold'); }}
+                    <button onClick={() => { shareApi.copyText(url); showToast('Künye adresi kopyalandı. NFC etikete bu adresi yazabilirsin.', 'CheckCircle2', 'text-emerald-500 font-bold'); }}
                         className="h-10 rounded-xl border border-card-border text-xs font-black">Adresi kopyala</button>
                 </div>
                 <button onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}

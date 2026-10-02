@@ -11,7 +11,7 @@ import { X } from 'lucide-react';
 import { LoadingBlocks, Sheet } from '@/components/health/HealthUI';
 import { ReportModal } from '@/components/common/modals/ReportModal';
 import { Avatar, LikeHeart, RichText, RollingCount, useMaskHidden } from '@/components/social/SocialUI';
-import { haptics } from '@/lib/haptics';
+import { haptics } from '@/native/haptics';
 import { socialService, timeAgo, type SocialComment, type SocialPost } from '@/services/socialService';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { share as shareApi, device } from "@/native";
 import { Baloo_2, Nunito } from 'next/font/google';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
@@ -1314,7 +1315,7 @@ export default function LegendaryLightDashboard() {
         // 1. If it is a coupon, copy to clipboard & show toast
         if (ctaType === 'coupon') {
             try {
-                navigator.clipboard.writeText(ctaVal);
+                shareApi.copyText(ctaVal);
                 setToastMsg(`🎟️ Kupon Kodu Kopyalandı: ${ctaVal}`);
             } catch (e) {
                 setToastMsg(`Kupon: ${ctaVal}`);
@@ -1341,7 +1342,7 @@ export default function LegendaryLightDashboard() {
 
         // 4. If it is an external URL link
         if (ctaType === 'url' || ctaVal.startsWith('http://') || ctaVal.startsWith('https://')) {
-            window.open(ctaVal, '_blank', 'noopener,noreferrer');
+            device.openExternal(ctaVal);
             closeStoryViewer();
             return;
         }
