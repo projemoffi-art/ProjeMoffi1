@@ -123,7 +123,7 @@ const translateCodeError = (err?: string) => {
     return 'Bir sorun oluştu. Lütfen tekrar dene.';
 };
 
-// E-postaya gelen 6 haneli kodu isteyen ortak adım (kayıt, doğrulanmamış giriş).
+// E-postaya gelen doğrulama kodunu isteyen ortak adım (kayıt, doğrulanmamış giriş).
 function CodeStep({ email, onVerified, onBack }: { email: string; onVerified: () => void; onBack: () => void }) {
     const { verifyOtp, resendOtp } = useAuth();
     const [code, setCode] = useState('');
@@ -140,7 +140,7 @@ function CodeStep({ email, onVerified, onBack }: { email: string; onVerified: ()
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (code.length !== 6) return;
+        if (code.length < 6) return;
         setError(''); setInfo(''); setLoading(true);
         const result = await verifyOtp(email, code, 'signup');
         setLoading(false);
@@ -158,22 +158,22 @@ function CodeStep({ email, onVerified, onBack }: { email: string; onVerified: ()
     return (
         <form onSubmit={submit} className="space-y-5">
             <p className="text-sm text-zinc-600 text-center leading-relaxed">
-                <span className="font-bold text-zinc-800">{email}</span> adresine 6 haneli bir kod gönderdik. Gelen kutunu (ve gereksiz klasörünü) kontrol et.
+                <span className="font-bold text-zinc-800">{email}</span> adresine bir doğrulama kodu gönderdik. Gelen kutunu (ve gereksiz klasörünü) kontrol et.
             </p>
             <input
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 autoFocus
-                maxLength={6}
+                maxLength={8}
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="••••••"
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="••••••••"
                 aria-label="Doğrulama kodu"
                 className="w-full py-4 text-center text-2xl font-bold tracking-[0.6em] bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-zinc-800 focus:border-purple-400/80 focus:bg-white outline-none transition-all placeholder-zinc-300"
             />
             {error && <div className="bg-red-500/10 text-red-600 text-xs p-3 rounded-xl border border-red-500/20 font-semibold text-center">{error}</div>}
             {info && <div className="bg-emerald-500/10 text-emerald-700 text-xs p-3 rounded-xl border border-emerald-500/20 font-semibold text-center">{info}</div>}
-            <button type="submit" disabled={loading || code.length !== 6} className={primaryButtonClass}>
+            <button type="submit" disabled={loading || code.length < 6} className={primaryButtonClass}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Doğrula'}
             </button>
             <div className="flex items-center justify-between text-xs font-semibold">
@@ -683,15 +683,15 @@ export function ResetForm({ setView, onComplete }: { setView: (v: AuthView) => v
             ) : (
                 <form onSubmit={handleNewPassword} className="space-y-4">
                     <p className="text-sm text-zinc-600 text-center leading-relaxed">
-                        Bu adres kayıtlıysa <span className="font-bold text-zinc-800">{email.trim()}</span> adresine 6 haneli bir kod gönderdik.
+                        Bu adres kayıtlıysa <span className="font-bold text-zinc-800">{email.trim()}</span> adresine bir doğrulama kodu gönderdik.
                     </p>
                     <input
                         inputMode="numeric"
                         autoComplete="one-time-code"
-                        maxLength={6}
+                        maxLength={8}
                         value={code}
-                        onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        placeholder="••••••"
+                        onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                        placeholder="••••••••"
                         aria-label="Doğrulama kodu"
                         className="w-full py-4 text-center text-2xl font-bold tracking-[0.6em] bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-zinc-800 focus:border-purple-400/80 focus:bg-white outline-none transition-all placeholder-zinc-300"
                     />
@@ -706,7 +706,7 @@ export function ResetForm({ setView, onComplete }: { setView: (v: AuthView) => v
                             value={password2} onChange={(e) => setPassword2(e.target.value)} required />
                     </div>
                     {error && <div className="bg-red-500/10 text-red-600 text-xs p-3 rounded-xl border border-red-500/20 font-semibold text-center">{error}</div>}
-                    <button type="submit" disabled={loading || code.length !== 6} className={primaryButtonClass}>
+                    <button type="submit" disabled={loading || code.length < 6} className={primaryButtonClass}>
                         {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Şifreyi Güncelle'}
                     </button>
                     <button type="button" onClick={() => { setSent(false); setCode(''); setError(''); }} className="w-full text-xs font-semibold text-zinc-400 hover:text-zinc-700">
