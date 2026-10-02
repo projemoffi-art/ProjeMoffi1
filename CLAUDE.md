@@ -3230,6 +3230,10 @@ engellenir) / `cancel_account_deletion`, her sayfada "Silmeyi geri al" şeridi (
 `/api/cron/account-purge` (servis rolü: `prepare_account_purge` randevuları "Silinmiş kullanıcı" yapar, tek sahipli
 işletmeyi yayından kaldırır → hesap → depodaki `{uid}/` dosyaları). Şifre değiştirme mevcut şifreyi doğrular ve diğer
 oturumları kapatır; "Oturumlar" ekranı diğer cihazlardan çıkış yapar (Supabase cihaz listesi vermez, sahte liste yok).
+**Yönetici 2FA:** `/admin` `AdminMfaGate` ile korunur (TOTP kurulum/QR → kod; aal2 olmadan panel gösterilmez),
+işletme onay rotası aal2 ister. Veritabanı tarafı `20261002180000_admin_requires_mfa.sql` (`is_admin()`, `get_my_role()`
+aal2 ister, 9 yönetici kuralı) Baran kurulumu yaptıktan SONRA uygulanacak. Not: `platform_settings` okuma kuralı sadece
+yönetici, bu yüzden ara katmandaki bakım modu kontrolü normal kullanıcılar için hiç çalışmıyor (önceden var olan hata).
 **Bekleyen:** `20261002171000_account_deletion_foreign_keys.sql` (DROP içerir, Baran SQL Editor'dan). Uygulanmadan kalıcı
 silme bildirim/yorum/sipariş bağları yüzünden hata verir; sipariş ve randevular da yanlışlıkla silinir.
 
@@ -3397,5 +3401,7 @@ E-posta gerektiren ya da Resend'e dokunan bir işe başlarken Baran'a madde 1'i 
    doğrudan yazma yetkisi yok: sonuç `finish_email_outbox` ile yazılır, takılan işler 15 dk sonra yeniden alınır.
 2. 🔴 **Hesap silme bağlantı düzeltmeleri** (8.57): `supabase/migrations/20261002171000_account_deletion_foreign_keys.sql`
    SQL Editor'dan çalıştırılmalı. İlk silme talebinin 30 günü dolmadan (en erken 2026-11-01) yapılmalı.
+   🔴 **Yönetici iki adımlı doğrulama:** Baran app.moffi.net/admin'e girip doğrulama uygulamasını kurmalı, sonra Claude
+   `20261002180000_admin_requires_mfa.sql`'i uygular (sıra ters olursa yönetici verisine erişim kapanır).
 3. `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinmeli (içerik 8.45'te taşındı).
 4. Eski silinen gönderi/hikâyelerin depoda kalan dosyaları temizlenmeli (8.50).

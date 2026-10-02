@@ -13,6 +13,7 @@ import {
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { AdminMfaGate } from "@/components/admin/AdminMfaGate";
 
 const MENU_GROUPS = [
     {
@@ -126,6 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     return (
+        <AdminMfaGate>
         <div className="dark h-screen overflow-hidden flex font-sans selection:bg-indigo-500/30 bg-background dark:bg-[#050508] text-white">
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
@@ -248,5 +250,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
             </main>
         </div>
+        </AdminMfaGate>
     );
 }

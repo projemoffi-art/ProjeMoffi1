@@ -34,6 +34,9 @@ export async function reviewBusiness(req: Request, decision: 'approve' | 'reject
 
         const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single();
         if (me?.role !== 'admin') return NextResponse.json({ error: 'Bu işlem için yönetici olmalısın.' }, { status: 403 });
+        // getUser() ile doğrulanmış oturumun güvence düzeyi (iki adımlı doğrulama tamamlandı mı)
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal?.currentLevel !== 'aal2') return NextResponse.json({ error: 'Bu işlem için iki adımlı doğrulama gerekli.' }, { status: 403 });
 
         const admin = createClient(url, serviceKey);
         const patch = decision === 'approve'
