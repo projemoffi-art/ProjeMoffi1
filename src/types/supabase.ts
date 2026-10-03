@@ -789,6 +789,7 @@ export type Database = {
       }
       businesses: {
         Row: {
+          accepts_calls: boolean
           address: string | null
           approved: boolean
           business_type: string | null
@@ -819,6 +820,7 @@ export type Database = {
           working_hours: Json | null
         }
         Insert: {
+          accepts_calls?: boolean
           address?: string | null
           approved?: boolean
           business_type?: string | null
@@ -849,6 +851,7 @@ export type Database = {
           working_hours?: Json | null
         }
         Update: {
+          accepts_calls?: boolean
           address?: string | null
           approved?: boolean
           business_type?: string | null
@@ -3694,6 +3697,7 @@ export type Database = {
           sos_settings: Json | null
           type: string | null
           walk_goal_km: number | null
+          walk_goal_steps: number | null
           weight: number | null
           xp: number | null
         }
@@ -3729,6 +3733,7 @@ export type Database = {
           sos_settings?: Json | null
           type?: string | null
           walk_goal_km?: number | null
+          walk_goal_steps?: number | null
           weight?: number | null
           xp?: number | null
         }
@@ -3764,6 +3769,7 @@ export type Database = {
           sos_settings?: Json | null
           type?: string | null
           walk_goal_km?: number | null
+          walk_goal_steps?: number | null
           weight?: number | null
           xp?: number | null
         }
@@ -5799,6 +5805,7 @@ export type Database = {
       }
       business_cards: {
         Row: {
+          accepts_calls: boolean | null
           address: string | null
           approved: boolean | null
           business_type: string | null
@@ -5819,6 +5826,7 @@ export type Database = {
           working_hours: Json | null
         }
         Insert: {
+          accepts_calls?: boolean | null
           address?: string | null
           approved?: boolean | null
           business_type?: never
@@ -5839,6 +5847,7 @@ export type Database = {
           working_hours?: Json | null
         }
         Update: {
+          accepts_calls?: boolean | null
           address?: string | null
           approved?: boolean | null
           business_type?: never
@@ -7228,6 +7237,7 @@ export type Database = {
       pet_emergency_set: { Args: { p_pet: string }; Returns: boolean }
       pet_level_for_xp: { Args: { p_xp: number }; Returns: number }
       pet_level_info: { Args: { p_xp: number }; Returns: Json }
+      pet_limit_for: { Args: { p_user: string }; Returns: number }
       pet_meals_target: { Args: { p_pet: string }; Returns: number }
       pet_metric: {
         Args: { p_from: string; p_metric: string; p_pet: string; p_to: string }
@@ -7237,6 +7247,8 @@ export type Database = {
       pet_species: { Args: { p_pet: string }; Returns: string }
       pet_walk_goal: { Args: { p_pet: string }; Returns: Json }
       pet_walk_goal_auto: { Args: { p_pet: string }; Returns: number }
+      pet_walk_goal_auto_steps: { Args: { p_pet: string }; Returns: number }
+      pet_walk_goal_steps: { Args: { p_pet: string }; Returns: number }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -7322,6 +7334,7 @@ export type Database = {
           priority: number
         }[]
       }
+      qc_quest_hint: { Args: { p_key: string; p_pet: string }; Returns: string }
       qc_quest_history: {
         Args: { p_day: string; p_key: string; p_pet: string }
         Returns: Json
@@ -7565,6 +7578,10 @@ export type Database = {
       }
       set_pet_walk_goal: {
         Args: { p_km: number; p_pet: string }
+        Returns: Json
+      }
+      set_pet_walk_goal_steps: {
+        Args: { p_pet: string; p_steps: number }
         Returns: Json
       }
       social_post_rows: {
@@ -8359,11 +8376,16 @@ export type Database = {
         Args: { p_distance_m: number; p_weight_kg: number }
         Returns: number
       }
+      walk_credited_steps: {
+        Args: { p_distance_m: number; p_steps: number }
+        Returns: number
+      }
       walk_route_preview: { Args: { p_path: Json }; Returns: Json }
       walk_segment_m: {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
       }
+      walk_steps_per_km: { Args: never; Returns: number }
       wall_now: { Args: never; Returns: string }
       weekday_key: { Args: { p_date: string }; Returns: string }
       withdraw_adoption_application: {

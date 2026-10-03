@@ -8,7 +8,7 @@ import { AddPetModal } from '@/components/community/modals/AddPetModal';
 import { usePet } from '@/context/PetContext';
 import { apiService } from '@/services/apiService';
 import { healthService } from '@/services/healthService';
-import { showToast } from '@/lib/utils';
+import { errorMessage, showToast } from '@/lib/utils';
 import type { Pet } from '@/services/types';
 
 export function AddPetFlow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -67,8 +67,8 @@ export function AddPetFlow({ isOpen, onClose }: { isOpen: boolean; onClose: () =
             onClose();
         } catch (err) {
             console.error('Hayvan kayıt hatası:', err);
-            const e = err as { message?: string; details?: string } | null;
-            showToast(`Kaydedilemedi: ${String(e?.message || e?.details || 'bilinmeyen hata').slice(0, 80)}`, 'AlertCircle', 'text-red-500');
+            // Sunucu mesajı olduğu gibi (ör. hayvan sınırı: "Ücretsiz hesapta en çok 5 hayvan… Prime ile 15")
+            showToast(errorMessage(err, 'Kaydedilemedi, tekrar dene.'), 'AlertCircle', 'text-red-500');
         } finally {
             setSaving(false);
         }

@@ -37,7 +37,7 @@ export default function BusinessProfilePage() {
 
     useEffect(() => {
         apiService.getBusinessProfile()
-            .then(p => setForm(p ? { ...p, phone: p.phone ? formatTrPhone(p.phone) : '' } : { businessName: '', about: '', phone: '', website: '', address: '', province: '', district: '', lat: null, lng: null, logoUrl: null, coverUrl: null, gallery: [] }))
+            .then(p => setForm(p ? { ...p, phone: p.phone ? formatTrPhone(p.phone) : '' } : { businessName: '', about: '', phone: '', acceptsCalls: true, website: '', address: '', province: '', district: '', lat: null, lng: null, logoUrl: null, coverUrl: null, gallery: [] }))
             .catch(() => showToast("Profil yüklenemedi.", "AlertCircle", "text-red-500 font-bold"));
     }, []);
 
@@ -147,6 +147,13 @@ export default function BusinessProfilePage() {
                         <input className={input} value={form.website} onChange={e => set('website', e.target.value)} placeholder="ornekklinik.com" />
                     </label>
                 </div>
+                <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" className="mt-1 w-5 h-5 accent-[#EE5B3D]" checked={form.acceptsCalls} onChange={e => set('acceptsCalls', e.target.checked)} />
+                    <span>
+                        <span className="block text-sm font-bold text-foreground">Müşteriler beni telefonla arayabilsin</span>
+                        <span className="block text-xs font-semibold text-zinc-500">Kapalıysa numaran müşterilere gösterilmez; müşteriler randevu ve mesajla ulaşır.</span>
+                    </span>
+                </label>
             </div>
 
             {/* Konum */}

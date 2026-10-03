@@ -255,6 +255,8 @@ export interface BusinessProfileData {
     businessName: string;
     about: string;
     phone: string;
+    /** Müşteriler telefonla arayabilsin mi (kapalıysa numara müşteriye hiç gösterilmez, sunucuda gizlenir). */
+    acceptsCalls: boolean;
     website: string;
     address: string;
     province: string;

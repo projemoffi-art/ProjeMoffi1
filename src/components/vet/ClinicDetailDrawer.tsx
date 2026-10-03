@@ -355,7 +355,7 @@ export function ClinicDetailDrawer({
                                                 </a>
                                             ) : (
                                                 <span className="flex items-center justify-center gap-2 h-11 rounded-xl bg-card border border-card-border text-sm font-bold text-secondary/60">
-                                                    <Phone className="w-4 h-4" /> Telefon yok
+                                                    <Phone className="w-4 h-4" /> {clinic.acceptsCalls === false ? 'Arama kapalı' : 'Telefon yok'}
                                                 </span>
                                             )}
                                             <button onClick={() => { haptics.tap(); setIsChatOpen(true); }} className="flex items-center justify-center gap-2 h-11 rounded-xl bg-card border border-card-border text-sm font-bold">
