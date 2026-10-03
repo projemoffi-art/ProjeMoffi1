@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import React, { useState, useRef, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Float } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSwipeable } from 'react-swipeable';
@@ -30,10 +30,55 @@ const GRACE_WINDOW_MS = 150;    // 150ms grace before real collision
 // =====================================================
 // TYPES
 // =====================================================
-type GamePhase = 'menu' | 'playing' | 'second_chance' | 'gameover';
+type GamePhase = 'menu' | 'playing' | 'gameover';
+type Lane = -1 | 0 | 1;
+type PowerUpType = 'MAGNET' | 'SHIELD' | 'MULTIPLIER' | 'ROCKET' | 'SNAIL';
+const POWERUP_TYPES: readonly string[] = ['MAGNET', 'SHIELD', 'MULTIPLIER', 'ROCKET', 'SNAIL'];
+/** Aşama mesafeyle ilerler: her 1000 m bir aşama, en fazla 5 (hız ve renk teması aşamaya bağlı). */
+const STAGE_LENGTH_M = 1000;
+const MAX_STAGE = 5;
+
+interface GameState {
+    started: boolean;
+    startedAt: number;
+    distance: number;
+    speed: number;
+    lane: Lane;
+    isJumping: boolean;
+    isSliding: boolean;
+    y: number;
+    vy: number;
+    slideEndTime: number;
+    shieldActive: boolean;
+    magnetActive: boolean;
+    multiplier: number;
+    slowActive: boolean;
+    missionsProgress: { coin: number; slide: number; powerup: number; distance: number };
+}
+
+const newGameState = (started: boolean): GameState => ({
+    started,
+    startedAt: 0,
+    distance: 0,
+    speed: SPEED_INITIAL,
+    lane: 0,
+    isJumping: false,
+    isSliding: false,
+    y: 0,
+    vy: 0,
+    slideEndTime: 0,
+    shieldActive: false,
+    magnetActive: false,
+    multiplier: 1,
+    slowActive: false,
+    missionsProgress: { coin: 0, slide: 0, powerup: 0, distance: 0 },
+});
+
+const laneLeft = (l: Lane): Lane => (l === 1 ? 0 : -1);
+const laneRight = (l: Lane): Lane => (l === -1 ? 0 : 1);
 
 type PowerUpState = {
-    type: 'MAGNET' | 'SHIELD' | 'MULTIPLIER' | 'ROCKET' | 'SNAIL' | null;
+    type: PowerUpType | null;
     expiresAt: number;
 };
 
@@ -79,38 +124,24 @@ export default function MoffiRunGame({
     const [coins, setCoins] = useState(0);
     const [powerUp, setPowerUp] = useState<PowerUpState>({ type: null, expiresAt: 0 });
     const [missions, setMissions] = useState<DailyMission[]>(DAILY_MISSIONS);
-    const [isClient, setIsClient] = useState(false);
+    // Üç boyutlu sahne yalnızca tarayıcıda çizilir.
+    const isClient = useSyncExternalStore(() => () => {}, () => true, () => false);
     const scoreRef = useRef(0);
     const coinsRef = useRef(0);
     const [stage, setStage] = useState(1);
+    const [multiplier, setMultiplier] = useState(1);
 
     // Single source of truth — directly accessible inside useFrame
-    const gs = useRef({
-        started: false,
-        distance: 0,
-        speed: SPEED_INITIAL,
-        lane: 0 as -1 | 0 | 1,
-        isJumping: false,
-        isSliding: false,
-        y: 0,
-        vy: 0,
-        slideEndTime: 0,
-        shieldActive: false,
-        magnetActive: false,
-        multiplier: 1,
-        slowActive: false,
-        missionsProgress: { coin: 0, slide: 0, powerup: 0, distance: 0 },
-    });
+    const gs = useRef<GameState>(newGameState(false));
 
-    useEffect(() => { setIsClient(true); }, []);
 
     // ---- KEYBOARD CONTROLS ----
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (!gs.current.started) return;
             const d = gs.current;
-            if (e.key === 'ArrowLeft' || e.key === 'a') d.lane = Math.max(-1, d.lane - 1) as any;
-            if (e.key === 'ArrowRight' || e.key === 'd') d.lane = Math.min(1, d.lane + 1) as any;
+            if (e.key === 'ArrowLeft' || e.key === 'a') d.lane = laneLeft(d.lane);
+            if (e.key === 'ArrowRight' || e.key === 'd') d.lane = laneRight(d.lane);
             if ((e.key === 'ArrowUp' || e.key === 'w') && !d.isJumping && !d.isSliding) {
                 d.isJumping = true; d.vy = JUMP_VELOCITY;
             }
@@ -126,8 +157,8 @@ export default function MoffiRunGame({
 
     // ---- SWIPE CONTROLS ----
     const swipeHandlers = useSwipeable({
-        onSwipedLeft: () => { if (!gs.current.started) return; gs.current.lane = Math.max(-1, gs.current.lane - 1) as any; },
-        onSwipedRight: () => { if (!gs.current.started) return; gs.current.lane = Math.min(1, gs.current.lane + 1) as any; },
+        onSwipedLeft: () => { if (!gs.current.started) return; gs.current.lane = laneLeft(gs.current.lane); },
+        onSwipedRight: () => { if (!gs.current.started) return; gs.current.lane = laneRight(gs.current.lane); },
         onSwipedUp: () => {
             const d = gs.current;
             if (!d.started || d.isJumping || d.isSliding) return;
@@ -146,28 +177,13 @@ export default function MoffiRunGame({
 
     const triggerStart = (e: React.PointerEvent) => {
         e.preventDefault();
-        gs.current = {
-            started: true,
-            distance: 0,
-            speed: SPEED_INITIAL,
-            lane: 0,
-            isJumping: false,
-            isSliding: false,
-            y: 0,
-            vy: 0,
-            slideEndTime: 0,
-            shieldActive: false,
-            magnetActive: false,
-            multiplier: 1,
-            slowActive: false,
-            missionsProgress: { coin: 0, slide: 0, powerup: 0, distance: 0 },
-        };
-        startTime.current = 0;
+        gs.current = newGameState(true);
         scoreRef.current = 0;
         coinsRef.current = 0;
         setScore(0);
         setCoins(0);
         setPowerUp({ type: null, expiresAt: 0 });
+        setMultiplier(1);
         setMissions(DAILY_MISSIONS.map(m => ({ ...m, progress: 0, done: false })));
         setPhase('playing');
         setStage(1);
@@ -189,7 +205,7 @@ export default function MoffiRunGame({
         ));
     };
 
-    const handlePowerUp = (type: 'MAGNET' | 'SHIELD' | 'MULTIPLIER' | 'ROCKET' | 'SNAIL') => {
+    const handlePowerUp = (type: PowerUpType) => {
         const durations: Record<string, number> = { MAGNET: 8000, SHIELD: 5000, MULTIPLIER: 10000, ROCKET: 6000, SNAIL: 5000 };
         const expiresAt = Date.now() + durations[type];
         setPowerUp({ type, expiresAt });
@@ -197,7 +213,10 @@ export default function MoffiRunGame({
 
         if (type === 'MAGNET') { gs.current.magnetActive = true; setTimeout(() => { gs.current.magnetActive = false; }, durations[type]); }
         if (type === 'SHIELD') { gs.current.shieldActive = true; } // cleared on first hit
-        if (type === 'MULTIPLIER') { gs.current.multiplier = 2; setTimeout(() => { gs.current.multiplier = 1; }, durations[type]); }
+        if (type === 'MULTIPLIER') {
+            gs.current.multiplier = 2; setMultiplier(2);
+            setTimeout(() => { gs.current.multiplier = 1; setMultiplier(1); }, durations[type]);
+        }
         if (type === 'SNAIL') { gs.current.slowActive = true; setTimeout(() => { gs.current.slowActive = false; }, durations[type]); }
         if (type === 'ROCKET') {
             gs.current.speed = Math.min(gs.current.speed * 1.5, SPEED_MAX);
@@ -208,6 +227,9 @@ export default function MoffiRunGame({
             m.type === 'powerup' ? { ...m, progress: gs.current.missionsProgress.powerup, done: gs.current.missionsProgress.powerup >= m.target } : m
         ));
     };
+
+    // Kare döngüsünün güncellediği canlı oyun durumu (three.js döngüsü için bilerek değişken nesne).
+    const readGame = () => gs.current;
 
     const handleScore = (s: number) => {
         scoreRef.current = s;
@@ -232,12 +254,13 @@ export default function MoffiRunGame({
                 <Stars radius={150} count={stage === 5 ? 5000 : 2500} factor={stage >= 4 ? 6 : 3} fade />
 
                 <GameScene
-                    gs={gs}
-                    phase={phase}
+                    getGame={readGame}
                     onCrash={handleCrash}
                     onCoin={handleCoin}
                     onPowerUp={handlePowerUp}
                     onScore={handleScore}
+                    stage={stage}
+                    onStageChange={setStage}
                 />
             </Canvas>
 
@@ -259,8 +282,8 @@ export default function MoffiRunGame({
                             <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-2xl border border-card-border flex items-center gap-3">
                                 <Coins className="text-yellow-400 w-5 h-5" />
                                 <span className="text-2xl font-black text-white tabular-nums">{coins}</span>
-                                {gs.current.multiplier > 1 && (
-                                    <span className="text-xs font-black text-amber-400 bg-amber-400/20 px-2 py-0.5 rounded-full">×{gs.current.multiplier}</span>
+                                {multiplier > 1 && (
+                                    <span className="text-xs font-black text-amber-400 bg-amber-400/20 px-2 py-0.5 rounded-full">×{multiplier}</span>
                                 )}
                             </div>
                         </div>
@@ -273,9 +296,7 @@ export default function MoffiRunGame({
                                 {powerUp.type === 'MULTIPLIER' && <Star className="text-amber-400 w-7 h-7" />}
                                 {powerUp.type === 'ROCKET' && <Zap className="text-red-400 w-7 h-7" />}
                                 {powerUp.type === 'SNAIL' && <Snail className="text-green-400 w-7 h-7" />}
-                                <div className="text-xs font-bold text-black/60 dark:text-white/60 uppercase">
-                                    {Math.max(0, Math.ceil((powerUp.expiresAt - Date.now()) / 1000))}s
-                                </div>
+                                <PowerUpCountdown expiresAt={powerUp.expiresAt} />
                             </div>
                         )}
                     </motion.div>
@@ -330,40 +351,6 @@ export default function MoffiRunGame({
             </AnimatePresence>
 
             
-            {/* SECOND CHANCE (MOFFI COIN) */}
-            <AnimatePresence>
-                {phase === 'second_chance' && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-3xl z-[210] p-8"
-                    >
-                        <div className="w-24 h-24 bg-cyan-500/20 rounded-full flex items-center justify-center border-4 border-cyan-400 mb-6 shadow-[0_0_50px_rgba(34,211,238,0.5)]">
-                            <Zap className="w-12 h-12 text-cyan-400 animate-pulse" />
-                        </div>
-                        <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 italic mb-4 text-center">SİNYAL<br/>KAYBEDİLDİ!</h2>
-                        <p className="text-gray-300 text-center mb-10 max-w-xs text-sm font-medium">Moffi kaza yaptı! <strong className="text-cyan-400">50 Moffi Coin</strong> karşılığında kurtarma dronu çağırıp kaldığın hızdan devam etmek ister misin?</p>
-                        
-                        <div className="flex flex-col gap-4 w-full max-w-xs">
-                            <button
-                                onClick={handleRevive}
-                                className="w-full bg-cyan-500 text-black py-5 rounded-2xl font-black text-xl shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Coins className="w-6 h-6 fill-black" /> 50 COİN ÖDE
-                            </button>
-                            <button
-                                onClick={finalizeGameOver}
-                                className="w-full bg-white/10 text-white py-5 rounded-2xl font-bold text-lg hover:bg-white/20 active:scale-95 transition-all"
-                            >
-                                PES ET
-                            </button>
-                        </div>
-                        <div className="mt-8 text-cyan-500/60 font-bold text-sm">Mevcut Bakiye: {userCoins} Coin</div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             {/* GAME OVER */}
             <AnimatePresence>
                 {phase === 'gameover' && (
@@ -417,26 +404,42 @@ export default function MoffiRunGame({
 // =====================================================
 // GAME SCENE (Three.js Canvas Inner)
 // =====================================================
-function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChange, stage }: any) {
-    const { camera } = useThree();
-    const playerRef = useRef<THREE.Group>(null!);
-    const [chunks, setChunks] = useState<LevelObject[]>([]);
-    const levelGen = useMemo(() => new LevelGenerator(-20), []);
-    const nextChunkAt = useRef(-20);
-    const graceTimers = useRef<Map<string, number>>(new Map());
-    const startTime = useRef<number>(0);
-
-    // Init world
+/** Güçlendirmenin kalan süresi (saniyede bir yenilenir). */
+function PowerUpCountdown({ expiresAt }: { expiresAt: number }) {
+    const [left, setLeft] = useState<number | null>(null);
     useEffect(() => {
-        levelGen.reset(-20);
-        let items: LevelObject[] = [];
-        for (let i = 0; i < 20; i++) {
-            const c = levelGen.generateNextChunk();
-            items = [...items, ...c.objects];
-        }
-        setChunks(items);
-        nextChunkAt.current = -20 - 20 * 30;
-    }, []);
+        const tick = () => setLeft(Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)));
+        const first = setTimeout(tick, 0);
+        const id = setInterval(tick, 1000);
+        return () => { clearTimeout(first); clearInterval(id); };
+    }, [expiresAt]);
+    return <div className="text-xs font-bold text-black/60 dark:text-white/60 uppercase">{left ?? ''}s</div>;
+}
+
+function GameScene({ getGame, onCrash, onCoin, onPowerUp, onScore, onStageChange, stage }: {
+    getGame: () => GameState;
+    onCrash: () => void;
+    onCoin: () => void;
+    onPowerUp: (type: PowerUpType) => void;
+    onScore: (meters: number) => void;
+    onStageChange: (stage: number) => void;
+    stage: number;
+}) {
+    const playerRef = useRef<THREE.Group>(null!);
+    // Dünya ilk çizimde bir kez kurulur: ilk 20 parça önceden üretilir.
+    const [world] = useState(() => {
+        const gen = new LevelGenerator(-20);
+        gen.reset(-20);
+        const items: LevelObject[] = [];
+        for (let i = 0; i < 20; i++) items.push(...gen.generateNextChunk().objects);
+        return { gen, items };
+    });
+    const [chunks, setChunks] = useState<LevelObject[]>(world.items);
+    const [pose, setPose] = useState<{ state: CharacterState; laneX: number; speed: number }>({ state: 'IDLE', laneX: 0, speed: SPEED_INITIAL });
+    const poseRef = useRef(pose);
+    const levelGenRef = useRef<LevelGenerator>(world.gen);
+    const nextChunkAt = useRef(-20 - 20 * 30);
+    const graceTimers = useRef<Map<string, number>>(new Map());
 
     // Static side trees
     const trees = useMemo(() => (
@@ -445,25 +448,40 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChan
         ))
     ), []);
 
-    useFrame((_, delta) => {
-        if (!playerRef.current) return;
+    useFrame((frame, delta) => {
+        const camera = frame.camera;
+        const levelGen = levelGenRef.current;
+        if (!playerRef.current || !levelGen) return;
 
         // --- MENU: camera orbits Moffi ---
-        if (!gs.current.started) {
+        const d = getGame();
+        const laneDelta = (d.lane * LANE_WIDTH) - playerRef.current.position.x;
+        const nextState: CharacterState = d.isJumping ? 'JUMP'
+            : d.isSliding ? 'SLIDE'
+                : !d.started ? 'IDLE'
+                    : laneDelta > 0.3 ? 'SIDESTEP_RIGHT'
+                        : laneDelta < -0.3 ? 'SIDESTEP_LEFT'
+                            : 'RUN';
+        const prevPose = poseRef.current;
+        if (prevPose.state !== nextState || prevPose.laneX !== d.lane * LANE_WIDTH || Math.abs(prevPose.speed - d.speed) > 1) {
+            const nextPose = { state: nextState, laneX: d.lane * LANE_WIDTH, speed: d.speed };
+            poseRef.current = nextPose;
+            setPose(nextPose);
+        }
+        if (!d.started) {
             playerRef.current.position.set(0, 0, 0);
             camera.position.set(0, 4, 8);
             camera.lookAt(0, 1.2, 0);
             return;
         }
 
-        const d = gs.current;
         const now = Date.now();
 
-        // Mark start time
-        if (startTime.current === 0) startTime.current = now;
-        const elapsed = (now - startTime.current) / 1000;
+        if (d.startedAt === 0) d.startedAt = now;
 
         // --- STAGE-BASED SPEED (Matematiksel Pacing) ---
+        const currentStage = Math.min(MAX_STAGE, 1 + Math.floor(d.distance / STAGE_LENGTH_M));
+        if (currentStage !== stage) onStageChange(currentStage);
         const slow = d.slowActive ? SLOW_MOTION_FACTOR : 1;
         
         // Hız, ZAMANLA değil, AŞAMA İLE (Stage) belirlenir.
@@ -505,7 +523,7 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChan
 
         // --- MAGNET: attract coins ---
         if (d.magnetActive) {
-            chunks.forEach((obj: any) => {
+            chunks.forEach((obj) => {
                 if (obj.type === 'COIN' && !obj.collected) {
                     const dz2 = Math.abs(playerRef.current.position.z - obj.z);
                     if (dz2 < 12) { obj.collected = true; onCoin(); }
@@ -521,7 +539,7 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChan
         }
 
         // --- COLLISION (with grace window) ---
-        chunks.forEach((obj: any) => {
+        chunks.forEach((obj) => {
             if (obj.collected) return;
             const dz = Math.abs(playerRef.current.position.z - obj.z);
             if (dz > 2.0) return;
@@ -530,10 +548,10 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChan
             const pType: string = obj.type;
 
             // POWERUP COLLECTION
-            if (['MAGNET', 'SHIELD', 'MULTIPLIER', 'ROCKET', 'SNAIL'].includes(pType)) {
+            if (POWERUP_TYPES.includes(pType)) {
                 if (dx < 1.2) {
                     obj.collected = true;
-                    onPowerUp(pType as any);
+                    onPowerUp(pType as PowerUpType);
                 }
                 return;
             }
@@ -545,7 +563,7 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChan
             }
 
             // OBSTACLE COLLISION — with grace window
-            const gKey = obj.uniqueId;
+            const gKey = obj.uniqueId ?? obj.id;
             let effectiveW = COLLISION_W;
             if (!graceTimers.current.has(gKey)) {
                 graceTimers.current.set(gKey, now);
@@ -573,14 +591,6 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChan
         });
     });
 
-    const laneDelta = (gs.current.lane * LANE_WIDTH) - (playerRef.current?.position.x ?? 0);
-    const playerState: CharacterState = gs.current.isJumping ? 'JUMP'
-        : gs.current.isSliding ? 'SLIDE'
-            : !gs.current.started ? 'IDLE'
-                : laneDelta > 0.3 ? 'SIDESTEP_RIGHT'
-                    : laneDelta < -0.3 ? 'SIDESTEP_LEFT'
-                        : 'RUN';
-
     return (
         <group>
             {/* World */}
@@ -591,15 +601,15 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChan
             <group ref={playerRef}>
                 <React.Suspense fallback={null}>
                     <MoffiCharacter
-                        state={playerState}
-                        laneTargetX={gs.current.lane * LANE_WIDTH}
-                        speed={gs.current.speed}
+                        state={pose.state}
+                        laneTargetX={pose.laneX}
+                        speed={pose.speed}
                     />
                 </React.Suspense>
             </group>
 
             {/* World Objects */}
-            {chunks.map((obj: any) => {
+            {chunks.map((obj) => {
                 if (obj.collected) return null;
                 const pos: [number, number, number] = [obj.x * LANE_WIDTH, obj.y || 0, obj.z];
                 const pType: string = obj.type;
