@@ -400,7 +400,7 @@ export function MoffiAssistant() {
                                     </div>
 
                                     {pet && (
-                                        <div className="mt-4 rounded-[20px] bg-card border border-card-border p-3.5 grid grid-cols-3 divide-x divide-card-border text-center">
+                                        <div className="mt-4 rounded-[20px] card-premium p-3.5 grid grid-cols-3 divide-x divide-card-border text-center">
                                             <div className="px-1">
                                                 <p className="text-[11px] font-bold text-secondary">Sağlık</p>
                                                 <p className={cn('text-[13.5px] font-extrabold mt-0.5 truncate', health?.tone === 'overdue' ? 'text-emergency' : health?.tone === 'attention' ? 'text-[#C98A1B]' : 'text-[#4E8A23]')}>
@@ -427,7 +427,7 @@ export function MoffiAssistant() {
                                                     if (p.send) send(p.send);
                                                     else { setInput(p.prefill || ''); setTimeout(() => inputRef.current?.focus(), 50); }
                                                 }}
-                                                className="text-left rounded-[18px] bg-card border border-card-border p-3 active:scale-[0.98] transition-transform"
+                                                className="text-left rounded-[18px] card-premium p-3 active:scale-[0.98] transition-transform"
                                             >
                                                 <span className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center"><p.Icon className="w-[18px] h-[18px] text-accent" /></span>
                                                 <span className="block mt-2 text-[14px] font-extrabold">{p.title}</span>
@@ -457,7 +457,7 @@ export function MoffiAssistant() {
                                                     'max-w-[86%] rounded-[20px] px-4 py-2.5 text-[15px] leading-relaxed',
                                                     m.role === 'user' ? 'bg-accent text-white rounded-br-md whitespace-pre-wrap'
                                                         : m.meta ? 'bg-[#F0C94E]/15 border border-[#E8A33D]/30 rounded-bl-md'
-                                                        : 'bg-card border border-card-border rounded-bl-md',
+                                                        : 'card-premium rounded-bl-md',
                                                 )}>
                                                     {m.role === 'user' ? m.content : <RichText text={m.content} />}
                                                     {actions.length > 0 && (
@@ -481,7 +481,7 @@ export function MoffiAssistant() {
                                     })}
                                     {busy && (
                                         <div className="flex justify-start">
-                                            <div className="rounded-[20px] rounded-bl-md bg-card border border-card-border px-4 py-3.5 flex gap-1.5">
+                                            <div className="rounded-[20px] rounded-bl-md card-premium px-4 py-3.5 flex gap-1.5">
                                                 {[0, 1, 2].map(i => <span key={i} className="w-2 h-2 rounded-full bg-accent/70 animate-bounce" style={{ animationDelay: `${i * 120}ms` }} />)}
                                             </div>
                                         </div>
@@ -501,7 +501,7 @@ export function MoffiAssistant() {
                                     {sessions.length === 0 ? (
                                         <p className="text-[14px] font-semibold text-secondary py-8 text-center">Henüz sohbet yok.</p>
                                     ) : (
-                                        <div className="rounded-[20px] bg-card border border-card-border divide-y divide-card-border overflow-hidden">
+                                        <div className="rounded-[20px] card-premium divide-y divide-card-border overflow-hidden">
                                             {sessions.map(s => (
                                                 <div key={s.id} className="flex items-center">
                                                     <button type="button" onClick={() => { setSessionId(s.id); setShowHistory(false); }} className="flex-1 min-w-0 text-left px-4 py-3">
@@ -520,7 +520,7 @@ export function MoffiAssistant() {
                                             <div className="mt-4 rounded-[18px] border border-emergency/30 bg-emergency/[0.06] p-3.5">
                                                 <p className="text-[13.5px] font-bold">Tüm sohbetler bu cihazdan silinsin mi?</p>
                                                 <div className="mt-3 flex gap-2">
-                                                    <button type="button" onClick={() => setConfirmClear(false)} className="flex-1 h-11 rounded-xl bg-card border border-card-border text-[14px] font-bold">Vazgeç</button>
+                                                    <button type="button" onClick={() => setConfirmClear(false)} className="flex-1 h-11 rounded-xl card-premium text-[14px] font-bold">Vazgeç</button>
                                                     <button type="button" onClick={() => { persist(() => []); setSessionId(null); setConfirmClear(false); }} className="flex-1 h-11 rounded-xl bg-emergency text-white text-[14px] font-extrabold">Sil</button>
                                                 </div>
                                             </div>
@@ -545,7 +545,7 @@ export function MoffiAssistant() {
                                 rows={1}
                                 maxLength={2000}
                                 placeholder={pet ? `${pet.name} hakkında sor…` : 'Bir şey sor…'}
-                                className="flex-1 resize-none max-h-32 min-h-[48px] rounded-[22px] bg-card border border-card-border px-4 py-3 text-[15px] font-medium focus:outline-none focus:border-accent/60 placeholder:text-secondary/70"
+                                className="flex-1 resize-none max-h-32 min-h-[48px] rounded-[22px] card-premium px-4 py-3 text-[15px] font-medium focus:outline-none focus:border-accent/60 placeholder:text-secondary/70"
                                 style={{ height: Math.min(128, 48 + Math.max(0, input.split('\n').length - 1) * 22) }}
                             />
                             <button

@@ -5,12 +5,17 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthContext';
 
 type Theme = 'light' | 'dark';
+/** Kullanıcının seçimi: açık, koyu ya da cihazın ayarı. Varsayılan açık (Baran, 2026-10-03). */
+export type ThemePreference = 'light' | 'dark' | 'system';
+const isPreference = (v: unknown): v is ThemePreference => v === 'light' || v === 'dark' || v === 'system';
 type FontSize = 'small' | 'medium' | 'large';
 type ColorBlindMode = 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 
 interface ThemeContextType {
+    /** O an uygulanan tema (sistem seçiliyse cihazın ayarına göre çözülmüş hâli). */
     theme: Theme;
-    setTheme: (theme: Theme) => void;
+    setTheme: (theme: ThemePreference) => void;
+    preference: ThemePreference;
     fontSize: FontSize;
     setFontSize: (size: FontSize) => void;
     colorBlindMode: ColorBlindMode;
@@ -33,7 +38,18 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const { user, updateSettings } = useAuth();
-    const [theme, setThemeState] = useState<Theme>('light');
+    const [preference, setPreferenceState] = useState<ThemePreference>('light');
+    const [systemDark, setSystemDark] = useState(false);
+    const theme: Theme = preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
+
+    // Cihazın açık/koyu ayarı (yalnızca 'system' seçiliyken etkili)
+    useEffect(() => {
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const update = () => setSystemDark(mq.matches);
+        update();
+        mq.addEventListener('change', update);
+        return () => mq.removeEventListener('change', update);
+    }, []);
     const [fontSize, setFontSizeState] = useState<FontSize>('medium');
     const [colorBlindMode, setColorBlindModeState] = useState<ColorBlindMode>('none');
     
@@ -46,12 +62,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // localStorage'dan theme'i yükle (sadece ilk açılışta)
     useEffect(() => {
-        const savedTheme = localStorage.getItem('moffi-theme') as Theme;
-        if (savedTheme === 'light' || savedTheme === 'dark') {
-            setThemeState(savedTheme);
-        } else {
-            setThemeState('light');
-        }
+        const saved = localStorage.getItem('moffi-theme');
+        setPreferenceState(isPreference(saved) ? saved : 'light');
     }, []);
 
     // Load Accessibility Settings from user profile
@@ -109,10 +121,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (seniorMode) root.classList.add('senior-mode');
     }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode, pathname, user?.settings?.appearance?.font, user?.settings?.appearance?.accentColor]);
 
-    const setTheme = React.useCallback((newTheme: Theme) => {
-        setThemeState(newTheme);
-        localStorage.setItem('moffi-theme', newTheme);
-        updateSettings('appearance', { theme: newTheme });
+    const setTheme = React.useCallback((next: ThemePreference) => {
+        setPreferenceState(next);
+        localStorage.setItem('moffi-theme', next);
+        updateSettings('appearance', { theme: next });
     }, [updateSettings]);
 
     const setFontSize = React.useCallback((size: FontSize) => {
@@ -151,7 +163,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, [updateSettings]);
 
     const themeValue = React.useMemo(() => ({
-        theme, setTheme,
+        theme, setTheme, preference,
         fontSize, setFontSize,
         colorBlindMode, setColorBlindMode,
         boldText, setBoldText,
@@ -160,24 +172,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         reduceTransparency, setReduceTransparency,
         seniorMode, setSeniorMode
     }), [
-        theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode,
+        theme, preference, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode,
         setTheme, setFontSize, setColorBlindMode, setBoldText, setHighContrast, setReduceMotion, setReduceTransparency, setSeniorMode
     ]);
 
     // Sync from LocalStorage / AuthContext with redundancy check
     useEffect(() => {
         // 1. Initial LocalStorage load (Client-side only)
-        const savedTheme = localStorage.getItem('moffi-theme') as Theme;
-        const validTheme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'light';
-        if (validTheme !== theme) {
-            setThemeState(validTheme);
-        }
+        const saved = localStorage.getItem('moffi-theme');
+        const validPreference: ThemePreference = isPreference(saved) ? saved : 'light';
+        if (validPreference !== preference) setPreferenceState(validPreference);
 
         // 2. Sync from AuthContext (Stable primitives)
         if (user?.settings?.appearance?.theme) {
             const userTheme = user.settings.appearance.theme;
-            if ((userTheme === 'light' || userTheme === 'dark') && userTheme !== theme) {
-                setThemeState(userTheme);
+            if (isPreference(userTheme) && userTheme !== preference) {
+                setPreferenceState(userTheme);
                 localStorage.setItem('moffi-theme', userTheme);
             }
         }

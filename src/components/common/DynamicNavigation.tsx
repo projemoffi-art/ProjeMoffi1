@@ -365,7 +365,7 @@ export function DynamicNavigation() {
     return (
         <>
             <FloatingControls />
-            <EdgePanel />
+            <EdgePanel hidden={isAnyLocalOverlayOpen || !isNavAllowedByExternalOverlays} />
             <ActiveWalkMiniWidget />
 
             <ActionHubDrawer

@@ -484,3 +484,39 @@ nextjs-portal,
   }
 }
 
+
+/* ── Moffi cam ve kart yüzeyleri (2026-10-03) ─────────────────────────────────────────────────────
+   Apple'ın Liquid Glass diline benzer: içerik üstünde süzülen yarı saydam, kenarı ışık alan yüzeyler.
+   .glass        → açık zemin üstünde (alt menü, başlık düğmeleri, seçiciler)
+   .glass-photo  → fotoğraf üstünde (yürüyüş kartı, oyun kartı)
+   .card-premium → düz kartların hafif parlak, katmanlı hâli
+   "Saydamlığı azalt" (erişilebilirlik) açıksa cam yerine düz renk kullanılır. */
+.glass {
+  background: color-mix(in srgb, var(--card-bg) 64%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -1px 0 rgba(255, 255, 255, 0.2), 0 12px 32px -14px rgba(32, 27, 22, 0.32);
+}
+.dark .glass {
+  background: color-mix(in srgb, var(--card-bg) 72%, transparent);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 14px 34px -14px rgba(0, 0, 0, 0.7);
+}
+.glass-photo {
+  background: rgba(24, 20, 16, 0.3);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.card-premium {
+  background: linear-gradient(180deg, var(--card-bg) 0%, color-mix(in srgb, var(--card-bg) 93%, var(--background)) 100%);
+  border: 1px solid var(--card-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(32, 27, 22, 0.04), 0 14px 30px -20px rgba(32, 27, 22, 0.35);
+}
+.dark .card-premium {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 30px -20px rgba(0, 0, 0, 0.75);
+}
+.reduce-transparency .glass { background: var(--card-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.reduce-transparency .glass-photo { background: rgba(24, 20, 16, 0.78); -webkit-backdrop-filter: none; backdrop-filter: none; }

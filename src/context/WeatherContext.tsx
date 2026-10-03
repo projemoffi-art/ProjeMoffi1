@@ -1,80 +1,67 @@
 'use client';
 
+// Uygulamanın TEK hava durumu kaynağı (Open-Meteo, anahtar gerektirmez). Ana sayfa yürüyüş kartı, yürüyüşe hazırlık,
+// takip ekranı, kenar paneli, görevler ve canlı etkinlikler buradan okur.
+// Konum: izin zaten verilmişse GPS; verilmemişse konum izni KENDİLİĞİNDEN SORULMAZ, IP'den yaklaşık konum kullanılır
+// (source: 'ip'). Kullanıcı kesin konum isterse requestPrecise() izni sorar. Hiçbir yoldan veri alınamazsa
+// weather null kalır; uydurma ya da varsayılan şehir verisi gösterilmez.
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { geolocation } from "@/native";
 
-// Open-Meteo WMO weather code mapping
-function getWeatherInfo(code: number, temp: number): {
-    condition: string;
-    icon: string;
-    emoji: string;
-    walkScore: number; // 0-100, yürüyüş için uygunluk puanı
-    walkLabel: string;
-    badgeColor: string;
-} {
-    let condition = 'Güneşli';
-    let icon = '☀️';
-    let emoji = '☀️';
-    let walkScore = 100;
+export type WeatherIconKey = 'Sun' | 'CloudSun' | 'Cloud' | 'CloudRain' | 'Snowflake' | 'CloudLightning';
 
-    if (code === 0) {
-        condition = 'Açık Gökyüzü';
-        icon = '☀️'; emoji = '☀️'; walkScore = 100;
-    } else if (code >= 1 && code <= 3) {
-        condition = 'Parçalı Bulutlu';
-        icon = '⛅'; emoji = '⛅'; walkScore = 90;
+// Open-Meteo WMO hava kodları
+function getWeatherInfo(code: number, temp: number) {
+    let condition = 'Açık';
+    let emoji = '☀️';
+    let iconKey: WeatherIconKey = 'Sun';
+    let walkScore = 100;
+    let advice = 'Yürüyüş için güzel bir hava.';
+
+    if (code >= 1 && code <= 3) {
+        condition = 'Parçalı bulutlu'; emoji = '⛅'; iconKey = 'CloudSun'; walkScore = 90; advice = 'Yürüyüş için uygun bir hava.';
     } else if (code >= 45 && code <= 48) {
-        condition = 'Sisli';
-        icon = '🌫️'; emoji = '🌫️'; walkScore = 60;
+        condition = 'Sisli'; emoji = '🌫️'; iconKey = 'Cloud'; walkScore = 60; advice = 'Görüş düşük; dostunu tasmadan ayırma.';
     } else if (code >= 51 && code <= 57) {
-        condition = 'Çiseleyen';
-        icon = '🌦️'; emoji = '🌦️'; walkScore = 50;
+        condition = 'Çiseleyen'; emoji = '🌦️'; iconKey = 'CloudRain'; walkScore = 50; advice = 'Hafif yağış var; dönüşte patileri kurula.';
     } else if (code >= 61 && code <= 67) {
-        condition = 'Yağmurlu';
-        icon = '🌧️'; emoji = '🌧️'; walkScore = 30;
+        condition = 'Yağmurlu'; emoji = '🌧️'; iconKey = 'CloudRain'; walkScore = 30; advice = 'Yağmur var; kısa bir tur yeterli olabilir.';
     } else if (code >= 71 && code <= 77) {
-        condition = 'Karlı';
-        icon = '❄️'; emoji = '❄️'; walkScore = 20;
+        condition = 'Karlı'; emoji = '❄️'; iconKey = 'Snowflake'; walkScore = 20; advice = 'Kar var; patiler üşüyebilir, kısa tur yeterli.';
     } else if (code >= 80 && code <= 82) {
-        condition = 'Sağanak';
-        icon = '⛈️'; emoji = '⛈️'; walkScore = 15;
+        condition = 'Sağanak'; emoji = '⛈️'; iconKey = 'CloudLightning'; walkScore = 15; advice = 'Kuvvetli yağış var; biraz beklemek daha iyi.';
     } else if (code >= 95) {
-        condition = 'Fırtınalı';
-        icon = '🌩️'; emoji = '🌩️'; walkScore = 5;
+        condition = 'Fırtınalı'; emoji = '🌩️'; iconKey = 'CloudLightning'; walkScore = 5; advice = 'Fırtına var; yürüyüşü ertelemek en iyisi.';
     }
 
-    // Sıcaklık bazlı puanlama
+    // Sıcaklık: pati güvenliği önce gelir.
     if (temp > 35) walkScore = Math.min(walkScore, 30);
     else if (temp > 30) walkScore = Math.min(walkScore, 55);
     else if (temp < 0) walkScore = Math.min(walkScore, 25);
     else if (temp < 5) walkScore = Math.min(walkScore, 45);
-    else if (temp >= 15 && temp <= 25) walkScore = Math.min(walkScore + 10, 100); // İdeal sıcaklık
+    else if (temp >= 15 && temp <= 25) walkScore = Math.min(walkScore + 10, 100);
 
-    const walkLabel = walkScore >= 80
-        ? 'Mükemmel'
-        : walkScore >= 60
-        ? 'Uygun'
-        : walkScore >= 40
-        ? 'Dikkatli Ol'
-        : 'Önerilmez';
+    if (temp >= 30) advice = 'Asfalt çok sıcak olabilir; serin saatleri ve çimenlik yolları seç.';
+    else if (temp >= 25) advice = 'Sıcak bir gün; yanına su al, gölgeli yolları tercih et.';
+    else if (temp < 0) advice = 'Hava dondurucu; kısa tur ve dönüşte patileri kontrol et.';
 
-    const badgeColor = walkScore >= 80
-        ? 'emerald'
-        : walkScore >= 60
-        ? 'yellow'
-        : walkScore >= 40
-        ? 'orange'
-        : 'red';
+    const walkLabel = walkScore >= 80 ? 'Mükemmel' : walkScore >= 60 ? 'Uygun' : walkScore >= 40 ? 'Dikkatli Ol' : 'Önerilmez';
+    const badgeColor = walkScore >= 80 ? 'emerald' : walkScore >= 60 ? 'yellow' : walkScore >= 40 ? 'orange' : 'red';
 
-    return { condition, icon, emoji, walkScore, walkLabel, badgeColor };
+    return { condition, icon: emoji, emoji, iconKey, walkScore, walkLabel, badgeColor, advice };
 }
 
 export interface WeatherData {
     temp: number;
     feelsLike: number;
+    code: number;
     condition: string;
     icon: string;
     emoji: string;
+    iconKey: WeatherIconKey;
+    /** Yürüyüş ve pati güvenliği önerisi */
+    advice: string;
     humidity: number;
     windSpeed: number;
     walkScore: number;
@@ -83,54 +70,74 @@ export interface WeatherData {
     city: string;
     lat: number;
     lon: number;
+    /** 'gps' = cihaz konumu, 'ip' = internet bağlantısından yaklaşık konum */
+    source: 'gps' | 'ip';
     lastUpdated: Date;
+}
+
+/** Sıcak zemin uyarısı: 25° ve üstü. */
+export function isHotForPaws(w: Pick<WeatherData, 'temp'> | null | undefined) {
+    return !!w && w.temp >= 25;
 }
 
 interface WeatherContextType {
     weather: WeatherData | null;
     isLoading: boolean;
     error: string | null;
+    /** Konum izni verilmemiş (konum yaklaşık ya da hiç yok) */
+    needsPermission: boolean;
+    permissionDenied: boolean;
     refresh: () => void;
+    /** Kullanıcı isteğiyle konum iznini sorar ve kesin konumla yeniler. */
+    requestPrecise: () => Promise<void>;
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
 
-const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 dakika
+const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
-async function reverseGeocode(lat: number, lon: number): Promise<string> {
+async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
     try {
         const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=tr`,
             { headers: { 'User-Agent': 'MoffiApp/1.0' } }
         );
         const data = await res.json();
-        // Şehir adı için farklı field'leri dene
-        return (
-            data?.address?.neighbourhood ||
-            data?.address?.suburb ||
-            data?.address?.quarter ||
-            data?.address?.city_district ||
-            data?.address?.district ||
-            data?.address?.city ||
-            data?.address?.town ||
-            'Konumunuz'
-        );
+        return data?.address?.neighbourhood || data?.address?.suburb || data?.address?.quarter
+            || data?.address?.city_district || data?.address?.district || data?.address?.city || data?.address?.town || null;
     } catch {
-        return 'Konumunuz';
+        return null;
     }
 }
 
-async function fetchWeather(lat: number, lon: number): Promise<{ temp: number; feelsLike: number; code: number; humidity: number; windSpeed: number }> {
+async function ipLocation(): Promise<{ lat: number; lon: number; city: string | null } | null> {
+    try {
+        const r = await fetch('https://freeipapi.com/api/json');
+        if (r.ok) {
+            const d = await r.json();
+            if (d?.latitude && d?.longitude) return { lat: d.latitude, lon: d.longitude, city: d.cityName || null };
+        }
+    } catch { /* sıradaki servis */ }
+    try {
+        const r = await fetch('https://ipapi.co/json/');
+        if (r.ok) {
+            const d = await r.json();
+            if (d?.latitude && d?.longitude) return { lat: d.latitude, lon: d.longitude, city: d.city || d.region || null };
+        }
+    } catch { /* yok */ }
+    return null;
+}
+
+async function fetchWeather(lat: number, lon: number) {
     const res = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,weathercode,windspeed_10m,relativehumidity_2m&timezone=auto`
     );
-    if (!res.ok) throw new Error('Weather fetch failed');
-    const data = await res.json();
-    const cur = data.current;
+    if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
+    const cur = (await res.json()).current;
     return {
         temp: Math.round(cur.temperature_2m),
         feelsLike: Math.round(cur.apparent_temperature),
-        code: cur.weathercode,
+        code: cur.weathercode as number,
         humidity: Math.round(cur.relativehumidity_2m),
         windSpeed: Math.round(cur.windspeed_10m),
     };
@@ -140,136 +147,41 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [permission, setPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (askPermission = false) => {
         setIsLoading(true);
         setError(null);
         try {
-            let lat = 40.9877; // default Istanbul
-            let lon = 29.0215;
-            let city = 'İstanbul';
-            let locationSource = 'default';
+            const perm = await geolocation.permission();
+            setPermission(perm);
+            let coords: { lat: number; lon: number; city: string | null; source: 'gps' | 'ip' } | null = null;
 
-            // 1. Try browser Geolocation first
-            try {
-                // Kısa süre: yükleme ekranı konum beklerken takılmasın
-                const fix = await geolocation.getCurrent({ timeoutMs: 3000, maxAgeMs: 5 * 60 * 1000 });
-                lat = fix.lat;
-                lon = fix.lng;
-                locationSource = 'gps';
-            } catch (gpsErr) {
-                console.warn('GPS geolocation failed/denied, trying IP geolocation...', gpsErr);
-                
-                // 2. Fallback to IP Geolocation (Try FreeIPAPI with CORS support first, then ipapi.co)
-                try {
-                    const freeIpRes = await fetch('https://freeipapi.com/api/json');
-                    if (freeIpRes.ok) {
-                        const ipData = await freeIpRes.json();
-                        if (ipData && ipData.latitude && ipData.longitude) {
-                            lat = ipData.latitude;
-                            lon = ipData.longitude;
-                            city = ipData.cityName || 'İstanbul';
-                            locationSource = 'ip';
-                        } else {
-                            throw new Error('Invalid data from FreeIPAPI');
-                        }
-                    } else {
-                        throw new Error(`FreeIPAPI returned status: ${freeIpRes.status}`);
-                    }
-                } catch (ipErr) {
-                    console.warn('FreeIPAPI failed, trying ipapi.co...', ipErr);
-                    try {
-                        const ipRes = await fetch('https://ipapi.co/json/');
-                        if (ipRes.ok) {
-                            const ipData = await ipRes.json();
-                            if (ipData && ipData.latitude && ipData.longitude) {
-                                lat = ipData.latitude;
-                                lon = ipData.longitude;
-                                city = ipData.city || ipData.region || 'İstanbul';
-                                locationSource = 'ip';
-                            }
-                        }
-                    } catch (fallbackErr) {
-                        console.warn('IP geolocation failed, using default Istanbul coordinates:', fallbackErr);
-                    }
-                }
+            if (perm === 'granted' || askPermission) {
+                const fix = await geolocation.getCurrentOrNull({ timeoutMs: askPermission ? 15000 : 6000, maxAgeMs: 10 * 60 * 1000 });
+                if (fix) coords = { lat: fix.lat, lon: fix.lng, city: null, source: 'gps' };
+                if (askPermission) setPermission(await geolocation.permission());
             }
-
-            // 3. Fetch real weather for coordinates from Open-Meteo
-            const wData = await fetchWeather(lat, lon);
-            
-            // 4. Reverse geocode city name if GPS was used to get detailed neighborhood name
-            if (locationSource === 'gps') {
-                try {
-                    const gpsCity = await reverseGeocode(lat, lon);
-                    if (gpsCity) city = gpsCity;
-                } catch (err) {
-                    console.warn('Reverse geocoding failed:', err);
-                }
+            if (!coords) {
+                const ip = await ipLocation();
+                if (ip) coords = { ...ip, source: 'ip' };
             }
+            if (!coords) { setWeather(null); setError('Konum belirlenemedi'); return; }
 
-            const info = getWeatherInfo(wData.code, wData.temp);
-
+            const w = await fetchWeather(coords.lat, coords.lon);
+            const city = coords.source === 'gps' ? await reverseGeocode(coords.lat, coords.lon) : coords.city;
+            const info = getWeatherInfo(w.code, w.temp);
             setWeather({
-                temp: wData.temp,
-                feelsLike: wData.feelsLike,
-                condition: info.condition,
-                icon: info.icon,
-                emoji: info.emoji,
-                humidity: wData.humidity,
-                windSpeed: wData.windSpeed,
-                walkScore: info.walkScore,
-                walkLabel: info.walkLabel,
-                badgeColor: info.badgeColor,
-                city,
-                lat,
-                lon,
+                ...w, ...info,
+                city: city || 'Konumun',
+                lat: coords.lat, lon: coords.lon,
+                source: coords.source,
                 lastUpdated: new Date(),
             });
-        } catch (err: any) {
-            console.error('All weather and location lookups failed, using default:', err);
+        } catch (err) {
+            console.warn('Hava durumu alınamadı:', err);
             setError('Hava durumu alınamadı');
-            
-            // Safe fallback if open-meteo is down
-            try {
-                const defaultLat = 40.9877;
-                const defaultLon = 29.0215;
-                const wData = await fetchWeather(defaultLat, defaultLon);
-                const info = getWeatherInfo(wData.code, wData.temp);
-                setWeather({
-                    temp: wData.temp,
-                    feelsLike: wData.feelsLike,
-                    condition: info.condition,
-                    icon: info.icon,
-                    emoji: info.emoji,
-                    humidity: wData.humidity,
-                    windSpeed: wData.windSpeed,
-                    walkScore: info.walkScore,
-                    walkLabel: info.walkLabel,
-                    badgeColor: info.badgeColor,
-                    city: 'İstanbul',
-                    lat: defaultLat,
-                    lon: defaultLon,
-                    lastUpdated: new Date(),
-                });
-            } catch {
-                setWeather({
-                    temp: 21,
-                    feelsLike: 20,
-                    condition: 'Parçalı Bulutlu',
-                    icon: '⛅',
-                    emoji: '⛅',
-                    humidity: 60,
-                    windSpeed: 10,
-                    walkScore: 85,
-                    walkLabel: 'Uygun',
-                    badgeColor: 'emerald',
-                    city: 'Caddebostan',
-                    lat: 40.9877,
-                    lon: 29.0215,
-                    lastUpdated: new Date(),
-                });
-            }
+            setWeather(null);
         } finally {
             setIsLoading(false);
         }
@@ -277,12 +189,20 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         load();
-        const interval = setInterval(load, REFRESH_INTERVAL_MS);
+        const interval = setInterval(() => load(), REFRESH_INTERVAL_MS);
         return () => clearInterval(interval);
     }, [load]);
 
+    const requestPrecise = useCallback(() => load(true), [load]);
+
     return (
-        <WeatherContext.Provider value={{ weather, isLoading, error, refresh: load }}>
+        <WeatherContext.Provider value={{
+            weather, isLoading, error,
+            needsPermission: permission !== 'granted',
+            permissionDenied: permission === 'denied',
+            refresh: () => load(),
+            requestPrecise,
+        }}>
             {children}
         </WeatherContext.Provider>
     );

@@ -74,7 +74,7 @@ export function HomeHeader({ firstName, userId, avatar, pets, activePetId, onSwi
                 </Link>
             )}
 
-            <div className="relative h-[236px] overflow-hidden">
+            <div className="relative min-h-[236px] pb-12 overflow-hidden">
                 <img
                     src="/images/header-hero.jpg"
                     alt=""
@@ -103,7 +103,7 @@ export function HomeHeader({ firstName, userId, avatar, pets, activePetId, onSwi
                                 type="button"
                                 aria-label={unreadCount > 0 ? `Bildirimler, ${unreadCount} okunmamış` : 'Bildirimler'}
                                 onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent('open-notification-drawer')); }}
-                                className="relative w-11 h-11 rounded-full bg-card/95 shadow-[0_4px_14px_rgba(32,27,22,0.12)] flex items-center justify-center active:scale-95 transition-transform"
+                                className="glass relative w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-transform"
                             >
                                 <Bell className="w-[21px] h-[21px] text-foreground" strokeWidth={2} />
                                 {unreadCount > 0 && (
@@ -115,7 +115,7 @@ export function HomeHeader({ firstName, userId, avatar, pets, activePetId, onSwi
                             <Link
                                 href={userId ? `/profile/${userId}` : '/home'}
                                 aria-label="Profilim"
-                                className="w-11 h-11 rounded-full p-[2px] bg-card shadow-[0_4px_14px_rgba(32,27,22,0.12)] active:scale-95 transition-transform"
+                                className="glass w-11 h-11 rounded-full p-[3px] active:scale-95 transition-transform"
                             >
                                 <Avatar src={avatar} name={firstName} className="w-full h-full text-[15px]" />
                             </Link>
@@ -126,29 +126,29 @@ export function HomeHeader({ firstName, userId, avatar, pets, activePetId, onSwi
                         {greeting} {firstName}!
                     </h1>
                     <p className="mt-1.5 max-w-[215px] text-[13.5px] leading-snug font-semibold text-foreground/75">“{quote}”</p>
-                </div>
 
-                {pets.length > 1 && (
-                    <div className="absolute z-10 right-5 bottom-10">
-                        <div className="flex items-center gap-1.5 bg-card/90 backdrop-blur rounded-full p-1 shadow-[0_4px_14px_rgba(32,27,22,0.12)]">
+                    {pets.length > 1 && (
+                        <div className="mt-3.5 flex flex-wrap gap-1.5 max-w-[260px]" role="radiogroup" aria-label="Evcil hayvan seç">
                             {pets.map(p => {
                                 const active = p.id === activePetId;
                                 return (
                                     <button
                                         key={p.id}
                                         type="button"
-                                        aria-label={`${p.name} seç`}
-                                        aria-pressed={active}
+                                        role="radio"
+                                        aria-checked={active}
                                         onClick={() => { haptics.tap(); onSwitchPet(p.id); }}
-                                        className={`rounded-full transition-all ${active ? 'ring-2 ring-accent ring-offset-2 ring-offset-card' : 'opacity-60'}`}
+                                        className={`glass flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 text-[12.5px] font-bold transition-all active:scale-95 ${active ? 'text-accent ring-2 ring-accent/70' : 'text-foreground/80'}`}
                                     >
-                                        <Avatar src={p.image || p.avatar} name={p.name} className="w-8 h-8 text-[13px]" />
+                                        <Avatar src={p.image || p.avatar} name={p.name} className="w-6 h-6 text-[11px]" />
+                                        {p.name}
                                     </button>
                                 );
                             })}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
+
             </div>
         </header>
     );

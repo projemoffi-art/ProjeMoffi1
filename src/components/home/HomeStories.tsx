@@ -65,12 +65,12 @@ export function HomeStories({ groups }: { groups: UserStoryGroup[] }) {
                             <span className="relative">
                                 <span
                                     className="block w-[60px] h-[60px] rounded-full p-[2.5px]"
-                                    style={{ background: unseen ? style.color : 'color-mix(in srgb, var(--foreground) 14%, transparent)' }}
+                                    style={{ background: unseen ? `conic-gradient(from 210deg, ${style.color}, #F7B24A, #EE5B3D, ${style.color})` : 'color-mix(in srgb, var(--foreground) 14%, transparent)' }}
                                 >
                                     <span className="block w-full h-full rounded-full border-[2.5px] border-background overflow-hidden">
                                         {style.Icon ? (
-                                            <span className="w-full h-full flex items-center justify-center" style={{ backgroundColor: style.color }}>
-                                                <style.Icon className="w-6 h-6 text-white" strokeWidth={2.2} />
+                                            <span className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${style.color} 70%, #fff) 0%, ${style.color} 55%, color-mix(in srgb, ${style.color} 80%, #000) 100%)` }}>
+                                                <style.Icon className="w-6 h-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]" strokeWidth={2.2} />
                                             </span>
                                         ) : (
                                             <img src={g.author_avatar || '/images/header-hero.jpg'} alt="" className="w-full h-full object-cover" />

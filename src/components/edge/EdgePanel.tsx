@@ -21,8 +21,9 @@ import { useNotifications } from '@/context/NotificationContext';
 import { useChat } from '@/context/ChatContext';
 import { useMyBusinesses, setLastPanel } from '@/hooks/useMyBusinesses';
 import { useUpcomingCare } from '@/hooks/useUpcomingCare';
-import { geolocation, haptics } from '@/native';
-import { getWeather, type WeatherData } from '@/services/weatherService';
+import { haptics } from '@/native';
+import { useWeather } from '@/context/WeatherContext';
+import { ThemePicker } from '@/components/common/ThemePicker';
 import { daysLeftText } from '@/lib/health/derive';
 import { formatClock, formatKm } from '@/lib/walkMetrics';
 import { cn } from '@/lib/utils';
@@ -32,8 +33,6 @@ import {
 } from './edgeCatalog';
 
 const HANDLE_Y_KEY = 'moffi_edge_y';
-const WEATHER_KEY = 'moffi_edge_weather';
-const WEATHER_TTL = 30 * 60 * 1000;
 const WEATHER_ICON: Record<string, typeof Sun> = { Sun, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning };
 
 function Tile({ s, badge, onClick }: { s: EdgeShortcut; badge?: number; onClick: () => void }) {
@@ -61,13 +60,14 @@ function Tile({ s, badge, onClick }: { s: EdgeShortcut; badge?: number; onClick:
 function Card({ children, onClick, className }: { children: React.ReactNode; onClick?: () => void; className?: string }) {
     const Comp = onClick ? 'button' : 'div';
     return (
-        <Comp type={onClick ? 'button' : undefined} onClick={onClick} className={cn('w-full text-left rounded-[20px] bg-card border border-card-border p-3.5', onClick && 'active:scale-[0.98] transition-transform', className)}>
+        <Comp type={onClick ? 'button' : undefined} onClick={onClick} className={cn('w-full text-left rounded-[20px] card-premium p-3.5', onClick && 'active:scale-[0.98] transition-transform', className)}>
             {children}
         </Comp>
     );
 }
 
-export function EdgePanel() {
+/** hidden: başka bir pencere (yürüyüş hazırlığı, hikâye, ayarlar…) açıkken tutamak gizlenir. */
+export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
     const router = useRouter();
     const pathname = usePathname();
     const { user, updateSettings } = useAuth();
@@ -98,26 +98,7 @@ export function EdgePanel() {
     useEffect(() => { if (!open) setView('main'); }, [open]);
 
     // --- Hava durumu (izin zaten verilmişse kendiliğinden; değilse kullanıcı dokununca sorulur) ---
-    const [weather, setWeather] = useState<WeatherData | null>(null);
-    const [weatherState, setWeatherState] = useState<'idle' | 'loading' | 'need-permission' | 'denied' | 'error'>('idle');
-    const loadWeather = useCallback(async (ask: boolean) => {
-        try {
-            const cached = JSON.parse(sessionStorage.getItem(WEATHER_KEY) || 'null');
-            if (cached && Date.now() - cached.at < WEATHER_TTL) { setWeather(cached.data); setWeatherState('idle'); return; }
-        } catch { /* yoksay */ }
-        const perm = await geolocation.permission();
-        if (perm === 'denied') { setWeatherState('denied'); return; }
-        if (perm !== 'granted' && !ask) { setWeatherState('need-permission'); return; }
-        setWeatherState('loading');
-        const fix = await geolocation.getCurrentOrNull({ timeoutMs: 10000 });
-        if (!fix) { setWeatherState((await geolocation.permission()) === 'denied' ? 'denied' : 'error'); return; }
-        const data = await getWeather(fix.lat, fix.lng);
-        if (!data) { setWeatherState('error'); return; }
-        setWeather(data);
-        setWeatherState('idle');
-        try { sessionStorage.setItem(WEATHER_KEY, JSON.stringify({ at: Date.now(), data })); } catch { /* yoksay */ }
-    }, []);
-    useEffect(() => { if (open && !weather) loadWeather(false); }, [open, weather, loadWeather]);
+    const { weather, isLoading: weatherLoading, needsPermission, permissionDenied, requestPrecise } = useWeather();
 
     // --- Tutamak: dokun / içeri kaydır = aç; yukarı-aşağı sürükle = taşı ---
     const drag = useRef<{ x: number; y: number; startY: number; moved: boolean; vertical: boolean; opened: boolean } | null>(null);
@@ -169,12 +150,12 @@ export function EdgePanel() {
     const goalKm = Math.max(0.1, dailyGoal.distance);
     const percent = Math.min(100, Math.round((todayDistanceKm / goalKm) * 100));
     const nextCare = care[0];
-    const WeatherIcon = weather ? WEATHER_ICON[weather.icon] || Sun : Sun;
+    const WeatherIcon = weather ? WEATHER_ICON[weather.iconKey] || Sun : Sun;
 
     return (
         <>
             {/* Tutamak */}
-            {!open && (
+            {!open && !hidden && (
                 <div
                     role="button"
                     aria-label="Kenar panelini aç"
@@ -237,7 +218,7 @@ export function EdgePanel() {
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <span className="block text-[12px] font-bold text-secondary">Bugünkü yürüyüş</span>
+                                                            <span className="block text-[12px] font-bold text-secondary">Bugün</span>
                                                             <span className="block text-[20px] font-extrabold leading-tight">{formatKm(todayDistanceKm, 1)} <span className="text-[13px] text-secondary">/ {formatKm(goalKm, 1)} km</span></span>
                                                             <span className="block text-[12px] font-bold text-accent">Yürüyüşe başla</span>
                                                         </>
@@ -249,26 +230,26 @@ export function EdgePanel() {
 
                                         {/* Hava + sıradaki sağlık işi */}
                                         <div className="grid grid-cols-2 gap-2.5">
-                                            <Card onClick={weatherState === 'need-permission' || weatherState === 'error' ? () => loadWeather(true) : undefined} className="p-3">
+                                            <Card onClick={(!weather || weather.source === 'ip') && !permissionDenied ? () => requestPrecise() : undefined} className="p-3">
                                                 {weather ? (
                                                     <>
                                                         <div className="flex items-center justify-between">
                                                             <span className="text-[24px] font-extrabold leading-none">{weather.temp}°</span>
                                                             <WeatherIcon className="w-7 h-7 text-[#E8A33D]" />
                                                         </div>
-                                                        <p className="text-[12px] font-bold mt-1.5">{weather.condition}</p>
-                                                        <p className="text-[11px] font-semibold text-secondary leading-snug mt-0.5 line-clamp-3">{weather.recommendation}</p>
+                                                        <p className="text-[12px] font-bold mt-1 truncate">{weather.condition}</p>
+                                                        <p className="text-[11px] font-semibold text-secondary leading-snug mt-0.5 line-clamp-2">{weather.advice}</p>
                                                     </>
                                                 ) : (
                                                     <div className="flex flex-col items-start gap-1.5">
                                                         <MapPin className="w-6 h-6 text-[#E8A33D]" />
                                                         <p className="text-[12px] font-bold leading-snug">
-                                                            {weatherState === 'loading' ? 'Hava durumu alınıyor…'
-                                                                : weatherState === 'denied' ? 'Konum izni kapalı'
-                                                                : weatherState === 'error' ? 'Alınamadı, tekrar dene'
-                                                                : 'Hava durumunu göster'}
+                                                            {weatherLoading ? 'Hava durumu alınıyor…'
+                                                                : permissionDenied ? 'Konum izni kapalı'
+                                                                : needsPermission ? 'Hava durumunu göster'
+                                                                : 'Alınamadı, tekrar dene'}
                                                         </p>
-                                                        {weatherState === 'denied' && <p className="text-[11px] font-semibold text-secondary leading-snug">Telefon ayarlarından konuma izin verebilirsin.</p>}
+                                                        {permissionDenied && <p className="text-[11px] font-semibold text-secondary leading-snug">Telefon ayarlarından konuma izin verebilirsin.</p>}
                                                     </div>
                                                 )}
                                             </Card>
@@ -293,10 +274,13 @@ export function EdgePanel() {
                                         </div>
 
                                         {/* Kısayollar */}
-                                        <div className="rounded-[20px] bg-card border border-card-border px-2 py-3.5">
+                                        <div className="rounded-[20px] card-premium px-2 py-3.5">
                                             <div className="grid grid-cols-4 gap-y-3.5 justify-items-center">
                                                 {visibleShortcuts.map(s => <Tile key={s.id} s={s} badge={badgeOf(s.id)} onClick={() => runShortcut(s)} />)}
                                             </div>
+                                        </div>
+                                        <div className="rounded-[20px] card-premium p-2">
+                                            <ThemePicker compact />
                                         </div>
                                     </div>
                                     <div className="shrink-0 border-t border-card-border px-3 py-2 flex items-center justify-between">
@@ -347,7 +331,7 @@ export function EdgePanel() {
                                             return (
                                                 <div key={group}>
                                                     <p className="text-[11.5px] font-extrabold text-secondary uppercase tracking-wide px-1 mb-1.5">{group}</p>
-                                                    <div className="rounded-[18px] bg-card border border-card-border divide-y divide-card-border overflow-hidden">
+                                                    <div className="rounded-[18px] card-premium divide-y divide-card-border overflow-hidden">
                                                         {items.map(s => {
                                                             const on = draft.includes(s.id);
                                                             const disabled = (!on && draft.length >= MAX_EDGE_SHORTCUTS) || (on && draft.length <= MIN_EDGE_SHORTCUTS);
@@ -379,7 +363,7 @@ export function EdgePanel() {
 
                                         <div>
                                             <p className="text-[11.5px] font-extrabold text-secondary uppercase tracking-wide px-1 mb-1.5">Tutamak</p>
-                                            <div className="rounded-[18px] bg-card border border-card-border p-3 space-y-3">
+                                            <div className="rounded-[18px] card-premium p-3 space-y-3">
                                                 <div>
                                                     <p className="text-[12.5px] font-bold mb-1.5">Ekranın hangi kenarında?</p>
                                                     <div className="grid grid-cols-2 gap-1.5">

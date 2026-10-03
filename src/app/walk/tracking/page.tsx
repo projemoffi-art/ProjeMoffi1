@@ -243,13 +243,10 @@ function TrackingContent() {
                         <span className="w-2 h-2 rounded-full bg-current" /> {pill.label}
                     </span>
                     {weather && (
-                        <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5 bg-card text-foreground border border-card-border">
+                        <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5 glass text-foreground">
                             {weather.emoji} {Math.round(weather.temp)}°C
                         </span>
                     )}
-                    <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5 bg-card text-foreground border border-card-border">
-                        ⏱ {Math.floor(walkData.time / 60)} dk
-                    </span>
                     {beaconId && (
                         <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center bg-foreground text-background">Konum paylaşılıyor</span>
                     )}
@@ -262,7 +259,7 @@ function TrackingContent() {
                             </div>
                         )}
                         {pawWarning && (
-                            <div className="rounded-2xl bg-card text-foreground text-[12px] font-semibold px-3.5 py-2.5 border border-card-border">🐾 {pawWarning}</div>
+                            <div className="rounded-2xl glass text-foreground text-[12px] font-semibold px-3.5 py-2.5">🐾 {pawWarning}</div>
                         )}
                     </div>
                 )}
@@ -290,7 +287,7 @@ function TrackingContent() {
                     </div>
                 )}
 
-                <div ref={bottomPanelRef} className="bg-card rounded-t-[28px] shadow-[0_-10px_30px_rgba(0,0,0,0.10)] px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
+                <div ref={bottomPanelRef} className="glass rounded-t-[28px] px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
                     {isPaused ? (
                         <div className="flex flex-col items-center text-center mb-5">
                             <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mb-3">

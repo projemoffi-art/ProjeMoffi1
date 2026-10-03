@@ -86,6 +86,7 @@ const MOCK_USER_BASE = (email: string, name?: string): User => ({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const userRef = React.useRef<User | null>(null);
+    const settingsWriteChain = React.useRef<Promise<void>>(Promise.resolve());
     const [isLoading, setIsLoading] = useState(true);
     const isLoadingRef = React.useRef(true);
 
@@ -221,7 +222,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         address: (profile as any).address,
                         ownerName: (profile as any).owner_name || (profile as any).ownerName,
                         phone: profile.phone,
+                        // Kayıtlı TÜM ayar kategorileri korunur (kenar paneli, yapay zekâ, bildirim, erişilebilirlik…).
+                        // Eskiden yalnızca appearance/privacy alınıyordu; sonraki updateSettings kalanları veritabanından siliyordu.
                         settings: {
+                            ...((profile as any).settings || {}),
                             appearance: (profile as any).settings?.appearance || { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
                             privacy: (profile as any).settings?.privacy || { smartShopEnabled: true }
                         }
@@ -549,15 +553,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (typeof window !== 'undefined') {
             if (isSupabaseEnabled) {
-                try {
-                    const { error } = await supabase
-                        .from('profiles')
-                        .update({ settings: updatedSettings })
-                        .eq('id', currentUser.id);
-                    if (error) console.error("Error saving settings to database:", error);
-                } catch (err) {
-                    console.error("Exception saving settings:", err);
-                }
+                // Veritabanındaki güncel ayarların üstüne yalnızca bu kategori birleştirilir: ekrandaki kopya eksik
+                // olsa bile (ör. profil yüklenemeyip varsayılanla açılmışsa) diğer kategoriler silinmez.
+                // Art arda gelen kayıtlar sıraya alınır; biri diğerinin değişikliğini ezmez.
+                const userId = currentUser.id;
+                settingsWriteChain.current = settingsWriteChain.current.then(async () => {
+                    try {
+                        const { data: row, error: readError } = await supabase.from('profiles').select('settings').eq('id', userId).single();
+                        if (readError) throw readError;
+                        const base = (row?.settings || {}) as Record<string, any>;
+                        const merged = { ...base, [category]: { ...(base[category] || {}), ...data } };
+                        const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);
+                        if (error) console.error("Ayarlar kaydedilemedi:", error);
+                    } catch (err) {
+                        console.error("Ayarlar kaydedilemedi:", err);
+                    }
+                });
+                await settingsWriteChain.current;
             } else {
                 localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
             }
@@ -821,6 +833,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     ownerName: (profile as any).ownerName,
                     phone: profile.phone,
                     settings: {
+                        ...((profile as any).settings || {}),
                         appearance: (profile as any).settings?.appearance || { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
                         privacy: (profile as any).settings?.privacy || { smartShopEnabled: true }
                     }

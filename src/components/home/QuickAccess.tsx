@@ -17,7 +17,7 @@ type Action = { path?: string; event?: [string, unknown?] };
 
 const QUICK: { label: string; Icon: typeof Home; tint: string; action: Action; badgeKey?: 'lost' | 'cart' }[] = [
     { label: 'Kayıp & Sahiplen', Icon: Home, tint: '#EE5B3D', action: { path: '/kayip' }, badgeKey: 'lost' },
-    { label: 'Market Petshop', Icon: ShoppingBag, tint: '#E8A33D', action: { path: '/petshop' }, badgeKey: 'cart' },
+    { label: 'Market Petshop', Icon: ShoppingBag, tint: '#E0892E', action: { path: '/petshop' }, badgeKey: 'cart' },
     { label: 'Veteriner', Icon: Stethoscope, tint: '#2F9E8F', action: { path: '/vet' } },
     { label: 'Sağlık Merkezi', Icon: HeartPulse, tint: '#8B7FD9', action: { path: '/health' } },
     { label: 'Beslenme & Su', Icon: Bone, tint: '#6BAF3A', action: { event: ['open-care-hub', { tab: 'nutrition' }] } },
@@ -85,10 +85,13 @@ export function QuickAccess({ lostCount, cartCount }: { lostCount: number; cartC
                             key={q.label}
                             type="button"
                             onClick={() => run(q.action)}
-                            className="relative flex flex-col items-center gap-1.5 rounded-[18px] bg-card border border-card-border px-1 pt-3 pb-2.5 shadow-[0_4px_14px_-8px_rgba(32,27,22,0.18)] active:scale-95 transition-transform"
+                            className="relative flex flex-col items-center gap-1.5 rounded-[18px] card-premium px-1 pt-3 pb-2.5 shadow-[0_4px_14px_-8px_rgba(32,27,22,0.18)] active:scale-95 transition-transform"
                         >
-                            <span className="w-10 h-10 rounded-[14px] flex items-center justify-center" style={{ backgroundColor: `${q.tint}1F` }}>
-                                <q.Icon className="w-[22px] h-[22px]" style={{ color: q.tint }} strokeWidth={2.1} />
+                            <span
+                                className="w-11 h-11 rounded-[15px] flex items-center justify-center"
+                                style={{ background: `linear-gradient(160deg, ${q.tint} 0%, color-mix(in srgb, ${q.tint} 76%, #000) 100%)`, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 16px -8px ${q.tint}` }}
+                            >
+                                <q.Icon className="w-[22px] h-[22px] text-white" strokeWidth={2.1} />
                             </span>
                             <span className="text-[11.5px] font-bold text-foreground text-center leading-[1.15]">{q.label}</span>
                             {badge > 0 && (
@@ -142,7 +145,7 @@ function AllServicesSheet({ open, onClose, onGo }: { open: boolean; onClose: () 
                             {ALL.map(group => (
                                 <div key={group.title}>
                                     <h3 className="text-[12.5px] font-bold text-secondary uppercase tracking-wide mb-2 px-1">{group.title}</h3>
-                                    <div className="rounded-[20px] bg-card border border-card-border divide-y divide-card-border overflow-hidden">
+                                    <div className="rounded-[20px] card-premium divide-y divide-card-border overflow-hidden">
                                         {group.items.map(item => (
                                             <button
                                                 key={item.path}

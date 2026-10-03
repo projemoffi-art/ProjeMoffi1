@@ -455,6 +455,19 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   izin varsa kendiliğinden, yoksa dokununca), sıradaki sağlık işi, gerçek künye QR (`/id/<petId>`). Eski `MoffiSidebar` (sahte hava/adım/
   su/ruh hali/QR/kapsül) ve `ActivityContext.activeMode/recTime/orderStep` silindi. `getWeather` hata hâlinde `null` döner.
 - **8.63e Bildirim izni** Ayarlar → Bildirimler'de gerçek aboneliğe bağlı (`PushSubscriptionRow`, `push_subscriptions`).
+- **8.63f 🔴 Ayarlar kayboluyordu (kök neden, düzeltildi):** `AuthContext` profili yüklerken `settings`'ten yalnızca
+  `appearance`/`privacy`'yi alıyordu; sonraki her `updateSettings` bu eksik kopyayı yazıp kenar paneli, yapay zekâ, bildirim,
+  erişilebilirlik ayarlarını veritabanından SİLİYORDU. Şimdi tüm kategoriler korunur ve `updateSettings` veritabanındaki güncel
+  ayarları okuyup yalnızca değişen kategoriyi birleştirir (yazımlar sıraya alınır). Ders: kısmi bir kopyayı bütün olarak geri yazma.
+- **8.63g Hava durumu TEK kaynak `WeatherContext`** (`weatherService`/`hooks/useWeather` silindi). Konum izni kendiliğinden SORULMAZ:
+  izin varsa GPS, yoksa IP'den yaklaşık konum (`source: 'ip'`); kesin konum `requestPrecise()` ile kullanıcı isteyince. Veri yoksa
+  `weather = null` (eski sahte "Caddebostan 21°" / varsayılan İstanbul kaldırıldı). `isHotForPaws` (≥25°), `advice`, `iconKey`.
+- **8.63h Görsel dil:** `globals.css` → `.glass` (yüzen cam: alt menü, başlık düğmeleri, takip ekranı panelleri), `.glass-photo`
+  (fotoğraf üstü), `.card-premium` (kartlar). "Saydamlığı azalt" açıksa düz renk. Alt menü yüzen cam hap (Liquid Glass benzeri).
+  Tema: `ThemeContext.preference` = açık/koyu/sistem, seçici `components/common/ThemePicker` (Ayarlar → Görünüm ve tema, kenar paneli).
+- **8.63i Yürüyüş:** ana sayfa kartı = halka (yüzde) + hafta şeridi (Pzt–Paz yürünen günler) + seri + hava/sıcak zemin uyarısı + cam
+  ölçü şeridi. Hazırlık paneli: kim yürüyor (isimli seçim), hedef her zaman açık, hava/pati güvenliği, günlük hazırlık listesi
+  (tasma/poşet/su/ödül, cihazda o gün), son yürüyüş + son 7 gün, sabit "Yürüyüşe Başla". Kenar tutamağı açık pencerelerde gizlenir.
 
 ### Supabase bağlayıcısı (claude.ai) notu
 `DROP` ve `DELETE` geçen her komut için ayrı onay ister (VS Code panelinde gösterilemez → "declined"; "her zaman izin ver" aşmaz).

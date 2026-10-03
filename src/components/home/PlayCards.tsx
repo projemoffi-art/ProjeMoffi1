@@ -25,17 +25,17 @@ export function PlayCards() {
             <button
                 type="button"
                 onClick={() => go('/game')}
-                className="relative min-h-[150px] rounded-[22px] overflow-hidden bg-[#1D2233] text-left p-3.5 flex flex-col justify-between active:scale-[0.98] transition-transform"
+                className="relative min-h-[156px] rounded-[22px] overflow-hidden bg-[#1D2233] text-left p-3 flex flex-col justify-between active:scale-[0.98] transition-transform shadow-[0_14px_30px_-16px_rgba(32,27,22,0.5)]"
             >
-                <img src="/images/game-center.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: '54% 28%' }} />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/75" />
-                <div className="relative">
+                <img src="/images/game-center.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: '60% 62%' }} />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/15 to-black/40" />
+                <div className="relative" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.55)' }}>
                     <div className="flex items-center gap-1.5 text-white text-[15px] font-bold">
                         <Gamepad2 className="w-[18px] h-[18px]" /> Oyun Merkezi
                     </div>
                     <p className="text-white/85 text-[12px] font-semibold mt-0.5">{GAME_COUNT} oyun seni bekliyor</p>
                 </div>
-                <div className="relative">
+                <div className="relative glass-photo rounded-[16px] px-2.5 py-2">
                     <div className="flex items-center justify-between text-[12px] font-bold mb-1.5">
                         <span className="text-white">Seviye {level}</span>
                         <span className="text-[#F0C94E] flex items-center gap-1"><Crown className="w-3.5 h-3.5" /> {totalPatiPuan.toLocaleString('tr-TR')}</span>
@@ -54,7 +54,7 @@ export function PlayCards() {
             <button
                 type="button"
                 onClick={() => go('/quests')}
-                className="min-h-[150px] rounded-[22px] bg-card border border-card-border text-left p-3.5 flex flex-col justify-between active:scale-[0.98] transition-transform"
+                className="min-h-[150px] rounded-[22px] card-premium text-left p-3.5 flex flex-col justify-between active:scale-[0.98] transition-transform"
             >
                 <div>
                     <div className="flex items-center gap-1.5 text-foreground text-[15px] font-bold">

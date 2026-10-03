@@ -66,7 +66,7 @@ export function StatRow({ items, size = "md" }: { items: { value: ReactNode; uni
 }
 
 export function WalkCard({ children, className }: { children: ReactNode; className?: string }) {
-    return <div className={cn("bg-card rounded-3xl border border-card-border shadow-moffi-card", className)}>{children}</div>;
+    return <div className={cn("card-premium rounded-3xl", className)}>{children}</div>;
 }
 
 export function PrimaryButton({ children, onClick, disabled, className }: { children: ReactNode; onClick?: () => void; disabled?: boolean; className?: string }) {
@@ -76,7 +76,8 @@ export function PrimaryButton({ children, onClick, disabled, className }: { chil
             whileTap={{ scale: 0.97 }}
             onClick={onClick}
             disabled={disabled}
-            className={cn("w-full h-14 rounded-2xl bg-accent text-white text-[15px] font-extrabold flex items-center justify-center gap-2 shadow-[0_10px_24px_-8px_rgba(238,91,61,0.55)] disabled:opacity-60", className)}
+            className={cn("w-full h-14 rounded-2xl text-white text-[15px] font-extrabold flex items-center justify-center gap-2 disabled:opacity-60", className)}
+            style={{ background: 'radial-gradient(120% 160% at 30% 10%, #FF9A6B 0%, #EE5B3D 50%, #CC452B 100%)', boxShadow: '0 12px 26px -10px rgba(238,91,61,0.85), inset 0 1px 0 rgba(255,255,255,0.45)' }}
         >
             {children}
         </motion.button>

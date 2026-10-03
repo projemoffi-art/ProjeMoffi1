@@ -28,6 +28,7 @@ import { socialService, type PersonCard } from '@/services/socialService';
 import { isFrameUnlocked, formatRemaining, type FrameStyle } from '@/lib/vipFrames';
 import { DeleteAccountButton } from '@/components/account/AccountDeletion';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { ThemePicker } from '@/components/common/ThemePicker';
 import { EDGE_SHORTCUTS, MAX_EDGE_SHORTCUTS, MIN_EDGE_SHORTCUTS, readEdgeSettings, type EdgeShortcutId } from '@/components/edge/edgeCatalog';
 
 interface SettingsDrawerProps {
@@ -423,7 +424,7 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
 
         <Section title="Erişilebilirlik ve Görünüm">
             <ActionRow icon={Layers} label="Kenar Paneli" desc="Kenar panelindeki kısayolları seç." onClick={() => setView('sidebar_config')} />
-            <ActionRow icon={Type} label="Metin ve Renk Ayarları" desc="Yazı boyutu ve görme desteği." onClick={() => setView('accessibility')} />
+            <ActionRow icon={Type} label="Görünüm ve tema" desc="Açık/koyu tema, yazı boyutu, görme desteği." onClick={() => setView('accessibility')} />
         </Section>
         
         <Section title="Moffi AI & Akıllı Asistan">
@@ -684,6 +685,13 @@ const AccessibilityView = ({
 }: ViewProps) => (
     <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar pr-1" style={{ maxHeight: 'calc(94vh - 180px)' }}>
         <div className="space-y-8 pb-10">
+            {/* Tema */}
+            <div className="px-2">
+                <h3 className="text-[14px] font-black text-foreground mb-1">Tema</h3>
+                <p className="text-[12px] font-semibold text-secondary mb-3">Sistem seçilirse telefonun açık/koyu ayarını izler.</p>
+                <ThemePicker />
+            </div>
+
             {/* Metin Boyutu Seksiyonu */}
             <div className="px-2">
                 <div className="flex items-center gap-3 mb-6">

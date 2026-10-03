@@ -42,7 +42,7 @@ export function HomeReminders({ items, loaded }: { items: CareItem[]; loaded: bo
                     <Skeleton className="h-[68px]" />
                 </div>
             ) : rows.length === 0 ? (
-                <div className="rounded-[20px] bg-card border border-card-border px-4 py-4 flex items-center gap-3">
+                <div className="rounded-[20px] card-premium px-4 py-4 flex items-center gap-3">
                     <span className="w-11 h-11 rounded-full bg-[#8FD14F]/20 flex items-center justify-center shrink-0">
                         <CheckCircle2 className="w-6 h-6 text-[#5C9B2E]" />
                     </span>
@@ -61,7 +61,7 @@ export function HomeReminders({ items, loaded }: { items: CareItem[]; loaded: bo
                             <Link
                                 key={item.id}
                                 href={item.href}
-                                className="rounded-[20px] bg-card border border-card-border pl-3 pr-3 py-3 flex items-center gap-3 active:scale-[0.99] transition-transform"
+                                className="rounded-[20px] card-premium pl-3 pr-3 py-3 flex items-center gap-3 active:scale-[0.99] transition-transform"
                             >
                                 <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: style.color }}>
                                     <style.Icon className="w-5 h-5 text-white" strokeWidth={2.2} />

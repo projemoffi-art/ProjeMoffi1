@@ -53,7 +53,7 @@ export function HomeRecommendations({ products, onAddToCart }: {
                         tabIndex={0}
                         onClick={() => { haptics.tap(); router.push(`/petshop?openProduct=${encodeURIComponent(p.id)}`); }}
                         onKeyDown={e => { if (e.key === 'Enter') router.push(`/petshop?openProduct=${encodeURIComponent(p.id)}`); }}
-                        className="snap-start w-[158px] shrink-0 rounded-[20px] bg-card border border-card-border overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+                        className="snap-start w-[158px] shrink-0 rounded-[20px] card-premium overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
                     >
                         <div className="h-[124px] bg-foreground/[0.05] relative">
                             {p.image && !broken.has(p.id) ? (
