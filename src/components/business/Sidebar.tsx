@@ -55,7 +55,7 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
         services: { name: "Hizmetlerim", path: "/business/services", icon: Activity },
         doctors: { name: typeConfig.staffLabelPlural, path: "/business/doctors", icon: Stethoscope },
         products: { name: t("business.sidebar.products"), path: "/business/products", icon: Store },
-        campaigns: { name: "Günün Fırsatı", path: "/business/campaigns", icon: Gift },
+        campaigns: { name: "Kampanyalar", path: "/business/campaigns", icon: Gift },
         quests: { name: t("business.sidebar.quests"), path: "/business/quests", icon: Megaphone },
         profile: { name: "İşletme profili", path: "/business/profile", icon: MapPin },
     };

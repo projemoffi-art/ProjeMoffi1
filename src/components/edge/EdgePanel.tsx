@@ -119,7 +119,6 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
     // Sayfa değişince panel kapanır.
     useEffect(() => { setOpen(false); }, [pathname]);
     useEffect(() => { if (!open) setView('main'); }, [open]);
-    useEffect(() => { if (view !== 'edit') setQuery(''); }, [view]);
 
     // --- Hava durumu (izin zaten verilmişse kendiliğinden; değilse kullanıcı dokununca sorulur) ---
     const { weather, isLoading: weatherLoading, needsPermission, permissionDenied, requestPrecise } = useWeather();
@@ -330,7 +329,7 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
                                         </div>
                                     </div>
                                     <div className="shrink-0 border-t border-card-border px-3 py-2 flex items-center justify-between">
-                                        <button type="button" onClick={() => { buzz(); setView('edit'); }} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-[13px] font-bold text-secondary active:bg-foreground/5">
+                                        <button type="button" onClick={() => { buzz(); setQuery(''); setView('edit'); }} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-[13px] font-bold text-secondary active:bg-foreground/5">
                                             <Pencil className="w-4 h-4" /> Düzenle
                                         </button>
                                         <button type="button" onClick={() => setOpen(false)} aria-label="Kapat" className="w-10 h-10 rounded-full flex items-center justify-center text-secondary active:bg-foreground/5">

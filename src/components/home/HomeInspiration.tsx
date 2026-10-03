@@ -5,7 +5,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { contentService, type FeedItem } from '@/services/contentService';
+import { contentLink, contentService, type FeedItem } from '@/services/contentService';
+import { device } from '@/native';
 import { Heart, PawPrint } from 'lucide-react';
 import { SectionHeader, ScrollDots, activeIndexOf, baloo } from './homeUI';
 
@@ -31,11 +32,13 @@ export function HomeInspiration({ items = [] }: { items?: FeedItem[] }) {
                 onScroll={e => setActive(activeIndexOf(e.currentTarget, slides.length))}
                 className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-5 px-5"
             >
-                {slides.map(s => (
+                {slides.map(s => {
+                    const link = contentLink(s.url);
+                    return (
                     <figure
                         key={s.key}
-                        onClick={s.url ? () => { if (s.id) contentService.track(s.id, 'tap'); if (s.url!.startsWith('/')) router.push(s.url!); else window.open(s.url!, '_blank', 'noopener'); } : undefined}
-                        className={`snap-center shrink-0 w-full relative h-[188px] rounded-[22px] overflow-hidden ${s.url ? 'cursor-pointer' : ''}`}
+                        onClick={link ? () => { if (s.id) contentService.track(s.id, 'tap'); if (link.kind === 'route') router.push(link.href); else device.openExternal(link.href); } : undefined}
+                        className={`snap-center shrink-0 w-full relative h-[188px] rounded-[22px] overflow-hidden ${link ? 'cursor-pointer' : ''}`}
                     >
                         <img src={s.image} alt="" className="absolute inset-0 w-full h-full object-cover scale-[1.04]" style={{ objectPosition: s.position }} />
                         <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(20,17,13,0.72) 0%, rgba(20,17,13,0.35) 48%, rgba(20,17,13,0) 75%)' }} />
@@ -47,7 +50,8 @@ export function HomeInspiration({ items = [] }: { items?: FeedItem[] }) {
                             </span>
                         </figcaption>
                     </figure>
-                ))}
+                    );
+                })}
             </div>
             <ScrollDots count={slides.length} active={active} />
         </section>

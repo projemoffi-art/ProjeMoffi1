@@ -62,7 +62,7 @@ export default function MigrationPage() {
             setPatients(pats);
             setSmsStatus(status);
         } catch (e: any) {
-            showToast("Hata", "Veriler yüklenemedi", "error");
+            showToast("Veriler yüklenemedi", "AlertCircle", "text-red-500 font-bold");
         } finally {
             setIsLoadingPatients(false);
         }
@@ -70,17 +70,17 @@ export default function MigrationPage() {
 
     const handleSaveSmsSettings = async () => {
         if (!smsForm.apiUsername || !smsForm.apiKey || !smsForm.senderId) {
-            showToast("Hata", "Tüm alanları doldurun", "error");
+            showToast("Tüm alanları doldurun", "AlertCircle", "text-red-500 font-bold");
             return;
         }
         setIsSavingSms(true);
         try {
             await apiService.setClinicSmsSettings(smsForm.provider, smsForm.apiUsername, smsForm.apiKey, smsForm.senderId);
-            showToast("Başarılı", "SMS ayarları kaydedildi", "success");
+            showToast("SMS ayarları kaydedildi", "CheckCircle2", "text-emerald-500 font-bold");
             setShowSmsForm(false);
             loadPatientsAndSms();
         } catch (e: any) {
-            showToast("Hata", e.message, "error");
+            showToast(e.message, "AlertCircle", "text-red-500 font-bold");
         } finally {
             setIsSavingSms(false);
         }
@@ -90,13 +90,13 @@ export default function MigrationPage() {
         try {
             const res = await apiService.sendClaimSms(patientId);
             if (res.mode === 'mock') {
-                showToast("Bilgi (Mock Mod)", "SMS sağlayıcı bağlı olmadığı için gerçek SMS atılmadı, işlem loglandı.", "info");
+                showToast("SMS sağlayıcı bağlı olmadığı için gerçek SMS atılmadı, işlem loglandı.", "Bell", "text-amber-500 font-bold");
             } else {
-                showToast("Başarılı", "SMS başarıyla gönderildi.", "success");
+                showToast("SMS başarıyla gönderildi.", "CheckCircle2", "text-emerald-500 font-bold");
             }
             loadPatientsAndSms(); // Refresh status
         } catch (e: any) {
-            showToast("Hata", "SMS gönderilemedi: " + e.message, "error");
+            showToast("SMS gönderilemedi: " + e.message, "AlertCircle", "text-red-500 font-bold");
         }
     };
 
@@ -194,7 +194,7 @@ export default function MigrationPage() {
         }
         setIsUploading(false);
         setResults({ success, error, logs });
-        if (success > 0) showToast("Başarılı", `${success} kayıt başarıyla içe aktarıldı.`, "success");
+        if (success > 0) showToast(`${success} kayıt başarıyla içe aktarıldı.`, "CheckCircle2", "text-emerald-500 font-bold");
     };
 
     return (
@@ -478,7 +478,7 @@ export default function MigrationPage() {
                                                                         onClick={async () => {
                                                                             try {
                                                                                 await apiService.approveManualClaim(p.id);
-                                                                                showToast('Hesap eşleşmesi onaylandı.', 'Check', 'text-green-500');
+                                                                                showToast('Hesap eşleşmesi onaylandı.', 'CheckCircle2', 'text-emerald-500 font-bold');
                                                                                 setPatients(patients.map(pat => pat.id === p.id ? {...pat, status: 'claimed'} : pat));
                                                                             } catch (err: any) {
                                                                                 showToast(err.message, 'AlertCircle', 'text-red-500');

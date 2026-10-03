@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { lostService } from '@/services/lostService';
-import { contentService, type FeedItem } from '@/services/contentService';
+import { contentLink, contentService, type FeedItem } from '@/services/contentService';
 import { useWeather } from '@/context/WeatherContext';
 import { usePet } from '@/context/PetContext';
 import { useActivity } from '@/context/ActivityContext';
@@ -73,10 +73,9 @@ const listingTitle = (l: { petName: string | null; kind: string }) =>
     l.petName?.trim() || (l.kind === 'found' ? 'Bulunan dost' : 'Kayıp dost');
 
 function ctaFromUrl(label: string | null, url: string | null): Pick<Story, 'ctaText' | 'ctaType' | 'ctaValue'> {
-    if (!url) return {};
-    if (url.startsWith('/')) return { ctaType: 'link', ctaValue: url, ctaText: label || 'Aç' };
-    if (/^https:\/\//.test(url)) return { ctaType: 'url', ctaValue: url, ctaText: label || 'Aç' };
-    return {};
+    const link = contentLink(url);
+    if (!link) return {};
+    return { ctaType: link.kind === 'route' ? 'link' : 'url', ctaValue: link.href, ctaText: label || 'Aç' };
 }
 
 function weekKey(now: number) {

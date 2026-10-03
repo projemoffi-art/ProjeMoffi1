@@ -498,6 +498,9 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - 🔴 **8.64a Depo güvenlik açığı (düzeltildi, 2026-10-03):** avatars/posts/stories/sounds depolarında güncelleme ve silme kuralları
   sahiplik denetlemiyordu. Artık yalnızca sahibi (`owner` ya da `<kullanıcı-id>/` klasörü). Yeni depo açarken aynı kuralı yaz.
 - Servis rolünün `businesses` gibi tablolara doğrudan yazma yetkisi yok (bilinçli); test kurulumunda işletme `execute_sql` ile açılır.
+- 🔴 Fırsat hikâyesi kampanyayı `clinic_campaigns`'ten CANLI okur; bu yüzden gösterilen alan (başlık/metin/görsel/kupon/hedef) değişince
+  `clinic_campaigns_content_review` tetikleyicisi öne çıkarmayı yeniden onaya düşürür (20261004100600). Canlı okunan işletme içeriğine yeni
+  alan eklersen tetikleyiciye de ekle. İçerik bağlantıları tek kural: `contentLink()` (`/…` ya da https; `//` reddedilir).
 
 ### Supabase bağlayıcısı (claude.ai) notu
 `DROP` ve `DELETE` geçen her komut için ayrı onay ister (VS Code panelinde gösterilemez → "declined"; "her zaman izin ver" aşmaz).
@@ -618,6 +621,12 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       bildirimi çıkıyordu; sıfırlandı, rozet anahtarı `moffi_earned_badges_v3`. Çerez bandı kompakt yazıldı, giriş/kurulumda gizli. `/onboarding` açık
       temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
       köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
+- [ ] 🔴 **Yeni işletme kaydı çalışmıyor (2026-10-03 genel kontrolde bulundu).** 8.54'te işletmeler ayrı kayda taşındı ama
+      `/business-register` hâlâ yalnızca `profiles`'a yazıyor; `protect_profile_*` tetikleyicileri rol/türü geri alıyor ve `businesses` +
+      `business_members` satırı oluşturan HİÇBİR yol yok → yeni işletme panele giremez, yönetici onay listesinde görünmez. Yönetici
+      onay ekranları (`/admin/businesses`, `/admin/users`, `/admin/health` vets sekmesi) hâlâ `profiles`'tan listeliyor (mevcut 3 işletmenin
+      kimliği sahibiyle aynı olduğu için şimdilik çalışıyor); `/admin/health` reddetmede neden göndermiyor. Çözüm planı Baran onayında.
+- [ ] `/admin/studio` ("Moffi Studio", `studio_assets`) hiçbir yerde kullanılmıyor; silme Baran onayında.
 - [ ] Yürüyüş denetimi C/D/E aşamaları (2026-10-03 raporu): C = görev/rozet/XP sunucuya, görev tiplerinin düzeltilmesi (günlük
       toplam, imkânsız "Çift Yürüyüş"), otomatik günlük hedefin gün içinde sabit kalması (ilk yürüyüşten sonra 1,7→2,3 sıçrıyor),
       meydan okuma/rozet/sıralama/ödül ekranlarının referans tasarıma çekilmesi. D = anahtarlı harita sağlayıcısı (OSM karo kullanım

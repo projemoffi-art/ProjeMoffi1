@@ -71,6 +71,15 @@ export interface AdminContentInput {
 type Row = Record<string, unknown>;
 const str = (v: unknown) => (v == null ? null : String(v));
 
+/** İçerik bağlantısının tek kuralı: uygulama içi yol ("/..." ama "//" değil) ya da https. Gerisi yok sayılır. */
+export function contentLink(url: string | null | undefined): { kind: 'route' | 'external'; href: string } | null {
+    const u = url?.trim();
+    if (!u) return null;
+    if (u.startsWith('/') && !u.startsWith('//')) return { kind: 'route', href: u };
+    if (/^https:\/\/[^\s]+$/i.test(u)) return { kind: 'external', href: u };
+    return null;
+}
+
 function fail(error: { message?: string } | null, fallback: string): never {
     // Sunucu fonksiyonlarının Türkçe hata metni kullanıcıya olduğu gibi gösterilir.
     throw new Error(error?.message?.replace(/^.*?: /, '') || fallback);
