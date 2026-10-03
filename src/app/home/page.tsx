@@ -2,12 +2,11 @@
 
 // Ana sayfa (design-reference/home-final). Bölümler src/components/home altında; bu dosya yalnızca sırayı,
 // veri bağlantılarını ve ilk kurulum yönlendirmesini tutar.
-// Sıra (2026-10-03, Baran onaylı): üst alan → hikâyeler → (doğum günü) → bugünkü yürüyüş → hızlı erişim →
+// Sıra (2026-10-03, Baran onaylı): üst kart (components/home/hero, çekmeceli) → hikâyeler → (doğum günü) → bugünkü yürüyüş → hızlı erişim →
 // hatırlatmalar → oyun/görev → öneriler → ilham.
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePet } from '@/context/PetContext';
 import { useNotifications } from '@/context/NotificationContext';
@@ -20,7 +19,7 @@ import { useQuestEngine } from '@/context/QuestEngineContext';
 import { useWeather } from '@/context/WeatherContext';
 import { useDailyNote } from '@/components/home/dailyNote';
 import { BirthdayCard } from '@/components/home/BirthdayCard';
-import { HomeHeader } from '@/components/home/HomeHeader';
+import { PetHero } from '@/components/home/hero/PetHero';
 import { HomeStories } from '@/components/home/HomeStories';
 import { WalkTodayCard } from '@/components/home/WalkTodayCard';
 import { QuickAccess } from '@/components/home/QuickAccess';
@@ -29,13 +28,17 @@ import { PlayCards } from '@/components/home/PlayCards';
 import { HomeRecommendations } from '@/components/home/HomeRecommendations';
 import { HomeInspiration } from '@/components/home/HomeInspiration';
 import { AddPetFlow } from '@/components/home/AddPetFlow';
-import { Skeleton, baloo, nunito } from '@/components/home/homeUI';
+import { Skeleton, nunito } from '@/components/home/homeUI';
+import { todayKey } from '@/lib/appointmentTime';
+import { daysBetween } from '@/lib/health/derive';
+
+const noopSubscribe = () => () => {};
 
 function HomeContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user } = useAuth();
-    const { pets, activePet, switchPet, isLoading: petsLoading, isInitialized } = usePet();
+    const { pets, activePet, switchPet, updatePet, isLoading: petsLoading, isInitialized } = usePet();
     const { unreadCount } = useNotifications();
     const { products, cartCount, addToCart } = usePetShop();
     const { items: careItems, loaded: careLoaded } = useUpcomingCare(pets, user?.id);
@@ -69,33 +72,40 @@ function HomeContent() {
     const suggested = useMemo(() => products.filter(p => p.inStock).slice(0, 6), [products]);
 
     // Günün notu: önce kişiye özel durum (sağlık, hava, yürüyüş), yoksa günlük bakım bilgisi.
-    const lastWalkAt = useMemo(() => history.reduce((max, w) => Math.max(max, new Date(w.ended_at || w.started_at || 0).getTime() || 0), 0), [history]);
-    const [nowMs, setNowMs] = useState(0);
-    useEffect(() => { setNowMs(Date.now()); }, [history]);
+    // Gün farkı takvim günüyle (bugün istemcide okunur; sunucu çiziminde boş).
+    const today = useSyncExternalStore(noopSubscribe, todayKey, () => '');
+    const lastWalkDay = useMemo(() => history.reduce((max, w) => {
+        const raw = w.ended_at || w.started_at;
+        const key = raw ? new Date(raw).toLocaleDateString('sv-SE') : '';
+        return key > max ? key : max;
+    }, ''), [history]);
     const note = useDailyNote({
         care: careItems,
         weather,
         petName: activePetObj?.name || null,
-        daysSinceLastWalk: lastWalkAt && nowMs ? (nowMs - lastWalkAt) / 86_400_000 : null,
+        daysSinceLastWalk: lastWalkDay && today ? daysBetween(lastWalkDay, today) : null,
         goalDone: todayDistanceKm >= Math.max(0.1, dailyGoal.distance),
     });
 
     return (
         <div className={`theme-vet ${nunito.className} min-h-[100dvh] bg-background text-foreground overflow-x-hidden`}>
             <main className="max-w-md mx-auto px-5 pb-[calc(env(safe-area-inset-bottom)+112px)]">
-                <HomeHeader
+                <PetHero
                     firstName={firstName}
                     userId={user?.id}
                     avatar={user?.avatar}
                     pets={pets}
                     activePet={activePetObj}
+                    loading={petsLoading}
                     onSwitchPet={switchPet}
+                    onUpdatePet={updatePet}
                     onAddPet={() => setAddPetOpen(true)}
                     unreadCount={unreadCount}
                     note={note}
+                    careItems={careItems}
                 />
 
-                <div className="relative z-10 -mt-7 -mx-5 px-5 pt-5 rounded-t-[28px] bg-background">
+                <div className="pt-3">
                     <HomeStories groups={storyGroups} />
                 </div>
 
@@ -106,20 +116,10 @@ function HomeContent() {
                         <Skeleton className="h-[150px]" />
                     </div>
                 ) : hasNoPets ? (
-                    <section className="mt-6 rounded-[24px] bg-card border border-card-border p-6 text-center">
-                        <img src="/images/moffi_pet_trio.png" alt="" className="w-40 h-28 object-contain mx-auto" />
-                        <h2 className={`${baloo.className} text-[22px] font-bold text-foreground mt-3`}>Dostunu ekleyelim</h2>
-                        <p className="text-[13.5px] font-semibold text-secondary mt-1.5 leading-relaxed">
-                            Aşı takvimi, yürüyüş, hatırlatmalar ve pasaport, dostunu ekledikten sonra burada.
-                        </p>
-                        <button
-                            type="button"
-                            onClick={() => setAddPetOpen(true)}
-                            className="mt-5 w-full h-[52px] rounded-2xl bg-accent text-white text-[15px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                        >
-                            <Plus className="w-5 h-5" strokeWidth={2.6} /> Evcil hayvan ekle
-                        </button>
-                    </section>
+                    <div className="mt-5 space-y-7">
+                        <QuickAccess lostCount={activeLostCount} cartCount={cartCount} />
+                        <HomeInspiration items={inspiration} />
+                    </div>
                 ) : (
                     <div className="mt-5 space-y-7">
                         <BirthdayCard pets={pets} />

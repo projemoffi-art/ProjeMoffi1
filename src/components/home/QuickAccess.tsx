@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Award, Bone, CalendarCheck, ChevronRight, Compass, Footprints, Gamepad2, HeartHandshake, HeartPulse,
+    Award, CalendarCheck, ChevronRight, Compass, Footprints, Gamepad2, HeartHandshake, HeartPulse,
     History, Home, IdCard, Pill, Scale, Shirt, ShoppingBag, ShoppingCart, Stethoscope, Syringe, Target, X,
 } from 'lucide-react';
 import { haptics } from '@/native';
@@ -20,7 +20,7 @@ const QUICK: { label: string; Icon: typeof Home; tint: string; action: Action; b
     { label: 'Market Petshop', Icon: ShoppingBag, tint: '#E0892E', action: { path: '/petshop' }, badgeKey: 'cart' },
     { label: 'Veteriner', Icon: Stethoscope, tint: '#2F9E8F', action: { path: '/vet' } },
     { label: 'Sağlık Merkezi', Icon: HeartPulse, tint: '#8B7FD9', action: { path: '/health' } },
-    { label: 'Beslenme & Su', Icon: Bone, tint: '#6BAF3A', action: { event: ['open-care-hub', { tab: 'nutrition' }] } },
+    { label: 'Pasaport', Icon: IdCard, tint: '#6BAF3A', action: { path: '/pasaport' } },
 ];
 
 const ALL: { title: string; items: { label: string; sub: string; Icon: typeof Home; path: string }[] }[] = [

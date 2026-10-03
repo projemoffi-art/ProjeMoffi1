@@ -5,6 +5,8 @@ import {
     SystemAnnouncement, SystemFeedback, SocialChallenge, BusinessAppointmentInput, ClinicClient, BusinessProfileData, WalkPoint
 } from './types';
 import { supabase } from '@/lib/supabase';
+import { shrinkForUpload } from '@/lib/media/compress';
+import { albumService } from './albumService';
 import { MockApiService } from './mockApiService';
 import { Doctor } from '@/types/domain';
 
@@ -568,6 +570,8 @@ export class SupabaseApiService implements IApiService {
             .eq('id', id)
             .eq('owner_id', user.id);
         if (error) throw error;
+        // Albüm satırları hayvanla birlikte silinir; özel depodaki dosyaları da kaldır (kalırsa hesap silinince temizlenir).
+        await albumService.removePetFiles(user.id, id).catch(() => {});
     }
 
     // --- TEMPORARY MOCK FALLBACKS (Until next phases) ---
@@ -1831,9 +1835,10 @@ export class SupabaseApiService implements IApiService {
     // dizisine ekliyor — anında commit ediliyor (yürüyüş bitmeden uygulama
     // kapansa bile fotoğraf kaybolmaz, yürüyüş noktalarıyla aynı dayanıklılık
     // deseni).
-    async uploadWalkPhoto(sessionId: string, file: File): Promise<string> {
+    async uploadWalkPhoto(sessionId: string, original: File): Promise<string> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
+        const file = await shrinkForUpload(original);
 
         const ext = file.name.split('.').pop() || 'jpg';
         const path = `${user.id}/${sessionId}/${Date.now()}.${ext}`;
@@ -2322,10 +2327,12 @@ export class SupabaseApiService implements IApiService {
         if (error) throw new Error(error.message || 'İstek kabul edilemedi.');
     }
 
-    async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds' = 'posts', onProgress?: (percent: number) => void): Promise<string> {
+    async uploadMedia(original: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds' = 'posts', onProgress?: (percent: number) => void): Promise<string> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
 
+        // Görseller yüklemeden önce telefonda küçültülür (depolama/trafik maliyeti; lib/media/compress).
+        const file = await shrinkForUpload(original);
         const ext = file.name.split('.').pop();
         const path = `${user.id}/${Date.now()}.${ext}`;
 

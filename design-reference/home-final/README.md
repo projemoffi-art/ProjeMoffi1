@@ -5,7 +5,8 @@
 Ana sayfa bu referansa göre tek seferde yeniden yazıldı; aşağıdaki "açık iş" ve "Baran karar verecek" notları
 bununla kapandı. Kod: `src/app/home/page.tsx` (yalnızca sıra + veri) ve `src/components/home/*` (her bölüm ayrı).
 
-- **Sıra:** üst alan (logo, zil, profil, selamlama + günün sözü; 2+ hayvanda seçici; kayıp modunda kırmızı şerit) →
+- **Sıra:** üst kart (2026-10-03 yeniden: hayvan fotoğraflı kart + Genel/Sağlık/Albüm/Petler çekmecesi; kurallar ve son hâl
+  `hero-card/README.md`, o dosya bu maddeye göre önceliklidir) →
   hikâyeler → (doğum günü) → Bugünkü Yürüyüş → Hızlı Erişim → Hatırlatmalar → Oyun + Görev → Öneriler → İlham.
   Hatırlatmalar bilinçli olarak Öneriler'den önce (sağlık alışverişten önce).
 - **Çıkanlar:** Luna kartı (3D/gardırop/halkalar), Aktivite Raporu, "Bugün senin için", "Moffi ile her an yanında"

@@ -59,6 +59,9 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
         { name: "Moffi AI asistanı", free: "Günde 5 mesaj", prime: "Günde 60 mesaj" },
         { name: "Her ay PawCoin hediyesi", free: false, prime: "500 PawCoin" },
         { name: "Seri kalkanı", free: "Haftada 1", prime: "Haftada 2" },
+        // Sınırlar sunucuda: album_limits() (CLAUDE.md 8.65).
+        { name: "Albüm (hayvan başına)", free: "50 fotoğraf, 10 anı", prime: "1.000 dosya, sınırsız anı" },
+        { name: "Anılara video (30 sn)", free: false, prime: true },
         { name: "Neon Aura ve Dark Metal profil çerçeveleri", free: false, prime: true },
         { name: "Profilinde Prime rozeti", free: false, prime: true },
     ];
@@ -112,7 +115,7 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
                                 Moffi <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-[#B8860B]">Prime</span>
                             </h2>
                             <p className="text-secondary font-medium leading-relaxed mb-10 max-w-sm">
-                                Moffi'yi Prime olmadan da tamamen kullanabilirsin. Prime, asistanı daha çok kullanmak ve küçük ayrıcalıklar isteyenler için.
+                                Moffi&apos;yi Prime olmadan da tamamen kullanabilirsin. Prime, asistanı daha çok kullanmak ve küçük ayrıcalıklar isteyenler için.
                             </p>
 
                             <div className="w-full mb-10 bg-foreground/5 border border-glass-border rounded-2xl overflow-hidden shadow-lg">

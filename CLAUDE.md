@@ -162,32 +162,14 @@ Ayrıca: bir tablo `postgres_changes` ile dinlenecekse, o tablo
   tanımlı — bu bir hata değil, doğru mimari (sadece `/vet` sayfasından
   ulaşılabiliyorlar, global olmalarına gerek yok).
 
-### 5.4 Beslenme ("Nutrition") — iki paralel, birbirinden habersiz sistem (AÇIK SORUN)
+### 5.4 Beslenme ("Nutrition") — KARAR VERİLDİ (2026-10-03)
 
-Şu an platformda iki ayrı "beslenme" konsepti var, birbirine bağlı değil:
-
-1. **`NutritionModal.tsx`** (vet klasörü) — "veteriner onaylı diyet planı"
-   kaydı, gerçek Supabase tablosu `nutrition_plans` (`getNutritionPlan` /
-   `updateNutritionPlan`, `supabaseApiService.ts` satır ~2596). Ana sayfadaki
-   "Beslenme" halkasından ve alt menüden `open-care-hub` event'i ile açılıyor.
-   **Canlı veritabanında bu tabloda 0 satır var (platformdaki 15 hayvanın
-   hiçbirinde plan yok)** — bomboş kart bu yüzden çıkıyor, bug değil.
-2. **`/food` sayfası** (`src/app/food/page.tsx`) — çok daha zengin bir günlük
-   beslenme takip arayüzü (`NutritionRing`, `WaterTracker`, `MealLoggerModal`,
-   `DietSetupWizard`, `MacroChart`, `MoffiPantry`, `FoodGradeCard`,
-   `SmartMealCard`). **Tamamen `localStorage` üzerinde çalışıyor, hiç
-   Supabase bağlantısı yok** — girilen veri gerçek veritabanına hiç gitmiyor.
-
-**Henüz karara bağlanmadı, ama önerilen yön:** ana sayfa halkasını
-`NutritionModal` yerine `/food` sayfasına yönlendirmek + `/food`'un
-localStorage kısmını gerçek Supabase tablolarına taşımak. `NutritionModal`'ı
-tamamen silmek yerine, veterinerin resmi reçete girişi olarak `/vet` akışına
-taşımak (Bölüm 5.3'teki DentalCareModal örneği gibi lokal hale getirmek)
-mantıklı. Bu Faz 12.5/19'un "ilk izlenim" (ana sayfa) yenilemesiyle bağlantılı.
-
-Küçük ek not: `NutritionModal`'daki dolu-plan görünümünde "DİYETİSYENE SOR"
-butonunun `onClick` işlevi yok (dead button) — küçük ama düzeltilmesi gereken
-bir detay.
+- Günlük takip (öğün x/y + taze su) ana sayfa üst kartının Genel sekmesinde, gerçek kayıtla: `pet_daily_stats` + `log_pet_care` (8.65).
+- Sahte `/food` sayfası (localStorage, varsayılan 540 kcal, sahte öneriler; hiçbir yerden bağlantısı yoktu) ve `components/food/*` SİLİNDİ.
+  Ana sayfadaki "Beslenme & Su" hızlı erişimi (boş diyet planı penceresini açıyordu) "Pasaport" ile değişti.
+- `NutritionModal` (veteriner diyet planı, `nutrition_plans`, 0 satır) yerinde kalır; alt menü ve `/vet?open=nutrition` ile açılır.
+- Claude'un kararı: ayrı bir "beslenme sayfası" şimdilik gerekli değil. Mama markası/porsiyon/kalori gibi ayrıntılı beslenme, ileride sağlık
+  tarafında (veteriner diyet planıyla birleşik) tasarlanır; o zaman Baran'la konuşulur. `NutritionModal`'daki "DİYETİSYENE SOR" düğmesi hâlâ ölü.
 
 ### 5.5 State machine'i localStorage'a bölünmüş şekilde yazarken dikkat (Faz 2-5 kontrolü, `ActivityContext.tsx`)
 
@@ -495,8 +477,33 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.63l Yürüyüş sesleri** tek modül `lib/audioCues.ts`: Web Audio ile kodda üretilen melodik sesler (dosya yok, telif yok), 3 tema
   (Zil/Marimba/Pati), olaylar başla/duraklat/devam/km/hedef/bitiş; sesli anons (cihaz sesi) isteğe bağlı, varsayılan kapalı. Tercih cihazda
   (`moffi_walk_audio`). Ses ancak dokunuşla açılır: başlat düğmesinde `audioCues.unlock()`.
-- **8.63m Üst alan:** hayvan seçimi sağ üstte, alttan açılan çekmecede (tek hayvanda da). Selamlama altında "günün notu"
-  (`components/home/dailyNote.ts`): geciken/yaklaşan sağlık işi > sıcak hava > hedef tamam > uzun süredir yürünmedi > iyi hava > günlük bakım bilgisi.
+- **8.63m Üst alan → 8.65 üst kart** ile değişti (eski `HomeHeader` ve sağ üst hayvan çekmecesi silindi). "Günün notu"
+  (`components/home/dailyNote.ts`) artık Genel sekmesinin başında: geciken/yaklaşan sağlık işi > sıcak hava > hedef tamam > uzun süredir
+  yürünmedi > iyi hava > günlük bakım bilgisi.
+
+### Ana sayfa üst kartı, günlük bakım, albüm (8.65, 2026-10-03 — Baran onaylı, kilitli referans)
+
+- Tasarım ve kurallar: `design-reference/home-final/hero-card/README.md` (+ `reference.jpg`). Kod `components/home/hero/*`:
+  `PetHero` (kart + 4 sekme + aşağı açılan çekmece), `GeneralTab`, `HealthTab`, `AlbumTab`, `PetsTab`. Petler sekmesi tek hayvan seçicidir.
+- 🔴 Kartta yatay kaydırma DOKUNMA olaylarıyla ölçülür: telefonda tarayıcı yatay hareketi işaretçiden alıp `pointercancel` gönderiyor,
+  framer `drag` bu yüzden telefonda çalışmıyordu (fareyle çalışır). Başka ekranda kaydırma yazarken aynı tuzak.
+- **Günlük bakım** (`services/petCareService.ts`, `hooks/usePetCare.ts`): `pet_daily_stats.meals_given/water_refreshed_at`, hedef
+  `pets.meals_per_day` (boşsa 12 aydan küçük 3, değilse 2). Yazma yalnızca `log_pet_care(pet, 'meal'|'water', undo)`,
+  `set_pet_meals_per_day`; okuma `pet_care_today`. Gün Türkiye takvim günü, sunucuda. Tabloya istemci yazma yetkisi kaldırıldı.
+- **Albüm** (`services/albumService.ts`, `hooks/usePetAlbum.ts`, `/album`): özel depo `pet-album` (`<kullanıcı>/<hayvan>/<id>.webp` + `_t`
+  önizleme), `pet_media`, `pet_memories`. Yükleme: `reserve_pet_media` (kota, biçim, Prime video denetimi, yolu sunucu verir) → depo kuralı
+  yalnızca ayrılmış ve onaylanmamış yola yazdırır → `confirm_pet_media` (dosya var mı + GERÇEK boyut `storage.objects`'ten). Silme: önce
+  depo (kendi klasörü), sonra `remove_pet_media`; yarım yüklemeler `remove_stale_pet_media`. Anı: `save_pet_memory`, `remove_pet_memory`
+  (fotoğraflar albümde kalır), `set_pet_media_memory`. Hayvan silinince dosyaları `deletePet` kaldırır; hesap silinince cron tüm depoları temizler.
+  Servis rolünün bu tablolara okuma yetkisi de yok (test için kullanıcı oturumu kullan).
+- Fotoğraf akışı dört kaynaktan, kopyasız: albüm + yürüyüş (`walk_sessions.photo_urls`) + hayvanın etiketlendiği kendi gönderileri + profil/kurulum
+  (`gallery_urls`). Kapak listede yok. "Kapak yap" albüm fotoğrafını herkese açık `avatars`'a tek kopya olarak alır. Otomatik anılar hesaplanır.
+- **Kota** tek yerde `album_limits()`: ücretsiz hayvan başına 50 dosya + 10 anı, video yok; Prime 1.000 dosya, sınırsız anı, ≤30 sn/≤50 MB video.
+  Baran: "şimdilik uygun, ayrıntılı bakılacak" (12.1). Prime penceresinde listelendi.
+- **Sıkıştırma tek yer** `lib/media/compress.ts`: `shrinkForUpload` (genel: uzun kenar 1600 px WebP/JPEG; GIF/SVG/görsel olmayan aynen) —
+  `uploadMedia`, `uploadWalkPhoto`, sohbet fotoğrafı bundan geçer; `encodeAlbumPhoto` (büyük + 400 px önizleme), `readVideo` (süre + kapak).
+  Sağlık belgeleri bilerek sıkıştırılmaz. Eski `utils.compressImage` (kullanılmıyordu, yön bilgisini bozuyordu) silindi.
+- Ortak kısa bildirim `GlobalToast` her temada okunur düz kart (eskiden açık temada koyu zemin üstünde koyu yazı + indigo şeritti).
 
 ### İçerik Stüdyosu ve hikâyeler (8.64, 2026-10-04 — Baran onaylı 5 kanal)
 
@@ -522,6 +529,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 ### Supabase bağlayıcısı (claude.ai) notu
 `DROP` ve `DELETE` geçen her komut için ayrı onay ister (VS Code panelinde gösterilemez → "declined"; "her zaman izin ver" aşmaz).
 Migration'ı bu kelimeleri içermeyen parçalar (Claude uygular) + içeren parça (Baran SQL Editor'dan) diye böl; kelimeyi gizleme.
+2026-10-03: `apply_migration` ile fonksiyon gövdesinde `delete from`, `on delete cascade` ve `for delete` politikası içeren migration onaysız
+uygulandı (20261004101100/101200). Önce dene; reddedilirse yine `*_MANUAL_sql_editor.sql`. `drop table` gibi doğrudan silme hâlâ Baran'da.
 
 ## 9. Bilinen, bilinçli ya da düşük öncelikli sorunlar (2026-10-02)
 
@@ -582,8 +591,10 @@ ilgili maddeyi tek satırla hatırlat.
 ### 12.1 Baran'ın yapacakları ve kararları
 
 **Hemen**
-- [ ] SQL Editor'da `20261004100900_profiles_no_direct_delete_MANUAL_sql_editor.sql` (profil satırını doğrudan silme izni, `studio_assets`,
-      testten kalan "[TEST]" işletmeler — şu an onaysız, görünmüyorlar).
+- [ ] 🔴 **Supabase Pro'ya geçiş (25 $/ay) — para olunca, albüm canlıda yoğun kullanılmadan önce.** Ücretsiz plan: 1 GB depolama (2026-10-03 ~260 MB
+      dolu), ayda 5 GB trafik, bir hafta işlemsiz proje duraklatılır, yedek yok. Pro: 100 GB / 250 GB, günlük yedek, sızmış şifre koruması (8.56).
+      Kodda yapılacak her şey yapıldı (sıkıştırma, önizleme, kota). Baran kararı 2026-10-03: "Pro'ya geçeriz ama param yok şu an".
+- [ ] Albüm kotalarının ayrıntılı gözden geçirilmesi (8.65; şimdilik 50/10 ücretsiz, 1.000/sınırsız/video Prime) ve Prime paket içeriğinin netleşmesi.
 - [ ] SQL Editor'da `supabase/migrations/20261003102000_walk_cleanup_MANUAL_sql_editor.sql` çalıştır (acil değil, tekrar eden
       politika/index temizliği; DROP içerdiği için bağlayıcıdan uygulanamıyor).
 - [ ] 🔴 **`GEMINI_API_KEY`** (Google AI Studio) → Vercel Production + yeniden yayın. Yok: yapay zekâ canlıda çalışmıyor. Yereldeki `.env.local` anahtarı da Google tarafından reddediliyor (401, 2026-10-03): AI Studio’dan yeni anahtar her ikisine.
@@ -640,7 +651,8 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       bildirimi çıkıyordu; sıfırlandı, rozet anahtarı `moffi_earned_badges_v3`. Çerez bandı kompakt yazıldı, giriş/kurulumda gizli. `/onboarding` açık
       temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
       köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
-- [ ] 🔴 **Kod borcu (2026-10-03 ölçümü, yalnızca azalır):** tip kontrolü (src) **68** hata; lint **~1.150** hata (çoğu `no-explicit-any` ~970,
+- [ ] 🔴 **Kod borcu (2026-10-03 ölçümü, yalnızca azalır):** tip kontrolü (src) **64** hata (+ `supabaseApiService.ts` başında `// @ts-nocheck`:
+      uygulamanın ana veri dosyası HİÇ tip denetlenmiyor, 168 lint hatası; kaldırılınca ortaya çıkacak hatalar bu sayıya eklenecek); lint **~1.150** hata (çoğu `no-explicit-any` ~970,
       `no-unescaped-entities` ~98, React kuralları ~120). Sıra: (1) tip hataları — gerçek kusurlar önce: `MoffiRunGame` tanımsız değişkenler
       (oyun bitişinde çöker), `ShopProduct`'ın iki ayrı tanımı (`services/types` ↔ `types/domain`, mağaza), `IApiService`'te eksik metotlar
       (`getClinicProducts`, `updateOrderTracking`, `getClinicQuests` — çalışıyor ama tipsiz), `PetContext.Pet` ↔ `services/types.Pet`, `AuthContext`
@@ -654,8 +666,8 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
 - [ ] "Moffi Puanı / PP" yazan arayüz metinleri yeni para birimi adına çevrilecek (isim belli olunca topluca).
 - [ ] `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinecek (içerik 8.45'te taşındı; kolon silme Baran'ın SQL Editor'ından).
 - [ ] Silinen gönderi/hikâyelerin depoda kalan eski dosyaları (8.50).
-- [ ] Bakım modu normal kullanıcıda çalışmıyor (Bölüm 9). `LiveMap` Carto altlığı OSM'e (8.1). Beslenme: `/food` localStorage → Supabase,
-      `NutritionModal` kararı (Bölüm 6, 5.4).
+- [ ] Bakım modu normal kullanıcıda çalışmıyor (Bölüm 9). `LiveMap` Carto altlığı OSM'e (8.1).
+- [ ] Albüm videosu telefonda 720p'ye dönüştürülmüyor (tarayıcıda güvenilir yol yok); native aşamasında yerel sıkıştırma eklentisi (8.65).
 - [ ] İlk gerçek hesap silme talebinde (en erken 2026-11-01) ilk gece çalışmasından sonra sonucu doğrula (8.57).
 - [ ] Sahte veriyle çalışan ekranlar (2026-10-03 ana sayfa turunda bulundu, ana sayfadan/kenar panelinden bağlantıları kaldırıldı):
       `/wallet` (`data/mockWallet`), `MoffiMapsModal` (sahte işaretler), mağaza ürün yorumları (`petshop` "Ahmet S." vb.),
