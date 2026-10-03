@@ -446,10 +446,6 @@ export interface IApiService {
     updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
     getAllOrders(): Promise<ShopOrder[]>;
 
-    // Announcements
-    getAnnouncements(): Promise<SystemAnnouncement[]>;
-    addAnnouncement(announcement: Partial<SystemAnnouncement>): Promise<SystemAnnouncement>;
-    deleteAnnouncement(id: string): Promise<void>;
 
     // Daily Star Pet (Yıldız Patiler)
     getAllPetsAdmin(): Promise<Pet[]>;
@@ -459,8 +455,6 @@ export interface IApiService {
     removeDailyStar(dateString: string, rank: number): Promise<void>;
 
     // Vet Advices (Vet Tavsiyeleri)
-    getVetAdvices(): Promise<any[]>;
-    saveClinicAdvice(clinicId: string, content: string, badge: string): Promise<void>;
     addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any>;
     deleteAdvice(id: string): Promise<void>;
 

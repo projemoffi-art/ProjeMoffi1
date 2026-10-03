@@ -37,9 +37,9 @@ function HomeContent() {
     const { user } = useAuth();
     const { pets, activePet, switchPet, isLoading: petsLoading, isInitialized } = usePet();
     const { unreadCount } = useNotifications();
-    const { storyGroups, activeLostCount } = useStories();
     const { products, cartCount, addToCart } = usePetShop();
     const { items: careItems, loaded: careLoaded } = useUpcomingCare(pets, user?.id);
+    const { storyGroups, inspiration, activeLostCount } = useStories(careItems);
     const [addPetOpen, setAddPetOpen] = useState(false);
     const { history } = useWalk();
     const { todayDistanceKm, dailyGoal } = useQuestEngine();
@@ -128,7 +128,7 @@ function HomeContent() {
                         <HomeReminders items={careItems} loaded={careLoaded} />
                         <PlayCards />
                         <HomeRecommendations products={suggested} onAddToCart={addToCart} />
-                        <HomeInspiration />
+                        <HomeInspiration items={inspiration} />
                     </div>
                 )}
             </main>

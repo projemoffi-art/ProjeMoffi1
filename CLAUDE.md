@@ -479,6 +479,23 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.63m Üst alan:** hayvan seçimi sağ üstte, alttan açılan çekmecede (tek hayvanda da). Selamlama altında "günün notu"
   (`components/home/dailyNote.ts`): geciken/yaklaşan sağlık işi > sıcak hava > hedef tamam > uzun süredir yürünmedi > iyi hava > günlük bakım bilgisi.
 
+### İçerik Stüdyosu ve hikâyeler (8.64, 2026-10-04 — Baran onaylı 5 kanal)
+
+- **Kanallar** (`hooks/useStories.ts`): **Kayıp Alarmı** (otomatik, kullanıcının 25 km çevresi), **<Hayvan>'ın Haftası** (otomatik özet
+  kartları: yürüyüş, seri, sağlık), **Moffi** (yönetici), **Veteriner Önerisi** ve **Fırsatlar** (işletme gönderir, yönetici ONAYLAR, yalnızca
+  işletmenin çevresine; fırsat "Reklam" etiketli). İçeriksiz kanal görünmez. "Moffi'den İlham" da aynı kaynaktan (yoksa marka kartları).
+  Yıldız Patiler ana sayfadan çıktı → Keşfet'e taşınacak (açık iş).
+- **Veri:** `content_items` + `content_events` (20261004100000). İstemcinin tabloya doğrudan erişimi YOK; fonksiyonlar: `content_feed`,
+  `content_track`, `content_submit_vet`, `content_promote_campaign` (fırsat = işletmenin `clinic_campaigns` kaydı, ikinci kopya yok),
+  `content_withdraw`, `content_my_items`, `content_admin_list/save/review/archive`. Yönetici denetimi `is_platform_admin()` = `get_my_role()`
+  (yönetici 2FA kuralı uygulanınca otomatik ona tabi). Onay/red işletmeye `notify_business('biz_content_review')`.
+- **Ekranlar:** yönetici `/admin/icerik` (eski `/admin/alerts` silindi), işletme `/business/campaigns` (öne çıkar + Veteriner Önerisi; randevu
+  sayfasındaki eski tavsiye editörü silindi). Servis `services/contentService.ts`. Emekli: `system_announcements`, `vet_advices`, `business_deals`,
+  `/api/deals*` (kod silindi; tablolar elle silinecek, aşağıda). Özel ad ekleri için `lib/turkish.ts` (`genitive`, `locative`).
+- 🔴 **8.64a Depo güvenlik açığı (bulundu, düzeltme dosyası hazır):** avatars/posts/stories/sounds depolarında güncelleme ve silme kuralları
+  sahiplik denetlemiyordu (herkes başkasının dosyasını silebilir/üzerine yazabilirdi). Düzeltme `20261004100200_storage_owner_only_MANUAL_sql_editor.sql`.
+- Servis rolünün `businesses` gibi tablolara doğrudan yazma yetkisi yok (bilinçli); test kurulumunda işletme `execute_sql` ile açılır.
+
 ### Supabase bağlayıcısı (claude.ai) notu
 `DROP` ve `DELETE` geçen her komut için ayrı onay ister (VS Code panelinde gösterilemez → "declined"; "her zaman izin ver" aşmaz).
 Migration'ı bu kelimeleri içermeyen parçalar (Claude uygular) + içeren parça (Baran SQL Editor'dan) diye böl; kelimeyi gizleme.
@@ -542,6 +559,9 @@ ilgili maddeyi tek satırla hatırlat.
 ### 12.1 Baran'ın yapacakları ve kararları
 
 **Hemen**
+- [ ] 🔴 SQL Editor'da `20261004100200_storage_owner_only_MANUAL_sql_editor.sql` (GÜVENLİK: başkasının dosyasını silme/üzerine yazma açığı).
+- [ ] SQL Editor'da (acil değil, sırayla): `20261004100100_content_studio_fk_MANUAL…`, `20261004100300_retire_old_story_tables_MANUAL…`,
+      `20261004100500_test_data_cleanup_MANUAL…` (test verisi, şu an arşivde/onaysız, görünmüyor).
 - [ ] SQL Editor'da `supabase/migrations/20261003102000_walk_cleanup_MANUAL_sql_editor.sql` çalıştır (acil değil, tekrar eden
       politika/index temizliği; DROP içerdiği için bağlayıcıdan uygulanamıyor).
 - [ ] 🔴 **`GEMINI_API_KEY`** (Google AI Studio) → Vercel Production + yeniden yayın. Yok: yapay zekâ canlıda çalışmıyor. Yereldeki `.env.local` anahtarı da Google tarafından reddediliyor (401, 2026-10-03): AI Studio’dan yeni anahtar her ikisine.

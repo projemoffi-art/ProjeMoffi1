@@ -29,8 +29,9 @@ const PremiumUpgradeModal = dynamic(() => import("@/components/community/modals/
 const HIDDEN_ROUTES = ['/', '/onboarding', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth', '/walk/tracking', '/walk/summary',
     // Paylaşılan pasaport, künye ve doğrulama sayfaları uygulama dışındaki kişilere açılır.
     '/p/', '/id/', '/verify/'];
-// Alt menü, ekranın altına sabit yorum/paylaşım kutusu olan sayfalarda gizlenir (genel pencereler çalışmaya devam eder).
-const BOTTOM_NAV_HIDDEN = ['/community/yeni', '/community/gonderi'];
+// Alt menü, ekranın altına sabit yorum/paylaşım kutusu olan sayfalarda ve işletme/yönetim panellerinde (kendi menüleri var)
+// gizlenir; genel pencereler (bildirimler vb.) çalışmaya devam eder.
+const BOTTOM_NAV_HIDDEN = ['/community/yeni', '/community/gonderi', '/business', '/admin'];
 
 export function DynamicNavigation() {
     const pathname = usePathname();
@@ -365,7 +366,7 @@ export function DynamicNavigation() {
     return (
         <>
             <FloatingControls />
-            <EdgePanel hidden={isAnyLocalOverlayOpen || !isNavAllowedByExternalOverlays} />
+            <EdgePanel hidden={isAnyLocalOverlayOpen || !isNavAllowedByExternalOverlays || pathname?.startsWith('/business') || pathname?.startsWith('/admin')} />
             <ActiveWalkMiniWidget />
 
             <ActionHubDrawer

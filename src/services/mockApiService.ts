@@ -667,64 +667,8 @@ export class MockApiService implements IApiService {
         return this.getOrders();
     }
 
-    async getAnnouncements(): Promise<SystemAnnouncement[]> {
-        const data = await this.loadData<SystemAnnouncement[]>('announcements');
-        if (!data) {
-            const initial: SystemAnnouncement[] = [
-                {
-                    id: 'ann_1',
-                    media_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=600',
-                    created_at: new Date().toISOString(),
-                    title: 'Kadıköy Patimaratonu!',
-                    description: '24 Mayıs Pazar günü Caddebostan Sahili\'nde buluşuyoruz. Tüm patili dostlarımız ve sahipleri davetlidir.',
-                    badge: 'Etkinlik',
-                    cta_text: 'Ücretsiz Kaydol 🎟️',
-                    cta_type: 'toast',
-                    cta_value: 'Patimaraton katılım biletiniz Moffi cüzdanınıza eklendi!',
-                    expires_at: new Date(Date.now() + 86400000 * 7).toISOString()
-                },
-                {
-                    id: 'ann_2',
-                    media_url: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=600',
-                    created_at: new Date(Date.now() - 7200000).toISOString(),
-                    title: 'Akıllı Tasma V2 Çıktı!',
-                    description: 'Tasma yazılımı için yeni geofence optimizasyonları ve pil tasarruf modu yayınlandı. Ayarlar sekmesinden güncelleyebilirsiniz.',
-                    badge: 'Sistem Güncellemesi',
-                    cta_text: 'Hemen Güncelle ⚡',
-                    cta_type: 'toast',
-                    cta_value: 'Akıllı Tasma V2 güncellemesi tasmanıza kablosuz (OTA) olarak yükleniyor...',
-                    expires_at: new Date(Date.now() + 86400000 * 30).toISOString()
-                }
-            ];
-            await this.saveData('announcements', initial);
-            return initial;
-        }
-        return data;
-    }
 
-    async addAnnouncement(announcement: Partial<SystemAnnouncement>): Promise<SystemAnnouncement> {
-        const list = await this.getAnnouncements();
-        const newAnn: SystemAnnouncement = {
-            id: `ann-${Date.now()}`,
-            title: announcement.title || 'Duyuru',
-            description: announcement.description || '',
-            media_url: announcement.media_url || 'https://images.unsplash.com/photo-1589758438368-0ad531db3366?q=80&w=600',
-            badge: announcement.badge || 'Duyuru',
-            cta_text: announcement.cta_text || 'İncele',
-            cta_type: announcement.cta_type || 'toast',
-            cta_value: announcement.cta_value || '',
-            expires_at: announcement.expires_at || new Date(Date.now() + 86400000 * 7).toISOString(),
-            created_at: new Date().toISOString()
-        };
-        await this.saveData('announcements', [newAnn, ...list]);
-        return newAnn;
-    }
 
-    async deleteAnnouncement(id: string): Promise<void> {
-        const list = await this.getAnnouncements();
-        const next = list.filter(item => item.id !== id);
-        await this.saveData('announcements', next);
-    }
 
     // Daily Star Pet (Yıldız Patiler) Mock Implementations
     async getAllPetsAdmin(): Promise<Pet[]> {
@@ -824,69 +768,7 @@ export class MockApiService implements IApiService {
         await this.saveData('daily_stars', updatedList);
     }
 
-    // Vet Advices (Vet Tavsiyeleri) Mock Implementations
-    async getVetAdvices(): Promise<any[]> {
-        const list = await this.loadData<any[]>('vet_advices') || [];
-        
-        // 2 default admin fallbacks if there are no global tips yet
-        const defaultAdminAdvices = [
-            {
-                id: 'vet-default-1',
-                clinic_id: null,
-                content: 'Yaz aylarında asfalt sıcaklığı hava sıcaklığının iki katına çıkabilir. Patileri yakmamak için yürüyüşleri sabah veya akşam yapın.',
-                badge: 'Yaz Bakımı ☀️',
-                media_url: '/images/moffi_pet_trio.png',
-                created_at: new Date().toISOString()
-            },
-            {
-                id: 'vet-default-2',
-                clinic_id: null,
-                content: 'İlkbahar ve yaz aylarında dış parazit aşılarını aksatmayın. Çimlerde yürüyüş sonrası pati aralarını mutlaka kontrol edin.',
-                badge: 'Sağlık Uyarısı 🩺',
-                media_url: '/images/moffi_pet_trio.png',
-                created_at: new Date().toISOString()
-            }
-        ];
 
-        // Merge saved list with defaults (only if no admin advices exist in the saved list)
-        const adminAdvicesInList = list.filter(item => !item.clinic_id);
-        const compiledList = [...list];
-        if (adminAdvicesInList.length === 0) {
-            compiledList.push(...defaultAdminAdvices);
-        }
-
-        // Attach clinic details for presentation
-        return compiledList.map(item => {
-            if (item.clinic_id) {
-                // Mock clinic details for mock testing
-                return {
-                    ...item,
-                    clinic: {
-                        name: item.clinic_id === 'biz_vet1' ? 'Moffi Vet Polikliniği' : 'Pet Clinic Ataşehir',
-                        imageUrl: '/images/moffi_pet_trio.png'
-                    }
-                };
-            }
-            return item;
-        });
-    }
-
-    async saveClinicAdvice(clinicId: string, content: string, badge: string): Promise<void> {
-        const list = await this.loadData<any[]>('vet_advices') || [];
-        // Keep one active tip per clinic for simplicity in mock
-        const filtered = list.filter(item => item.clinic_id !== clinicId);
-        
-        const newAdvice = {
-            id: `advice-${Date.now()}`,
-            clinic_id: clinicId,
-            content,
-            badge,
-            media_url: '/images/moffi_pet_trio.png',
-            created_at: new Date().toISOString()
-        };
-
-        await this.saveData('vet_advices', [newAdvice, ...filtered]);
-    }
 
     async addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any> {
         const list = await this.loadData<any[]>('vet_advices') || [];

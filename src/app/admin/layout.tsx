@@ -20,7 +20,7 @@ const MENU_GROUPS = [
         group: "PLATFORM",
         items: [
             { title: "Genel Bakış", icon: LayoutDashboard, path: "/admin" },
-            { title: "Sistem Duyuruları", icon: Megaphone, path: "/admin/alerts" },
+            { title: "İçerik Stüdyosu", icon: Megaphone, path: "/admin/icerik" },
             { title: "Yıldız Patiler", icon: Trophy, path: "/admin/featured-pets" },
             { title: "Analizler", icon: BarChart3, path: "/admin/analytics" },
         ]

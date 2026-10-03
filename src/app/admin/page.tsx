@@ -241,7 +241,7 @@ export default function MoffiCoreDashboard() {
                             {[
                                 { title: "İçerik Moderasyonu", desc: "Şikayet edilen verileri ve sosyal etkileşimleri inceleyin.", icon: Shield, action: "Başlat", href: "/admin/moderation" },
                                 { title: "Kullanıcı Kontrolü", desc: "Kullanıcıları yetkilendirin veya askıya alın.", icon: Fingerprint, action: "Eriş", href: "/admin/users" },
-                                { title: "Sistem Uyarıları", desc: "Öncelikli duyuruları ve SOS bildirimlerini yönetin.", icon: Radio, action: "Senkronize Et", href: "/admin/alerts" },
+                                { title: "İçerik Stüdyosu", desc: "Ana sayfa hikâyelerini ve İlham kartını yönetin, işletme içeriklerini onaylayın.", icon: Radio, action: "Aç", href: "/admin/icerik" },
                                 { title: "Platform Metrikleri", desc: "Davranışsal eğilim analizini derinlemesine inceleyin.", icon: TrendingUp, action: "Analiz Et", href: "/admin/analytics" }
                             ].map((item, i) => (
                                 <Link href={item.href || '#'} key={i} className="group/item">

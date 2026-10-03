@@ -2043,29 +2043,6 @@ export class SupabaseApiService implements IApiService {
         return { ...data, ended_at: data.end_time, started_at: data.start_time };
     }
 
-    async getVetAdvices(): Promise<any[]> {
-        // vet_advices.clinic_id'nin profiles'a yabancı anahtarı yok; eskiden bağlı sorgu (embed) her
-        // yüklemede PGRST200 veriyordu. Klinik adı herkese açık işletme kartından ayrı okunur.
-        const { data, error } = await supabase
-            .from('vet_advices')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error("Error fetching vet advices:", error);
-            return [];
-        }
-        const ids = Array.from(new Set((data || []).map((a: any) => a.clinic_id).filter((v: string) => /^[0-9a-f-]{36}$/i.test(v || ''))));
-        const cards: Record<string, any> = {};
-        if (ids.length > 0) {
-            const { data: rows } = await supabase.from('business_cards').select('id, name, logo_url').in('id', ids);
-            (rows || []).forEach((r: any) => { cards[r.id] = r; });
-        }
-        return (data || []).map((a: any) => ({
-            ...a,
-            profiles: cards[a.clinic_id] ? { full_name: cards[a.clinic_id].name, business_name: cards[a.clinic_id].name, avatar_url: cards[a.clinic_id].logo_url } : null,
-        }));
-    }
 
     // --- FINANCE / TRANSACTIONS ---
 
@@ -2648,91 +2625,8 @@ export class SupabaseApiService implements IApiService {
         return `${Math.floor(diff / 86400)} gün`;
     }
 
-    async getAnnouncements(): Promise<SystemAnnouncement[]> {
-        try {
-            const { data, error } = await supabase
-                .from('system_announcements')
-                .select('*')
-                .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            
-            return (data || []).map((o: any) => ({
-                id: String(o.id),
-                title: o.title,
-                description: o.description,
-                media_url: o.media_url,
-                badge: o.badge,
-                cta_text: o.cta_text,
-                cta_type: o.cta_type,
-                cta_value: o.cta_value,
-                expires_at: o.expires_at,
-                created_at: o.created_at
-            }));
-        } catch (err) {
-            // Hata hâlinde örnek duyuru gösterilmez; ana sayfada duyuru kanalı görünmez.
-            console.warn("system_announcements okunamadı:", err);
-            return [];
-        }
-    }
 
-    async addAnnouncement(announcement: Partial<SystemAnnouncement>): Promise<SystemAnnouncement> {
-        try {
-            const payload = {
-                title: announcement.title,
-                description: announcement.description,
-                media_url: announcement.media_url,
-                badge: announcement.badge,
-                cta_text: announcement.cta_text,
-                cta_type: announcement.cta_type,
-                cta_value: announcement.cta_value,
-                expires_at: announcement.expires_at,
-                created_at: new Date().toISOString()
-            };
-
-            const { data, error } = await supabase
-                .from('system_announcements')
-                .insert(payload)
-                .select()
-                .single();
-
-            if (error) throw error;
-
-            return {
-                id: String(data.id),
-                title: data.title,
-                description: data.description,
-                media_url: data.media_url,
-                badge: data.badge,
-                cta_text: data.cta_text,
-                cta_type: data.cta_type,
-                cta_value: data.cta_value,
-                expires_at: data.expires_at,
-                created_at: data.created_at
-            };
-        } catch (err) {
-            console.warn("Supabase system_announcements insert failed, falling back to mockApi:", err);
-            return this.mockApi.addAnnouncement(announcement);
-        }
-    }
-
-    async deleteAnnouncement(id: string): Promise<void> {
-        try {
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-            if (!isUuid) {
-                return this.mockApi.deleteAnnouncement(id);
-            }
-            const { error } = await supabase
-                .from('system_announcements')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
-        } catch (err) {
-            console.warn("Supabase system_announcements delete failed, falling back to mockApi:", err);
-            return this.mockApi.deleteAnnouncement(id);
-        }
-    }
 
     // Daily Star Pet (Yıldız Patiler) Supabase Implementations
     async getAllPetsAdmin(): Promise<Pet[]> {
@@ -2971,30 +2865,6 @@ export class SupabaseApiService implements IApiService {
 
     // Vet Advices (Vet Tavsiyeleri) Supabase Implementations
 
-    async saveClinicAdvice(clinicId: string, content: string, badge: string): Promise<void> {
-        try {
-            // Overwrite: Delete previous advices for this clinic first
-            await supabase
-                .from('vet_advices')
-                .delete()
-                .eq('clinic_id', clinicId);
-
-            // Insert new advice
-            const { error } = await supabase
-                .from('vet_advices')
-                .insert({
-                    clinic_id: clinicId,
-                    content: content,
-                    badge: badge,
-                    media_url: '/images/moffi_pet_trio.png'
-                });
-
-            if (error) throw error;
-        } catch (err) {
-            console.warn("Supabase saveClinicAdvice failed, falling back to mockApi:", err);
-            return this.mockApi.saveClinicAdvice(clinicId, content, badge);
-        }
-    }
 
     async addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any> {
         try {

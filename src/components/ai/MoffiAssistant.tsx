@@ -24,6 +24,7 @@ import { todayKey } from '@/lib/appointmentTime';
 import { formatKm, petWeightKg } from '@/lib/walkMetrics';
 import { haptics } from '@/native';
 import { cn } from '@/lib/utils';
+import { genitive, locative } from '@/lib/turkish';
 import type { HealthBundle } from '@/types/health';
 
 type Action = { type: 'link'; label: string; url: string } | { type: 'pay'; label: string } | { type: 'retry'; label: string };
@@ -322,11 +323,11 @@ export function MoffiAssistant() {
     const petName = pet?.name || 'dostun';
     const prompts = [
         { Icon: HeartPulse, title: 'Sağlık özeti', hint: 'Durum ve sıradaki işler', send: `${petName} için sağlık durumunu kısaca özetler misin? Yaklaşan ya da geciken bir şey var mı?` },
-        { Icon: Stethoscope, title: 'Belirti sor', hint: 'Ne zaman veterinere?', prefill: `${petName}'da şu belirti var: ` },
+        { Icon: Stethoscope, title: 'Belirti sor', hint: 'Ne zaman veterinere?', prefill: `${locative(petName)} şu belirti var: ` },
         { Icon: Utensils, title: 'Beslenme', hint: 'Günlük miktar ve öğün', send: `${petName} için günlük mama miktarı ve öğün sayısı ne olmalı? Kilosuna ve yaşına göre yaklaşık hesapla.` },
-        { Icon: Footprints, title: 'Egzersiz', hint: 'Bu hafta yeterli mi?', send: `${petName}'ın bu haftaki yürüyüşleri yeterli mi? Irkı ve yaşı için ideal günlük egzersiz ne kadar?` },
-        { Icon: Syringe, title: 'Aşı ve parazit', hint: 'Takvimi açıkla', send: `${petName}'ın aşı ve parazit takvimini açıklar mısın? Sıradaki uygulama ne zaman ve neden önemli?` },
-        { Icon: Brain, title: 'Davranış', hint: 'Eğitim önerisi al', prefill: `${petName}'ın şu davranışıyla ilgili yardım istiyorum: ` },
+        { Icon: Footprints, title: 'Egzersiz', hint: 'Bu hafta yeterli mi?', send: `${genitive(petName)} bu haftaki yürüyüşleri yeterli mi? Irkı ve yaşı için ideal günlük egzersiz ne kadar?` },
+        { Icon: Syringe, title: 'Aşı ve parazit', hint: 'Takvimi açıkla', send: `${genitive(petName)} aşı ve parazit takvimini açıklar mısın? Sıradaki uygulama ne zaman ve neden önemli?` },
+        { Icon: Brain, title: 'Davranış', hint: 'Eğitim önerisi al', prefill: `${genitive(petName)} şu davranışıyla ilgili yardım istiyorum: ` },
     ];
 
     const health = bundle ? overallStatus(bundle, todayKey()) : null;

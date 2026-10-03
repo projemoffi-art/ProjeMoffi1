@@ -94,8 +94,7 @@ export default function BusinessAppointmentsPage() {
     const [criticalNotes, setCriticalNotes] = useState("");
 
     // Tabs and Shift Settings States
-    const [activeTab, setActiveTab] = useState<'appointments' | 'advice' | 'shifts' | 'reviews' | 'messages'>('appointments');
-    const [isSavingAdvice, setIsSavingAdvice] = useState(false);
+    const [activeTab, setActiveTab] = useState<'appointments' | 'shifts' | 'reviews' | 'messages'>('appointments');
 
     // Reviews States
     const [reviewsData, setReviewsData] = useState<{ reviews: any[], averageRating: number }>({ reviews: [], averageRating: 0 });
@@ -128,8 +127,6 @@ export default function BusinessAppointmentsPage() {
     }>({ isOpen: false, appointments: [], onConfirm: null, isProcessing: false });
 
     // Vet Health Advice States
-    const [vetAdviceText, setVetAdviceText] = useState("");
-    const [vetAdviceBadge, setVetAdviceBadge] = useState("Genel Sağlık 🩺");
 
     // Exception States
     const [exceptions, setExceptions] = useState<any[]>([]);
@@ -352,18 +349,6 @@ export default function BusinessAppointmentsPage() {
                 }
             }
 
-            try {
-                const clinicId = businessId;
-                if (!clinicId) return;
-                const { data: advices } = await supabase.from('vet_advices').select('*');
-                const myAdvice = (advices || []).find((item: any) => item.clinic_id === clinicId);
-                if (myAdvice) {
-                    setVetAdviceText(myAdvice.content);
-                    setVetAdviceBadge(myAdvice.badge);
-                }
-            } catch (adviceErr) {
-                console.error("Failed to load clinic advice:", adviceErr);
-            }
         };
 
         loadSettings();
@@ -827,43 +812,6 @@ export default function BusinessAppointmentsPage() {
         await proceedSave(false);
     };
 
-    const handleSaveAdvice = async () => {
-        if (!businessId) {
-            showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertCircle", "text-amber-500 font-bold");
-            return;
-        }
-        if (!vetAdviceText.trim()) {
-            showToast("Lütfen bir tavsiye metni girin! ⚠️", "AlertCircle", "text-amber-500 font-bold");
-            return;
-        }
-        setIsSavingAdvice(true);
-        try {
-            if (isSupabaseEnabled) {
-                const clinicId = businessId;
-                await apiService.saveClinicAdvice(clinicId, vetAdviceText.trim(), vetAdviceBadge.trim());
-            } else {
-                localStorage.setItem('moffi_clinic_advice', JSON.stringify({ content: vetAdviceText.trim(), badge: vetAdviceBadge.trim() }));
-            }
-
-            // Broadcast story changes
-            try {
-                const broadcast = new BroadcastChannel('moffi_announcements_channel');
-                broadcast.postMessage('REFRESH_STORIES');
-                broadcast.close();
-            } catch (bErr) {
-                console.error("Tab sync broadcast failed:", bErr);
-            }
-
-            showToast("Günün sağlık tavsiyesi başarıyla hikayelerde yayınlandı! 🩺🚀", "CheckCircle2", "text-green-500 font-bold");
-        } catch (e: any) {
-            console.error("Failed to save clinic advice:", e);
-            const errStr = e.message || e.error_description || JSON.stringify(e);
-            showToast(`Tavsiye kaydedilemedi! ❌ Hata: ${errStr.slice(0, 80)}`, "AlertCircle", "text-red-500 font-bold");
-        } finally {
-            setIsSavingAdvice(false);
-        }
-    };
-
     return (
         <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
             <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-8">
@@ -876,12 +824,6 @@ export default function BusinessAppointmentsPage() {
                         className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'appointments' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         Randevu Akışı
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('advice')}
-                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'advice' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
-                    >
-                        Günün Tavsiyesi 🩺
                     </button>
                     <button 
                         onClick={() => setActiveTab('shifts')}
@@ -1449,117 +1391,6 @@ export default function BusinessAppointmentsPage() {
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'advice' && (
-                    <div className="bg-white dark:bg-[#121212] rounded-[2.5rem] p-8 border border-zinc-200 dark:border-card-border shadow-moffi-card text-left max-w-3xl space-y-8">
-                        <div>
-                            <h2 className="text-xl font-black text-foreground dark:text-white flex items-center gap-2 mb-2">
-                                <Heart className="w-5 h-5 text-red-500 fill-current" /> Günün Sağlık Tavsiyesi 🩺
-                            </h2>
-                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
-                                Moffi kullanıcılarına ulaştırılacak pratik bir evcil hayvan sağlığı tavsiyesi veya uyarısı yayınlayın.
-                            </p>
-                        </div>
-
-                        {/* Advice Form Inputs */}
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Tavsiye Kategorisi</label>
-                                    <select 
-                                        value={vetAdviceBadge}
-                                        onChange={e => setVetAdviceBadge(e.target.value)}
-                                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl px-4 py-3.5 text-xs font-bold focus:border-[#5B4D9D] focus:ring-1 focus:ring-[#5B4D9D] outline-none text-foreground dark:text-white transition-all shadow-sm"
-                                    >
-                                        <option value="Genel Sağlık 🩺">Genel Sağlık 🩺</option>
-                                        <option value="Aşı Uyarısı 💉">Aşı Uyarısı 💉</option>
-                                        <option value="Beslenme Tavsiyesi 🍖">Beslenme 🍖</option>
-                                        <option value="Yaz Bakımı ☀️">Yaz Bakımı ☀️</option>
-                                        <option value="Kış Bakımı ❄️">Kış Bakımı ❄️</option>
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2 sm:col-span-2">
-                                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Tavsiye Açıklaması</label>
-                                    <textarea
-                                        value={vetAdviceText}
-                                        onChange={e => setVetAdviceText(e.target.value.slice(0, 150))}
-                                        placeholder="Örn: Yaz aylarında asfalt sıcaklığı dostlarımızın patilerini yakabilir. Yürüyüşleri sabah ve akşam yapın..."
-                                        rows={3}
-                                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl px-4 py-3 text-xs focus:border-[#5B4D9D] focus:ring-1 focus:ring-[#5B4D9D] outline-none text-foreground dark:text-white transition-all resize-none shadow-sm"
-                                    />
-                                    <div className="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-1.5 px-1">
-                                        <span>En fazla 150 karakter yazabilirsiniz</span>
-                                        <span className={vetAdviceText.length >= 135 ? "text-red-500 font-black" : "text-gray-500 dark:text-gray-400"}>
-                                            {vetAdviceText.length}/150
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Interactive Preview - Story Layout Mockup */}
-                        <div className="pt-6 border-t border-zinc-150 dark:border-white/5 space-y-4">
-                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">HİKAYE ÖNİZLEME (KULLANICININ EKRANINDA BÖYLE GÖRÜNECEK)</label>
-                            
-                            <div className="flex justify-center">
-                                <div className="w-[280px] h-[450px] rounded-[2.2rem] bg-zinc-950 text-white relative overflow-hidden shadow-2xl border-4 border-zinc-900 flex flex-col justify-between p-6">
-                                    {/* Background Image / Placeholder */}
-                                    <div className="absolute inset-0 z-0 bg-cover bg-center opacity-65 transition-all duration-300" style={{ backgroundImage: `url('/images/moffi_pet_trio.png')` }} />
-                                    {/* Black Gradient Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/70 z-10" />
-
-                                    {/* Top Bar (Clinic Info) */}
-                                    <div className="z-20 flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-full border border-black/20 dark:border-white/20 overflow-hidden bg-black/10 dark:bg-white/10 flex items-center justify-center">
-                                            <img src="/images/moffi_pet_trio.png" className="w-full h-full object-cover" />
-                                        </div>
-                                        <div className="text-left">
-                                            <div className="font-black text-xs leading-none">VetLife Global Clinic</div>
-                                            <span className="text-[9px] text-zinc-300">Az Önce</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Middle Content */}
-                                    <div className="z-20 text-left space-y-2 mt-auto mb-5">
-                                        <div>
-                                            <span className="inline-block bg-[#5B4D9D] text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow">
-                                                {vetAdviceBadge}
-                                            </span>
-                                        </div>
-                                        <p className="text-[12.5px] leading-relaxed font-bold drop-shadow-md">
-                                            {vetAdviceText || "Yazacağınız tavsiye metni burada canlı olarak görüntülenecektir. Lütfen yukarıdaki alana tavsiyenizi girin..."}
-                                        </p>
-                                    </div>
-
-                                    {/* CTA Button */}
-                                    <div className="z-20 mt-auto">
-                                        <div className="w-full py-2.5 bg-white dark:bg-zinc-100 text-black font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-lg select-none">
-                                            Randevu Al 📅
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Save Action */}
-                        <div className="pt-6 border-t border-zinc-150 dark:border-white/5 flex justify-end">
-                            <button
-                                onClick={handleSaveAdvice}
-                                disabled={isSavingAdvice}
-                                className="bg-[#5B4D9D] hover:bg-[#4E3F8F] text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-purple-500/10 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50 disabled:scale-100"
-                            >
-                                {isSavingAdvice ? (
-                                    <>Yayınlanıyor...</>
-                                ) : (
-                                    <>
-                                        <Send className="w-4 h-4" /> Sağlık Tavsiyesini Yayınla 🚀
-                                    </>
-                                )}
-                            </button>
                         </div>
                     </div>
                 )}

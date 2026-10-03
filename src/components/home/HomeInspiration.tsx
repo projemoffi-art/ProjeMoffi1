@@ -1,8 +1,11 @@
 'use client';
 
 // Moffi'den İlham (home-final referansı): kaydırılabilen fotoğraf + söz kartları. Sayfanın kapanış imzası.
+// İçerik Stüdyosu'nda yayında 'inspiration' öğesi varsa onlar gösterilir; yoksa Moffi'nin kendi marka kartları.
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { contentService, type FeedItem } from '@/services/contentService';
 import { Heart, PawPrint } from 'lucide-react';
 import { SectionHeader, ScrollDots, activeIndexOf, baloo } from './homeUI';
 
@@ -15,17 +18,25 @@ const SLIDES = [
     { image: '/images/ilham6.jpg', quote: 'Sevgi bazen yumuşacık bir pati kadar.', position: '50% 40%' },
 ];
 
-export function HomeInspiration() {
+export function HomeInspiration({ items = [] }: { items?: FeedItem[] }) {
+    const router = useRouter();
     const [active, setActive] = useState(0);
+    const slides = items.length
+        ? items.map(i => ({ key: i.id, image: i.mediaUrl as string, quote: i.title, position: '50% 40%', id: i.id, url: i.ctaUrl }))
+        : SLIDES.map(s => ({ key: s.image, image: s.image, quote: s.quote, position: s.position, id: null as string | null, url: null as string | null }));
     return (
         <section>
             <SectionHeader title="Moffi'den İlham" subtitle="Daha mutlu patiler, daha güzel yarınlar ♡" />
             <div
-                onScroll={e => setActive(activeIndexOf(e.currentTarget, SLIDES.length))}
+                onScroll={e => setActive(activeIndexOf(e.currentTarget, slides.length))}
                 className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-5 px-5"
             >
-                {SLIDES.map(s => (
-                    <figure key={s.image} className="snap-center shrink-0 w-full relative h-[188px] rounded-[22px] overflow-hidden">
+                {slides.map(s => (
+                    <figure
+                        key={s.key}
+                        onClick={s.url ? () => { if (s.id) contentService.track(s.id, 'tap'); if (s.url!.startsWith('/')) router.push(s.url!); else window.open(s.url!, '_blank', 'noopener'); } : undefined}
+                        className={`snap-center shrink-0 w-full relative h-[188px] rounded-[22px] overflow-hidden ${s.url ? 'cursor-pointer' : ''}`}
+                    >
                         <img src={s.image} alt="" className="absolute inset-0 w-full h-full object-cover scale-[1.04]" style={{ objectPosition: s.position }} />
                         <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(20,17,13,0.72) 0%, rgba(20,17,13,0.35) 48%, rgba(20,17,13,0) 75%)' }} />
                         <Heart className="absolute top-4 right-4 w-6 h-6 text-white/90" strokeWidth={1.8} />
@@ -38,7 +49,7 @@ export function HomeInspiration() {
                     </figure>
                 ))}
             </div>
-            <ScrollDots count={SLIDES.length} active={active} />
+            <ScrollDots count={slides.length} active={active} />
         </section>
     );
 }
