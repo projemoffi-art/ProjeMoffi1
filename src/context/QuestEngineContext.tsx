@@ -24,7 +24,9 @@ import { usePet } from './PetContext';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/lib/supabase';
 import { haversineKm } from '@/lib/utils';
-import { apiService, isSupabaseEnabled } from '@/services/apiService';
+import { apiService } from '@/services/apiService';
+import type { WalkStats } from '@/types/domain';
+import type { WeatherData } from './WeatherContext';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -270,7 +272,7 @@ const PET_SIZE_GOAL_MULTIPLIER: Record<string, number> = {
     'Dev': 1.3,
 };
 
-function computeDailyGoal(walkStats: any, petSize?: string): { distance: number; duration: number } {
+function computeDailyGoal(walkStats: WalkStats | null, petSize?: string): { distance: number; duration: number } {
     const totalWalks = walkStats?.totalWalks || 0;
     const avgDist = walkStats?.averageDistanceKm || 0;
     const avgDur = walkStats
@@ -407,10 +409,10 @@ interface QuestTemplate {
     category: QuestCategory;
     difficulty: QuestDifficulty;
     type: QuestType;
-    targetFn: (goal: { distance: number; duration: number }, stats: any) => number;
+    targetFn: (goal: { distance: number; duration: number }, stats: WalkStats | null) => number;
     unit: string;
     reward: { pp: number; xp: number };
-    condition?: (weather: any, stats: any, hour: number) => boolean;
+    condition?: (weather: WeatherData | null, stats: WalkStats | null, hour: number) => boolean;
 }
 
 const QUEST_TEMPLATES: QuestTemplate[] = [
@@ -572,7 +574,7 @@ const QUEST_TEMPLATES: QuestTemplate[] = [
         targetFn: () => 2.0,
         unit: 'km',
         reward: { pp: 70, xp: 100 },
-        condition: (weather) => weather && (weather.walkScore <= 60 || weather.temp <= 5),
+        condition: (weather) => !!weather && (weather.walkScore <= 60 || weather.temp <= 5),
     },
     {
         templateId: 'morning_walk',
@@ -807,8 +809,8 @@ function getMonthlyResearch(monthKey: string): MonthlyResearch {
 function selectDailyQuests(
     difficulty: QuestDifficulty,
     goal: { distance: number; duration: number },
-    weather: any,
-    walkStats: any,
+    weather: WeatherData | null,
+    walkStats: WalkStats | null,
     dateStr: string
 ): Quest[] {
     const hour = new Date().getHours();
@@ -1035,7 +1037,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     // kalır (hızlı ilk render için), ama gerçek kaynak artık profiles.pati_puan_balance.
     // coin_balance/PawCoin'e HİÇ dokunmuyor, tamamen ayrı bir alan.
     useEffect(() => {
-        if (!isSupabaseEnabled || !user?.id) return;
+        if (!user?.id) return;
         apiService.getPatiPuanBalance().then(realBalance => {
             setTotalPatiPuan(realBalance);
             localStorage.setItem(PUAN_KEY, String(realBalance));
@@ -1065,7 +1067,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     // Faz 8: gerçek seri kalkanı durumunu DB'den al (localStorage'daki eski flag'in
     // yerine — o flag gerçek seri hesabına hiç etki etmiyordu)
     useEffect(() => {
-        if (!isSupabaseEnabled || !user?.id) return;
+        if (!user?.id) return;
         apiService.getStreakShieldStatus().then(status => {
             setStreakShieldAvailable(status.available);
         }).catch(err => console.error('Seri kalkanı durumu alınamadı:', err));
@@ -1122,7 +1124,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     }, []);
 
     const awardReward = useCallback((ruleKey: string, xp: number, icon: string, title: string) => {
-        if (!isSupabaseEnabled || notifiedRef.current.has(ruleKey)) return;
+        if (notifiedRef.current.has(ruleKey)) return;
         notifiedRef.current.add(ruleKey);
 
         apiService.claimReward(ruleKey).then(res => {
@@ -1574,8 +1576,8 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
 
     // ── Event bus: sosyal aksiyonlar ──────────────────────────────────────
     useEffect(() => {
-        const handleQuestTrigger = (e: any) => {
-            const { type } = e.detail || {};
+        const handleQuestTrigger = (e: Event) => {
+            const type = (e as CustomEvent<{ type?: string }>).detail?.type ?? '';
             if (type === 'post_added') {
                 socialCountsRef.current.posts++;
                 lifetimePostCountRef.current++;
@@ -1655,7 +1657,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     // gerçek seri hesaplamasına gerçekten yansıyor). Eskiden bu sadece bir toast
     // gösterip localStorage flag'i kapatıyordu, gerçek seriye hiç etkisi yoktu.
     const useStreakShield = useCallback(async () => {
-        if (!streakShieldAvailable || !isSupabaseEnabled) return;
+        if (!streakShieldAvailable) return;
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const y = yesterday.getFullYear(), m = String(yesterday.getMonth() + 1).padStart(2, '0'), d = String(yesterday.getDate()).padStart(2, '0');
@@ -1667,10 +1669,10 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
             window.dispatchEvent(new CustomEvent('moffi-toast', {
                 detail: { message: '🛡️ Seri Kalkanı kullanıldı! Seriniz korundu.', icon: 'Shield', color: 'text-blue-400' }
             }));
-        } catch (err: any) {
+        } catch (err) {
             console.error('Seri kalkanı kullanılamadı:', err);
             window.dispatchEvent(new CustomEvent('moffi-toast', {
-                detail: { message: err?.message || 'Seri kalkanı kullanılamadı.', icon: 'AlertTriangle', color: 'text-red-400' }
+                detail: { message: err instanceof Error ? err.message : 'Seri kalkanı kullanılamadı.', icon: 'AlertTriangle', color: 'text-red-400' }
             }));
         }
     }, [streakShieldAvailable]);

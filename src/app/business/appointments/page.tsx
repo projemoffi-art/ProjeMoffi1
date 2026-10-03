@@ -10,7 +10,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { usePet } from "@/context/PetContext";
 import { showToast, cn } from "@/lib/utils";
-import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { apiService } from "@/services/apiService";
 import { uploadChatImage } from "@/lib/chatMedia";
 import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
 import { supabase } from "@/lib/supabase";
@@ -22,8 +22,120 @@ import { CHAT_MESSAGE_EVENT, type ChatMessageEventDetail } from "@/context/ChatC
 import { healthService } from "@/services/healthService";
 import type { VaccineDefinition } from "@/types/health";
 
+type ApptRow = Awaited<ReturnType<typeof apiService.getClinicAppointments>>[number];
+type Conversation = Awaited<ReturnType<typeof apiService.getChatConversations>>[number];
+type ChatMessage = Awaited<ReturnType<typeof apiService.getChatMessages>>[number];
+type Review = Awaited<ReturnType<typeof apiService.getClinicReviews>>['reviews'][number];
+type DayHours = { open: string; close: string; closed: boolean };
+type WeekHours = Record<string, DayHours>;
+type ClinicException = Awaited<ReturnType<typeof apiService.getClinicExceptions>>[number];
+
+/** Müşterinin randevu alırken paylaştığı pasaport özeti (appointments.shared_passport, vet sayfası yazar). */
+interface SharedPassportView {
+    basic?: { name?: string | null; breed?: string | null; weight?: string | null; age?: string | null; gender?: string | null } | null;
+    vaccines?: { name?: string; definition?: { name?: string } | null }[] | null;
+    healthNotes?: string | null;
+    ownerInfo?: { name?: string | null; phone?: string | null; email?: string | null } | null;
+}
+
+interface ConsultationView {
+    diagnosis?: string;
+    criticalNotes?: string | null;
+    weightKg?: number | null;
+    temperatureC?: number | null;
+    vaccines?: { name?: string; date?: string; nextDate?: string | null; batch?: string | null }[];
+    medications?: { name: string; dose?: string; duration?: string }[];
+}
+
+const DEFAULT_HOURS: WeekHours = {
+    monday: { open: "09:00", close: "18:00", closed: false },
+    tuesday: { open: "09:00", close: "18:00", closed: false },
+    wednesday: { open: "09:00", close: "18:00", closed: false },
+    thursday: { open: "09:00", close: "18:00", closed: false },
+    friday: { open: "09:00", close: "18:00", closed: false },
+    saturday: { open: "09:00", close: "18:00", closed: true },
+    sunday: { open: "09:00", close: "18:00", closed: true },
+};
+const WEEKDAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/** businesses.working_hours (JSON) → gün başına saat; tanınmayan alanlar varsayılanda kalır. */
+function parseWeekHours(raw: unknown): WeekHours | null {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const out: WeekHours = { ...DEFAULT_HOURS };
+    for (const [day, v] of Object.entries(raw as Record<string, unknown>)) {
+        if (!v || typeof v !== 'object') continue;
+        const d = v as Partial<DayHours>;
+        out[day] = { open: typeof d.open === 'string' ? d.open : '09:00', close: typeof d.close === 'string' ? d.close : '18:00', closed: !!d.closed };
+    }
+    return out;
+}
+
+/** Randevunun duvar saati günü (8.36: saatler Türkiye duvar saati, UTC etiketli) → haftanın günü anahtarı. */
+const wallWeekday = (iso: string) => {
+    const [y, m, d] = wallParts(iso).dateKey.split('-').map(Number);
+    return WEEKDAY_KEYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+};
+
+function toAppt(item: ApptRow) {
+    let time = "00:00";
+    let dateStr = "";
+    if (item.appointment_date) {
+        const wall = wallParts(item.appointment_date);
+        time = wall.time;
+        const today = todayKey();
+        dateStr = wall.dateKey === today ? "Bugün" : wall.dateKey === addDaysKey(today, 1) ? "Yarın" : wall.dateKey;
+    }
+    const ownerName = item.user?.full_name || item.user?.username || item.guest_name || "Müşteri";
+    const reason = item.reason || '';
+    const parsedType = reason.includes('Randevu tipi:') ? (reason.split('Randevu tipi: ')[1].trim() || "Rutin Kontrol") : (reason || "Rutin Kontrol");
+    const pet = item.pet;
+    const fallbackPassport: SharedPassportView = {
+        basic: pet && (pet.breed || pet.weight || pet.age) ? {
+            breed: pet.breed || null,
+            weight: pet.weight ? `${pet.weight} kg` : null,
+            age: pet.age || null,
+        } : null,
+        ownerInfo: { name: ownerName, phone: item.user?.phone || item.guest_phone || "" },
+    };
+    const shared = item.shared_passport && typeof item.shared_passport === 'object' && !Array.isArray(item.shared_passport)
+        ? (item.shared_passport as unknown as SharedPassportView) : null;
+    return {
+        id: item.id,
+        userId: item.user_id,
+        petName: pet?.name || item.guest_pet_name || "Evcil hayvan belirtilmedi",
+        ownerName,
+        isGuest: !item.user_id,
+        guestPhone: item.guest_phone || null,
+        time,
+        date: dateStr,
+        rawDate: item.appointment_date,
+        type: parsedType,
+        status: item.status,
+        image: pet?.avatar_url || null,
+        petId: item.pet_id,
+        petType: pet?.type || null,
+        sharedPassport: shared ?? fallbackPassport,
+        clinicId: item.clinic_id,
+        clinicName: item.clinic_name,
+        realDoctorName: item.doctor?.name || item.doctor_name || null,
+        attendance_status: item.attendance_status,
+        consultationData: undefined as ConsultationView | undefined,
+    };
+}
+type Appt = ReturnType<typeof toAppt>;
+
+/**
+ * Paylaşılan pasaport randevudan en fazla 24 saat önce/sonra görünür. Tarih okunamazsa GÖSTERİLMEZ
+ * (eskiden okunamayan tarihte erişim açık kalıyordu).
+ */
+function passportAccessOpen(apt: Appt): boolean {
+    if (!apt.sharedPassport || apt.status === 'rejected' || apt.status === 'cancelled' || !apt.rawDate) return false;
+    const t = new Date(apt.rawDate).getTime();
+    if (!Number.isFinite(t)) return false;
+    return Math.abs(Date.now() - t) <= 24 * 60 * 60 * 1000;
+}
+
 export default function BusinessAppointmentsPage() {
-    const { customRecords, setCustomRecords, updatePet } = usePet();
     // Faz 3.1 (işletme türü mimarisi, 2026-09-25) — muayene/aşı/reçete (EMR)
     // akışı artık SADECE hasMedicalRecords=true olan türlerde (bugün: vet)
     // gösteriliyor. Diğer türler (kuaför/eğitmen/gönüllü/personel) için
@@ -33,45 +145,17 @@ export default function BusinessAppointmentsPage() {
     const { hasMedicalRecords: typeHasMedicalRecords, staffLabel } = useBusinessType();
     const { businessId } = useActiveBusiness();
 
-    const checkAccessGranted = (apt: any) => {
-        if (!apt.sharedPassport) return false;
-        if (apt.status === 'rejected' || apt.status === 'cancelled') return false;
-        
-        try {
-            let aptDate: Date;
-            if (apt.date === 'Bugün') {
-                aptDate = new Date();
-            } else if (apt.date === 'Yarın') {
-                aptDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
-            } else {
-                aptDate = new Date(apt.date);
-            }
-            
-            if (isNaN(aptDate.getTime())) {
-                return true;
-            }
-            
-            const now = Date.now();
-            const diffMs = Math.abs(now - aptDate.getTime());
-            const twentyFourHoursMs = 24 * 60 * 60 * 1000;
-            
-            return diffMs <= twentyFourHoursMs;
-        } catch (e) {
-            return true;
-        }
-    };
-
     // Initialize with empty data
-    const [appointments, setAppointments] = useState<any[]>([]);
-    const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+    const [appointments, setAppointments] = useState<Appt[]>([]);
+    const [pendingRequests, setPendingRequests] = useState<Appt[]>([]);
 
     // Consultation Form States
-    const [selectedApt, setSelectedApt] = useState<any | null>(null);
+    const [selectedApt, setSelectedApt] = useState<Appt | null>(null);
     // Moffi hesabı olmayan (misafir) müşterinin hesabına bağlı bir evcil hayvan yok; muayene kaydı yazılamaz.
     const hasMedicalRecords = typeHasMedicalRecords && !selectedApt?.isGuest;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [diagnosis, setDiagnosis] = useState("");
-    
+
     // Ölçümler (muayene kaydına ve hastanın kilo geçmişine yazılır)
     const [weightKg, setWeightKg] = useState("");
     const [temperatureC, setTemperatureC] = useState("");
@@ -82,14 +166,14 @@ export default function BusinessAppointmentsPage() {
     const [vaccineName, setVaccineName] = useState("");
     const [vaccineNextDate, setVaccineNextDate] = useState("");
     const [vaccineBatch, setVaccineBatch] = useState("");
-    const [addedVaccines, setAddedVaccines] = useState<any[]>([]);
-    
+    const [addedVaccines, setAddedVaccines] = useState<{ definitionId: string | null; name: string; date: string; nextDate: string; batch: string }[]>([]);
+
     // Medication Form States
     const [medName, setMedName] = useState("");
     const [medDose, setMedDose] = useState("");
     const [medDuration, setMedDuration] = useState("");
-    const [addedMeds, setAddedMeds] = useState<any[]>([]);
-    
+    const [addedMeds, setAddedMeds] = useState<{ name: string; dose: string; duration: string }[]>([]);
+
     // Critical Health Notes
     const [criticalNotes, setCriticalNotes] = useState("");
 
@@ -97,21 +181,13 @@ export default function BusinessAppointmentsPage() {
     const [activeTab, setActiveTab] = useState<'appointments' | 'shifts' | 'reviews' | 'messages'>('appointments');
 
     // Reviews States
-    const [reviewsData, setReviewsData] = useState<{ reviews: any[], averageRating: number }>({ reviews: [], averageRating: 0 });
+    const [reviewsData, setReviewsData] = useState<{ reviews: Review[], averageRating: number }>({ reviews: [], averageRating: 0 });
     const [isLoadingReviews, setIsLoadingReviews] = useState(false);
     const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
     const [isSubmittingReply, setIsSubmittingReply] = useState<{ [key: string]: boolean }>({});
     const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
-    const [workingHours, setWorkingHours] = useState<{ [key: string]: { open: string, close: string, closed: boolean } }>({
-        monday: { open: "09:00", close: "18:00", closed: false },
-        tuesday: { open: "09:00", close: "18:00", closed: false },
-        wednesday: { open: "09:00", close: "18:00", closed: false },
-        thursday: { open: "09:00", close: "18:00", closed: false },
-        friday: { open: "09:00", close: "18:00", closed: false },
-        saturday: { open: "09:00", close: "18:00", closed: true },
-        sunday: { open: "09:00", close: "18:00", closed: true }
-    });
-    const [originalWorkingHours, setOriginalWorkingHours] = useState<{ [key: string]: { open: string, close: string, closed: boolean } } | null>(null);
+    const [workingHours, setWorkingHours] = useState<WeekHours>(DEFAULT_HOURS);
+    const [originalWorkingHours, setOriginalWorkingHours] = useState<WeekHours | null>(null);
     const [startTime, setStartTime] = useState("09:00");
     const [endTime, setEndTime] = useState("18:00");
     const [lunchStart, setLunchStart] = useState("12:00");
@@ -121,7 +197,7 @@ export default function BusinessAppointmentsPage() {
     // Close Warning Modal State
     const [closeWarningModal, setCloseWarningModal] = useState<{
         isOpen: boolean;
-        appointments: any[];
+        appointments: Appt[];
         onConfirm: ((cancelAppointments: boolean) => Promise<void>) | null;
         isProcessing?: boolean;
     }>({ isOpen: false, appointments: [], onConfirm: null, isProcessing: false });
@@ -129,19 +205,19 @@ export default function BusinessAppointmentsPage() {
     // Vet Health Advice States
 
     // Exception States
-    const [exceptions, setExceptions] = useState<any[]>([]);
+    const [exceptions, setExceptions] = useState<ClinicException[]>([]);
     const [selectedExceptionDate, setSelectedExceptionDate] = useState<string | null>(null);
     const [exceptionForm, setExceptionForm] = useState<{ isClosed: boolean, open: string, close: string }>({ isClosed: false, open: "09:00", close: "18:00" });
-    
+
     // Reject Reason States (Faz 9)
     const [rejectingApptId, setRejectingApptId] = useState<string | number | null>(null);
     const [rejectReason, setRejectReason] = useState("");
 
     // Messages States
-    const [conversations, setConversations] = useState<any[]>([]);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
     const [totalUnread, setTotalUnread] = useState(0);
-    const [selectedConv, setSelectedConv] = useState<any>(null);
-    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
 
     // Filter State
@@ -150,15 +226,15 @@ export default function BusinessAppointmentsPage() {
     const exceptionsScrollProps = useDragScroll();
 
     const fetchExceptions = async () => {
-        if (!businessId || !isSupabaseEnabled) return;
+        if (!businessId) return;
         try {
             const today = new Date();
             const endDate = new Date(today);
             endDate.setDate(endDate.getDate() + 14);
-            
+
             const todayStr = today.toLocaleDateString('sv-SE');
             const endStr = endDate.toLocaleDateString('sv-SE');
-            
+
             const list = await apiService.getClinicExceptions(businessId, todayStr, endStr);
             setExceptions(list);
         } catch (e) {
@@ -173,16 +249,13 @@ export default function BusinessAppointmentsPage() {
             const dayKey = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
             const baseHours = workingHours[dayKey] || { open: "09:00", close: "18:00", closed: false };
 
-            const isSameAsDefault = 
-                exceptionForm.isClosed === baseHours.closed && 
+            const isSameAsDefault =
+                exceptionForm.isClosed === baseHours.closed &&
                 (exceptionForm.isClosed || (exceptionForm.open === baseHours.open && exceptionForm.close === baseHours.close));
 
-            let conflictingAppts: any[] = [];
+            let conflictingAppts: Appt[] = [];
             if (exceptionForm.isClosed) {
-                conflictingAppts = [...appointments, ...pendingRequests].filter(a => {
-                    if (!a.rawDate) return false;
-                    return new Date(a.rawDate).toLocaleDateString('sv-SE') === selectedExceptionDate;
-                });
+                conflictingAppts = [...appointments, ...pendingRequests].filter(a => !!a.rawDate && wallParts(a.rawDate).dateKey === selectedExceptionDate);
             }
 
             const proceedSave = async (cancelAppointments: boolean) => {
@@ -212,7 +285,7 @@ export default function BusinessAppointmentsPage() {
                     );
                     showToast("İstisna başarıyla kaydedildi! ✨", "CheckCircle2", "text-emerald-500 font-bold");
                 }
-                
+
                 setSelectedExceptionDate(null);
                 fetchExceptions();
             };
@@ -254,60 +327,9 @@ export default function BusinessAppointmentsPage() {
         }
         try {
             const clinicId = businessId;
-            const list = await apiService.getClinicAppointments(clinicId);
-            const mapped = list.map((item: any) => {
-                let time = "00:00";
-                let dateStr = "";
-                if (item.appointment_date) {
-                    const wall = wallParts(item.appointment_date);
-                    time = wall.time;
-                    const today = todayKey();
-                    dateStr = wall.dateKey === today ? "Bugün" : wall.dateKey === addDaysKey(today, 1) ? "Yarın" : wall.dateKey;
-                }
-                const ownerName = item.user?.full_name || item.user?.username || item.guest_name || "Müşteri";
-
-                let parsedType = "Rutin Kontrol";
-                if (item.reason && item.reason.includes('Randevu tipi:')) {
-                    parsedType = item.reason.split('Randevu tipi: ')[1].trim() || "Rutin Kontrol";
-                } else if (item.reason) {
-                    parsedType = item.reason;
-                }
-
-                return {
-                    id: item.id,
-                    userId: item.user_id,
-                    petName: item.pet?.name || item.guest_pet_name || "Evcil hayvan belirtilmedi",
-                    ownerName,
-                    isGuest: !item.user_id,
-                    guestPhone: item.guest_phone || null,
-                    time: time,
-                    date: dateStr,
-                    rawDate: item.appointment_date,
-                    type: parsedType,
-                    status: item.status,
-                    image: item.pet?.avatar_url || null,
-                    petId: item.pet_id,
-                    petType: item.pet?.type || null,
-                    sharedPassport: item.shared_passport || {
-                        basic: (item.pet?.breed || item.pet?.weight || item.pet?.age) ? {
-                            breed: item.pet?.breed || null,
-                            weight: item.pet?.weight ? `${item.pet.weight} kg` : null,
-                            age: item.pet?.age || null
-                        } : null,
-                        ownerInfo: {
-                            name: ownerName,
-                            phone: item.user?.phone || item.guest_phone || ""
-                        }
-                    },
-                    clinicId: item.clinic_id,
-                    clinicName: item.clinic_name,
-                    realDoctorName: item.doctor?.name || item.doctor_name || null,
-                    attendance_status: item.attendance_status
-                };
-            });
-            // Test mock kaldırıldı
-            const confirmed = mapped.filter((a: any) => a.status === 'confirmed' || a.status === 'completed');
-            const pending = mapped.filter((a: any) => a.status === 'pending');
+            const mapped = (await apiService.getClinicAppointments(clinicId)).map(toAppt);
+            const confirmed = mapped.filter(a => a.status === 'confirmed' || a.status === 'completed');
+            const pending = mapped.filter(a => a.status === 'pending');
 
             setAppointments(confirmed);
             setPendingRequests(pending);
@@ -319,23 +341,24 @@ export default function BusinessAppointmentsPage() {
     // Load Clinic Shift Settings
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        
+
         const loadSettings = async () => {
             if (!businessId) return;
-            
-            if (isSupabaseEnabled) {
+
+            {
                 try {
                     const clinicId = businessId;
                     const [settings, profile] = await Promise.all([
                         apiService.getClinicSettings(clinicId),
                         apiService.getActiveBusiness()
                     ]);
-                    
-                    if (profile?.working_hours) {
-                        setWorkingHours(profile.working_hours);
-                        setOriginalWorkingHours(profile.working_hours);
+
+                    const hours = parseWeekHours(profile?.working_hours);
+                    if (hours) {
+                        setWorkingHours(hours);
+                        setOriginalWorkingHours(hours);
                     }
-                    
+
                     if (settings) {
                         if (settings.startTime) setStartTime(settings.startTime);
                         if (settings.endTime) setEndTime(settings.endTime);
@@ -356,17 +379,17 @@ export default function BusinessAppointmentsPage() {
     }, [businessId]);
 
     const loadConversations = async () => {
-        if (!businessId || !isSupabaseEnabled) return;
+        if (!businessId) return;
         try {
             const convs = await apiService.getChatConversations('clinic');
             setConversations(convs);
-            const unread = convs.filter((c: any) => c.unread).length;
+            const unread = convs.filter(c => c.unread).length;
             setTotalUnread(unread);
         } catch (e) { console.error(e); }
     };
 
     const loadChatHistory = async (userId: string) => {
-        if (!businessId || !isSupabaseEnabled) return;
+        if (!businessId) return;
         try {
             const history = await apiService.getChatMessages(userId, 'clinic');
             setChatMessages(history);
@@ -377,7 +400,7 @@ export default function BusinessAppointmentsPage() {
 
     // Mesajlar ChatContext'in tek Realtime kanalından gelen olayla tazelenir (yoklama yok).
     useEffect(() => {
-        if (!businessId || !isSupabaseEnabled) return;
+        if (!businessId) return;
         loadConversations();
         const onChat = () => loadConversations();
         window.addEventListener(CHAT_MESSAGE_EVENT, onChat);
@@ -420,12 +443,10 @@ export default function BusinessAppointmentsPage() {
     };
 
     const loadReviews = async () => {
-        if (!businessId || !isSupabaseEnabled) return;
+        if (!businessId) return;
         setIsLoadingReviews(true);
         try {
-            console.log("Loading reviews for clinic ID:", businessId);
             const data = await apiService.getClinicReviews(businessId);
-            console.log("Returned data from getClinicReviews:", data);
             setReviewsData({
                 reviews: data.reviews || [],
                 averageRating: data.averageRating || 0
@@ -446,7 +467,7 @@ export default function BusinessAppointmentsPage() {
     const handleReplySubmit = async (reviewId: string) => {
         const text = replyText[reviewId];
         if (!text || !text.trim() || !businessId) return;
-        
+
         setIsSubmittingReply(prev => ({ ...prev, [reviewId]: true }));
         try {
             const success = await apiService.replyToReview(reviewId, businessId, text.trim());
@@ -464,29 +485,14 @@ export default function BusinessAppointmentsPage() {
         }
     };
 
-    // Load confirmed appointments
+    // Randevular veritabanından
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-        if (isSupabaseEnabled) {
-            fetchAppointmentsFromDb();
-            return;
-        }
-        try {
-            const stored = localStorage.getItem('moffi_confirmed_appointments');
-            if (stored) {
-                setAppointments(JSON.parse(stored));
-            } else {
-                localStorage.setItem('moffi_confirmed_appointments', JSON.stringify([]));
-                setAppointments([]);
-            }
-        } catch (e) {
-            console.error("Storage Load Error:", e);
-        }
+        fetchAppointmentsFromDb();
     }, [businessId]);
 
     // Randevu değişiklikleri Supabase Realtime ile anında gelir (RLS: üyelik — is_business_member).
     useEffect(() => {
-        if (!isSupabaseEnabled || !businessId) return;
+        if (!businessId) return;
 
         const channel = supabase
             .channel(`clinic-appointments-${businessId}`)
@@ -508,24 +514,15 @@ export default function BusinessAppointmentsPage() {
         };
     }, [businessId]);
 
-    const saveAppointments = (updated: any[]) => {
-        setAppointments(updated);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('moffi_confirmed_appointments', JSON.stringify(updated));
-        }
-    };
-
     const handleAttendanceChange = async (id: number | string, status: 'attended' | 'no_show' | null) => {
-        if (!isSupabaseEnabled) return;
-        
         // Optimistic UI Update
         setAppointments(prev => prev.map(apt => apt.id === id ? { ...apt, attendance_status: status } : apt));
-        
+
         try {
             await apiService.updateAttendanceStatus(id.toString(), status);
             showToast(status === 'attended' ? 'Randevu "Geldi" olarak işaretlendi.' : status === 'no_show' ? 'Randevu "Gelmedi" olarak işaretlendi.' : 'Katılım durumu sıfırlandı.', "CheckCircle2", "text-emerald-400 font-bold");
-        } catch (e: any) {
-            console.error("[handleAttendanceChange] Katılım güncellenirken kritik HATA:", e?.message || e);
+        } catch (e) {
+            console.error("[handleAttendanceChange] Katılım güncellenemedi:", e);
             // Revert on error
             fetchAppointmentsFromDb();
         }
@@ -541,51 +538,23 @@ export default function BusinessAppointmentsPage() {
             return;
         }
 
-        if (isSupabaseEnabled) {
-            try {
-                await apiService.updateAppointmentStatus(id.toString(), action === 'accept' ? 'confirmed' : 'rejected', providedRejectReason);
-                showToast(
-                    action === 'accept' 
-                        ? `Randevu Onaylandı! ${target.petName} için bildirim gönderildi. ✨`
-                        : `Randevu Reddedildi! ❌`, 
-                    action === 'accept' ? "CheckCircle2" : "XCircle", 
-                    action === 'accept' ? "text-emerald-400 font-bold" : "text-red-400 font-bold"
-                );
-
-
-                await fetchAppointmentsFromDb();
-                return;
-            } catch (e) {
-                console.error("Failed to update appointment status in Supabase:", e);
-                showToast("Randevu durumu güncellenemedi. ❌", "AlertCircle", "text-red-400 font-bold");
-                return;
-            }
-        }
-
-        if (action === 'accept') {
-            const updatedAppt = {
-                ...target,
-                status: 'confirmed'
-            };
-            const updated = [...appointments, updatedAppt].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
-            saveAppointments(updated);
-
-            // Replace alert with premium showToast
-            showToast(`Randevu Onaylandı! ${target.petName} için bildirim gönderildi. ✨`, "CheckCircle2", "text-emerald-400 font-bold");
-        } else if (action === 'reject') {
-            // Replace alert with premium showToast
-            showToast(`Randevu Reddedildi! ❌`, "XCircle", "text-red-400 font-bold");
-        }
-
-        const updatedPending = pendingRequests.filter(r => r.id !== id);
-        setPendingRequests(updatedPending);
-
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('moffi_pending_appointments', JSON.stringify(updatedPending));
+        try {
+            await apiService.updateAppointmentStatus(id.toString(), action === 'accept' ? 'confirmed' : 'rejected', providedRejectReason);
+            showToast(
+                action === 'accept'
+                    ? `Randevu Onaylandı! ${target.petName} için bildirim gönderildi. ✨`
+                    : `Randevu Reddedildi! ❌`,
+                action === 'accept' ? "CheckCircle2" : "XCircle",
+                action === 'accept' ? "text-emerald-400 font-bold" : "text-red-400 font-bold"
+            );
+            await fetchAppointmentsFromDb();
+        } catch (e) {
+            console.error("Failed to update appointment status in Supabase:", e);
+            showToast("Randevu durumu güncellenemedi. ❌", "AlertCircle", "text-red-400 font-bold");
         }
     };
 
-    const startConsultation = (apt: any) => {
+    const startConsultation = (apt: Appt) => {
         setSelectedApt(apt);
         setIsModalOpen(true);
         if (apt.status === 'completed') {
@@ -593,7 +562,7 @@ export default function BusinessAppointmentsPage() {
             if (hasMedicalRecords) {
                 healthService.getRecordByAppointment(apt.id).then(rec => {
                     if (!rec) return;
-                    const consultationData = {
+                    const consultationData: ConsultationView = {
                         diagnosis: rec.diagnosis,
                         criticalNotes: rec.criticalNotes,
                         weightKg: rec.weightKg,
@@ -601,7 +570,7 @@ export default function BusinessAppointmentsPage() {
                         vaccines: rec.vaccines.map(v => ({ name: v.name, date: v.date, nextDate: v.next_date, batch: v.batch })),
                         medications: rec.medications,
                     };
-                    setSelectedApt((cur: any) => cur && cur.id === apt.id ? { ...cur, consultationData } : cur);
+                    setSelectedApt(cur => cur && cur.id === apt.id ? { ...cur, consultationData } : cur);
                 }).catch(e => showToast(e.message, "AlertCircle", "text-red-500 font-bold"));
             }
         } else {
@@ -677,7 +646,7 @@ export default function BusinessAppointmentsPage() {
             return;
         }
 
-        const updatedApt = {
+        const updatedApt: Appt = {
             ...selectedApt,
             status: 'completed',
             consultationData: writesRecord ? {
@@ -690,34 +659,30 @@ export default function BusinessAppointmentsPage() {
             } : { criticalNotes }
         };
 
-        if (isSupabaseEnabled) {
-            try {
-                if (writesRecord) {
-                    // Muayene kaydı, aşılar, reçete, kilo ve randevunun tamamlanması tek atomik
-                    // sunucu işleminde (record_consultation): biri başarısız olursa hiçbiri yazılmaz.
-                    await healthService.recordConsultation({
-                        appointmentId: selectedApt.id,
-                        diagnosis,
-                        criticalNotes,
-                        weightKg: parsedWeight,
-                        temperatureC: parsedTemp,
-                        vaccines: addedVaccines,
-                        medications: addedMeds,
-                    });
-                } else {
-                    await apiService.updateAppointmentStatus(selectedApt.id.toString(), 'completed');
-                }
-            } catch (e: any) {
-                console.error("Failed to sync consultation details with Supabase:", e);
-                // Do NOT swallow the error
-                showToast("Veritabanı senkronizasyonu başarısız: " + (e.message || "Bilinmeyen Hata"), "AlertCircle", "text-red-500 font-bold");
-                return; // Stop execution, don't show success message and don't commit local state!
+        try {
+            if (writesRecord) {
+                // Muayene kaydı, aşılar, reçete, kilo ve randevunun tamamlanması tek atomik
+                // sunucu işleminde (record_consultation): biri başarısız olursa hiçbiri yazılmaz.
+                await healthService.recordConsultation({
+                    appointmentId: selectedApt.id,
+                    diagnosis,
+                    criticalNotes,
+                    weightKg: parsedWeight,
+                    temperatureC: parsedTemp,
+                    vaccines: addedVaccines,
+                    medications: addedMeds,
+                });
+            } else {
+                await apiService.updateAppointmentStatus(selectedApt.id.toString(), 'completed');
             }
+        } catch (e) {
+            console.error("Failed to sync consultation details with Supabase:", e);
+            showToast("Kaydedilemedi: " + (e instanceof Error ? e.message : "Bilinmeyen hata"), "AlertCircle", "text-red-500 font-bold");
+            return;
         }
 
-        // Supabase yazımı hatasız bittikten SONRA (veya mock moddaysak) local state'i güncelle
-        const updatedList = appointments.map(apt => apt.id === selectedApt.id ? updatedApt : apt);
-        saveAppointments(updatedList);
+        // Sunucu yazımı hatasız bittikten SONRA ekrandaki liste güncellenir.
+        setAppointments(prev => prev.map(apt => apt.id === selectedApt.id ? updatedApt : apt));
 
         // Show premium toast
         showToast(
@@ -737,7 +702,6 @@ export default function BusinessAppointmentsPage() {
         }
 
         const settings = {
-            workingHours,
             startTime,
             endTime,
             lunchStart,
@@ -745,27 +709,10 @@ export default function BusinessAppointmentsPage() {
             slotDuration
         };
 
-        let conflictingAppts: any[] = [];
-        const newlyClosedDays = (Object.keys(workingHours) as Array<keyof typeof workingHours>).filter(day => {
-            const isNowClosed = workingHours[day].closed;
-            const wasClosed = originalWorkingHours?.[day]?.closed;
-            return isNowClosed && !wasClosed;
-        });
-
-        if (newlyClosedDays.length > 0) {
-            const dayNameToIndex: Record<string, number> = {
-                'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
-                'thursday': 4, 'friday': 5, 'saturday': 6
-            };
-            const newlyClosedIndexes = newlyClosedDays.map(d => dayNameToIndex[d]);
-            
-            conflictingAppts = [...appointments, ...pendingRequests].filter(a => {
-                if (!a.rawDate) return false;
-                const dateObj = new Date(a.rawDate);
-                if (dateObj < new Date()) return false;
-                return newlyClosedIndexes.includes(dateObj.getDay());
-            });
-        }
+        const newlyClosedDays = Object.keys(workingHours).filter(day => workingHours[day].closed && !originalWorkingHours?.[day]?.closed);
+        // Kapanan günlere düşen gelecek randevular (gün, duvar saatine göre).
+        const conflictingAppts: Appt[] = newlyClosedDays.length === 0 ? [] : [...appointments, ...pendingRequests].filter(a =>
+            !!a.rawDate && new Date(a.rawDate).getTime() > Date.now() && newlyClosedDays.includes(wallWeekday(a.rawDate)));
 
         const proceedSave = async (cancelAppointments: boolean) => {
             if (cancelAppointments && conflictingAppts.length > 0) {
@@ -781,21 +728,18 @@ export default function BusinessAppointmentsPage() {
                 fetchAppointmentsFromDb();
             }
 
-            if (isSupabaseEnabled) {
-                try {
-                    const clinicId = businessId;
-                    await Promise.all([
-                        apiService.saveClinicSettings(clinicId, settings),
-                        apiService.updateActiveBusiness({ working_hours: workingHours })
-                    ]);
-                    setOriginalWorkingHours(workingHours);
-                } catch (e) {
-                    console.error("Failed to save clinic settings to Supabase:", e);
-                    showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertCircle", "text-red-500 font-bold");
-                    return;
-                }
+            try {
+                await Promise.all([
+                    apiService.saveClinicSettings(businessId, settings),
+                    apiService.updateActiveBusiness({ working_hours: workingHours })
+                ]);
+                setOriginalWorkingHours(workingHours);
+            } catch (e) {
+                console.error("Failed to save clinic settings to Supabase:", e);
+                showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertCircle", "text-red-500 font-bold");
+                return;
             }
-            
+
             showToast("Vardiya ayarları başarıyla kaydedildi! ✨", "CheckCircle2", "text-emerald-500 font-bold");
         };
 
@@ -819,25 +763,25 @@ export default function BusinessAppointmentsPage() {
             </p>
                 {/* TABS */}
                 <div className="flex gap-4 mb-8 border-b border-zinc-200 dark:border-[#27272a] pb-px">
-                    <button 
+                    <button
                         onClick={() => setActiveTab('appointments')}
                         className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'appointments' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         Randevu Akışı
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('shifts')}
                         className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'shifts' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         Vardiya & Takvim Ayarları
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('reviews')}
                         className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${activeTab === 'reviews' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         <Star className="w-3.5 h-3.5 mb-0.5" /> Yorumlar
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('messages')}
                         className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${activeTab === 'messages' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
@@ -855,7 +799,7 @@ export default function BusinessAppointmentsPage() {
                     <div className="flex-1 space-y-6">
                         {/* Stats Row */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div 
+                            <div
                                 onClick={() => setActiveFilter('all')}
                                 className={`p-6 rounded-3xl cursor-pointer transition-all border ${
                                     activeFilter === 'all'
@@ -866,7 +810,7 @@ export default function BusinessAppointmentsPage() {
                                 <div className="text-gray-500 text-xs font-bold uppercase mb-2">Toplam Randevu (Bugün)</div>
                                 <div className="text-4xl font-black text-foreground dark:text-white">{appointments.length + pendingRequests.length}</div>
                             </div>
-                            <div 
+                            <div
                                 onClick={() => setActiveFilter('pending')}
                                 className={`p-6 rounded-3xl cursor-pointer transition-all border flex flex-col ${
                                     activeFilter === 'pending'
@@ -877,7 +821,7 @@ export default function BusinessAppointmentsPage() {
                                 <div className="text-gray-500 text-xs font-bold uppercase mb-2">Bekleyen Onay</div>
                                 <div className="text-4xl font-black text-foreground dark:text-white">{pendingRequests.length}</div>
                             </div>
-                            <div 
+                            <div
                                 onClick={() => setActiveFilter('confirmed')}
                                 className={`p-6 rounded-3xl cursor-pointer transition-all border ${
                                     activeFilter === 'confirmed'
@@ -902,7 +846,7 @@ export default function BusinessAppointmentsPage() {
                                 {activeFilter === 'pending' ? (
                                     <div className="text-center py-10 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
                                         <p className="text-gray-500 dark:text-gray-300 font-bold">Sadece Bekleyen İstekler listeleniyor.</p>
-                                        <p className="text-xs text-gray-400 mt-2">Onaylı randevuları görmek için "Toplam" veya "Onaylanmış" filtresine tıklayın.</p>
+                                        <p className="text-xs text-gray-400 mt-2">Onaylı randevuları görmek için &quot;Toplam&quot; veya &quot;Onaylanmış&quot; filtresine tıklayın.</p>
                                     </div>
                                 ) : (
                                     <>
@@ -950,13 +894,13 @@ export default function BusinessAppointmentsPage() {
                                                         <div className="flex items-center flex-wrap gap-2 mr-2 sm:border-r border-card-border sm:pr-4">
                                                             {!apt.attendance_status ? (
                                                                 <>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleAttendanceChange(apt.id, 'attended')}
                                                                         className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold hover:bg-green-500/20 transition-colors"
                                                                     >
                                                                         Geldi ✓
                                                                     </button>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleAttendanceChange(apt.id, 'no_show')}
                                                                         className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-500/20 transition-colors"
                                                                     >
@@ -974,7 +918,7 @@ export default function BusinessAppointmentsPage() {
                                                                             ✗ Gelmedi
                                                                         </span>
                                                                     )}
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleAttendanceChange(apt.id, null)}
                                                                         className="text-[9px] text-gray-400 hover:text-indigo-400 underline decoration-dotted"
                                                                     >
@@ -985,7 +929,7 @@ export default function BusinessAppointmentsPage() {
                                                         </div>
                                                     ) : null}
 
-                                                    <button 
+                                                    <button
                                                         onClick={() => startConsultation(apt)}
                                                         disabled={apt.attendance_status === 'no_show'}
                                                         className={`px-4 py-2 rounded-xl border text-sm font-bold transition-colors ${
@@ -1017,7 +961,7 @@ export default function BusinessAppointmentsPage() {
 
                                 <AnimatePresence mode="wait">
                                     {activeFilter === 'confirmed' ? (
-                                        <motion.div 
+                                        <motion.div
                                             key="confirmed-msg"
                                             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                                             className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border"
@@ -1026,7 +970,7 @@ export default function BusinessAppointmentsPage() {
                                             <p className="text-gray-500 dark:text-gray-400 font-bold text-sm">Sadece onaylı randevular listeleniyor</p>
                                         </motion.div>
                                     ) : pendingRequests.length === 0 ? (
-                                        <motion.div 
+                                        <motion.div
                                             key="empty-msg"
                                             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                                             className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border"
@@ -1035,7 +979,7 @@ export default function BusinessAppointmentsPage() {
                                             <p className="text-gray-500 dark:text-gray-400 font-bold text-sm">Bekleyen istek yok</p>
                                         </motion.div>
                                     ) : (
-                                        <motion.div 
+                                        <motion.div
                                             key="pending-list"
                                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                                             className="space-y-4"
@@ -1055,7 +999,7 @@ export default function BusinessAppointmentsPage() {
                                                         <div>
                                                             <div className="font-black text-foreground dark:text-white text-lg flex items-center flex-wrap">
                                                                 {req.petName}
-                                                                <NoShowBadge userId={req.userId} />
+                                                                {req.userId && <NoShowBadge userId={req.userId} />}
                                                             </div>
                                                             <div className="text-xs text-gray-500 font-bold bg-card dark:bg-black/20 px-2 py-1 rounded-md inline-block mt-1">
                                                                 ⏰ {req.time || "Saatsiz"} • {req.date}
@@ -1069,18 +1013,18 @@ export default function BusinessAppointmentsPage() {
                                                     {req.sharedPassport && (
                                                          <div className="bg-black/5 dark:bg-white/5 border border-indigo-500/10 p-3.5 rounded-2xl mb-4 text-left space-y-2 mt-2">
                                                              <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">Tıbbi Pasaport Önizleme</span>
-                                                             {checkAccessGranted(req) ? (
+                                                             {passportAccessOpen(req) ? (
                                                                  <>
                                                                      {req.sharedPassport.basic && (
                                                                          <div className="text-[10px] text-gray-500 dark:text-gray-400 flex flex-wrap gap-x-3 gap-y-1">
                                                                              <span>🐾 <strong>Irk:</strong> {req.sharedPassport.basic.breed}</span>
                                                                              <span>⚖️ <strong>Kilo:</strong> {req.sharedPassport.basic.weight}</span>
-                                                                             <span>🎂 <strong>Yaş:</strong> {req.sharedPassport.basic.age || '2.1'}</span>
+                                                                             <span>🎂 <strong>Yaş:</strong> {req.sharedPassport.basic.age || 'Belirtilmemiş'}</span>
                                                                          </div>
                                                                      )}
                                                                      {req.sharedPassport.vaccines && req.sharedPassport.vaccines.length > 0 && (
                                                                          <div className="text-[9px] text-gray-500 border-t border-card-border pt-1.5 mt-1">
-                                                                             <strong className="text-gray-500 dark:text-gray-400">Son Aşılar:</strong> {req.sharedPassport.vaccines.slice(0, 2).map((v: any) => v.definition?.name || v.name || 'Karma Aşı').join(", ")}
+                                                                             <strong className="text-gray-500 dark:text-gray-400">Son Aşılar:</strong> {req.sharedPassport.vaccines.slice(0, 2).map(v => v.definition?.name || v.name || 'Karma Aşı').join(", ")}
                                                                          </div>
                                                                      )}
                                                                      {req.sharedPassport.healthNotes && (
@@ -1103,8 +1047,8 @@ export default function BusinessAppointmentsPage() {
                                                     )}
                                                     {rejectingApptId === req.id ? (
                                                         <div className="space-y-2 mt-2">
-                                                            <input 
-                                                                type="text" 
+                                                            <input
+                                                                type="text"
                                                                 placeholder="Reddetme sebebi (isteğe bağlı)..."
                                                                 value={rejectReason}
                                                                 onChange={(e) => setRejectReason(e.target.value)}
@@ -1162,7 +1106,7 @@ export default function BusinessAppointmentsPage() {
                                     return (
                                         <div key={day.key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl border bg-[#F8F9FC] dark:bg-white/5 border-zinc-200 dark:border-card-border gap-3">
                                             <div className="flex items-center gap-3">
-                                                <div 
+                                                <div
                                                     onClick={() => setWorkingHours(prev => ({ ...prev, [day.key]: { ...(prev[day.key] || { open: "09:00", close: "18:00" }), closed: !(prev[day.key]?.closed) } }))}
                                                     className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 flex items-center cursor-pointer ${!h.closed ? 'bg-[#5B4D9D]' : 'bg-zinc-250 dark:bg-zinc-700'}`}
                                                 >
@@ -1170,7 +1114,7 @@ export default function BusinessAppointmentsPage() {
                                                 </div>
                                                 <span className={`text-sm font-bold ${!h.closed ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 line-through'}`}>{day.label}</span>
                                             </div>
-                                            
+
                                             <div className={`flex items-center gap-2 ${h.closed ? 'opacity-50 pointer-events-none' : ''}`}>
                                                 <select
                                                     value={h.open}
@@ -1210,7 +1154,7 @@ export default function BusinessAppointmentsPage() {
                                 <div className="flex gap-4">
                                     <div className="flex-1 space-y-1.5">
                                         <label className="text-[9px] font-bold text-gray-500">Başlangıç</label>
-                                        <select 
+                                        <select
                                             value={lunchStart}
                                             onChange={e => setLunchStart(e.target.value)}
                                             className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
@@ -1220,7 +1164,7 @@ export default function BusinessAppointmentsPage() {
                                     </div>
                                     <div className="flex-1 space-y-1.5">
                                         <label className="text-[9px] font-bold text-gray-500">Bitiş</label>
-                                        <select 
+                                        <select
                                             value={lunchEnd}
                                             onChange={e => setLunchEnd(e.target.value)}
                                             className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
@@ -1233,7 +1177,7 @@ export default function BusinessAppointmentsPage() {
 
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">RANDEVU MUAYENE SÜRESI</label>
-                                <select 
+                                <select
                                     value={slotDuration}
                                     onChange={e => setSlotDuration(Number(e.target.value))}
                                     className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
@@ -1262,8 +1206,8 @@ export default function BusinessAppointmentsPage() {
                                 <h3 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">YAKLAŞAN 14 GÜN (İSTİSNALAR)</h3>
                                 <p className="text-xs text-gray-500 font-medium">Belirli günler için kliniği kapatabilir veya özel mesai saatleri belirleyebilirsiniz.</p>
                             </div>
-                            
-                            <div 
+
+                            <div
                                 {...exceptionsScrollProps}
                                 className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide snap-x cursor-grab active:cursor-grabbing"
                             >
@@ -1274,18 +1218,18 @@ export default function BusinessAppointmentsPage() {
                                     const dayNameShort = d.toLocaleDateString('tr-TR', { weekday: 'short' });
                                     const dayNum = d.getDate();
                                     const monthShort = d.toLocaleDateString('tr-TR', { month: 'short' });
-                                    
+
                                     const dayKey = d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-                                    
+
                                     const exception = exceptions.find(ex => ex.exception_date === dateStr);
                                     const baseHours = workingHours[dayKey] || { open: "09:00", close: "18:00", closed: false };
-                                    
+
                                     const isClosed = exception ? exception.is_closed : baseHours.closed;
                                     const isException = !!exception;
                                     const isSelected = selectedExceptionDate === dateStr;
 
                                     return (
-                                        <div 
+                                        <div
                                             key={dateStr}
                                             onClick={() => {
                                                 setSelectedExceptionDate(isSelected ? null : dateStr);
@@ -1296,10 +1240,10 @@ export default function BusinessAppointmentsPage() {
                                                 });
                                             }}
                                             className={`min-w-[100px] flex-shrink-0 p-3 rounded-2xl border snap-center transition-all ${
-                                                isSelected 
-                                                    ? 'border-[#5B4D9D] bg-[#5B4D9D]/5' 
-                                                    : isException 
-                                                        ? 'border-orange-400 bg-orange-400/5 dark:bg-orange-400/10' 
+                                                isSelected
+                                                    ? 'border-[#5B4D9D] bg-[#5B4D9D]/5'
+                                                    : isException
+                                                        ? 'border-orange-400 bg-orange-400/5 dark:bg-orange-400/10'
                                                         : 'border-zinc-200 dark:border-card-border bg-[#F8F9FC] dark:bg-white/5 hover:border-zinc-350 dark:hover:border-[#3f3f46]'
                                             }`}
                                         >
@@ -1307,7 +1251,7 @@ export default function BusinessAppointmentsPage() {
                                                 <div className={`text-xl font-black ${isException ? 'text-orange-500' : 'text-foreground dark:text-white'}`}>{dayNum}</div>
                                                 <div className="text-[10px] font-bold text-gray-500 uppercase">{monthShort} {dayNameShort}</div>
                                                 <div className={`text-[9px] font-bold mt-2 px-2 py-0.5 rounded-full inline-block ${
-                                                    isClosed 
+                                                    isClosed
                                                         ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
                                                         : isException
                                                             ? 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400'
@@ -1332,7 +1276,7 @@ export default function BusinessAppointmentsPage() {
                                     >
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                             <div className="flex items-center gap-3">
-                                                <div 
+                                                <div
                                                     onClick={(e) => {
                                                         setExceptionForm(prev => ({ ...prev, isClosed: !prev.isClosed }));
                                                     }}
@@ -1419,7 +1363,7 @@ export default function BusinessAppointmentsPage() {
                             </div>
                         ) : (
                             <div className="space-y-6">
-                                {reviewsData.reviews.map((review: any) => (
+                                {reviewsData.reviews.map(review => (
                                     <div key={review.id} className="bg-white dark:bg-[#1a1a1c] border border-zinc-150 dark:border-white/5 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex items-center gap-3">
@@ -1432,7 +1376,7 @@ export default function BusinessAppointmentsPage() {
                                                 </div>
                                                 <div>
                                                     <h4 className="font-bold text-sm text-foreground dark:text-white">{review.user?.name || "İsimsiz Kullanıcı"}</h4>
-                                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{new Date(review.created_at).toLocaleDateString()}</p>
+                                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{review.created_at ? new Date(review.created_at).toLocaleDateString('tr-TR') : ''}</p>
                                                 </div>
                                             </div>
                                             <div className="flex gap-1">
@@ -1441,10 +1385,10 @@ export default function BusinessAppointmentsPage() {
                                                 ))}
                                             </div>
                                         </div>
-                                        
+
                                         {review.comment && (
                                             <p className="text-sm text-gray-600 dark:text-gray-300 font-medium leading-relaxed mb-4">
-                                                "{review.comment}"
+                                                &ldquo;{review.comment}&rdquo;
                                             </p>
                                         )}
 
@@ -1456,20 +1400,20 @@ export default function BusinessAppointmentsPage() {
                                                         <span className="text-[10px] font-black text-[#5B4D9D] uppercase tracking-widest flex items-center gap-1.5">
                                                             <CheckCircle2 className="w-3.5 h-3.5" /> Yanıtınız
                                                         </span>
-                                                        <button 
+                                                        <button
                                                             onClick={() => {
                                                                 setEditingReplyId(review.id);
-                                                                setReplyText(prev => ({ ...prev, [review.id]: review.clinic_reply }));
+                                                                setReplyText(prev => ({ ...prev, [review.id]: review.clinic_reply || '' }));
                                                             }}
                                                             className="text-[10px] text-gray-400 hover:text-[#5B4D9D] font-bold uppercase transition-colors"
                                                         >
                                                             Düzenle
                                                         </button>
                                                     </div>
-                                                    
+
                                                     {editingReplyId === review.id ? (
                                                         <div className="space-y-3 mt-3">
-                                                            <textarea 
+                                                            <textarea
                                                                 value={replyText[review.id] || ""}
                                                                 onChange={(e) => setReplyText(prev => ({ ...prev, [review.id]: e.target.value }))}
                                                                 placeholder="Yanıtınızı güncelleyin..."
@@ -1477,7 +1421,7 @@ export default function BusinessAppointmentsPage() {
                                                             />
                                                             <div className="flex justify-end gap-2">
                                                                 <button onClick={() => setEditingReplyId(null)} className="px-4 py-2 text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">İptal</button>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => handleReplySubmit(review.id)}
                                                                     disabled={isSubmittingReply[review.id]}
                                                                     className="bg-[#5B4D9D] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#4E3F8F] transition-all disabled:opacity-50"
@@ -1496,7 +1440,7 @@ export default function BusinessAppointmentsPage() {
                                                 <div className="space-y-3">
                                                     {editingReplyId === review.id ? (
                                                         <div className="space-y-3">
-                                                            <textarea 
+                                                            <textarea
                                                                 value={replyText[review.id] || ""}
                                                                 onChange={(e) => setReplyText(prev => ({ ...prev, [review.id]: e.target.value }))}
                                                                 placeholder="Müşterinize vereceğiniz yanıt buraya girin (herkese açık olacaktır)..."
@@ -1504,7 +1448,7 @@ export default function BusinessAppointmentsPage() {
                                                             />
                                                             <div className="flex justify-end gap-2">
                                                                 <button onClick={() => setEditingReplyId(null)} className="px-4 py-2 text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">İptal</button>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => handleReplySubmit(review.id)}
                                                                     disabled={!replyText[review.id]?.trim() || isSubmittingReply[review.id]}
                                                                     className="bg-[#5B4D9D] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#4E3F8F] transition-all disabled:opacity-50"
@@ -1514,7 +1458,7 @@ export default function BusinessAppointmentsPage() {
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <button 
+                                                        <button
                                                             onClick={() => setEditingReplyId(review.id)}
                                                             className="text-[10px] font-black uppercase tracking-widest text-[#5B4D9D] hover:text-[#4E3F8F] flex items-center gap-1.5 transition-colors"
                                                         >
@@ -1545,13 +1489,13 @@ export default function BusinessAppointmentsPage() {
                                     <div className="text-center text-sm text-zinc-400 p-4 font-bold">Henüz mesaj yok.</div>
                                 )}
                                 {conversations.map(conv => (
-                                    <button 
+                                    <button
                                         key={conv.userId}
                                         onClick={() => setSelectedConv(conv)}
                                         className={cn(
                                             "w-full flex items-center justify-between p-3 rounded-2xl transition-all text-left",
-                                            selectedConv?.userId === conv.userId 
-                                                ? "bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20" 
+                                            selectedConv?.userId === conv.userId
+                                                ? "bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20"
                                                 : "hover:bg-zinc-50 dark:hover:bg-white/5 border border-transparent"
                                         )}
                                     >
@@ -1599,7 +1543,7 @@ export default function BusinessAppointmentsPage() {
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                                         <ChatMessageList
-                                            messages={chatMessages}
+                                            messages={chatMessages.map(m => ({ id: m.id, text: m.text || '', attachmentUrl: m.attachmentUrl, sentByMe: m.sentByMe, createdAt: m.createdAt || undefined, deleted: m.deleted }))}
                                             onRecall={handleRecallMessage}
                                             emptyLabel="Henüz mesaj yok"
                                             emptyIcon={<MessageSquare className="w-12 h-12 mb-4 mx-auto" />}
@@ -1626,14 +1570,14 @@ export default function BusinessAppointmentsPage() {
             <AnimatePresence>
                 {isModalOpen && selectedApt && (
                     <div className="fixed inset-0 z-[6000] flex items-center justify-center p-4">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={closeConsultation}
                             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                         />
-                        
+
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -1669,7 +1613,7 @@ export default function BusinessAppointmentsPage() {
                                 {selectedApt.sharedPassport && (
                                     <div className="bg-indigo-50/30 dark:bg-white/5 border border-indigo-500/10 dark:border-indigo-500/5 p-4 rounded-3xl space-y-2 text-left">
                                         <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block">Paylaşılan Tıbbi Pasaport Bilgileri</span>
-                                        {checkAccessGranted(selectedApt) ? (
+                                        {passportAccessOpen(selectedApt) ? (
                                             <>
                                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                                                     <div><strong className="text-gray-500 dark:text-gray-400">Irk:</strong> {selectedApt.sharedPassport.basic?.breed || 'Belirtilmemiş'}</div>
@@ -1679,7 +1623,7 @@ export default function BusinessAppointmentsPage() {
                                                 </div>
                                                 {selectedApt.sharedPassport.vaccines && selectedApt.sharedPassport.vaccines.length > 0 && (
                                                     <div className="text-xs pt-2 border-t border-zinc-200 dark:border-white/5">
-                                                        <strong className="text-gray-500 dark:text-gray-400">Son Aşılar:</strong> {selectedApt.sharedPassport.vaccines.map((v: any) => v.definition?.name || v.name || 'Bilinmeyen Aşı').join(", ")}
+                                                        <strong className="text-gray-500 dark:text-gray-400">Son Aşılar:</strong> {selectedApt.sharedPassport.vaccines.map(v => v.definition?.name || v.name || 'Bilinmeyen Aşı').join(", ")}
                                                     </div>
                                                 )}
                                                 {selectedApt.sharedPassport.healthNotes && (
@@ -1734,11 +1678,11 @@ export default function BusinessAppointmentsPage() {
                                             </div>
                                         )}
 
-                                        {hasMedicalRecords && selectedApt.consultationData?.vaccines?.length > 0 && (
+                                        {hasMedicalRecords && (selectedApt.consultationData?.vaccines?.length ?? 0) > 0 && (
                                             <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
                                                 <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">Uygulanan Aşılar</span>
                                                 <div className="space-y-3">
-                                                    {selectedApt.consultationData.vaccines.map((v: any, index: number) => (
+                                                    {(selectedApt.consultationData?.vaccines ?? []).map((v, index) => (
                                                         <div key={index} className="flex justify-between items-center text-sm border-b border-zinc-200 dark:border-white/5 pb-2 last:border-b-0 last:pb-0">
                                                             <div>
                                                                 <strong className="text-foreground dark:text-white flex items-center gap-1.5"><Syringe className="w-3.5 h-3.5 text-emerald-500" /> {v.name}</strong>
@@ -1754,11 +1698,11 @@ export default function BusinessAppointmentsPage() {
                                             </div>
                                         )}
 
-                                        {hasMedicalRecords && selectedApt.consultationData?.medications?.length > 0 && (
+                                        {hasMedicalRecords && (selectedApt.consultationData?.medications?.length ?? 0) > 0 && (
                                             <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
                                                 <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">Yazılan Reçete</span>
                                                 <div className="space-y-3">
-                                                    {selectedApt.consultationData.medications.map((m: any, index: number) => (
+                                                    {(selectedApt.consultationData?.medications ?? []).map((m, index) => (
                                                         <div key={index} className="flex justify-between items-center text-sm border-b border-zinc-200 dark:border-white/5 pb-2 last:border-b-0 last:pb-0">
                                                             <div>
                                                                 <strong className="text-foreground dark:text-white flex items-center gap-1.5"><Pill className="w-3.5 h-3.5 text-indigo-500" /> {m.name}</strong>
@@ -1852,7 +1796,7 @@ export default function BusinessAppointmentsPage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-bold text-gray-500">Sonraki doz (boşsa aşı aralığına göre hesaplanır)</label>
-                                                    <input 
+                                                    <input
                                                         type="date"
                                                         value={vaccineNextDate}
                                                         onChange={e => setVaccineNextDate(e.target.value)}
@@ -1863,7 +1807,7 @@ export default function BusinessAppointmentsPage() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-bold text-gray-500">Aşı Seri No / Lot</label>
-                                                    <input 
+                                                    <input
                                                         value={vaccineBatch}
                                                         onChange={e => setVaccineBatch(e.target.value)}
                                                         placeholder="Örn: LOT-98X2"
@@ -1871,7 +1815,7 @@ export default function BusinessAppointmentsPage() {
                                                     />
                                                 </div>
                                                 <div className="flex items-end">
-                                                    <button 
+                                                    <button
                                                         type="button"
                                                         onClick={handleAddVaccine}
                                                         className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all"
@@ -1880,7 +1824,7 @@ export default function BusinessAppointmentsPage() {
                                                     </button>
                                                 </div>
                                             </div>
-                                            
+
                                             {addedVaccines.length > 0 && (
                                                 <div className="mt-2 space-y-1 bg-white dark:bg-black/20 p-2 rounded-xl border border-zinc-200 dark:border-white/5">
                                                     {addedVaccines.map((v, i) => (
@@ -1902,7 +1846,7 @@ export default function BusinessAppointmentsPage() {
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-bold text-gray-500">İlaç Adı</label>
-                                                    <input 
+                                                    <input
                                                         value={medName}
                                                         onChange={e => setMedName(e.target.value)}
                                                         placeholder="Örn: Amoksisilin"
@@ -1911,7 +1855,7 @@ export default function BusinessAppointmentsPage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-bold text-gray-500">Dozaj / Kullanım</label>
-                                                    <input 
+                                                    <input
                                                         value={medDose}
                                                         onChange={e => setMedDose(e.target.value)}
                                                         placeholder="Günde 2 kez 1 tablet"
@@ -1920,7 +1864,7 @@ export default function BusinessAppointmentsPage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-bold text-gray-500">Kullanım Süresi (Gün)</label>
-                                                    <input 
+                                                    <input
                                                         type="number"
                                                         value={medDuration}
                                                         onChange={e => setMedDuration(e.target.value)}
@@ -1929,7 +1873,7 @@ export default function BusinessAppointmentsPage() {
                                                     />
                                                 </div>
                                             </div>
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={handleAddMedication}
                                                 className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all"
@@ -1975,13 +1919,13 @@ export default function BusinessAppointmentsPage() {
                             {/* FOOTER ACTIONS */}
                             {selectedApt.status !== 'completed' && (
                                 <div className="p-6 border-t border-zinc-200 dark:border-card-border flex gap-4 bg-zinc-50 dark:bg-white/5">
-                                    <button 
+                                    <button
                                         onClick={closeConsultation}
                                         className="flex-1 py-3 rounded-2xl bg-zinc-200 hover:bg-zinc-350 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold transition-all text-sm"
                                     >
                                         Vazgeç
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={handleCompleteConsultation}
                                         className="flex-1 py-3 rounded-2xl bg-[#5B4D9D] hover:bg-[#4E3F8F] text-white font-bold transition-all text-sm shadow-lg shadow-purple-500/20"
                                     >
@@ -2019,14 +1963,14 @@ export default function BusinessAppointmentsPage() {
                                         </div>
                                     ))}
                                 </div>
-                                
+
                                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 text-left">
                                     <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">
                                         💡 <strong className="font-black">Hatırlatma:</strong> Mesajlar sekmesinden müşterilerinizle doğrudan iletişime geçebilirsiniz.
                                     </p>
                                 </div>
                             </div>
-                            
+
                             <div className="p-4 bg-black/5 dark:bg-white/5 border-t border-black/10 dark:border-white/10 space-y-3">
                                 <button
                                     disabled={closeWarningModal.isProcessing}

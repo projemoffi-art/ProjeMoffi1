@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { apiService } from "@/services/apiService";
 import { Plus, Users, Loader2, CheckCircle2, AlertCircle, Mail, X, UserPlus, Shield, Clock, UserMinus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Doctor, BusinessInvitation, BusinessMember } from "@/types/domain";
+import { Doctor } from "@/types/domain";
 import { useBusinessType, useActiveBusiness } from "@/context/BusinessTypeContext";
 import { StaffScheduleEditor } from "@/components/business/StaffScheduleEditor";
 
@@ -13,8 +13,8 @@ export default function BusinessDoctorsPage() {
     const { staffLabel, staffLabelPlural } = useBusinessType();
 
     const [doctors, setDoctors] = useState<Doctor[]>([]);
-    const [members, setMembers] = useState<BusinessMember[]>([]);
-    const [invitations, setInvitations] = useState<BusinessInvitation[]>([]);
+    const [members, setMembers] = useState<Awaited<ReturnType<typeof apiService.getBusinessMembers>>>([]);
+    const [invitations, setInvitations] = useState<Awaited<ReturnType<typeof apiService.getBusinessInvitations>>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -57,8 +57,8 @@ export default function BusinessDoctorsPage() {
             ]);
             setDoctors(docs || []);
             setMembers(mems || []);
-            setInvitations((invs || []).filter((i: any) => i.status === 'pending'));
-        } catch (err: any) {
+            setInvitations((invs || []).filter(i => i.status === 'pending'));
+        } catch (err) {
             console.error("Veri yüklenirken hata:", err);
             showError("Veriler yüklenemedi.");
         } finally {
@@ -85,7 +85,7 @@ export default function BusinessDoctorsPage() {
             setNewName("");
             setNewTitle("");
             await fetchAll();
-        } catch (err: any) {
+        } catch (err) {
             showError(`${staffLabel} eklenirken bir hata oluştu.`);
         } finally {
             setIsSaving(false);
@@ -96,7 +96,7 @@ export default function BusinessDoctorsPage() {
         try {
             await apiService.updateDoctor(doctor.id, { isActive: !doctor.is_active });
             setDoctors(doctors.map(d => d.id === doctor.id ? { ...d, is_active: !d.is_active } : d));
-        } catch (err: any) {
+        } catch (err) {
             showError(`${staffLabel} durumu güncellenemedi.`);
         }
     };
@@ -117,8 +117,8 @@ export default function BusinessDoctorsPage() {
             setInviteEmail("");
             setInviteDoctorId("");
             await fetchAll();
-        } catch (err: any) {
-            showError(err.message || "Davet gönderilemedi.");
+        } catch (err) {
+            showError(err instanceof Error ? err.message : "Davet gönderilemedi.");
         } finally {
             setIsInviting(false);
         }
@@ -130,8 +130,8 @@ export default function BusinessDoctorsPage() {
             await apiService.cancelInvitation(invId);
             showSuccess("Davet iptal edildi.");
             await fetchAll();
-        } catch (err: any) {
-            showError(err.message || "Davet iptal edilemedi.");
+        } catch (err) {
+            showError(err instanceof Error ? err.message : "Davet iptal edilemedi.");
         } finally {
             setCancellingInvId(null);
         }
@@ -145,14 +145,14 @@ export default function BusinessDoctorsPage() {
             await apiService.removeBusinessMember(businessId, userId);
             showSuccess(`${memberName || 'Üye'} ekipten çıkarıldı.`);
             await fetchAll();
-        } catch (err: any) {
-            showError(err.message || "Üye çıkarılamadı.");
+        } catch (err) {
+            showError(err instanceof Error ? err.message : "Üye çıkarılamadı.");
         } finally {
             setRemovingUserId(null);
         }
     };
 
-    const getMemberForDoctor = (doctorId: string): BusinessMember | undefined => {
+    const getMemberForDoctor = (doctorId: string) => {
         return members.find(m => m.doctor_id === doctorId);
     };
 

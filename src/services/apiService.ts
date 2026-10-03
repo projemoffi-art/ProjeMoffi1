@@ -1,14 +1,7 @@
-// @ts-nocheck
-import { 
-    Pet, Post, UserProfile, LostPet,
-    ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService
-} from './types';
-
+// Uygulamanın tek veri katmanı. (2026-10-03: tarayıcı deposundaki "moffi_force_mock" anahtarıyla tüm uygulamayı sahte
+// veriye geçiren MockApiService ve IApiService arayüzü kaldırıldı; tip doğrudan sınıftan gelir.)
 import { SupabaseApiService } from './supabaseApiService';
-import { MockApiService } from './mockApiService';
 
-const useMock = typeof window !== 'undefined' && localStorage.getItem('moffi_force_mock') === 'true';
+export const apiService = new SupabaseApiService();
+export type ApiService = SupabaseApiService;
 
-export const isSupabaseEnabled = !useMock;
-
-export const apiService: IApiService = useMock ? new MockApiService() : new SupabaseApiService();

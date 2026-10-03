@@ -12,17 +12,21 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
 import { apiService } from "@/services/apiService";
+import type { UserProfile } from "@/services/types";
+import type { ProfileSummary } from "@/services/supabaseApiService";
+
+/** Profildeki telefonla eşleşen, işletmelerin açtığı sahipsiz hasta kayıtları (my_unclaimed_matches). */
+type UnclaimedMatch = Awaited<ReturnType<typeof apiService.getMyUnclaimedMatches>>[number];
 import { healthService } from "@/services/healthService";
 import { usePet } from "@/context/PetContext";
 import { showToast } from "@/lib/utils";
-import { AddPetModal } from "@/components/community/modals/AddPetModal";
+import { AddPetFlow } from "@/components/home/AddPetFlow";
 import { EditProfileModal } from "@/components/community/modals/EditProfileModal";
 
 // ── Tab Imports ─────────────────────────────────────────────
 import { WalletTab } from "@/components/profile/WalletTab";
 import { OrdersTab } from "@/components/profile/OrdersTab";
 import { RoutesTab } from "@/components/profile/RoutesTab";
-import { FamilyTab } from "@/components/profile/FamilyTab";
 import { HealthProvider } from "@/components/health/HealthProvider";
 import { PassportHome } from "@/components/passport/PassportHome";
 import { Avatar, FollowButton, PostGrid } from "@/components/social/SocialUI";
@@ -76,30 +80,33 @@ export default function ProfilePage() {
     const searchParams = useSearchParams();
     const id = params.id as string;
     const { user: currentUser, updateProfile } = useAuth();
-    const { pets, activePet, switchPet, addPet } = usePet();
+    const { pets, activePet, switchPet } = usePet();
     const { openChat } = useChat();
     const isOwnProfile = !!(currentUser && (id === currentUser.id || id === 'me'));
 
     // Başkasının profilinde o kişinin hayvanları (sadece herkese açık kart alanları).
     // Önceden burada profile bakan kişinin kendi hayvanları gösteriliyordu.
-    const [ownerPets, setOwnerPets] = useState<{ id: string; name: string; breed: string | null; gender: string | null; image: string }[]>([]);
+    const [ownerPets, setOwnerPets] = useState<Awaited<ReturnType<typeof apiService.getPublicPetsByOwner>>>([]);
     useEffect(() => {
         if (isOwnProfile || !id || id === 'me') { setOwnerPets([]); return; }
         let alive = true;
         apiService.getPublicPetsByOwner(id).then(list => { if (alive) setOwnerPets(list); }).catch(() => {});
         return () => { alive = false; };
     }, [id, isOwnProfile]);
-    const profilePets = isOwnProfile ? pets : ownerPets;
+    // Kendi hayvanlarım tam kayıt (yaş gösterilir); başkasınınki yalnızca herkese açık kart.
+    const profilePets = isOwnProfile
+        ? pets.map(p => ({ id: p.id, name: p.name, breed: p.breed, type: p.type, image: p.image, ageLabel: ageText(p.birthday, p.age, todayKey()) }))
+        : ownerPets.map(p => ({ ...p, ageLabel: null }));
     // Ödül Merkezi / Prime çerçevesi: hakkı (Prime ya da süresi geçmemiş VIP) her çizimde yeniden doğrulanır.
     // Başkalarının profilinde henüz gösterilmiyor; seçim sadece sahibinin ayarlarında duruyor (YAPILACAKLAR).
     const { activePerks } = useQuestEngine();
     const frameStyle: FrameStyle = isOwnProfile
-        ? resolveFrameStyle((currentUser as any)?.settings?.appearance?.frameStyle, { isPrime: !!(currentUser as any)?.is_prime, activePerks })
+        ? resolveFrameStyle(currentUser?.settings?.appearance?.frameStyle, { isPrime: !!currentUser?.is_prime, activePerks })
         : 'minimal';
 
     // ── State ──────────────────────────────────────────────
     const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState<any>(null);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('posts');
@@ -140,8 +147,8 @@ export default function ProfilePage() {
             if (summary?.blockedByMe) { await socialService.unblock(id); showToast("Engel kaldırıldı.", "CheckCircle2", "text-emerald-500"); }
             else { await socialService.block(id); showToast("Hesap engellendi.", "CheckCircle2", "text-emerald-500"); }
             setBlockConfirm(false); setMoreOpen(false); loadSummary();
-        } catch (err: any) {
-            showToast(err?.message || "İşlem yapılamadı.", "AlertCircle", "text-red-500");
+        } catch (err) {
+            showToast(err instanceof Error ? err.message : "İşlem yapılamadı.", "AlertCircle", "text-red-500");
         }
     };
 
@@ -161,7 +168,7 @@ export default function ProfilePage() {
     // ── Relations Modal (Followers / Following List) ────────
     const [isRelationsModalOpen, setIsRelationsModalOpen] = useState(false);
     const [relationsModalTab, setRelationsModalTab] = useState<'followers' | 'following'>('followers');
-    const [relationsList, setRelationsList] = useState<any[]>([]);
+    const [relationsList, setRelationsList] = useState<ProfileSummary[]>([]);
     const [relationsLoading, setRelationsLoading] = useState(false);
 
     const openRelationsModal = async (tab: 'followers' | 'following') => {
@@ -193,11 +200,10 @@ export default function ProfilePage() {
     const [editAllowComments, setEditAllowComments] = useState(true);
     const [editCommentPrivacy, setEditCommentPrivacy] = useState('everyone');
     const [editFilterWords, setEditFilterWords] = useState('');
-    
+
     // Unclaimed Match states
-    const [unclaimedMatches, setUnclaimedMatches] = useState<any[]>([]);
+    const [unclaimedMatches, setUnclaimedMatches] = useState<UnclaimedMatch[]>([]);
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
-    const [claimCode, setClaimCode] = useState('');
     const [claimLoading, setClaimLoading] = useState(false);
 
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
@@ -205,32 +211,13 @@ export default function ProfilePage() {
     useEffect(() => {
         if (searchParams.get('addPet') === 'true' && isOwnProfile) {
             setIsAddPetOpen(true);
-            
+
             // Clean up the URL to prevent reopening on reload
             const newUrl = window.location.pathname;
             window.history.replaceState({}, '', newUrl);
         }
     }, [searchParams, isOwnProfile]);
 
-    const [addPetStep, setAddPetStep] = useState(1);
-    const [newPetName, setNewPetName] = useState('');
-    const [newPetType, setNewPetType] = useState('dog');
-    const [newPetBreed, setNewPetBreed] = useState('');
-    const [newPetAge, setNewPetAge] = useState('');
-    const [newPetGender, setNewPetGender] = useState('Erkek');
-    const [newPetNeutered, setNewPetNeutered] = useState('Evet');
-    const [newPetSize, setNewPetSize] = useState('Orta');
-    const [newPetFeatures, setNewPetFeatures] = useState('');
-    const [newPetHealth, setNewPetHealth] = useState('');
-    const [newPetCharacter, setNewPetCharacter] = useState('');
-    const [newPetMicrochip, setNewPetMicrochip] = useState('');
-    const [newPetShowPhone, setNewPetShowPhone] = useState(true);
-    const [newPetPhotos, setNewPetPhotos] = useState<any[]>([]);
-    const [isSavingPet, setIsSavingPet] = useState(false);
-    const [newPetWeight, setNewPetWeight] = useState('');
-    const [newPetActivityTarget, setNewPetActivityTarget] = useState('70');
-    const [newPetWaterTarget, setNewPetWaterTarget] = useState('1200');
-    const [newPetFoodTarget, setNewPetFoodTarget] = useState('1600');
 
     // ── Data Fetch ─────────────────────────────────────────
     useEffect(() => {
@@ -258,94 +245,53 @@ export default function ProfilePage() {
             setEditBio(currentUser.bio || '');
             setEditAvatarPreview(isPlaceholderUrl(currentUser.avatar) ? null : (currentUser.avatar || null));
             setEditCoverPreview(isPlaceholderUrl(currentUser.cover_photo) ? null : (currentUser.cover_photo || null));
-            setEditAllowComments(currentUser.settings?.default_allow_comments !== false);
-            setEditCommentPrivacy(currentUser.settings?.default_comment_privacy || 'everyone');
-            setEditFilterWords(currentUser.settings?.comment_filter_words?.join(', ') || '');
+            setEditAllowComments(currentUser.commentDefaults?.allowComments !== false);
+            setEditCommentPrivacy(currentUser.commentDefaults?.privacy || 'everyone');
+            setEditFilterWords(currentUser.commentDefaults?.filterWords.join(', ') || '');
         }
     }, [currentUser, isOwnProfile]);
     const handleSave = async () => {
-        console.log('--- Profil Kaydetme Başladı ---');
-        console.log('editName:', editName);
-        console.log('editUsername:', editUsername);
-        console.log('editBio:', editBio);
-        console.log('editAvatarFile:', editAvatarFile);
-        console.log('editCoverFile:', editCoverFile);
-        console.log('Mevcut avatar:', currentUser?.avatar);
-        console.log('Mevcut cover:', currentUser?.cover_photo);
-
         setIsSaving(true);
         try {
             let avatarUrl: string | null = isPlaceholderUrl(currentUser?.avatar) ? null : (currentUser?.avatar || null);
             let coverUrl: string | null = isPlaceholderUrl(currentUser?.cover_photo) ? null : (currentUser?.cover_photo || null);
+            if (editAvatarFile) avatarUrl = await apiService.uploadMedia(editAvatarFile, 'avatars');
+            if (editCoverFile) coverUrl = await apiService.uploadMedia(editCoverFile, 'avatars');
 
-            console.log('Başlangıç avatarUrl:', avatarUrl);
-            console.log('Başlangıç coverUrl:', coverUrl);
-
-            // Upload avatar if new file selected
-            if (editAvatarFile) {
-                console.log('Yeni avatar yükleniyor...');
-                avatarUrl = await apiService.uploadMedia(editAvatarFile, 'avatars');
-                console.log('Yeni avatar yüklendi. URL:', avatarUrl);
-            }
-
-            // Upload cover if new file selected
-            if (editCoverFile) {
-                console.log('Yeni kapak yükleniyor...');
-                coverUrl = await apiService.uploadMedia(editCoverFile, 'avatars');
-                console.log('Yeni kapak yüklendi. URL:', coverUrl);
-            }
-
-            console.log('updateProfile çağrılıyor. Payload:', {
-                name: editName,
-                username: editUsername,
-                bio: editBio,
-                avatar: avatarUrl,
-                cover_photo: coverUrl,
-                phone: editPhone,
-                default_allow_comments: editAllowComments,
-                default_comment_privacy: editCommentPrivacy,
-                comment_filter_words: editFilterWords.split(',').map(w => w.trim()).filter(Boolean),
-            });
-
+            const filterWords = editFilterWords.split(',').map(w => w.trim()).filter(Boolean);
             await updateProfile({
                 name: editName,
                 username: editUsername,
                 bio: editBio,
-                avatar: avatarUrl,
-                cover_photo: coverUrl,
-                phone: editPhone,
+                avatar: avatarUrl ?? undefined,
+                cover_photo: coverUrl ?? undefined,
+                phone: editPhone.trim() || null,
                 default_allow_comments: editAllowComments,
                 default_comment_privacy: editCommentPrivacy,
-                comment_filter_words: editFilterWords.split(',').map(w => w.trim()).filter(Boolean),
-            } as any);
-
-            console.log('updateProfile başarılı oldu.');
-
-            // Update local profile state
-            setProfile((prev: any) => ({
+                comment_filter_words: filterWords,
+            });
+            setProfile(prev => (prev ? {
                 ...prev,
-                full_name: editName,
+                name: editName,
                 username: editUsername,
                 bio: editBio,
-                avatar: avatarUrl,
-                avatar_url: avatarUrl,
-                cover_photo: coverUrl,
-                cover_url: coverUrl,
-                phone: editPhone,
+                avatar: avatarUrl ?? undefined,
+                cover_photo: coverUrl ?? undefined,
+                phone: editPhone.trim() || null,
                 default_allow_comments: editAllowComments,
                 default_comment_privacy: editCommentPrivacy,
-                comment_filter_words: editFilterWords.split(',').map(w => w.trim()).filter(Boolean),
-            }));
+                comment_filter_words: filterWords,
+            } : prev));
 
             setIsEditing(false);
             setEditAvatarFile(null);
             setEditCoverFile(null);
             showToast('✅ Profil güncellendi!', 'Sparkles', 'text-cyan-400');
-            
-            // Unclaimed Match Check
-            if (editPhone) {
+
+            // Bu telefonla kliniklerde açılmış kayıt var mı (yalnızca kendi kayıtlı telefonumla eşleşir)
+            if (editPhone.trim()) {
                 try {
-                    const matches = await apiService.checkUnclaimedMatches(editPhone);
+                    const matches = await apiService.getMyUnclaimedMatches();
                     if (matches && matches.length > 0) {
                         setUnclaimedMatches(matches);
                         setIsClaimModalOpen(true);
@@ -354,59 +300,21 @@ export default function ProfilePage() {
                     console.error("Match error:", e);
                 }
             }
-        } catch (err: any) {
-            console.error('Kaydetme esnasında hata oluştu:', err);
-            showToast('❌ Kayıt başarısız: ' + (err?.message || 'Bilinmeyen hata'), 'ShieldAlert', 'text-red-500');
+        } catch (err) {
+            console.error('Profil kaydedilemedi:', err);
+            showToast('❌ Kayıt başarısız: ' + (err instanceof Error ? err.message : 'Bilinmeyen hata'), 'ShieldAlert', 'text-red-500');
         } finally {
             setIsSaving(false);
-            console.log('--- Profil Kaydetme Bitti ---');
-        }
-    };
-
-    const handleSavePet = async () => {
-        setIsSavingPet(true);
-        try {
-            let imageUrl = '';
-            if (newPetPhotos.length > 0) {
-                try {
-                    imageUrl = await apiService.uploadMedia(newPetPhotos[0].file, 'avatars');
-                } catch {
-                    imageUrl = '';
-                }
-            }
-            const petData = {
-                name: newPetName, type: newPetType, breed: newPetBreed,
-                age: newPetAge, gender: newPetGender,
-                is_neutered: newPetNeutered === 'Evet',
-                size: newPetSize,
-                character: newPetCharacter, microchip_id: newPetMicrochip,
-                show_phone: newPetShowPhone, image: imageUrl || '',
-            };
-            const saved = await apiService.addPet(petData as any);
-            // Eklerken yazılan alerji/hastalık bilgisi tek sağlık kaydına (Acil Bilgiler) gider.
-            if (newPetHealth.trim() && saved.id) {
-                try { await healthService.saveProfile(saved.id, { notes: newPetHealth }); }
-                catch (e) { console.warn('Sağlık notu kaydedilemedi:', e); }
-            }
-            // Uygulamanın geri kalanı (ana sayfa, pasaport) yeni hayvanı yenilemeden görsün.
-            addPet({ ...petData, id: saved.id, image: saved.image || imageUrl || '' } as any);
-            setIsAddPetOpen(false);
-            setAddPetStep(1); setNewPetName(''); setNewPetPhotos([]);
-            showToast(`${newPetName} aileye hoş geldin! 🐾`, 'Sparkles', 'text-orange-400');
-        } catch (err) {
-            showToast('Pati kaydedilemedi.', 'ShieldAlert', 'text-red-500');
-        } finally {
-            setIsSavingPet(false);
         }
     };
 
     // ── Derived values ──────────────────────────────────────
     const displayUser = isOwnProfile ? currentUser : profile;
-    const avatarUrl = isEditing ? editAvatarPreview : (isPlaceholderUrl(displayUser?.avatar || displayUser?.avatar_url) ? null : (displayUser?.avatar || displayUser?.avatar_url || null));
-    const coverUrl = isEditing ? editCoverPreview : (isPlaceholderUrl(displayUser?.cover_photo || displayUser?.cover_url) ? null : (displayUser?.cover_photo || displayUser?.cover_url || null));
-    const avatarSeed = displayUser?.username || displayUser?.name || displayUser?.email || 'moffi';
+    const avatarUrl = isEditing ? editAvatarPreview : (isPlaceholderUrl(displayUser?.avatar) ? null : (displayUser?.avatar || null));
+    const coverUrl = isEditing ? editCoverPreview : (isPlaceholderUrl(displayUser?.cover_photo) ? null : (displayUser?.cover_photo || null));
+    const avatarSeed = displayUser?.username || displayUser?.name || 'moffi';
     const avatarGradient = seedColor(avatarSeed);
-    const initials = getInitials(displayUser?.name, displayUser?.username, displayUser?.email);
+    const initials = getInitials(displayUser?.name, displayUser?.username);
 
     // ── Render: Loading ─────────────────────────────────────
     if (loading) {
@@ -442,8 +350,8 @@ export default function ProfilePage() {
 
 
     // ── Keşfet Ekran 10 — Profil ─────────────────────────────
-    const displayName = displayUser?.name || displayUser?.display_name || displayUser?.full_name || displayUser?.username || 'Moffi Kullanıcısı';
-    const city = [displayUser?.district, displayUser?.province].filter(Boolean).join(', ');
+    const displayName = displayUser?.name || displayUser?.username || 'Moffi Kullanıcısı';
+    const city = [profile?.district, profile?.province].filter(Boolean).join(', ');
     const blocked = !!summary?.blockedByMe;
     const Stat = ({ value, label, onClick }: { value: number; label: string; onClick?: () => void }) => (
         <button onClick={onClick} disabled={!onClick} className="flex-1 text-center">
@@ -458,7 +366,7 @@ export default function ProfilePage() {
             { id: 'tools', label: 'Araçlarım', icon: <Settings className="w-5 h-5" /> },
         ] : []),
     ];
-    const isToolsActive = ['tools', 'wallet', 'orders', 'appointments', 'routes', 'family', 'passport'].includes(activeTab);
+    const isToolsActive = ['tools', 'wallet', 'orders', 'appointments', 'routes', 'passport'].includes(activeTab);
 
     return (
         <main className="theme-vet min-h-screen bg-background text-foreground pb-32 overflow-x-hidden">
@@ -536,14 +444,14 @@ export default function ProfilePage() {
                             <section className="mt-5">
                                 <div className="text-sm font-black mb-2">{isOwnProfile ? 'Hayvanlarım' : 'Hayvanları'}</div>
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                                    {profilePets.map((pet: any) => (
+                                    {profilePets.map(pet => (
                                         <button key={pet.id} onClick={() => { if (isOwnProfile) { switchPet(pet.id); router.push('/pasaport'); } }}
                                             className={`flex items-center gap-2.5 pl-1.5 pr-4 py-1.5 rounded-2xl bg-card border shrink-0 text-left ${isOwnProfile && activePet?.id === pet.id ? 'border-accent/50' : 'border-card-border'}`}>
                                             <Avatar src={pet.image} name={pet.name} className="w-11 h-11" />
                                             <span>
                                                 <span className="block text-sm font-black">{pet.name}</span>
                                                 <span className="block text-[11px] font-semibold text-secondary">
-                                                    {[pet.breed || speciesLabel(pet.type), isOwnProfile ? ageText(pet.birthday, pet.age, todayKey()) : null].filter(Boolean).join(' · ')}
+                                                    {[pet.breed || speciesLabel(pet.type), pet.ageLabel].filter(Boolean).join(' · ')}
                                                 </span>
                                             </span>
                                         </button>
@@ -584,7 +492,7 @@ export default function ProfilePage() {
                         </motion.div>
                     ) : activeTab === 'tools' && isOwnProfile ? (
                         <motion.div key="tools" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6">
-                            
+
                             {/* Sağlık & Bakım Grubu */}
                             <div className="mb-6">
                                 <h3 className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] mb-3 ml-2 flex items-center gap-2">
@@ -603,22 +511,13 @@ export default function ProfilePage() {
                                         </div>
                                         <ChevronRight className="w-5 h-5 text-rose-400/50" />
                                     </motion.button>
-                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('passport')} className="p-4 rounded-[1.5rem] bg-gradient-to-br from-sky-500/10 to-blue-500/5 border border-sky-500/20 hover:border-sky-500/40 transition-colors flex flex-col gap-3">
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('passport')} className="col-span-2 p-4 rounded-[1.5rem] bg-gradient-to-br from-sky-500/10 to-blue-500/5 border border-sky-500/20 hover:border-sky-500/40 transition-colors flex flex-col gap-3">
                                         <div className="w-9 h-9 rounded-xl bg-sky-500/20 flex items-center justify-center text-sky-500">
                                             <FileText className="w-4.5 h-4.5" />
                                         </div>
                                         <div className="text-left">
                                             <p className="text-xs font-black text-zinc-900 dark:text-white uppercase">Pasaport</p>
                                             <p className="text-[8px] font-bold text-sky-500/80 uppercase mt-0.5">Kimlik Bilgileri</p>
-                                        </div>
-                                    </motion.button>
-                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('family')} className="p-4 rounded-[1.5rem] bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border border-purple-500/20 hover:border-purple-500/40 transition-colors flex flex-col gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-500">
-                                            <UsersIcon className="w-4.5 h-4.5" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-xs font-black text-zinc-900 dark:text-white uppercase">Aile</p>
-                                            <p className="text-[8px] font-bold text-purple-500/80 uppercase mt-0.5">Ortak Bakım</p>
                                         </div>
                                     </motion.button>
                                 </div>
@@ -636,8 +535,8 @@ export default function ProfilePage() {
                                                 <Wallet className="w-5 h-5" />
                                             </div>
                                             <div className="text-left">
-                                                <p className="text-sm font-black text-zinc-900 dark:text-white uppercase">Moffi Pay</p>
-                                                <p className="text-[9px] font-bold text-emerald-500/80 uppercase mt-0.5">Bakiye & Temassız</p>
+                                                <p className="text-sm font-black text-zinc-900 dark:text-white uppercase">PawCoin</p>
+                                                <p className="text-[9px] font-bold text-emerald-500/80 uppercase mt-0.5">Bakiye ve hareketler</p>
                                             </div>
                                         </div>
                                         <ChevronRight className="w-5 h-5 text-emerald-400/50" />
@@ -696,7 +595,7 @@ export default function ProfilePage() {
                             <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
                                 <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
                             </button>
-                            <OrdersTab orders={[]} />
+                            <OrdersTab />
                         </motion.div>
                     ) : activeTab === 'passport' && isOwnProfile ? (
                         <motion.div key="passport" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
@@ -715,13 +614,6 @@ export default function ProfilePage() {
                                 <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
                             </button>
                             <RoutesTab activePet={activePet} />
-                        </motion.div>
-                    ) : activeTab === 'family' && isOwnProfile ? (
-                        <motion.div key="family" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
-                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
-                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
-                            </button>
-                            <FamilyTab />
                         </motion.div>
                     ) : null}
                 </AnimatePresence>
@@ -746,29 +638,8 @@ export default function ProfilePage() {
             </Sheet>
             <ReportModal isOpen={reportUserOpen} onClose={() => setReportUserOpen(false)} entityType="user" entityId={id} />
 
-            {/* Add Pet Modal */}
-            <AddPetModal
-                isOpen={isAddPetOpen} onClose={() => setIsAddPetOpen(false)}
-                step={addPetStep} setStep={setAddPetStep}
-                newPetName={newPetName} setNewPetName={setNewPetName}
-                newPetType={newPetType} setNewPetType={setNewPetType}
-                newPetBreed={newPetBreed} setNewPetBreed={setNewPetBreed}
-                newPetAge={newPetAge} setNewPetAge={setNewPetAge}
-                newPetGender={newPetGender} setNewPetGender={setNewPetGender}
-                newPetNeutered={newPetNeutered} setNewPetNeutered={setNewPetNeutered}
-                newPetSize={newPetSize} setNewPetSize={setNewPetSize}
-                newPetFeatures={newPetFeatures} setNewPetFeatures={setNewPetFeatures}
-                newPetHealth={newPetHealth} setNewPetHealth={setNewPetHealth}
-                newPetCharacter={newPetCharacter} setNewPetCharacter={setNewPetCharacter}
-                newPetMicrochip={newPetMicrochip} setNewPetMicrochip={setNewPetMicrochip}
-                newPetShowPhone={newPetShowPhone} setNewPetShowPhone={setNewPetShowPhone}
-                newPetPhotos={newPetPhotos} setNewPetPhotos={setNewPetPhotos}
-                isSaving={isSavingPet} onSave={handleSavePet}
-                newPetWeight={newPetWeight} setNewPetWeight={setNewPetWeight}
-                newPetActivityTarget={newPetActivityTarget} setNewPetActivityTarget={setNewPetActivityTarget}
-                newPetWaterTarget={newPetWaterTarget} setNewPetWaterTarget={setNewPetWaterTarget}
-                newPetFoodTarget={newPetFoodTarget} setNewPetFoodTarget={setNewPetFoodTarget}
-            />
+            {/* Hayvan ekleme: ana sayfayla aynı akış (tek sistem) */}
+            <AddPetFlow isOpen={isAddPetOpen} onClose={() => setIsAddPetOpen(false)} />
 
             {/* ══ PREMIUM PROFILE EDIT MODAL ══ */}
             <EditProfileModal
@@ -816,70 +687,33 @@ export default function ProfilePage() {
                             </button>
                             <h2 className="text-xl font-black uppercase text-foreground mb-4 italic">🎉 Kayıtların Bulundu!</h2>
                             <p className="text-sm text-secondary mb-4">
-                                Telefon numaranla eşleşen veteriner kayıtları bulduk. Bunları profiline aktarmak için işlem yapman gerekiyor.
+                                Telefon numaranla eşleşen klinik kayıtları bulduk. Klinik onaylayınca hayvanın ve geçmiş kaydı hesabına eklenir.
                             </p>
                             <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
                                 {unclaimedMatches.map(match => (
                                     <div key={match.id} className="p-4 rounded-2xl bg-foreground/5 border border-card-border flex flex-col gap-2">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-bold text-foreground text-sm">{match.pet_name || 'İsimsiz Pati'}</h3>
-                                                <p className="text-xs text-secondary">{match.raw_name}</p>
-                                            </div>
-                                            <span className="text-[10px] uppercase tracking-wider font-black px-2 py-1 rounded-full bg-accent text-white">
-                                                {match.status === 'sms_sent' ? 'SMS Onayı' : 'Manuel Onay'}
-                                            </span>
+                                        <div>
+                                            <h3 className="font-bold text-foreground text-sm">{match.pet_name || 'İsimsiz Pati'}</h3>
+                                            <p className="text-xs text-secondary">{match.clinic_name}</p>
                                         </div>
-                                        {match.status === 'sms_sent' ? (
-                                            <div className="flex gap-2 mt-2">
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="6 Haneli Kod" 
-                                                    className="flex-1 bg-background border border-card-border rounded-xl px-3 text-sm text-center outline-none"
-                                                    value={claimCode}
-                                                    onChange={e => setClaimCode(e.target.value)}
-                                                    maxLength={6}
-                                                />
-                                                <button 
-                                                    disabled={claimLoading || claimCode.length !== 6}
-                                                    onClick={async () => {
-                                                        setClaimLoading(true);
-                                                        try {
-                                                            await apiService.verifyAndClaim(match.id, claimCode);
-                                                            showToast('Kayıt başarıyla profiline eklendi!', 'CheckCircle2', 'text-green-500');
-                                                            setUnclaimedMatches(prev => prev.filter(m => m.id !== match.id));
-                                                            if (unclaimedMatches.length === 1) setIsClaimModalOpen(false);
-                                                        } catch (err: any) {
-                                                            showToast(err.message, 'AlertCircle', 'text-red-500');
-                                                        } finally {
-                                                            setClaimLoading(false);
-                                                        }
-                                                    }}
-                                                    className="px-4 py-2 bg-foreground text-background text-xs font-black uppercase rounded-xl disabled:opacity-50"
-                                                >
-                                                    Doğrula
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button 
-                                                disabled={claimLoading || match.status === 'claim_requested'}
-                                                onClick={async () => {
-                                                    setClaimLoading(true);
-                                                    try {
-                                                        await apiService.requestManualClaim(match.id);
-                                                        showToast('Kliniğe onay isteği gönderildi.', 'CheckCircle2', 'text-emerald-500');
-                                                        setUnclaimedMatches(prev => prev.map(m => m.id === match.id ? {...m, status: 'claim_requested'} : m));
-                                                    } catch (err: any) {
-                                                        showToast(err.message, 'AlertCircle', 'text-red-500');
-                                                    } finally {
-                                                        setClaimLoading(false);
-                                                    }
-                                                }}
-                                                className="w-full mt-2 py-2 bg-foreground/10 text-foreground text-xs font-black uppercase rounded-xl hover:bg-foreground/20 transition disabled:opacity-50"
-                                            >
-                                                {match.status === 'claim_requested' ? 'İstek Gönderildi' : 'Manuel Onay İste'}
-                                            </button>
-                                        )}
+                                        <button
+                                            disabled={claimLoading || match.requested}
+                                            onClick={async () => {
+                                                setClaimLoading(true);
+                                                try {
+                                                    await apiService.requestManualClaim(match.id);
+                                                    showToast('Kliniğe onay isteği gönderildi.', 'CheckCircle2', 'text-emerald-500');
+                                                    setUnclaimedMatches(prev => prev.map(m => m.id === match.id ? { ...m, requested: true } : m));
+                                                } catch (err) {
+                                                    showToast(err instanceof Error ? err.message : 'İşlem yapılamadı.', 'AlertCircle', 'text-red-500');
+                                                } finally {
+                                                    setClaimLoading(false);
+                                                }
+                                            }}
+                                            className="w-full mt-1 py-2 bg-foreground/10 text-foreground text-xs font-black rounded-xl hover:bg-foreground/20 transition disabled:opacity-50"
+                                        >
+                                            {match.requested ? 'İstek gönderildi · klinik onayı bekleniyor' : 'Kliniğe onay isteği gönder'}
+                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -910,7 +744,7 @@ export default function ProfilePage() {
                         >
                             {/* Drag handle */}
                             <div className="w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full mx-auto mb-4 shrink-0" />
-                            
+
                             {/* Header / Tabs */}
                             <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-4 shrink-0">
                                 <div className="flex gap-4">
@@ -956,7 +790,7 @@ export default function ProfilePage() {
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {relationsList.map((userItem: any) => {
+                                        {relationsList.map(userItem => {
                                             const initials = getInitials(userItem.name, userItem.username);
                                             const gradient = seedColor(userItem.username || userItem.id);
                                             return (

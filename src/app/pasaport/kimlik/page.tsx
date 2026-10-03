@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { share as shareApi } from "@/native";
 import { ClipboardList } from 'lucide-react';
 import { useHealth } from '@/components/health/HealthProvider';
@@ -51,14 +51,14 @@ export default function IdentityPage() {
             const url = await apiService.uploadMedia(file, 'avatars');
             updatePet(pet.id, { image: url });
             showToast('Fotoğraf güncellendi.', 'CheckCircle2', 'text-emerald-500 font-bold');
-        } catch (e: any) {
-            showToast(e?.message || 'Fotoğraf yüklenemedi.', 'AlertCircle', 'text-red-500 font-bold');
+        } catch (e) {
+            showToast(e instanceof Error ? e.message : 'Fotoğraf yüklenemedi.', 'AlertCircle', 'text-red-500 font-bold');
         } finally {
             setUploading(false);
         }
     };
 
-    const chip = pet ? (pet.microchip || pet.microchip_id || pet.microchip_no) : null;
+    const chip = pet ? pet.microchip : null;
 
     return (
         <>
@@ -112,16 +112,19 @@ function EditSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     const [f, setF] = useState({ name: '', type: 'dog', breed: '', gender: '', birthday: '', color: '', neutered: '', microchip: '', petvet: '' });
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!open || !pet) return;
+    // Pencere her açılışta güncel kayıtla doldurulur (çizim sırasında önceki durumla karşılaştırma).
+    const [filled, setFilled] = useState(false);
+    if (!open && filled) setFilled(false);
+    if (open && pet && !filled) {
+        setFilled(true);
         setF({
             name: pet.name || '', type: pet.type || 'other', breed: pet.breed || '', gender: genderLabel(pet.gender) || '',
             birthday: /^\d{4}-\d{2}-\d{2}/.test(pet.birthday || '') ? pet.birthday!.slice(0, 10) : '',
             color: pet.color || '', neutered: pet.neutered === true ? 'yes' : pet.neutered === false ? 'no' : '',
-            microchip: pet.microchip || pet.microchip_id || pet.microchip_no || '', petvet: pet.petvet_no || '',
+            microchip: pet.microchip || '', petvet: pet.petvet_no || '',
         });
         setError(null);
-    }, [open, pet]);
+    }
 
     const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF(s => ({ ...s, [k]: e.target.value }));
 
@@ -130,15 +133,15 @@ function EditSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
         if (!f.name.trim()) { setError('Ad boş olamaz.'); return; }
         if (f.birthday && f.birthday > new Date().toISOString().slice(0, 10)) { setError('Doğum tarihi ileri bir tarih olamaz.'); return; }
         // Eski kayıtlardaki numaralar bozulmasın diye kural sadece numara değiştirildiğinde uygulanır.
-        const oldChip = (pet.microchip || pet.microchip_id || pet.microchip_no || '').replace(/\s/g, '');
+        const oldChip = (pet.microchip || '').replace(/\s/g, '');
         const newChip = f.microchip.replace(/\s/g, '');
         if (newChip && newChip !== oldChip && !/^\d{15}$/.test(newChip)) { setError('Mikroçip numarası 15 haneli olmalı.'); return; }
         updatePet(pet.id, {
             name: f.name.trim(), type: f.type, breed: f.breed.trim(), gender: f.gender,
             birthday: f.birthday, color: f.color, petvet_no: f.petvet,
-            microchip: f.microchip.replace(/\s/g, ''), microchip_id: f.microchip.replace(/\s/g, ''),
-            ...(f.neutered ? { neutered: f.neutered === 'yes', is_neutered: f.neutered === 'yes' } : {}),
-        } as any);
+            microchip: f.microchip.replace(/\s/g, ''),
+            ...(f.neutered ? { neutered: f.neutered === 'yes' } : {}),
+        });
         showToast('Kimlik bilgileri kaydedildi.', 'CheckCircle2', 'text-emerald-500 font-bold');
         onClose();
     };

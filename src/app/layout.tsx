@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import { SocialProvider } from "@/context/SocialContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { PetProvider } from "@/context/PetContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -12,15 +11,11 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
 import { AccountDeletionBanner } from "@/components/account/AccountDeletion";
 import { DynamicNavigation } from "@/components/common/DynamicNavigation";
-import { GlobalIdentitySync } from "@/components/common/GlobalIdentitySync";
 import { GlobalCareModals } from "@/components/common/GlobalCareModals";
-import { WellbeingProvider } from "@/context/WellbeingContext";
 import { GlobalAuraBackground } from "@/components/common/GlobalAuraBackground";
 import { WeatherProvider } from "@/context/WeatherContext";
 import { QuestEngineProvider } from "@/context/QuestEngineContext";
-import { LiveEventsProvider } from "@/context/LiveEventsContext";
 import { QuestRewardEngineLoader } from "@/components/quests/QuestRewardEngineLoader";
-import { Phase2Loader } from "@/components/quests/Phase2Loader";
 import { GlobalToast } from "@/components/common/GlobalToast";
 import CookieBanner from "@/components/common/CookieBanner";
 import { ShareSheetHost } from "@/components/common/ShareSheet";
@@ -76,14 +71,10 @@ export default function RootLayout({
                 <ActivityProvider>
                   <WeatherProvider>
                     <QuestEngineProvider>
-                      <LiveEventsProvider>
                       <ChatProvider>
-                        <WellbeingProvider>
                           <ThemeProvider>
-                            <SocialProvider>
                                   <ReportProvider>
                                     <ClientAuthWrapper>
-                                      <GlobalIdentitySync />
                                       <AccountDeletionBanner />
                                       <GlobalAuraBackground />
                                       <div id="modal-root" className="pointer-events-none fixed inset-0 z-[99999]"></div>
@@ -100,7 +91,6 @@ export default function RootLayout({
                                       </Suspense>
                                       <GlobalCareModals />
                                       <QuestRewardEngineLoader />
-                                      <Phase2Loader />
                                       <AIWidgetLoader />
                                       <WeatherDetailSheet />
                                       <CookieBanner />
@@ -108,11 +98,8 @@ export default function RootLayout({
                                     </ClientAuthWrapper>
                                     <ShareSheetHost />
                                   </ReportProvider>
-                            </SocialProvider>
                           </ThemeProvider>
-                        </WellbeingProvider>
                       </ChatProvider>
-                      </LiveEventsProvider>
                     </QuestEngineProvider>
                   </WeatherProvider>
                 </ActivityProvider>

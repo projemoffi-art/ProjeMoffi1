@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
     Search, X, PawPrint,
     User, ArrowRight
 } from 'lucide-react';
@@ -20,7 +20,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
     const { user } = useAuth();
     const [query, setQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [results, setResults] = useState<{ profiles: any[], posts: any[], pets: any[] }>({ profiles: [], posts: [], pets: [] });
+    const [results, setResults] = useState<Awaited<ReturnType<typeof apiService.globalSearch>>>({ profiles: [], posts: [], pets: [] });
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -54,8 +54,8 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
     }, [query]);
 
     const dynamicCategories = [
-        { category: 'Kullanıcılar', items: results.profiles.map(p => ({ id: p.id, label: `@${p.username}`, icon: <User className="w-4 h-4" />, type: 'user' })) },
-        { category: 'Patiler', items: results.pets.map(p => ({ id: p.pet_id || p.id, label: `${p.name}`, icon: <PawPrint className="w-4 h-4" />, type: 'pet' })) },
+        { category: 'Kullanıcılar', items: results.profiles.flatMap(p => (p.id ? [{ id: p.id, label: `@${p.username}`, icon: <User className="w-4 h-4" />, type: 'user' }] : [])) },
+        { category: 'Patiler', items: results.pets.flatMap(p => (p.owner_id ? [{ id: p.owner_id, label: `${p.name}`, icon: <PawPrint className="w-4 h-4" />, type: 'pet' }] : [])) },
         { category: 'Gönderiler', items: results.posts.map(p => ({ id: p.id, label: p.desc?.substring(0, 30) + '...', icon: <ArrowRight className="w-4 h-4" />, type: 'post' })) }
     ].filter(cat => cat.items.length > 0);
 
@@ -80,7 +80,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                         {/* SEARCH INPUT AREA */}
                         <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center gap-4">
                             <Search className="w-6 h-6 text-gray-400" />
-                            <input 
+                            <input
                                 ref={inputRef}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
@@ -95,7 +95,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                         {/* RESULTS AREA */}
                         <div className="max-h-[50vh] overflow-y-auto no-scrollbar">
                             <AnimatePresence mode="wait">
-                                <motion.div 
+                                <motion.div
                                     key="search-view"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
@@ -104,7 +104,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                 >
                                     {isLoading ? (
                                         <div className="py-12 flex flex-col items-center justify-center gap-3">
-                                            <motion.div 
+                                            <motion.div
                                                 animate={{ rotate: 360 }}
                                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                 className="w-6 h-6 border-2 border-gray-200 dark:border-white/10 border-t-cyan-500 rounded-full"

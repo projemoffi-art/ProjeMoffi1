@@ -1,103 +1,51 @@
 /**
- * Moffi Veri Dışa Aktarma Yardımcı Aracı (KVKK Uyumlu)
- * Kullanıcının platform üzerindeki tüm verilerini paketler ve indirir.
+ * KVKK veri taşınabilirliği: kullanıcının hesabındaki kayıtları tek JSON dosyası olarak indirir.
+ * Yalnızca gerçekten okunan veriler yazılır (uydurma alan ya da sıfır bakiye yok).
  */
-export const exportUserData = (packageData: {
-    user: any,
-    pets?: any[],
-    posts?: any[],
-    adoptions?: any[],
-    notifications?: any[],
-    orders?: any[],
-    chats?: any[],
-    walkStats?: any
-}) => {
-    try {
-        const { user, pets, posts, adoptions, notifications, orders, chats, walkStats } = packageData;
+import type { User } from '@/context/AuthContext';
 
-        // İndirilecek veriyi hazırla
-        const exportData = {
-            export_version: "2.0.0 (Premium)",
-            export_date: new Date().toISOString(),
-            platform: "Moffi Ecosystem",
-            licence_type: user.subscription_status || 'free',
-            
-            // 1. KİMLİK VE PROFİL
-            account: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                joined_at: user.joinedAt,
-                bio: user.bio,
-                avatar_url: user.avatar,
-                stats: user.stats,
-                wallet: {
-                    balance: user.wallet_balance || 0,
-                    moffi_coins: user.moffi_coins || 0
-                }
-            },
+export interface UserDataPackage {
+    user: User;
+    pets: unknown[];
+    posts: unknown[];
+    adoptions: unknown[];
+    notifications: unknown[];
+    orders: unknown[];
+    chats: unknown[];
+    walkStats: unknown;
+    pawCoin: { balance: number; history: unknown[] };
+}
 
-            // 2. AYARLAR VE TERCİHLER
-            preferences: user.settings,
+export const exportUserData = ({ user, pets, posts, adoptions, notifications, orders, chats, walkStats, pawCoin }: UserDataPackage) => {
+    const exportData = {
+        export_date: new Date().toISOString(),
+        platform: 'Moffi',
+        account: {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            joined_at: user.joinedAt,
+            bio: user.bio,
+            avatar_url: user.avatar,
+            is_prime: !!user.is_prime,
+        },
+        preferences: user.settings ?? {},
+        pets,
+        content: { posts, adoption_ads: adoptions },
+        social: { notifications, conversations: chats },
+        activity: { orders, walks: walkStats },
+        paw_coin: pawCoin,
+    };
 
-            // 3. EVCİL HAYVANLAR VE SAĞLIK
-            pets: (pets || []).map(p => ({
-                id: p.id,
-                name: p.name,
-                type: p.type,
-                breed: p.breed,
-                age: p.age,
-                is_lost: p.is_lost,
-                sos_settings: p.sos_settings
-            })),
-
-            // 4. TOPLULUK VE İÇERİK
-            content: {
-                posts: posts || [],
-                adoption_ads: adoptions || []
-            },
-
-            // 5. ETKİLEŞİM VE SOSYAL
-            social: {
-                notifications: notifications || [],
-                conversations: (chats || []).map(c => ({
-                    id: c.id,
-                    with_user: c.userName,
-                    message_count: c.messages?.length || 0,
-                    messages: c.messages || []
-                }))
-            },
-
-            // 6. TİCARET VE FİTNESS
-            activity: {
-                orders: orders || [],
-                fitness: walkStats || {}
-            },
-
-            // 7. GÜVENLİK
-            security: {
-                login_activity: user.loginActivity || []
-            }
-        };
-
-        // Blob oluştur
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        // Gizli bir link oluştur ve tıkla
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `moffi_full_data_${user.username}_${new Date().getFullYear()}_${new Date().getMonth()+1}.json`;
-        document.body.appendChild(link);
-        link.click();
-        
-        // Temizlik
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        return { success: true };
-    } catch (error) {
-        console.error("Veri dışa aktarılırken hata oluştu:", error);
-        return { success: false, error };
-    }
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `moffi_verilerim_${user.username}_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 };

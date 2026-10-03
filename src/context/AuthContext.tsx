@@ -1,12 +1,42 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+// Oturum ve kullanıcı profili (tek kaynak: Supabase Auth + profiles). (2026-10-03: tarayıcı deposundaki sahte kullanıcı
+// listesiyle çalışan "mock" giriş yolları, geliştirmede admin@moffipet.com'a kendiliğinden yönetici yetkisi veren kısayol ve
+// örnek kullanıcılar kaldırıldı.)
+
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import type { EmailOtpType, Session, Subscription } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
-import { apiService, isSupabaseEnabled } from "@/services/apiService";
-import { SupabaseApiService } from "@/services/supabaseApiService";
+import { apiService } from "@/services/apiService";
+import type { ProfileUpdate, UserProfile } from "@/services/types";
 
 export type UserRole = 'user' | 'business' | 'admin';
 export type BusinessType = 'petshop' | 'vet' | 'grooming' | 'trainer' | 'shelter';
+
+/** Bir ayar kategorisi (profiles.settings içinde). */
+export type SettingsCategory = Record<string, unknown>;
+
+// Uygulamanın tanıdığı kategoriler (tip alias'ı: SettingsCategory'ye atanabilir). Bilinmeyen kategoriler serbest alanlıdır.
+export type AppearanceSettings = {
+    theme?: 'light' | 'dark' | 'system'; font?: string;
+    /** Profil fotoğrafı çerçevesi (lib/vipFrames). */
+    frameStyle?: string;
+};
+export type AccessibilitySettings = {
+    fontSize?: 'small' | 'medium' | 'large'; colorBlindMode?: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
+    boldText?: boolean; highContrast?: boolean; reduceMotion?: boolean; reduceTransparency?: boolean; seniorMode?: boolean;
+};
+export type WellbeingSettings = {
+    dailyLimit?: number; quietMode?: { enabled: boolean; from: string; to: string };
+};
+
+/** Kullanıcı ayarları: kategori adı → alanlar (görünüm, gizlilik, kenar paneli, yapay zekâ, bildirim, erişilebilirlik…). */
+export type UserSettings = {
+    appearance?: AppearanceSettings;
+    accessibility?: AccessibilitySettings;
+    wellbeing?: WellbeingSettings;
+    [category: string]: SettingsCategory | undefined;
+};
 
 export interface User {
     id: string;
@@ -29,8 +59,7 @@ export interface User {
     businessId?: string;
     businessName?: string;
     businessApproved?: boolean;
-    settings?: any; // Simplified for dynamic migration
-    subscription_status?: string;
+    settings?: UserSettings;
     kybStatus?: 'pending' | 'approved' | 'rejected';
     kybRejectionReason?: string;
     taxId?: string;
@@ -38,6 +67,8 @@ export interface User {
     address?: string;
     ownerName?: string;
     phone?: string;
+    /** Gönderilerin varsayılan yorum ayarları (profiles sütunları; sunucu yorum eklerken uygular, 8.49). */
+    commentDefaults?: { allowComments: boolean; privacy: string; filterWords: string[] };
 }
 
 interface AuthContextType {
@@ -49,9 +80,9 @@ interface AuthContextType {
     resetPasswordWithCode: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
     changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
     signOutOtherDevices: () => Promise<{ success: boolean; error?: string }>;
-    logout: () => void;
-    updateProfile: (data: Partial<User>) => Promise<void>;
-    updateSettings: (category: any, data: any) => Promise<void>;
+    logout: () => Promise<void>;
+    updateProfile: (data: ProfileUpdate) => Promise<void>;
+    updateSettings: (category: string, data: SettingsCategory) => Promise<void>;
     verifyOtp: (email: string, token: string, type: 'signup' | 'recovery' | 'invite' | 'magiclink' | 'email_change' | 'email') => Promise<{ success: boolean; error?: string }>;
     resendOtp: (email: string) => Promise<{ success: boolean; error?: string }>;
     signInWithGoogle: () => Promise<void>;
@@ -61,98 +92,116 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAIL = process.env.NODE_ENV !== 'production' ? "admin@moffipet.com" : null;
+const DEFAULT_SETTINGS: UserSettings = {
+    appearance: {},
+};
 
-const MOCK_USER_BASE = (email: string, name?: string): User => ({
-    id: `user-${email.split('@')[0] || 'guest'}-${Date.now()}`,
-    username: name || email.split('@')[0] || 'moffi_user',
-    email: email,
-    role: (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? 'admin' : 'user',
-    avatar: undefined,
-    bio: "Moffi Dünyasına yeni katıldı! 🐾",
-    is_prime: false,
-    joinedAt: new Date().toISOString(),
-    stats: { posts: 0, followers: 0, following: 0 },
-    settings: {
-        appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
-        privacy: { smartShopEnabled: true }
-    }
-});
+const ROLES: UserRole[] = ['user', 'business', 'admin'];
+const asRole = (v: string | null | undefined): UserRole => (ROLES.includes(v as UserRole) ? (v as UserRole) : 'user');
+const asSettings = (v: unknown): UserSettings => (v && typeof v === 'object' && !Array.isArray(v) ? (v as UserSettings) : {});
+const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+/** Profil kaydı + oturum e-postası → uygulamadaki kullanıcı. */
+function toUser(profile: UserProfile, email: string): User {
+    const settings = asSettings(profile.settings);
+    return {
+        id: profile.id,
+        username: profile.username || email.split('@')[0] || 'user',
+        name: profile.name || profile.username || 'Moffi User',
+        display_name: profile.name || profile.username || 'Moffi User',
+        email,
+        role: asRole(profile.role),
+        avatar: profile.avatar,
+        cover_photo: profile.cover_photo,
+        bio: profile.bio ?? undefined,
+        is_prime: profile.is_prime,
+        joinedAt: profile.created_at || new Date().toISOString(),
+        stats: { posts: 0, followers: profile.stats.followers, following: profile.stats.following },
+        businessType: (profile.businessType ?? undefined) as BusinessType | undefined,
+        businessName: profile.businessName ?? undefined,
+        businessApproved: profile.businessApproved ?? undefined,
+        kybStatus: (profile.kybStatus ?? undefined) as User['kybStatus'],
+        taxId: profile.taxId ?? undefined,
+        iban: profile.iban ?? undefined,
+        address: profile.address ?? undefined,
+        ownerName: profile.ownerName ?? undefined,
+        phone: profile.phone ?? undefined,
+        commentDefaults: {
+            allowComments: profile.default_allow_comments,
+            privacy: profile.default_comment_privacy,
+            filterWords: profile.comment_filter_words,
+        },
+        // Kayıtlı TÜM ayar kategorileri korunur (kenar paneli, yapay zekâ, bildirim, erişilebilirlik…).
+        // Eskiden yalnızca appearance/privacy alınıyordu; sonraki updateSettings kalanları veritabanından siliyordu.
+        settings: {
+            ...settings,
+            appearance: settings.appearance || DEFAULT_SETTINGS.appearance,
+        },
+    };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
-    const userRef = React.useRef<User | null>(null);
-    const settingsWriteChain = React.useRef<Promise<void>>(Promise.resolve());
+    const userRef = useRef<User | null>(null);
+    const settingsWriteChain = useRef<Promise<void>>(Promise.resolve());
     const [isLoading, setIsLoading] = useState(true);
-    const isLoadingRef = React.useRef(true);
 
     useEffect(() => {
         userRef.current = user;
     }, [user]);
 
-    // Sync isLoadingRef so syncSessionCookie can access latest isLoading without re-renders
-    React.useEffect(() => {
-        isLoadingRef.current = isLoading;
-    }, [isLoading]);
-
-    // Sync user role to cookies for Next.js Middleware route protection
-    // IMPORTANT: Only runs AFTER loading is complete to avoid deleting valid sessions
     // Rol, ara katmanda (middleware) her istekte Supabase oturumundan ve profiles.role'den okunur.
     // Ayrı bir imzalı rol çerezi tutulmaz (eskiden vardı; imza anahtarı tanımsızken taklit edilebiliyordu).
 
-    // --- INITIALIZATION ---
+    // --- BAŞLANGIÇ ---
     useEffect(() => {
         let isMounted = true;
-        let authListener: any = null;
+        let authListener: Subscription | null = null;
+
+        // Profil, oturumdaki kullanıcı kimliğiyle okunur (hesap değiştirirken eski oturumun önbelleği kullanılmaz).
+        const syncProfile = async (session: Session) => {
+            const authUser = session.user;
+            const email = authUser.email || '';
+            try {
+                const profile = await apiService.getUserProfile(authUser.id);
+                if (!isMounted) return;
+                if (profile) {
+                    setUser(toUser(profile, email));
+                } else {
+                    // Profil satırı yoksa (ilk giriş) oluşturulur.
+                    const created = await apiService.updateProfile({
+                        name: (authUser.user_metadata?.full_name as string | undefined) || email.split('@')[0] || 'Moffi User',
+                        username: email.split('@')[0] || 'user',
+                    });
+                    if (isMounted) setUser(toUser(created, email));
+                }
+            } catch (err) {
+                console.error('[Auth] Profile sync failed:', errorMessage(err));
+                // Profil okunamazsa oturum bilgisiyle devam edilir (kullanıcı kilitlenmesin).
+                if (isMounted) {
+                    const name = (authUser.user_metadata?.full_name as string | undefined) || email.split('@')[0] || 'Moffi User';
+                    setUser({
+                        id: authUser.id,
+                        username: email.split('@')[0] || 'user',
+                        name,
+                        display_name: name,
+                        email,
+                        role: 'user',
+                        avatar: authUser.user_metadata?.avatar_url as string | undefined,
+                        joinedAt: new Date().toISOString(),
+                        stats: { posts: 0, followers: 0, following: 0 },
+                        settings: DEFAULT_SETTINGS,
+                    });
+                }
+            }
+        };
 
         const initializeAuth = async () => {
-            if (!isSupabaseEnabled) {
-                // Heal stale user lists in localStorage
-                if (typeof window !== 'undefined') {
-                    const storedList = localStorage.getItem('moffi_mock_users_list');
-                    if (storedList) {
-                        try {
-                            const list = JSON.parse(storedList);
-                            let changed = false;
-                            const updated = list.map((u: any) => {
-                                if (u.email && u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && u.role !== 'admin') {
-                                    changed = true;
-                                    return { ...u, role: 'admin' };
-                                }
-                                return u;
-                            });
-                            if (changed) {
-                                localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
-                            }
-                        } catch (e) {}
-                    }
-                }
-
-                const savedUser = localStorage.getItem('moffi_mock_user');
-                if (savedUser) {
-                    const parsed = JSON.parse(savedUser);
-                    if (parsed && parsed.email && parsed.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && parsed.role !== 'admin') {
-                        parsed.role = 'admin';
-                        localStorage.setItem('moffi_mock_user', JSON.stringify(parsed));
-                    }
-                    setUser(parsed);
-                } else {
-                    setUser(MOCK_USER_BASE('guest@moffi.com', 'MoffiGuest'));
-                }
-                setIsLoading(false);
-                return;
-            }
-
             try {
-                // 1. Get initial session
                 const { data: { session } } = await supabase.auth.getSession();
-                
                 if (isMounted) {
-                    if (session?.user) {
-                        await syncProfile(session);
-                    } else {
-                        setUser(null);
-                    }
+                    if (session?.user) await syncProfile(session);
+                    else setUser(null);
                     setIsLoading(false);
                 }
             } catch (err) {
@@ -163,359 +212,129 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
             }
 
-            // 2. Set up event listener for subsequent changes
             if (isMounted) {
                 const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
                     if (!isMounted) return;
-                    console.log(`[Auth] Auth state change event: ${event}`);
-                    
                     if (event === 'SIGNED_OUT') {
                         setUser(null);
-                    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-                        if (session?.user) {
-                            await syncProfile(session);
-                        }
+                    } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && session?.user) {
+                        await syncProfile(session);
                     }
                 });
                 authListener = subscription;
             }
         };
 
-        // FIX: syncProfile uses session.user.id DIRECTLY to query the profile.
-        // Previously it called getCurrentUser() → getSession() which could return
-        // a stale cached session for the WRONG user during account switching.
-        const syncProfile = async (session: any) => {
-            if (!session?.user?.id) return;
-            const authUser = session.user;
-            console.log(`[Auth] Syncing profile for user: ${authUser.id} (${authUser.email})`);
-
-            try {
-                // Use getUserProfile(id) directly — bypasses any stale getSession() cache
-                const profile = await apiService.getUserProfile(authUser.id);
-                if (!isMounted) return;
-
-                if (profile) {
-                    setUser({
-                        id: profile.id,
-                        username: profile.username || authUser.email?.split('@')[0] || 'user',
-                        name: (profile as any).name || profile.username || 'Moffi User',
-                        display_name: (profile as any).name || profile.username || 'Moffi User',
-                        email: authUser.email,
-                        role: (profile.role || 'user') as UserRole,
-                        avatar: profile.avatar,
-                        cover_photo: profile.cover_photo,
-                        bio: profile.bio,
-                        is_prime: (profile as any).is_prime === true,
-                        joinedAt: (profile as any).created_at || new Date().toISOString(),
-                        stats: profile.stats || { posts: 0, followers: 0, following: 0 },
-                        subscription_status: profile.subscription_status,
-                        businessType: (profile as any).business_type || (profile as any).businessType,
-                        businessName: (profile as any).business_name || (profile as any).businessName,
-                        businessApproved: (profile as any).business_approved || (profile as any).businessApproved,
-                        kybStatus: (profile as any).kyb_status || (profile as any).kybStatus,
-                        taxId: (profile as any).tax_id || (profile as any).taxId,
-                        iban: (profile as any).iban,
-                        address: (profile as any).address,
-                        ownerName: (profile as any).owner_name || (profile as any).ownerName,
-                        phone: profile.phone,
-                        // Kayıtlı TÜM ayar kategorileri korunur (kenar paneli, yapay zekâ, bildirim, erişilebilirlik…).
-                        // Eskiden yalnızca appearance/privacy alınıyordu; sonraki updateSettings kalanları veritabanından siliyordu.
-                        settings: {
-                            ...((profile as any).settings || {}),
-                            appearance: (profile as any).settings?.appearance || { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
-                            privacy: (profile as any).settings?.privacy || { smartShopEnabled: true }
-                        }
-                    });
-                } else {
-                    // No profile row yet — create one (first-time login)
-                    console.log('[Auth] No profile found for', authUser.id, '— provisioning...');
-                    const newProfile = await apiService.updateProfile({
-                        name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Moffi User',
-                        username: authUser.email?.split('@')[0] || 'user',
-                    } as any);
-                    if (isMounted && newProfile) {
-                        setUser({
-                            id: newProfile.id,
-                            username: newProfile.username,
-                            name: newProfile.name,
-                            display_name: newProfile.name,
-                            email: authUser.email,
-                            role: newProfile.role || 'user',
-                            avatar: newProfile.avatar,
-                            joinedAt: new Date().toISOString(),
-                            stats: { posts: 0, followers: 0, following: 0 },
-                            settings: {
-                                appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
-                                privacy: { smartShopEnabled: true }
-                            }
-                        });
-                    }
-                }
-            } catch (err: any) {
-                console.error('[Auth] Profile sync failed:', err?.message || err);
-                // Fallback: use auth session data so user isn't blocked
-                if (isMounted) {
-                    setUser({
-                        id: authUser.id,
-                        username: authUser.email?.split('@')[0] || 'user',
-                        name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Moffi User',
-                        display_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Moffi User',
-                        email: authUser.email || '',
-                        role: 'user',
-                        avatar: authUser.user_metadata?.avatar_url,
-                        joinedAt: new Date().toISOString(),
-                        stats: { posts: 0, followers: 0, following: 0 },
-                        settings: {
-                            appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
-                            privacy: { smartShopEnabled: true }
-                        }
-                    });
-                }
-            }
-        };
-
         initializeAuth();
-
         return () => {
             isMounted = false;
-            if (authListener) authListener.unsubscribe();
+            authListener?.unsubscribe();
         };
     }, []);
 
-    const login = async (email: string, password: string) => {
-        if (isSupabaseEnabled) {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                // Doğrulanmamış hesap: şifre doğru ama e-posta kodu girilmemiş → yeni kod gönderip kod ekranına geç
-                if ((error as any).code === 'email_not_confirmed' || /email not confirmed/i.test(error.message)) {
-                    await supabase.auth.resend({ type: 'signup', email });
-                    return { success: false, needsVerification: true };
-                }
-                return { success: false, error: error.message };
+    const login = useCallback(async (email: string, password: string) => {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+            // Doğrulanmamış hesap: şifre doğru ama e-posta kodu girilmemiş → yeni kod gönderip kod ekranına geç
+            if (error.code === 'email_not_confirmed' || /email not confirmed/i.test(error.message)) {
+                await supabase.auth.resend({ type: 'signup', email });
+                return { success: false, needsVerification: true };
             }
-            return { success: true };
-        } else {
-            let loggedUser: User | null = null;
-            if (typeof window !== 'undefined') {
-                const storedList = localStorage.getItem('moffi_mock_users_list');
-                if (storedList) {
-                    const list = JSON.parse(storedList);
-                    loggedUser = list.find((u: any) => u.email.toLowerCase() === email.toLowerCase()) || null;
-                }
-            }
-
-            if (!loggedUser) {
-                loggedUser = MOCK_USER_BASE(email);
-                if (typeof window !== 'undefined') {
-                    const storedList = localStorage.getItem('moffi_mock_users_list');
-                    const list = storedList ? JSON.parse(storedList) : [];
-                    list.push(loggedUser);
-                    localStorage.setItem('moffi_mock_users_list', JSON.stringify(list));
-                }
-            }
-
-            if (loggedUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-                loggedUser.role = 'admin';
-            }
-
-            setUser(loggedUser);
-            localStorage.setItem('moffi_mock_user', JSON.stringify(loggedUser));
-            return { success: true };
+            return { success: false, error: error.message };
         }
-    };
+        return { success: true };
+    }, []);
 
-    const signInWithGoogle = async () => {
-        if (!isSupabaseEnabled) return;
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
+    const signInWithGoogle = useCallback(async () => {
+        await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } });
+    }, []);
+
+    const signInWithApple = useCallback(async () => {
+        await supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: `${window.location.origin}/auth/callback` } });
+    }, []);
+
+    const signup = useCallback(async (name: string, email: string, password: string, marketingConsent: boolean = false) => {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
             options: {
-                redirectTo: `${window.location.origin}/auth/callback`
-            }
+                data: { full_name: name, marketing_consent: marketingConsent },
+                emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
+            },
         });
-    };
+        if (error) return { success: false, error: error.message };
+        // Doğrulama açıkken kayıtlı bir adres için Supabase hata yerine kimliksiz kullanıcı döner
+        if (data.user && data.user.identities?.length === 0) return { success: false, error: 'User already registered' };
+        // Oturum yoksa e-posta doğrulaması açık: kod gönderildi
+        return { success: true, needsVerification: !data.session };
+    }, []);
 
-    const signInWithApple = async () => {
-        if (!isSupabaseEnabled) return;
-        await supabase.auth.signInWithOAuth({
-            provider: 'apple',
-            options: {
-                redirectTo: `${window.location.origin}/auth/callback`
-            }
-        });
-    };
-
-    const signup = async (name: string, email: string, password: string, marketingConsent: boolean = false) => {
-        if (isSupabaseEnabled) {
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: { full_name: name, marketing_consent: marketingConsent },
-                    emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
-                }
-            });
-            if (error) return { success: false, error: error.message };
-            // Doğrulama açıkken kayıtlı bir adres için Supabase hata yerine kimliksiz kullanıcı döner
-            if (data.user && data.user.identities?.length === 0) {
-                return { success: false, error: 'User already registered' };
-            }
-            // Oturum yoksa e-posta doğrulaması açık: 6 haneli kod gönderildi
-            return { success: true, needsVerification: !data.session };
-        } else {
-            const newUser = MOCK_USER_BASE(email, name);
-            setUser(newUser);
-            localStorage.setItem('moffi_mock_user', JSON.stringify(newUser));
-
-            if (typeof window !== 'undefined') {
-                const storedList = localStorage.getItem('moffi_mock_users_list');
-                const list = storedList ? JSON.parse(storedList) : [];
-                list.push(newUser);
-                localStorage.setItem('moffi_mock_users_list', JSON.stringify(list));
-            }
-
-            return { success: true };
-        }
-    };
-
-    const logout = async () => {
-        if (isSupabaseEnabled) {
-            await supabase.auth.signOut({ scope: 'local' });
-        }
-        // Clear ALL moffi and supabase auth keys from localStorage
-        // to prevent stale token contamination on next login
+    const logout = useCallback(async () => {
+        await supabase.auth.signOut({ scope: 'local' });
+        // Uygulamanın ve Supabase'in tarayıcıdaki anahtarları temizlenir (sonraki girişte eski oturum karışmasın).
         if (typeof window !== 'undefined') {
-            const keysToRemove = Object.keys(localStorage).filter(
-                k => k.startsWith('moffi_') || k.startsWith('sb-') || k.includes('supabase')
-            );
-            keysToRemove.forEach(k => localStorage.removeItem(k));
+            Object.keys(localStorage)
+                .filter(k => k.startsWith('moffi_') || k.startsWith('sb-') || k.includes('supabase'))
+                .forEach(k => localStorage.removeItem(k));
         }
         setUser(null);
-    };
+    }, []);
 
-    const updateProfile = async (data: Partial<User>) => {
-        if (isSupabaseEnabled) {
-            const profile = await apiService.updateProfile({
-                name: data.name || data.username,
-                username: data.username,
-                avatar: data.avatar,
-                bio: data.bio,
-                cover_photo: (data as any).cover_photo,
-                subscription_status: (data as any).subscription_status,
-                is_setup_completed: (data as any).is_setup_completed,
-                default_allow_comments: (data as any).default_allow_comments,
-                default_comment_privacy: (data as any).default_comment_privacy,
-                comment_filter_words: (data as any).comment_filter_words
-            } as any);
-            
-            setUser(prev => {
-                if (prev) {
-                    return {
-                        ...prev,
-                        name: profile.name || prev.name,
-                        display_name: profile.name || prev.display_name,
-                        username: profile.username || prev.username,
-                        avatar: profile.avatar !== undefined ? profile.avatar : prev.avatar,
-                        cover_photo: profile.cover_photo !== undefined ? profile.cover_photo : prev.cover_photo,
-                        bio: profile.bio !== undefined ? profile.bio : prev.bio,
-                        subscription_status: profile.subscription_status || prev.subscription_status,
-                        settings: {
-                            ...prev.settings,
-                            default_allow_comments: (profile as any).default_allow_comments !== undefined ? (profile as any).default_allow_comments : prev.settings?.default_allow_comments,
-                            default_comment_privacy: (profile as any).default_comment_privacy || prev.settings?.default_comment_privacy,
-                            comment_filter_words: (profile as any).comment_filter_words || prev.settings?.comment_filter_words
-                        }
-                    };
-                }
-                return {
-                    id: profile.id,
-                    username: profile.username || profile.name || data.username || "user",
-                    name: profile.name || data.name || data.username,
-                    display_name: profile.name || data.name || data.username,
-                    email: profile.email || "user@moffi.com",
-                    role: 'user',
-                    avatar: profile.avatar,
-                    cover_photo: profile.cover_photo,
-                    bio: profile.bio,
-                    joinedAt: new Date().toISOString(),
-                    stats: { posts: 0, followers: 0, following: 0 },
-                    settings: {
-                        default_allow_comments: (profile as any).default_allow_comments,
-                        default_comment_privacy: (profile as any).default_comment_privacy,
-                        comment_filter_words: (profile as any).comment_filter_words
-                    }
-                };
-            });
-        } else {
-            setUser(prev => prev ? { ...prev, ...data } : null);
-        }
-    };
+    // Eskiden yalnızca ad/kullanıcı adı/fotoğraf/biyografi iletiliyordu: profil düzenlemedeki telefon ve yorum ayarları hiç kaydedilmiyordu.
+    const updateProfile = useCallback(async (data: ProfileUpdate) => {
+        const profile = await apiService.updateProfile(data);
+        setUser(prev => (prev ? { ...toUser(profile, prev.email), settings: prev.settings } : prev));
+    }, []);
 
-    const updateSettings = async (category: any, data: any) => {
+    const updateSettings = useCallback(async (category: string, data: SettingsCategory) => {
         const currentUser = userRef.current;
         if (!currentUser) return;
-
-        const updatedSettings = {
-            ...currentUser.settings,
-            [category]: { ...currentUser.settings?.[category], ...data }
-        };
-        const updatedUser = {
+        const updatedUser: User = {
             ...currentUser,
-            settings: updatedSettings
+            settings: { ...currentUser.settings, [category]: { ...currentUser.settings?.[category], ...data } },
         };
-        
-        // State ve Ref'i anında senkron güncelle ki art arda çağrılarda patlamasın
+        // State ve ref anında güncellenir ki art arda çağrılar birbirini ezmesin
         setUser(updatedUser);
         userRef.current = updatedUser;
 
-        if (typeof window !== 'undefined') {
-            if (isSupabaseEnabled) {
-                // Veritabanındaki güncel ayarların üstüne yalnızca bu kategori birleştirilir: ekrandaki kopya eksik
-                // olsa bile (ör. profil yüklenemeyip varsayılanla açılmışsa) diğer kategoriler silinmez.
-                // Art arda gelen kayıtlar sıraya alınır; biri diğerinin değişikliğini ezmez.
-                const userId = currentUser.id;
-                settingsWriteChain.current = settingsWriteChain.current.then(async () => {
-                    try {
-                        const { data: row, error: readError } = await supabase.from('profiles').select('settings').eq('id', userId).single();
-                        if (readError) throw readError;
-                        const base = (row?.settings || {}) as Record<string, any>;
-                        const merged = { ...base, [category]: { ...(base[category] || {}), ...data } };
-                        const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);
-                        if (error) console.error("Ayarlar kaydedilemedi:", error);
-                    } catch (err) {
-                        console.error("Ayarlar kaydedilemedi:", err);
-                    }
-                });
-                await settingsWriteChain.current;
-            } else {
-                localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
+        // Veritabanındaki güncel ayarların üstüne yalnızca bu kategori birleştirilir: ekrandaki kopya eksik
+        // olsa bile (ör. profil yüklenemeyip varsayılanla açılmışsa) diğer kategoriler silinmez.
+        // Art arda gelen kayıtlar sıraya alınır; biri diğerinin değişikliğini ezmez.
+        const userId = currentUser.id;
+        settingsWriteChain.current = settingsWriteChain.current.then(async () => {
+            try {
+                const { data: row, error: readError } = await supabase.from('profiles').select('settings').eq('id', userId).single();
+                if (readError) throw readError;
+                const base = asSettings(row?.settings);
+                const merged = { ...base, [category]: { ...(base[category] || {}), ...data } };
+                const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);
+                if (error) console.error("Ayarlar kaydedilemedi:", error);
+            } catch (err) {
+                console.error("Ayarlar kaydedilemedi:", err);
             }
-        }
-    };
+        });
+        await settingsWriteChain.current;
+    }, []);
 
-    const forgotPassword = async (email: string) => {
-        if (isSupabaseEnabled) {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?type=recovery`
-            });
-            if (error) return { success: false, error: error.message };
-            return { success: true, message: "Sıfırlama e-postası gönderildi." };
-        }
-        return { success: true, message: "E-posta simüle edildi." };
-    };
+    const forgotPassword = useCallback(async (email: string) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?type=recovery`,
+        });
+        if (error) return { success: false, error: error.message };
+        return { success: true, message: "Sıfırlama e-postası gönderildi." };
+    }, []);
 
-    // Sıfırlama e-postasındaki 6 haneli kod doğrulanınca oturum açılır, ardından yeni şifre kaydedilir.
-    const resetPasswordWithCode = async (email: string, code: string, newPassword: string) => {
-        if (!isSupabaseEnabled) return { success: true };
+    // Sıfırlama e-postasındaki kod doğrulanınca oturum açılır, ardından yeni şifre kaydedilir.
+    const resetPasswordWithCode = useCallback(async (email: string, code: string, newPassword: string) => {
         const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' });
         if (error) return { success: false, error: error.message };
         const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
         if (updateError) return { success: false, error: updateError.message };
         return { success: true };
-    };
+    }, []);
 
     // Mevcut şifre yeniden doğrulanmadan şifre değiştirilmez (açık kalmış bir oturumu ele geçiren şifreyi değiştiremesin)
-    const changePassword = async (currentPassword: string, newPassword: string) => {
-        if (!isSupabaseEnabled) return { success: true };
+    const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         const email = authUser?.email;
         if (!email) return { success: false, error: 'Oturum bulunamadı, tekrar giriş yap.' };
@@ -528,145 +347,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) return { success: false, error: /same/i.test(error.message) ? 'Yeni şifre eskisiyle aynı olamaz.' : 'Şifre güncellenemedi. En az 8 karakter olmalı.' };
         await supabase.auth.signOut({ scope: 'others' });
         return { success: true };
-    };
+    }, []);
 
-    const signOutOtherDevices = async () => {
-        if (!isSupabaseEnabled) return { success: true };
+    const signOutOtherDevices = useCallback(async () => {
         const { error } = await supabase.auth.signOut({ scope: 'others' });
         return error ? { success: false, error: error.message } : { success: true };
-    };
+    }, []);
 
-    const resendOtp = async (email: string) => {
-        if (!isSupabaseEnabled) return { success: true };
+    const resendOtp = useCallback(async (email: string) => {
         try {
             const { error } = await supabase.auth.resend({
                 type: 'signup',
                 email,
-                options: {
-                    emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
-                }
+                options: { emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback` },
             });
             if (error) return { success: false, error: error.message };
             return { success: true };
-        } catch (err: any) {
-            return { success: false, error: err.message };
+        } catch (err) {
+            return { success: false, error: errorMessage(err) };
         }
-    };
+    }, []);
 
-    const verifyOtp = async (email: string, token: string, type: any) => {
-        if (isSupabaseEnabled) {
-            const otpType = type === 'signup' ? 'email' : type;
-            const { error } = await supabase.auth.verifyOtp({
-                email,
-                token,
-                type: otpType
-            });
-            if (error) return { success: false, error: error.message };
-            return { success: true };
-        }
+    const verifyOtp = useCallback(async (email: string, token: string, type: 'signup' | 'recovery' | 'invite' | 'magiclink' | 'email_change' | 'email') => {
+        const otpType: EmailOtpType = type === 'signup' ? 'email' : type;
+        const { error } = await supabase.auth.verifyOtp({ email, token, type: otpType });
+        if (error) return { success: false, error: error.message };
         return { success: true };
-    };
+    }, []);
 
-    const getAllUsers = async (): Promise<User[]> => {
-        if (isSupabaseEnabled) {
-            const { data, error } = await supabase.from('profiles').select('*');
-            if (error) {
-                console.error("Error fetching users from database:", error);
-                return [];
-            }
-            return data.map((profile: any) => ({
-                id: profile.id,
-                username: profile.username || profile.full_name || 'user',
-                name: profile.full_name,
-                email: profile.email || '',
-                role: profile.role || 'user',
-                avatar: profile.avatar_url,
-                bio: profile.bio,
-                joinedAt: profile.created_at || new Date().toISOString(),
-                stats: { posts: 0, followers: 0, following: 0 },
-                businessType: profile.business_type,
-                businessName: profile.business_name,
-                businessApproved: profile.business_approved,
-                kybStatus: profile.kyb_status,
-                taxId: profile.tax_id,
-                iban: profile.iban,
-                address: profile.address,
-                ownerName: profile.owner_name,
-                phone: profile.phone,
-                settings: profile.settings || {}
-            }));
-        } else {
-            if (typeof window !== 'undefined') {
-                const stored = localStorage.getItem('moffi_mock_users_list');
-                if (stored) {
-                    return JSON.parse(stored);
-                }
-            }
-            const defaultList: User[] = [
-                {
-                    id: 'user-admin',
-                    username: 'admin',
-                    email: 'admin@moffipet.com',
-                    role: 'admin',
-                    bio: 'Moffi Platform Yöneticisi',
-                    joinedAt: '2025-01-01T12:00:00Z',
-                    is_prime: true,
-                    stats: { posts: 0, followers: 0, following: 0 },
-                    settings: {
-                        appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
-                        privacy: { smartShopEnabled: true }
-                    }
-                },
-                {
-                    id: 'user-uveys',
-                    username: 'uveys',
-                    email: 'uveys@moffi.com',
-                    role: 'user',
-                    bio: 'Pati Dostu',
-                    joinedAt: '2025-02-15T12:00:00Z',
-                    is_prime: false,
-                    stats: { posts: 0, followers: 0, following: 0 },
-                    settings: {
-                        appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
-                        privacy: { smartShopEnabled: true }
-                    }
-                },
-                {
-                    id: 'user-hekim',
-                    username: 'Dr. Moffi',
-                    email: 'doctor@moffipet.com',
-                    role: 'business',
-                    businessType: 'vet',
-                    businessName: 'Moffi Veteriner Kliniği',
-                    businessApproved: false,
-                    kybStatus: 'pending',
-                    taxId: '8765432109',
-                    iban: 'TR98 7654 3210 9876 5432 1098 76',
-                    address: 'Moda Caddesi No:42 Kadıköy / İstanbul',
-                    ownerName: 'Dr. Ahmet Yılmaz',
-                    phone: '0532 123 45 67',
-                    bio: 'VetLife Uzman Hekim',
-                    joinedAt: '2025-03-01T12:00:00Z',
-                    is_prime: true,
-                    stats: { posts: 0, followers: 0, following: 0 },
-                    settings: {
-                        appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
-                        privacy: { smartShopEnabled: true }
-                    }
-                }
-            ];
-            if (typeof window !== 'undefined') {
-                localStorage.setItem('moffi_mock_users_list', JSON.stringify(defaultList));
-            }
-            return defaultList;
+    /** Yönetici panosu: profiller (e-posta profiles'ta yok; yönetici e-postayı admin_user_emails ile okur). */
+    const getAllUsers = useCallback(async (): Promise<User[]> => {
+        const { data, error } = await supabase.from('profiles').select('id, username, full_name, role, avatar_url, bio, created_at');
+        if (error) {
+            console.error("Error fetching users from database:", error);
+            return [];
         }
-    };
+        return (data || []).map(profile => ({
+            id: profile.id,
+            username: profile.username || profile.full_name || 'user',
+            name: profile.full_name || undefined,
+            email: '',
+            role: asRole(profile.role),
+            avatar: profile.avatar_url || undefined,
+            bio: profile.bio || undefined,
+            joinedAt: profile.created_at || new Date().toISOString(),
+            stats: { posts: 0, followers: 0, following: 0 },
+        }));
+    }, []);
 
     return (
         <AuthContext.Provider value={{
             user, isLoading, login, signup, logout, resetPasswordWithCode, changePassword, signOutOtherDevices,
             updateProfile, updateSettings, forgotPassword, verifyOtp, resendOtp,
-            signInWithGoogle, signInWithApple, getAllUsers
+            signInWithGoogle, signInWithApple, getAllUsers,
         }}>
             {children}
         </AuthContext.Provider>

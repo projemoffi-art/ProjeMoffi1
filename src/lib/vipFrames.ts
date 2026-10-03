@@ -26,8 +26,10 @@ export function isFrameUnlocked(style: FrameStyle, opts: { isPrime: boolean; act
 // VIP süresi dolmuşsa) sessizce 'minimal'e düşürür — istemcinin gönderdiği
 // değeri kör kör güvenerek render etmek yerine burada gerçek bir yeniden
 // doğrulama yapılıyor.
-export function resolveFrameStyle(requested: FrameStyle | undefined, opts: { isPrime: boolean; activePerks: Record<string, string> }): FrameStyle {
-    const style = requested || 'minimal';
+const FRAME_STYLES: FrameStyle[] = ['minimal', 'glass', 'neon', 'metal'];
+
+export function resolveFrameStyle(requested: string | undefined, opts: { isPrime: boolean; activePerks: Record<string, string> }): FrameStyle {
+    const style: FrameStyle = FRAME_STYLES.includes(requested as FrameStyle) ? (requested as FrameStyle) : 'minimal';
     return isFrameUnlocked(style, opts) ? style : 'minimal';
 }
 

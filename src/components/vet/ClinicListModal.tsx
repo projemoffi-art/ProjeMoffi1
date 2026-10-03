@@ -30,7 +30,7 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
         return clinics.filter(c =>
             c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             c.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.features.some(f => f.toLowerCase().includes(searchQuery.toLowerCase()))
+            (c.features || []).some(f => f.toLowerCase().includes(searchQuery.toLowerCase()))
         );
     }, [clinics, searchQuery]);
 

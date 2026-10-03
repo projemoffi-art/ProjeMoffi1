@@ -16,14 +16,8 @@ import { WalkCard, StatRow, PrimaryButton, ProgressBar } from "@/components/walk
 
 // Ekran 7 (Yürüyüş Sonucu). Rakamlar sunucuya kaydedilmiş yürüyüşten (finish_walk) okunur; ekranda görülen
 // ile geçmişte görülen aynıdır.
-interface SavedWalk {
-    id: string;
-    pet_id?: string | null;
-    distance_meters?: number;
-    active_seconds?: number | null;
-    steps?: number | null;
-    calories_kcal?: number | null;
-}
+/** Kayıtlı yürüyüş (getWalkById: walk_sessions satırı). */
+type SavedWalk = NonNullable<Awaited<ReturnType<typeof apiService.getWalkById>>>;
 
 function SummaryContent() {
     const router = useRouter();
@@ -45,7 +39,7 @@ function SummaryContent() {
         let cancelled = false;
         apiService.getWalkById(id).then(data => {
             if (cancelled) return;
-            setWalk(data?.id ? data : null);
+            setWalk(data);
             setLoading(false);
         });
         return () => { cancelled = true; };

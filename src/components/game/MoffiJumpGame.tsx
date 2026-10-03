@@ -9,13 +9,22 @@ import { cn } from "@/lib/utils";
 interface GameProps {
     onGameOver: (score: number) => void;
     onClose: () => void;
+    /** Oyun altını bakiyesi (profiles.coin_balance). */
     userCoins?: number;
-    onSpendCoins?: (amount: number) => boolean;
+    /** Kurtarma: 50 oyun altını sunucuda düşülür (game_continue); başarılıysa true. */
+    onContinue?: () => Promise<boolean>;
 }
 
 type PlatformType = 'normal' | 'moving' | 'fragile' | 'spring';
+type Platform = { id: number; x: number; y: number; type: PlatformType; dx: number; isBroken: boolean };
+type Item = { id: number; x: number; y: number; emoji: string; collected: boolean; platformId: number; score: number };
 
-export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSpendCoins }: GameProps) {
+// Platform/ödül kimlikleri ve rastgele aralıklar çizimden bağımsız (React kuralı: render sırasında saat/rastgele yok).
+let idSeq = 0;
+const newId = () => ++idSeq;
+const randomGap = () => Math.random() * 60 + 50;
+
+export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onContinue }: GameProps) {
     // ------------------------------------------------------------------------
     // CONSTANTS & REFS
     // ------------------------------------------------------------------------
@@ -43,12 +52,18 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
     const [level, setLevel] = useState(1);
 
     const containerRef = useRef<HTMLDivElement>(null);
-    const requestRef = useRef<number>();
-    
+    const requestRef = useRef<number | undefined>(undefined);
+
     // Virtual World State
     const player = useRef({ x: 0, y: 0, vy: 0, vx: 0 });
-    const platforms = useRef<{ id: number, x: number, y: number, type: PlatformType, dx: number, isBroken: boolean }[]>([]);
-    const items = useRef<{ id: number, x: number, y: number, emoji: string, collected: boolean, platformId: number, score: number }[]>([]);
+    const platforms = useRef<Platform[]>([]);
+    const items = useRef<Item[]>([]);
+    // Fizik döngüsü ref'lerle çalışır; ekrana çizilecek liste değiştiğinde (eklenen/silinen platform, ödül) anlık görüntü alınır.
+    const [entities, setEntities] = useState<{ platforms: Platform[]; items: Item[] }>({ platforms: [], items: [] });
+    const syncEntities = () => setEntities({ platforms: platforms.current.slice(), items: items.current.slice() });
+    // Skor ve aşama döngü içinde ref'te tutulur, ekrana state olarak yansıtılır (güncelleyici içinde yan etki yok).
+    const scoreRef = useRef(0);
+    const levelRef = useRef(1);
     const cameraY = useRef(0);
     const keys = useRef({ left: false, right: false });
 
@@ -60,16 +75,18 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
         const width = containerRef.current?.clientWidth || 400;
 
         if (!isRevive) {
+            scoreRef.current = 0;
+            levelRef.current = 1;
             setScore(0);
             setLevel(1);
             cameraY.current = 0;
             platforms.current = [];
             items.current = [];
-            
+
             // Generate solid initial floor (span the entire width)
             for (let i = -PLATFORM_WIDTH; i < width + PLATFORM_WIDTH; i += (PLATFORM_WIDTH - 5)) {
                 platforms.current.push({
-                    id: Date.now() + i, x: i, y: height - 30, type: 'normal', dx: 0, isBroken: false
+                    id: newId(), x: i, y: height - 30, type: 'normal', dx: 0, isBroken: false
                 });
             }
 
@@ -77,31 +94,32 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
             let currentY = height - 150;
             while (currentY > -height) {
                 spawnPlatform(currentY, width, 1);
-                currentY -= (Math.random() * 60 + 50); // Safe reachable gap
+                currentY -= randomGap(); // Safe reachable gap
             }
 
             player.current = { x: width / 2 - PLAYER_SIZE / 2, y: height - 200, vy: 0, vx: 0 };
-            
+
         } else {
             // Revive Mode (Second Chance)
             // Put a giant safe platform right beneath the player and clear nearby hazards
             const currentY = height / 2;
             player.current = { x: width / 2 - PLAYER_SIZE / 2, y: currentY - 100, vy: JUMP_FORCE, vx: 0 };
-            
+
             // Remove platforms that are on screen to prevent unfair deaths
             platforms.current = platforms.current.filter(p => p.y < 0);
             items.current = items.current.filter(i => i.y < 0);
-            
+
             // Add a safety net platform
             platforms.current.push({
-                id: Date.now(), x: width / 2 - PLATFORM_WIDTH, y: currentY, type: 'normal', dx: 0, isBroken: false
+                id: newId(), x: width / 2 - PLATFORM_WIDTH, y: currentY, type: 'normal', dx: 0, isBroken: false
             });
             // Extend its width visually by spawning two side by side
             platforms.current.push({
-                id: Date.now()+1, x: width / 2, y: currentY, type: 'normal', dx: 0, isBroken: false
+                id: newId(), x: width / 2, y: currentY, type: 'normal', dx: 0, isBroken: false
             });
         }
 
+        syncEntities();
         setGameState('playing');
     };
 
@@ -110,7 +128,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
         let dx = 0;
 
         const rand = Math.random();
-        
+
         // Level probabilities
         if (currentLevel >= 2 && rand < 0.2) {
             type = 'moving';
@@ -129,19 +147,19 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
             else type = 'normal';
         }
 
-        
+
         let x = 0;
         if (platforms.current.length === 0) {
             x = Math.random() * (screenWidth - PLATFORM_WIDTH);
         } else {
             // Find the highest platform (the last one generated before this one)
             const highestP = platforms.current.reduce((highest, p) => p.y < highest.y ? p : highest, platforms.current[0]);
-            
+
             // Yönü rastgele belirle (Sağa veya Sola)
-            let dir = Math.random() > 0.5 ? 1 : -1;
-            
+            const dir = Math.random() > 0.5 ? 1 : -1;
+
             // X ekseninde en az 50, en fazla 140 piksel kaydır (Üst üste binmeyi engeller, ulaşılabilir tutar)
-            let shift = Math.random() * 90 + 50; 
+            const shift = Math.random() * 90 + 50;
             x = highestP.x + (dir * shift);
 
             // Ekran dışına çıkarsa geri yansıt (Sektirme mantığı)
@@ -150,7 +168,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                 x = screenWidth - PLATFORM_WIDTH - shift - 10;
             }
         }
-        const id = Date.now() + Math.random();
+        const id = newId();
         platforms.current.push({
             id, x, y, type, dx, isBroken: false
         });
@@ -170,7 +188,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
             }
 
             items.current.push({
-                id: Date.now() + Math.random(),
+                id: newId(),
                 platformId: id,
                 x: x + PLATFORM_WIDTH / 2 - 12,
                 y: y - 25,
@@ -182,7 +200,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
     };const gameOver = () => {
         setGameState('second_chance');
         cancelAnimationFrame(requestRef.current!);
-        if (score > highScore) setHighScore(Math.floor(score));
+        if (scoreRef.current > highScore) setHighScore(Math.floor(scoreRef.current));
     };
 
     // ------------------------------------------------------------------------
@@ -244,7 +262,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                             } else {
                                 player.current.vy = JUMP_FORCE;
                             }
-                            
+
                             const pEl = document.getElementById(`platform-${p.id}`);
                             if (pEl) {
                                 pEl.style.transition = 'none';
@@ -265,20 +283,22 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                 if (player.current.y < height / 2) {
                     const diff = (height / 2) - player.current.y;
                     player.current.y += diff;
-                    
-                    setScore(prev => {
-                        const newScore = prev + diff;
-                        const newLevel = Math.min(5, Math.floor(newScore / 2000) + 1);
-                        if (newLevel !== level) setLevel(newLevel);
-                        return newScore;
-                    });
+
+                    scoreRef.current += diff;
+                    setScore(scoreRef.current);
+                    const newLevel = Math.min(5, Math.floor(scoreRef.current / 2000) + 1);
+                    if (newLevel !== levelRef.current) {
+                        levelRef.current = newLevel;
+                        setLevel(newLevel);
+                    }
 
                     platforms.current.forEach(p => { p.y += diff; });
                     items.current.forEach(i => { i.y += diff; });
 
                     const highestPlatform = platforms.current.reduce((min, p) => p.y < min ? p.y : min, height);
                     if (highestPlatform > 0) {
-                        spawnPlatform(highestPlatform - (Math.random() * (40 + level*10) + 60), width, level);
+                        spawnPlatform(highestPlatform - (Math.random() * (40 + levelRef.current * 10) + 60), width, levelRef.current);
+                        syncEntities();
                     }
                 }
 
@@ -304,8 +324,9 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
 
                     if (isXHit && isYHit) {
                         item.collected = true;
-                        setScore(prev => prev + item.score); // Use item's dynamic score!
-                        
+                        scoreRef.current += item.score;
+                        setScore(scoreRef.current);
+
                         const el = document.getElementById(`item-${item.id}`);
                         if (el) {
                             // Professional Floating Text Effect!
@@ -318,8 +339,10 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                 }
 
                 // 7. Cleanup
+                const before = platforms.current.length + items.current.length;
                 platforms.current = platforms.current.filter(p => p.y < height + 50 && !p.isBroken);
                 items.current = items.current.filter(i => i.y < height + 50 && !i.collected);
+                if (platforms.current.length + items.current.length !== before) syncEntities();
 
                 // 8. Death Check
                 if (player.current.y > height) {
@@ -362,11 +385,11 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
 
             requestRef.current = requestAnimationFrame(loop);
         };
-        
+
         requestRef.current = requestAnimationFrame(loop); // INITIAL CALL
 
         return () => cancelAnimationFrame(requestRef.current!);
-    }, [gameState, level]);
+    }, [gameState]);
 
     // ------------------------------------------------------------------------
     // CONTROLS
@@ -407,7 +430,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
 
     return (
         <div ref={containerRef} className="fixed inset-0 z-50 bg-[#0a0a0f] overflow-hidden font-sans select-none touch-none">
-            
+
             {/* DYNAMIC BACKGROUND */}
             <div className="absolute inset-0 pointer-events-none transition-colors duration-1000" style={{
                 background: level === 1 ? 'linear-gradient(to top, #1e1b4b, #000000)' :
@@ -441,7 +464,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
             {gameState === 'playing' && (
                 <>
                     {/* Platforms */}
-                    {platforms.current.map(p => (
+                    {entities.platforms.map(p => (
                         <div
                             key={p.id}
                             id={`platform-${p.id}`}
@@ -454,7 +477,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                                             p.type === 'moving' ? 'linear-gradient(90deg, #4ade80, #16a34a)' :
                                             p.type === 'fragile' ? 'linear-gradient(90deg, #ef4444, #b91c1c)' :
                                             'linear-gradient(90deg, #facc15, #ca8a04)', // spring
-                                boxShadow: p.type === 'spring' ? '0 0 15px rgba(250,204,21,0.5)' : 
+                                boxShadow: p.type === 'spring' ? '0 0 15px rgba(250,204,21,0.5)' :
                                            p.type === 'fragile' ? '0 0 15px rgba(239,68,68,0.5)' : 'none',
                                 willChange: 'transform'
                             }}
@@ -465,9 +488,9 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                         </div>
                     ))}
 
-                    
+
                     {/* Items */}
-                    {items.current.map(i => !i.collected && (
+                    {entities.items.map(i => !i.collected && (
                         <div
                             key={i.id}
                             id={`item-${i.id}`}
@@ -491,7 +514,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
 
                     {/* Touch Controls for Mobile */}
                     <div className="absolute bottom-10 left-10 right-10 flex justify-between z-30 sm:hidden">
-                        <button 
+                        <button
                             className="w-20 h-20 bg-white/5 backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 active:bg-white/20"
                             onTouchStart={(e) => handleTouchStart(e, 'left')}
                             onTouchEnd={(e) => handleTouchEnd(e, 'left')}
@@ -500,7 +523,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                         >
                             <span className="text-3xl text-white opacity-50">←</span>
                         </button>
-                        <button 
+                        <button
                             className="w-20 h-20 bg-white/5 backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 active:bg-white/20"
                             onTouchStart={(e) => handleTouchStart(e, 'right')}
                             onTouchEnd={(e) => handleTouchEnd(e, 'right')}
@@ -523,7 +546,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                             </div>
                             <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-2 uppercase tracking-tighter">Moffi Jump Pro</h2>
                             <p className="text-gray-400 mb-8 font-medium text-sm">Zıplayarak en tepeye ulaş! İpucu: Ekranın sağından çıkarsan solundan girersin! Cihazını sağa/sola yatır.</p>
-                            
+
                             <div className="grid grid-cols-2 gap-2 mb-8 text-left">
                                 <div className="bg-white/5 p-2 rounded-lg flex items-center gap-2"><div className="w-4 h-2 bg-cyan-400 rounded-full"/> <span className="text-[10px] font-bold text-gray-300">Sabit Zemin</span></div>
                                 <div className="bg-white/5 p-2 rounded-lg flex items-center gap-2"><div className="w-4 h-2 bg-green-500 rounded-full"/> <span className="text-[10px] font-bold text-gray-300">Hareketli</span></div>
@@ -545,20 +568,20 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
             {/* SECOND CHANCE (MOFFI COIN) */}
             <AnimatePresence>
                 {gameState === 'second_chance' && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
                         animate={{ opacity: 1, backdropFilter: 'blur(20px)' }}
                         className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/80"
                     >
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
                             className="bg-[#111116] border border-orange-500/30 rounded-[2rem] p-8 text-center max-w-sm w-full shadow-[0_0_60px_rgba(249,115,22,0.2)] relative overflow-hidden"
                         >
                             <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-orange-400 via-red-500 to-orange-400" />
-                            
+
                             <h2 className="text-2xl font-black text-orange-400 uppercase tracking-tighter mb-2 mt-4">SİNYAL KAYBEDİLDİ!</h2>
                             <p className="text-gray-400 text-sm font-medium mb-6">
-                                Boşluğa düştün. Ama <strong className="text-white">50 Moffi Coin</strong> karşılığında kurtarma dronu seni düştüğün yere geri bırakabilir!
+                                Boşluğa düştün. Ama <strong className="text-white">50 oyun altını</strong> karşılığında kurtarma dronu seni düştüğün yere geri bırakabilir!
                             </p>
 
                             <div className="w-full bg-black/40 rounded-2xl p-4 border border-white/5 mb-6 flex justify-between items-center">
@@ -570,19 +593,17 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                             </div>
 
                             <div className="flex flex-col gap-3">
-                                <button 
-                                    onClick={() => {
-                                        if (onSpendCoins && onSpendCoins(50)) {
-                                            initGame(true); // revive
-                                        }
+                                <button
+                                    onClick={async () => {
+                                        if (onContinue && await onContinue()) initGame(true); // kurtarma
                                     }}
                                     disabled={userCoins < 50}
                                     className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black rounded-xl text-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.4)] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
                                 >
-                                    50 Coin Öde & Kurtar <Zap className="w-5 h-5 fill-white" />
+                                    50 Altın Öde & Kurtar <Zap className="w-5 h-5 fill-white" />
                                 </button>
-                                <button 
-                                    onClick={() => setGameState('gameover')} 
+                                <button
+                                    onClick={() => setGameState('gameover')}
                                     className="w-full py-4 bg-white/5 text-gray-400 font-bold rounded-xl text-sm hover:bg-white/10 transition-colors"
                                 >
                                     Düşüşü Kabul Et (Çıkış)
@@ -599,7 +620,7 @@ export default function MoffiJumpGame({ onGameOver, onClose, userCoins = 0, onSp
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl z-50">
                         <div className="bg-[#111116] p-8 rounded-[2.5rem] shadow-[0_0_60px_rgba(239,68,68,0.2)] border border-red-500/20 text-center max-w-sm mx-4 transform transition-all w-full relative overflow-hidden">
                             <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-red-600 to-orange-500" />
-                            
+
                             <div className="text-gray-500 font-black mb-2 uppercase tracking-widest text-xs">SİSTEM ÇÖKTÜ</div>
                             <h2 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400 mb-6 drop-shadow-lg font-mono tracking-tighter">{Math.floor(score)}</h2>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Timer, X, ArrowRight, Flame, Coins, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,9 +8,13 @@ import { cn } from "@/lib/utils";
 interface GameProps {
     onGameOver: (score: number) => void;
     onClose: () => void;
+    /** Oyun altını bakiyesi (profiles.coin_balance). */
     userCoins?: number;
-    onSpendCoins?: (amount: number) => boolean;
+    /** Süre uzatma: 50 oyun altını sunucuda düşülür (game_continue); başarılıysa true. */
+    onContinue?: () => Promise<boolean>;
 }
+
+type Card = { id: number; iconData: (typeof ICONS)[number]; isFlipped: boolean; isMatched: boolean };
 
 
 
@@ -53,17 +57,29 @@ const ICONS = [
 
 
 
-export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSpendCoins }: GameProps) {
+/** Seviyenin destesi: gereken ikon çiftleri karıştırılır. */
+function buildDeck(level: number): Card[] {
+    const pairs = ICONS.slice(0, LEVELS[level - 1].pairs);
+    return [...pairs, ...pairs]
+        .map(iconData => ({ iconData, order: Math.random() }))
+        .sort((a, b) => a.order - b.order)
+        .map(({ iconData }, id) => ({ id, iconData, isFlipped: false, isMatched: false }));
+}
+
+export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onContinue }: GameProps) {
     const [currentLevel, setCurrentLevel] = useState(1);
-    const [cards, setCards] = useState<any[]>([]);
+    const [cards, setCards] = useState<Card[]>(() => buildDeck(1));
+    const floatIdRef = useRef(0);
+    // Bitiş ekranındaki parçacıklar bir kez üretilir (çizim sırasında rastgele sayı üretilmez).
+    const [particles] = useState(() => Array.from({ length: 30 }, () => ({ x: Math.random() * 100, duration: 2 + Math.random() * 3, delay: Math.random() * 2 })));
     const [flippedIndices, setFlippedIndices] = useState<number[]>([]);
-    
+
     // Skor ve Kombo
     const [matches, setMatches] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(LEVELS[0].time);
     const [totalScore, setTotalScore] = useState(0);
     const [combo, setCombo] = useState(0);
-    
+
     // Oyun Durumu
     const [gameState, setGameState] = useState<'playing' | 'level_complete' | 'game_complete' | 'gameover' | 'second_chance'>('playing');
     const [floatingTexts, setFloatingTexts] = useState<{id: number, text: string, color: string, x: number, y: number}[]>([]);
@@ -79,7 +95,7 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
             x = (e.clientX / window.innerWidth) * 100;
             y = (e.clientY / window.innerHeight) * 100;
         }
-        const id = Date.now() + Math.random();
+        const id = ++floatIdRef.current;
         setFloatingTexts(prev => [...prev, { id, text, color, x, y }]);
         setTimeout(() => {
             setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
@@ -91,32 +107,16 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
         setTimeout(() => setScreenShake(false), 300);
     };
 
-    // ==============================
-    // SEVİYE BAŞLATMA
-    // ==============================
-    useEffect(() => {
-        const config = LEVELS[currentLevel - 1];
-        
-        // Bu seviye için gereken ikonları seç
-        const selectedIcons = ICONS.slice(0, config.pairs);
-        
-        // Desteyi oluştur ve karıştır
-        const deck = [...selectedIcons, ...selectedIcons]
-            .sort(() => Math.random() - 0.5)
-            .map((item, index) => ({
-                id: index,
-                iconData: item,
-                isFlipped: false,
-                isMatched: false
-            }));
-
-        setCards(deck);
+    // Seviye başlatma: yalnızca olaydan (sonraki aşama) çağrılır; ilk seviye ilk durumdan gelir.
+    const startLevel = (level: number) => {
+        setCurrentLevel(level);
+        setCards(buildDeck(level));
         setFlippedIndices([]);
         setMatches(0);
-        setTimeLeft(config.time);
+        setTimeLeft(LEVELS[level - 1].time);
         setCombo(0);
         setGameState('playing');
-    }, [currentLevel]);
+    };
 
     // ==============================
     // SAYAÇ (TIMER)
@@ -165,11 +165,11 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                     // KOMBO VE PUAN HESAPLAMA
                     const newCombo = combo + 1;
                     setCombo(newCombo);
-                    
+
                     const comboMulti = 1 + Math.floor(newCombo / 2); // Her 2 doğruda çarpan artar
                     const points = 20 * comboMulti;
                     setTotalScore(s => s + points);
-                    
+
                     addFloatingText(`+${points} ${comboMulti > 1 ? `(x${comboMulti})` : ''}`, 'text-cyan-400', e);
 
                     // SEVİYE BİTTİ Mİ?
@@ -185,7 +185,7 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                 // EŞLEŞMEDİ (HATA)
                 triggerShake();
                 setCombo(0); // Hata yapınca kombo sıfırlanır
-                
+
                 setTimeout(() => {
                     const resetCards = [...cards];
                     resetCards[idx1].isFlipped = false;
@@ -211,18 +211,16 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
         }
     };
 
-    const nextLevel = () => {
-        setCurrentLevel(prev => prev + 1);
-    };
+    const nextLevel = () => startLevel(currentLevel + 1);
 
     return (
         <div className={cn("fixed inset-0 z-50 bg-[#050505] flex flex-col items-center justify-center font-sans overflow-hidden select-none touch-none", screenShake && "animate-[shake_0.2s_ease-in-out]")}>
-            
+
             {/* CYBERPUNK BACKGROUND */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" style={{ perspective: '500px' }}>
                 <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/30 via-transparent to-transparent transform-gpu rotate-x-60 scale-150 origin-bottom" />
             </div>
-            
+
             <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-cyan-900/20 rounded-full blur-[100px] pointer-events-none" />
             <div className="absolute bottom-[-10%] right-[-20%] w-[60vw] h-[60vw] bg-fuchsia-900/20 rounded-full blur-[100px] pointer-events-none" />
 
@@ -242,7 +240,7 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
 
             {/* HUD (HEADS UP DISPLAY) */}
             <div className="absolute top-6 left-6 right-6 flex justify-between items-start z-30 pointer-events-none">
-                
+
                 {/* SOL HUD: Skor ve Moffi */}
                 <div className="flex gap-4 items-center">
                     {/* Mascot */}
@@ -256,7 +254,7 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                             <div className="absolute inset-0 bg-fuchsia-500/20 animate-pulse mix-blend-screen" />
                         )}
                     </div>
-                    
+
                     <div className="flex flex-col gap-2">
                         <div className="bg-black/60 backdrop-blur-md rounded-2xl px-5 py-2 flex items-center gap-3 border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] pointer-events-auto">
                             <Trophy className="w-6 h-6 text-amber-400 drop-shadow-md" />
@@ -308,20 +306,20 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                                     (card.isFlipped || card.isMatched) ? "rotate-y-180" : "hover:scale-[1.03]",
                                     card.isMatched && "opacity-0 scale-90 pointer-events-none transition-all duration-700 ease-in-out delay-300"
                                 )}>
-                                    
+
                                     {/* KARTIN ARKASI (Kapalı Yüz) - Siber Moffi Hologramı */}
                                     <div className="absolute inset-0 backface-hidden bg-[#111116] rounded-xl flex flex-col items-center justify-center border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden group">
                                         {/* Cyber grid bg */}
                                         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px] opacity-20" />
-                                        
-                                        <img 
-                                            src="/images/robot_moffi.jpg" 
-                                            className="w-12 h-12 md:w-16 md:h-16 object-cover scale-150 mix-blend-screen opacity-50 group-hover:opacity-100 transition-opacity" 
+
+                                        <img
+                                            src="/images/robot_moffi.jpg"
+                                            className="w-12 h-12 md:w-16 md:h-16 object-cover scale-150 mix-blend-screen opacity-50 group-hover:opacity-100 transition-opacity"
                                             style={{ maskImage: 'radial-gradient(circle at center, black 30%, transparent 60%)', WebkitMaskImage: 'radial-gradient(circle at center, black 30%, transparent 60%)' }}
                                         />
                                         <div className="absolute inset-0 border-2 border-transparent group-hover:border-cyan-500/30 rounded-xl transition-colors" />
                                     </div>
-                                    
+
                                     {/* KARTIN ÖNÜ (Açık Yüz) - Parlayan Neon İkon */}
                                     <div className="absolute inset-0 backface-hidden rotate-y-180 bg-[#0a0a0f] rounded-xl flex flex-col items-center justify-center border border-cyan-500/40 shadow-[0_0_20px_rgba(34,211,238,0.2)] overflow-hidden">
                                         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
@@ -340,12 +338,12 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
             {/* BÖLÜM GEÇİLDİ EKRANI */}
             <AnimatePresence>
                 {gameState === 'level_complete' && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
                         animate={{ opacity: 1, backdropFilter: 'blur(16px)' }}
                         className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/60"
                     >
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
                             className="bg-[#111116] border border-white/10 rounded-[2rem] p-8 text-center max-w-sm w-full shadow-[0_0_60px_rgba(34,211,238,0.2)] relative overflow-hidden"
                         >
@@ -356,7 +354,7 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                             </div>
 
                             <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-500 uppercase tracking-tighter mb-2">AŞAMA TAMAM!</h2>
-                            <p className="text-gray-400 font-medium mb-8">Zihnin matrix'e uyum sağlıyor.</p>
+                            <p className="text-gray-400 font-medium mb-8">Zihnin matrix&apos;e uyum sağlıyor.</p>
 
                             <button onClick={nextLevel} className="w-full py-4 bg-white text-black font-black rounded-xl text-lg flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)]">
                                 Sonraki Aşama <ArrowRight className="w-5 h-5" />
@@ -366,16 +364,16 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                 )}
             </AnimatePresence>
 
-            
+
             {/* İKİNCİ HAK (SECOND CHANCE) EKRANI */}
             <AnimatePresence>
                 {gameState === 'second_chance' && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
                         animate={{ opacity: 1, backdropFilter: 'blur(20px)' }}
                         className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/80"
                     >
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
                             className="bg-[#111116] border border-orange-500/30 rounded-[2rem] p-8 text-center max-w-sm w-full shadow-[0_0_60px_rgba(249,115,22,0.2)] relative overflow-hidden"
                         >
@@ -399,9 +397,9 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                             </div>
 
                             <div className="flex flex-col gap-3">
-                                <button 
-                                    onClick={() => {
-                                        if (onSpendCoins && onSpendCoins(50)) {
+                                <button
+                                    onClick={async () => {
+                                        if (onContinue && await onContinue()) {
                                             setTimeLeft(30);
                                             setGameState('playing');
                                             addFloatingText('SÜRE UZATILDI!', 'text-cyan-400');
@@ -410,10 +408,10 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                                     disabled={userCoins < 50}
                                     className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black rounded-xl text-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.4)] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
                                 >
-                                    50 Coin Öde & Devam Et <Zap className="w-5 h-5 fill-white" />
+                                    50 Oyun Altını Öde & Devam Et <Zap className="w-5 h-5 fill-white" />
                                 </button>
-                                <button 
-                                    onClick={() => setGameState('gameover')} 
+                                <button
+                                    onClick={() => setGameState('gameover')}
                                     className="w-full py-4 bg-white/5 text-gray-400 font-bold rounded-xl text-sm hover:bg-white/10 transition-colors"
                                 >
                                     Vazgeç ve Çık
@@ -427,7 +425,7 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
             {/* OYUN BİTTİ (GAME OVER / KAZANDIN) EKRANI */}
             <AnimatePresence>
                 {(gameState === 'game_complete' || gameState === 'gameover') && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
                         animate={{ opacity: 1, backdropFilter: 'blur(30px)' }}
                         className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/80"
@@ -435,20 +433,21 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                         {/* MATRIX KAPANIS EFEKTi (Fütüristik Parçacıklar) */}
                         {gameState === 'game_complete' && (
                             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                                {[...Array(30)].map((_, i) => (
+                                {particles.map((pt, i) => (
                                     <motion.div
                                         key={i}
-                                        initial={{ y: "100vh", x: Math.random() * window.innerWidth, opacity: 0 }}
+                                        initial={{ y: "100vh", opacity: 0 }}
                                         animate={{ y: "-100vh", opacity: [0, 1, 0] }}
-                                        transition={{ duration: 2 + Math.random() * 3, repeat: Infinity, ease: "linear", delay: Math.random() * 2 }}
+                                        transition={{ duration: pt.duration, repeat: Infinity, ease: "linear", delay: pt.delay }}
+                                        style={{ left: `${pt.x}%` }}
                                         className="absolute w-1 h-12 bg-cyan-500/50 rounded-full blur-[2px]"
                                     />
                                 ))}
                             </div>
                         )}
 
-                        <motion.div 
-                            initial={{ scale: 0.5, y: 100, rotateX: 45 }} 
+                        <motion.div
+                            initial={{ scale: 0.5, y: 100, rotateX: 45 }}
                             animate={{ scale: 1, y: 0, rotateX: 0 }}
                             transition={{ type: "spring", bounce: 0.5 }}
                             className={cn(
@@ -459,7 +458,7 @@ export default function PetMemoryGame({ onGameOver, onClose, userCoins = 0, onSp
                             <div className={cn("absolute top-0 inset-x-0 h-2 bg-gradient-to-r", gameState === 'game_complete' ? "from-cyan-400 via-fuchsia-500 to-cyan-400" : "from-red-600 to-orange-600")} />
 
                             <div className={cn(
-                                "w-32 h-32 rounded-[2rem] bg-black overflow-hidden mx-auto mb-8 border-4 relative flex items-center justify-center transition-transform", 
+                                "w-32 h-32 rounded-[2rem] bg-black overflow-hidden mx-auto mb-8 border-4 relative flex items-center justify-center transition-transform",
                                 gameState === 'game_complete' ? "border-cyan-400 shadow-[0_0_50px_rgba(34,211,238,0.6)] scale-110" : "border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.4)] grayscale"
                             )}>
                                 <img src="/images/robot_moffi.jpg" className="w-full h-full object-cover scale-125 mix-blend-screen" />

@@ -2,11 +2,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Bell, Calendar, Camera, Check, ChevronRight, Image as ImageIcon, MapPin, Plus, Search, VenetianMask, Weight, X } from "lucide-react";
 import { Sheet } from "@/components/health/HealthUI";
-import { ErrorText, PrimaryButton, ScreenFrame, SecondaryButton } from "@/components/onboarding/OnboardingUI";
+import { ErrorText, PrimaryButton, ScreenFrame } from "@/components/onboarding/OnboardingUI";
 import { apiService } from "@/services/apiService";
 import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +16,8 @@ import { breedsFor, UNKNOWN_BREED } from "@/constants/breeds";
 import { areaName } from "@/lib/geo";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { genitive } from "@/lib/turkish";
+import type { Pet } from "@/services/types";
 import { geolocation, haptics, push } from "@/native";
 
 // İlk kurulum, ekranlar 4–9 (design-reference/onboarding-final). Hayvan 8. ekranda [Tamamla]'ya basınca TEK seferde
@@ -191,24 +193,23 @@ export function PetSetup() {
             const birthDate = draft.birthDate || (draft.approxMonths != null ? monthsToBirthDate(draft.approxMonths) : "");
             const weightNum = parseFloat(draft.weight.replace(",", "."));
 
-            const payload = {
+            const payload: Partial<Pet> & { name: string } = {
                 name: petName,
                 type: draft.kind,
                 breed: draft.breed && draft.breed !== UNKNOWN_BREED ? draft.breed : "",
                 gender: draft.gender,
                 birthday: birthDate,
                 birth_date_estimated: !draft.birthDate && draft.approxMonths != null,
-                is_neutered: draft.neutered === "Evet",
+                neutered: draft.neutered === "Evet",
                 weight: Number.isFinite(weightNum) && weightNum > 0 ? `${weightNum} kg` : "",
                 character: draft.notes.trim(),
                 features: draft.features,
                 image: uploaded[0] || "",
                 gallery_urls: uploaded,
-                sos_settings: { auto_post_sos: true, sos_radius: "5km", secure_proxy_only: false, location_precision: "exact", emergency_sms_number: "", reward_amount: 0, reward_currency: "TL", finder_message: "", reward_enabled: false, header_sos_alert_enabled: true, activity_target: 70, water_target: 1200, food_target: 1600 },
+                sos_settings: { auto_post_sos: true, sos_radius: "5km", secure_proxy_only: false, location_precision: "exact", emergency_sms_number: "", reward_amount: 0, reward_currency: "TL", finder_message: "", reward_enabled: false, header_sos_alert_enabled: true },
             };
-            const savedPet = await apiService.addPet(payload as never);
-            const image = savedPet.image || uploaded[0] || "";
-            addPet({ ...(payload as object), id: savedPet.id, image, avatar: image } as never);
+            const savedPet = await apiService.addPet(payload);
+            addPet({ id: savedPet.id });
 
             if (area && user?.id) {
                 try {
@@ -219,7 +220,7 @@ export function PetSetup() {
             }
             await completeOnboarding();
             try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* yoksay */ }
-            setSaved({ name: petName, image: image || photos[0]?.url || null });
+            setSaved({ name: petName, image: uploaded[0] || photos[0]?.url || null });
             setStep(9);
             haptics.celebrate();
         } catch (e) {
@@ -298,7 +299,7 @@ export function PetSetup() {
                         </button>
                     </div>
                     <div>
-                        <label htmlFor="pet-name" className="text-sm font-bold">Pet'in adı</label>
+                        <label htmlFor="pet-name" className="text-sm font-bold">Pet&apos;in adı</label>
                         <input id="pet-name" value={draft.name} onChange={e => set("name", e.target.value.slice(0, 30))} placeholder="Örn: Luna" autoComplete="off" maxLength={30}
                             className="mt-2 w-full h-14 px-4 rounded-2xl bg-card border border-card-border text-[16px] font-semibold outline-none focus:border-accent focus:ring-4 focus:ring-accent/10" />
                     </div>
@@ -440,7 +441,7 @@ export function PetSetup() {
                 <motion.div {...fade} className="space-y-4">
                     <div>
                         <h2 className="text-2xl font-black leading-tight">Daha iyi bir deneyim için</h2>
-                        <p className="text-sm text-secondary mt-1.5 leading-relaxed">Bazı izinler, Moffi'yi sen ve patili dostun için daha faydalı hale getirir. İstediğin zaman ayarlardan değiştirebilirsin.</p>
+                        <p className="text-sm text-secondary mt-1.5 leading-relaxed">Bazı izinler, Moffi&apos;yi sen ve patili dostun için daha faydalı hale getirir. İstediğin zaman ayarlardan değiştirebilirsin.</p>
                     </div>
                     {row(<MapPin className="w-5 h-5" />, "Konum izni", "Yakındaki veterinerleri bulmak ve yürüyüşünü kaydetmek için. Sadece şehir ve ilçe düzeyinde kaydedilir.", <Toggle on={draft.wantLocation} onChange={v => set("wantLocation", v)} />)}
                     {row(<Bell className="w-5 h-5" />, "Bildirim izni", pushOk ? "Aşı ve randevu hatırlatmaları, kayıp ilanları ve sana özel bildirimler için." : "Telefon bildirimleri çok yakında; şimdilik hatırlatmalar e-postayla gelir.", <Toggle on={pushOk && draft.wantNotifications} disabled={!pushOk} onChange={v => set("wantNotifications", v)} />)}
@@ -452,19 +453,19 @@ export function PetSetup() {
 
     // ── 9. Tamamlandı ─────────────────────────────────────────────────────────────
     return (
-        <ScreenFrame footer={<PrimaryButton onClick={() => router.replace("/home")}>Moffi'yi Keşfet</PrimaryButton>}>
+        <ScreenFrame footer={<PrimaryButton onClick={() => router.replace("/home")}>Moffi&apos;yi Keşfet</PrimaryButton>}>
             <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center text-center gap-5">
                 <span className="w-20 h-20 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg"><Check className="w-11 h-11" strokeWidth={3} /></span>
                 <div>
                     <h1 className="text-3xl font-black">Her şey hazır!</h1>
-                    <p className="text-[15px] text-secondary mt-2">{saved?.name} artık Moffi'de seninle.</p>
+                    <p className="text-[15px] text-secondary mt-2">{saved?.name} artık Moffi&apos;de seninle.</p>
                 </div>
                 <div className="relative w-52 h-52 rounded-full overflow-hidden bg-card border-4 border-white shadow-xl flex items-center justify-center">
                     {saved?.image ? <img src={saved.image} alt="" className="w-full h-full object-cover" /> : <span className="text-8xl" aria-hidden>{draft.kind === "cat" ? "🐱" : draft.kind === "dog" ? "🐶" : "🐾"}</span>}
                 </div>
                 <div className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card border border-card-border text-left">
                     <span className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0"><Check className="w-5 h-5" /></span>
-                    <span><span className="block font-bold text-[15px]">Pet Pasaportu oluşturuldu</span><span className="block text-xs text-secondary mt-0.5">{saved?.name}'nın pasaportu hazır. Dilediğin zaman detaylarını güncelleyebilirsin.</span></span>
+                    <span><span className="block font-bold text-[15px]">Pet Pasaportu oluşturuldu</span><span className="block text-xs text-secondary mt-0.5">{saved?.name ? genitive(saved.name) : 'Dostunun'} pasaportu hazır. Dilediğin zaman detaylarını güncelleyebilirsin.</span></span>
                 </div>
             </motion.div>
         </ScreenFrame>

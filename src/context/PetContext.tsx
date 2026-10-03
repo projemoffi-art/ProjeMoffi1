@@ -1,355 +1,164 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+// Kullanıcının evcil hayvanları ve seçili hayvan (tek kaynak: pets tablosu + profiles.active_pet_id).
+// Randevular da burada (sağlık, veteriner ve profil ekranları aynı listeyi kullanır; işletme değişikliği canlı gelir).
+// (2026-10-03: yalnızca sahte veri katmanına yazılıp hiç okunmayan kayıtlar — customRecords, recordDocuments, orders, walkRoutes —
+// ve veritabanına gitmeden sahte kimlikle hayvan ekleyen addPet kaldırıldı.)
+
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { apiService } from "../services/apiService";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/lib/supabase";
 import { PETS_CHANGED_EVENT } from "@/services/lostService";
+import type { Pet } from '@/services/types';
 
-// --- TYPES ---
-export interface Pet {
-    id: string;
-    name: string;
-    breed: string;
-    age?: string | number;
-    weight: string | number;
-    gender: string;
-    image: string;
-    cover_photo?: string;
-    themeColor: string;
-    microchip?: string;
-    microchip_id?: string;
-    microchip_no?: string;
-    neutered?: boolean;
-    birthday?: string;      // YYYY-MM-DD (pets.birth_date)
-    city?: string;
-    color?: string;
-    petvet_no?: string;     // Resmi PETVET kayıt numarası (sahip girer, doğrulanmaz)
-    passport_no?: string;   // Moffi pasaport no (sunucu verir, değişmez)
-    created_at?: string;
-    // Yeni kimlik alanları
-    type?: string;          // Hayvan türü emoji: 🐶 🐱 🐰 vb.
-    size?: string;          // Mini / Küçük / Orta / Büyük / Dev
-    character?: string;     // Karakter & kişilik açıklaması
-    features?: string;      // Ayırt edici özellikler
-    owner?: {
-        name: string;
-        phone: string;
-        address: string;
-    };
-    avatar?: string;
-    is_lost?: boolean;
-    // Hub-preview dashboard alanları
-    health?: string;
-    streak?: number;
-    activity_target?: number;
-    water_target?: number;
-    food_target?: number;
-    sos_settings?: {
-        auto_post_sos: boolean;
-        sos_radius: '2km' | '5km' | '10km' | 'city';
-        secure_proxy_only: boolean;
-        location_precision: 'exact' | 'area';
-        emergency_sms_number: string;
-        reward_amount: number;
-        reward_currency: string;
-        finder_message: string;
-        quiet_hours?: { enabled: boolean; from: string; to: string };
-        emergency_bypass?: boolean;
-        header_sos_alert_enabled?: boolean;
-        reward_enabled?: boolean;
-        // Ek izleme alanları
-        weight?: string;
-        health?: string;
-        streak?: number;
-        activity_target?: number;
-        water_target?: number;
-        food_target?: number;
-        // Yeni alanlar
-        birthday?: string;
-        color?: string;
-        size?: string;
-        character?: string;
-        features?: string;
-        parasiteInternal?: string;
-        parasiteExternal?: string;
-        owner?: { name: string; phone: string; address: string };
-    };
-}
+// Tek tanım services/types'ta (eskiden burada ikinci, uyumsuz bir Pet vardı).
+export type { Pet };
+
+type Appointment = Awaited<ReturnType<typeof apiService.getAppointments>>[number];
 
 interface PetContextType {
     pets: Pet[];
     activePet: Pet | null;
     isLoading: boolean;
     isInitialized: boolean;
-    addPet: (pet: Omit<Pet, 'id'> & { id?: string }) => void;
+    /** Veritabanına kaydedilmiş (apiService.addPet) hayvanı listeye alır ve seçili yapar; liste sunucudan tazelenir. */
+    addPet: (pet: Pick<Pet, 'id'> & Partial<Pet>) => void;
     updatePet: (id: string, updates: Partial<Pet>) => void;
     deletePet: (id: string) => void;
     switchPet: (id: string) => void;
-    customRecords: Record<string, any[]>;
-    setCustomRecords: (petId: string, records: any[]) => void;
-    recordDocuments: Record<string, Record<string, string[]>>;
-    setRecordDocuments: (petId: string, recordId: string, documents: string[]) => void;
-    orders: Record<string, any[]>;
-    setOrders: (petId: string, orders: any[]) => void;
-    appointments: Record<string, any[]>;
-    setAppointments: (petId: string, appointments: any[]) => void;
+    /** Hayvan kimliğine göre randevular. */
+    appointments: Record<string, Appointment[]>;
     refreshAppointments: () => Promise<void>;
-    walkRoutes: Record<string, any[]>;
-    setWalkRoutes: (petId: string, routes: any[]) => void;
 }
 
 const PetContext = createContext<PetContextType | undefined>(undefined);
-
-const INITIAL_PETS: Pet[] = [];
-
+const NO_APPOINTMENTS: Record<string, Appointment[]> = {};
+const NO_PETS: Pet[] = [];
 
 export function PetProvider({ children }: { children: React.ReactNode }) {
-    const [pets, setPets] = useState<Pet[]>([]);
-    const [activePetId, setActivePetId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isInitialized, setIsInitialized] = useState(false);
     const { user } = useAuth();
-    
-    // Track if initial load is done to prevent persistence effect from running prematurely
-    const isInitializedRef = useRef(false);
-    // Track previous values to prevent unnecessary saves
-    const prevPetsRef = useRef<string>('');
-    const prevActivePetIdRef = useRef<string | null>(null);
+    const userId = user?.id ?? null;
+    // Hangi kullanıcı için yüklendiği de tutulur: oturum değişince eski kullanıcının hayvanları görünmez.
+    const [state, setState] = useState<{ userId: string | null; pets: Pet[]; activePetId: string | null; loaded: boolean }>(
+        { userId: null, pets: [], activePetId: null, loaded: false });
+    const [appointmentsState, setAppointmentsState] = useState<{ userId: string | null; byPet: Record<string, Appointment[]> }>({ userId: null, byPet: {} });
 
-    // LOAD FROM SERVICE LAYER - runs whenever user changes
-    useEffect(() => {
-        if (!user) {
-            setPets([]);
-            setActivePetId(null);
-            prevPetsRef.current = '';
-            prevActivePetIdRef.current = null;
-            setIsLoading(false);
-            setIsInitialized(false);
-            isInitializedRef.current = false;
-            return;
+    const current = state.userId === userId ? state : { userId, pets: NO_PETS, activePetId: null, loaded: false };
+
+    const loadPets = useCallback(async (uid: string, preferActive?: string | null) => {
+        try {
+            const [fetched, active] = await Promise.all([apiService.getPets(), preferActive ? Promise.resolve(null) : apiService.getActivePet()]);
+            const activeId = preferActive || active?.id || fetched[0]?.id || null;
+            setState({ userId: uid, pets: fetched, activePetId: activeId, loaded: true });
+        } catch (err) {
+            console.error("Pet veri yükleme hatası:", err);
+            setState({ userId: uid, pets: [], activePetId: null, loaded: true });
         }
+    }, []);
 
-        const loadInitialData = async () => {
-            setIsLoading(true);
-            setIsInitialized(false);
-            isInitializedRef.current = false;
-            try {
-                const fetchedPets = await apiService.getPets();
-                setPets(fetchedPets as any);
-                prevPetsRef.current = JSON.stringify(fetchedPets);
-                
-                const active = await apiService.getActivePet();
-                const activeId = active?.id || (fetchedPets[0]?.id || null);
-                setActivePetId(activeId);
-                prevActivePetIdRef.current = activeId;
-            } catch (err) {
-                console.error("Pet veri yükleme hatası:", err);
-                setPets(INITIAL_PETS);
-                setActivePetId(null);
-            } finally {
-                setIsLoading(false);
-                setIsInitialized(true);
-                isInitializedRef.current = true;
-            }
-        };
-        loadInitialData();
-    }, [user?.id]);
-
-    // Kayıp modu (pets.is_lost) sadece sunucuda, ilan yayınlanınca / kavuşunca değişir; lostService bu olayı yayar.
     useEffect(() => {
-        if (!user) return;
+        if (!userId) return;
+        let alive = true;
+        Promise.all([apiService.getPets(), apiService.getActivePet()])
+            .then(([fetched, active]) => {
+                if (alive) setState({ userId, pets: fetched, activePetId: active?.id || fetched[0]?.id || null, loaded: true });
+            })
+            .catch(err => {
+                console.error("Pet veri yükleme hatası:", err);
+                if (alive) setState({ userId, pets: [], activePetId: null, loaded: true });
+            });
+        return () => { alive = false; };
+    }, [userId]);
+
+    // Kayıp modu (pets.is_lost) sadece sunucuda değişir; lostService bu olayı yayar.
+    useEffect(() => {
+        if (!userId) return;
         const reload = () => {
-            apiService.getPets().then(fetched => {
-                setPets(fetched as any);
-                prevPetsRef.current = JSON.stringify(fetched);
-            }).catch(err => console.error('Pet yenileme hatası:', err));
+            apiService.getPets()
+                .then(fetched => setState(s => (s.userId === userId ? { ...s, pets: fetched } : s)))
+                .catch(err => console.error('Pet yenileme hatası:', err));
         };
         window.addEventListener(PETS_CHANGED_EVENT, reload);
         return () => window.removeEventListener(PETS_CHANGED_EVENT, reload);
-    }, [user?.id]);
+    }, [userId]);
 
-    // PERSISTENCE EFFECT - only saves when data actually changes
-    // Uses JSON comparison to prevent unnecessary saves
-    useEffect(() => {
-        if (!isInitializedRef.current || isLoading) return;
-        
-        const petsJson = JSON.stringify(pets);
-        const activePetChanged = activePetId !== prevActivePetIdRef.current;
-        const petsChanged = petsJson !== prevPetsRef.current;
-        
-        if (petsChanged) {
-            prevPetsRef.current = petsJson;
-            apiService.saveData('pets', pets);
-        }
-        if (activePetChanged) {
-            prevActivePetIdRef.current = activePetId;
-            // Don't call setActivePet (Supabase) here - it causes auth re-fetches
-            // Just save locally
-            apiService.saveData('active_pet_id', activePetId);
-        }
-    }, [pets, activePetId, isLoading]);
+    const addPet = useCallback((pet: Pick<Pet, 'id'> & Partial<Pet>) => {
+        if (!userId) return;
+        apiService.setActivePet(pet.id).catch(err => console.error('Seçili hayvan kaydedilemedi:', err));
+        loadPets(userId, pet.id);
+    }, [userId, loadPets]);
 
-    // --- ACTIONS ---
-    const addPet = React.useCallback((newPetData: Omit<Pet, 'id'> & { id?: string }) => {
-        const defaultSosSettings = {
-            auto_post_sos: true, sos_radius: '5km' as const, secure_proxy_only: false,
-            location_precision: 'exact' as const, emergency_sms_number: "", reward_amount: 0,
-            reward_currency: "TL",
-            finder_message: "Lütfen yardıma ihtiyacım var!",
-            quiet_hours: { enabled: false, from: "23:00", to: "08:00" },
-            emergency_bypass: true, header_sos_alert_enabled: true,
-            reward_enabled: false
-        };
-        const newPet: Pet = {
-            ...newPetData,
-            id: newPetData.id || `pet-${Date.now()}`,
-            // Kullanıcının girdiği sos_settings değerlerini koru, eksikleri varsayılanla doldur
-            sos_settings: newPetData.sos_settings
-                ? { ...defaultSosSettings, ...newPetData.sos_settings }
-                : defaultSosSettings
-        };
-        setPets(prev => [...prev, newPet]);
-        setActivePetId(newPet.id);
-    }, []);
-
-    const updatePet = React.useCallback((id: string, updates: Partial<Pet>) => {
-        setPets(prev => prev.map(pet => pet.id === id ? { ...pet, ...updates } : pet));
+    const updatePet = useCallback((id: string, updates: Partial<Pet>) => {
+        setState(s => ({ ...s, pets: s.pets.map(pet => pet.id === id ? { ...pet, ...updates } : pet) }));
         apiService.updatePet(id, updates).catch(err => {
             console.error("Pet veri tabanı güncelleme hatası:", err);
         });
     }, []);
 
-    const deletePet = React.useCallback(async (id: string) => {
+    const deletePet = useCallback(async (id: string) => {
         try {
             await apiService.deletePet(id);
-            setPets(prev => {
-                const newPets = prev.filter(p => p.id !== id);
-                setActivePetId(curr => {
-                    if (curr === id) return newPets[0]?.id || null;
-                    return curr;
-                });
-                return newPets;
+            setState(s => {
+                const pets = s.pets.filter(p => p.id !== id);
+                return { ...s, pets, activePetId: s.activePetId === id ? pets[0]?.id || null : s.activePetId };
             });
         } catch (err) {
             console.error("Pet silme hatası:", err);
         }
     }, []);
 
-    const switchPet = React.useCallback((id: string) => {
-        setActivePetId(String(id));
+    const switchPet = useCallback((id: string) => {
+        setState(s => ({ ...s, activePetId: String(id) }));
+        // Seçim cihazlar arasında korunur (profiles.active_pet_id).
+        apiService.setActivePet(String(id)).catch(err => console.error('Seçili hayvan kaydedilemedi:', err));
     }, []);
 
-    const petsWithMascot = React.useMemo(() => {
-        return pets;
-    }, [pets]);
+    const activePet = useMemo(
+        () => current.pets.find(p => String(p.id) === String(current.activePetId)) || null,
+        [current.pets, current.activePetId]);
 
-    const activePet = React.useMemo(() => {
-        return pets.find(p => String(p.id) === String(activePetId)) || null;
-    }, [pets, activePetId]);
-
-    const [customRecords, setCustomRecordsInternal] = useState<Record<string, any[]>>({});
-    const [recordDocuments, setRecordDocumentsInternal] = useState<Record<string, Record<string, string[]>>>({});
-    const [orders, setOrdersInternal] = useState<Record<string, any[]>>({});
-    const [appointments, setAppointmentsInternal] = useState<Record<string, any[]>>({});
-    const [walkRoutes, setWalkRoutesInternal] = useState<Record<string, any[]>>({});
-
-    const setCustomRecords = React.useCallback((petId: string, records: any[]) => {
-        setCustomRecordsInternal(prev => ({ ...prev, [petId]: records }));
-    }, []);
-    const setRecordDocuments = React.useCallback((petId: string, recordId: string, documents: string[]) => {
-        setRecordDocumentsInternal(prev => ({ ...prev, [petId]: { ...(prev[petId] || {}), [recordId]: documents } }));
-    }, []);
-    const setOrders = React.useCallback((petId: string, orderList: any[]) => {
-        setOrdersInternal(prev => ({ ...prev, [petId]: orderList }));
-    }, []);
-    const setAppointments = React.useCallback((petId: string, apptList: any[]) => {
-        setAppointmentsInternal(prev => ({ ...prev, [petId]: apptList }));
-    }, []);
-    const setWalkRoutes = React.useCallback((petId: string, routeList: any[]) => {
-        setWalkRoutesInternal(prev => ({ ...prev, [petId]: routeList }));
-    }, []);
-
-    // LOAD EXTRA DATA ONCE
-    useEffect(() => {
-        const loadExtraData = async () => {
-            const storedRecords = await apiService.loadData<Record<string, any[]>>('custom_records');
-            const storedDocs = await apiService.loadData<Record<string, Record<string, string[]>>>('record_docs');
-            const storedOrders = await apiService.loadData<Record<string, any[]>>('orders');
-            const storedRoutes = await apiService.loadData<Record<string, any[]>>('walk_routes');
-            if (storedRecords) setCustomRecordsInternal(storedRecords);
-            if (storedDocs) setRecordDocumentsInternal(storedDocs);
-            if (storedOrders) setOrdersInternal(storedOrders);
-            if (storedRoutes) setWalkRoutesInternal(storedRoutes);
-        };
-        loadExtraData();
-    }, []); // RUNS ONCE ONLY
-
-    const refreshAppointments = React.useCallback(async () => {
-        if (!user?.id) return;
+    const refreshAppointments = useCallback(async () => {
+        if (!userId) return;
         try {
-            const list = await apiService.getAppointments(user.id);
-            const grouped: Record<string, any[]> = {};
-            list.forEach(apt => {
-                const pid = apt.pet_id;
-                if (!grouped[pid]) grouped[pid] = [];
-                grouped[pid].push(apt);
-            });
-            setAppointmentsInternal(grouped);
+            const list = await apiService.getAppointments(userId);
+            const grouped: Record<string, Appointment[]> = {};
+            for (const apt of list) {
+                const pid = String(apt.pet_id ?? '');
+                (grouped[pid] ||= []).push(apt);
+            }
+            setAppointmentsState({ userId, byPet: grouped });
         } catch (err) {
             console.error("Failed to load user appointments:", err);
         }
-    }, [user?.id]);
+    }, [userId]);
 
-    // APPOINTMENTS: LIVE DB FETCH & FOCUS SYNC
+    // Randevular: ilk yükleme, pencere odağında tazeleme ve işletme değişikliklerinde canlı güncelleme.
     useEffect(() => {
-        if (!user?.id) return;
-        
-        refreshAppointments();
-
-        window.addEventListener('focus', refreshAppointments);
-
-        // İşletme onay/red/tamamlama yaptığında liste anında güncellenir.
+        if (!userId) return;
+        const load = () => { refreshAppointments(); };
+        const first = setTimeout(load, 0);
+        window.addEventListener('focus', load);
         const channel = supabase
-            .channel(`user-appointments-${user.id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `user_id=eq.${user.id}` }, () => {
-                refreshAppointments();
-            })
+            .channel(`user-appointments-${userId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `user_id=eq.${userId}` }, load)
             .subscribe();
-
         return () => {
-            window.removeEventListener('focus', refreshAppointments);
+            clearTimeout(first);
+            window.removeEventListener('focus', load);
             supabase.removeChannel(channel);
         };
-    }, [user?.id, refreshAppointments]);
+    }, [userId, refreshAppointments]);
 
-    // PERSIST EXTRA DATA - debounced via useMemo-stable refs
-    useEffect(() => {
-        if (!isInitializedRef.current) return;
-        apiService.saveData('custom_records', customRecords);
-    }, [customRecords]);
-    useEffect(() => {
-        if (!isInitializedRef.current) return;
-        apiService.saveData('record_docs', recordDocuments);
-    }, [recordDocuments]);
-    useEffect(() => {
-        if (!isInitializedRef.current) return;
-        apiService.saveData('orders', orders);
-    }, [orders]);
-    useEffect(() => {
-        if (!isInitializedRef.current) return;
-        apiService.saveData('walk_routes', walkRoutes);
-    }, [walkRoutes]);
+    const appointments = appointmentsState.userId === userId ? appointmentsState.byPet : NO_APPOINTMENTS;
+    // Oturum yokken yükleme beklenmez; oturum varken ilk okuma bitene kadar yükleniyor.
+    const isLoading = !!userId && !current.loaded;
+    const isInitialized = !!userId && current.loaded;
 
-    const petValue = React.useMemo(() => ({
-        pets: petsWithMascot, activePet, isLoading, isInitialized, addPet, updatePet, deletePet, switchPet,
-        customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
-        orders, setOrders, appointments, setAppointments, refreshAppointments, walkRoutes, setWalkRoutes
-    }), [
-        petsWithMascot, activePet, isLoading, isInitialized, addPet, updatePet, deletePet, switchPet,
-        customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
-        orders, setOrders, appointments, setAppointments, refreshAppointments, walkRoutes, setWalkRoutes
-    ]);
+    const petValue = useMemo(() => ({
+        pets: current.pets, activePet, isLoading, isInitialized, addPet, updatePet, deletePet, switchPet,
+        appointments, refreshAppointments,
+    }), [current.pets, activePet, isLoading, isInitialized, addPet, updatePet, deletePet, switchPet, appointments, refreshAppointments]);
 
     return (
         <PetContext.Provider value={petValue}>

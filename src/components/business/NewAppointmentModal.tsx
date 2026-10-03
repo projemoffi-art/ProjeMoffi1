@@ -38,7 +38,7 @@ export function NewAppointmentModal({ isOpen, onClose, onCreated, clinicId, staf
     const [guestPhone, setGuestPhone] = useState("");
     const [guestPetName, setGuestPetName] = useState("");
     const [guestPetSpecies, setGuestPetSpecies] = useState("");
-    const [services, setServices] = useState<{ service_name: string; duration_minutes: number; price: number | null }[]>([]);
+    const [services, setServices] = useState<{ service_name: string; duration_minutes: number | null; price: number | null }[]>([]);
     const [serviceName, setServiceName] = useState("");
     const [duration, setDuration] = useState(30);
     const [doctors, setDoctors] = useState<{ id: string; name: string }[]>([]);
@@ -86,7 +86,7 @@ export function NewAppointmentModal({ isOpen, onClose, onCreated, clinicId, staf
             ]);
             setClients(clientList.filter(c => c.kind === 'moffi'));
             setServices(serviceList || []);
-            setDoctors((doctorList || []).filter((d: any) => d.is_active !== false).map((d: any) => ({ id: d.id, name: d.name })));
+            setDoctors((doctorList || []).filter(d => d.is_active !== false).map(d => ({ id: d.id, name: d.name })));
             if (serviceList?.length) {
                 setServiceName(serviceList[0].service_name);
                 setDuration(serviceList[0].duration_minutes || 30);
@@ -154,8 +154,8 @@ export function NewAppointmentModal({ isOpen, onClose, onCreated, clinicId, staf
             });
             onCreated();
             onClose();
-        } catch (err: any) {
-            setError(err?.message || "Randevu oluşturulamadı.");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Randevu oluşturulamadı.");
         } finally {
             setSubmitting(false);
         }

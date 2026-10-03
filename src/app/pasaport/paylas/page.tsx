@@ -57,8 +57,8 @@ function ShareContent() {
             const link = await healthService.createShareLink(pet.id, ordered, days);
             setCreated(link);
             loadLinks();
-        } catch (e: any) {
-            showToast(e?.message || 'Bağlantı oluşturulamadı.', 'AlertCircle', 'text-red-500 font-bold');
+        } catch (e) {
+            showToast(e instanceof Error ? e.message : 'Bağlantı oluşturulamadı.', 'AlertCircle', 'text-red-500 font-bold');
         } finally {
             setCreating(false);
         }
@@ -70,8 +70,8 @@ function ShareContent() {
             if (created?.id === id) setCreated(null);
             loadLinks();
             showToast('Bağlantı kapatıldı, artık açılmaz.', 'CheckCircle2', 'text-emerald-500 font-bold');
-        } catch (e: any) {
-            showToast(e?.message || 'Bağlantı kapatılamadı.', 'AlertCircle', 'text-red-500 font-bold');
+        } catch (e) {
+            showToast(e instanceof Error ? e.message : 'Bağlantı kapatılamadı.', 'AlertCircle', 'text-red-500 font-bold');
         }
     };
 
@@ -141,7 +141,7 @@ function ShareContent() {
                             <SoftButton onClick={() => window.print()} className={cn(ordered.length === 0 || !bundle ? 'opacity-50 pointer-events-none' : '')}>
                                 <Download className="w-4 h-4" /> PDF olarak indir
                             </SoftButton>
-                            <p className="text-[11px] font-semibold text-secondary">PDF için açılan pencerede "PDF olarak kaydet"i seç.</p>
+                            <p className="text-[11px] font-semibold text-secondary">PDF için açılan pencerede &quot;PDF olarak kaydet&quot;i seç.</p>
                         </div>
 
                         {created && <CreatedLink link={created} petName={pet.name} onRevoke={() => revoke(created.id)} />}
@@ -180,7 +180,7 @@ function ShareContent() {
                     <HealthReport
                         identity={{
                             name: pet.name, type: pet.type, breed: pet.breed, gender: pet.gender, birthDate: pet.birthday, age: pet.age,
-                            color: pet.color, microchipNo: pet.microchip || pet.microchip_id || pet.microchip_no, petvetNo: pet.petvet_no,
+                            color: pet.color, microchipNo: pet.microchip, petvetNo: pet.petvet_no,
                             neutered: pet.neutered ?? null, passportNo: pet.passport_no,
                         }}
                         bundle={bundle} today={today} sections={sections}

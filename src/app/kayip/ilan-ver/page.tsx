@@ -60,15 +60,21 @@ function Wizard() {
     const species: Species = pet ? toSpecies(pet.type) : manual.species;
 
     useEffect(() => { currentPosition(8000).then(p => { if (p) setFallback([p.lat, p.lng]); }); }, []);
-    useEffect(() => { setPhone((user as any)?.phone || ''); }, [user]);
-
+    // Kullanıcı ve seçilen hayvan değişince form ön doldurulur (çizim sırasında önceki değerle karşılaştırma).
+    const userPhone = (user as { phone?: string } | null)?.phone || '';
+    const [phoneFor, setPhoneFor] = useState<string | null>(null);
+    if (user && phoneFor !== userPhone) {
+        setPhoneFor(userPhone);
+        setPhone(userPhone);
+    }
     // Pasaporttaki hayvan seçilince fotoğraf, renk ve varsayılan bildirim alanı dolar.
-    useEffect(() => {
-        if (!pet) return;
+    const [filledFor, setFilledFor] = useState<string | null>(null);
+    if (pet && filledFor !== pet.id) {
+        setFilledFor(pet.id);
         setPhotos(pet.image ? [{ url: pet.image, preview: pet.image }] : []);
-        setFeatures(f => (f.length ? f : [pet.color, pet.microchip || pet.microchip_no ? 'Çipli' : null].filter(Boolean) as string[]));
+        setFeatures(f => (f.length ? f : [pet.color, pet.microchip ? 'Çipli' : null].filter(Boolean) as string[]));
         setRadius(toSpecies(pet.type) === 'cat' ? 1 : 3);
-    }, [pet]);
+    }
 
     useEffect(() => {
         if (step !== 4 || loc.lat == null || loc.lng == null) return;
@@ -103,8 +109,8 @@ function Wizard() {
                 contactMode: showPhone ? 'phone' : 'in_app', contactPhone: showPhone ? phone : null, notifyRadiusKm: radius,
             });
             router.replace(`/kayip/${res.id}/yayinlandi?n=${res.notified}`);
-        } catch (e: any) {
-            setError(e?.message || 'İlan yayınlanamadı.');
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'İlan yayınlanamadı.');
             setSaving(false);
         }
     };

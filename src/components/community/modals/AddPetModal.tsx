@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, ChevronLeft, Plus, AlertTriangle, ShieldAlert, 
-    PhoneCall, Sparkles, Dog, Cat
+    Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PET_TYPES } from '@/constants/petTypes';
@@ -36,22 +36,14 @@ interface AddPetModalProps {
     setNewPetCharacter: (val: string) => void;
     newPetMicrochip: string;
     setNewPetMicrochip: (val: string) => void;
-    newPetShowPhone: boolean;
-    setNewPetShowPhone: (val: boolean) => void;
     newPetPhotos: { file: File, preview: string }[];
-    setNewPetPhotos: (val: any | ((p: any) => any)) => void;
+    setNewPetPhotos: React.Dispatch<React.SetStateAction<{ file: File, preview: string }[]>>;
     isSaving: boolean;
     onSave: () => Promise<void>;
     
     // Props for dynamic goals, streak, health and weight inputs
     newPetWeight: string;
     setNewPetWeight: (val: string) => void;
-    newPetActivityTarget: string;
-    setNewPetActivityTarget: (val: string) => void;
-    newPetWaterTarget: string;
-    setNewPetWaterTarget: (val: string) => void;
-    newPetFoodTarget: string;
-    setNewPetFoodTarget: (val: string) => void;
 }
 
 export function AddPetModal({
@@ -81,8 +73,6 @@ export function AddPetModal({
     setNewPetCharacter,
     newPetMicrochip,
     setNewPetMicrochip,
-    newPetShowPhone,
-    setNewPetShowPhone,
     newPetPhotos,
     setNewPetPhotos,
     isSaving,
@@ -90,12 +80,6 @@ export function AddPetModal({
     
     newPetWeight,
     setNewPetWeight,
-    newPetActivityTarget,
-    setNewPetActivityTarget,
-    newPetWaterTarget,
-    setNewPetWaterTarget,
-    newPetFoodTarget,
-    setNewPetFoodTarget
 }: AddPetModalProps) {
     return (
         <AnimatePresence>
@@ -175,7 +159,7 @@ export function AddPetModal({
                                                 <div key={index} className="relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden border border-gray-100 shadow-sm group">
                                                     <img src={photo.preview} className="w-full h-full object-cover" alt="Pet Preview" />
                                                     <button
-                                                        onClick={() => setNewPetPhotos((prev: any[]) => prev.filter((_, i) => i !== index))}
+                                                        onClick={() => setNewPetPhotos(prev => prev.filter((_, i) => i !== index))}
                                                         className="absolute top-1 right-1 w-6 h-6 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                                     >
                                                         <X className="w-3.5 h-3.5 text-white" />
@@ -208,7 +192,7 @@ export function AddPetModal({
                                                                     file,
                                                                     preview: URL.createObjectURL(file)
                                                                 }));
-                                                                setNewPetPhotos((prev: any[]) => [...prev, ...newPhotos]);
+                                                                setNewPetPhotos(prev => [...prev, ...newPhotos]);
                                                             }
                                                         }}
                                                     />
@@ -441,80 +425,12 @@ export function AddPetModal({
                                                     type="text" 
                                                     value={newPetMicrochip} 
                                                     onChange={e => setNewPetMicrochip(e.target.value)} 
-                                                    placeholder="TR-000000000" 
+                                                    placeholder="15 haneli numara" 
                                                     className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl pl-12 pr-5 py-4 text-foreground outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-mono tracking-widest text-sm" 
                                                 />
                                                 <ShieldAlert className="absolute left-4.5 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary/80" />
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {/* Gezi, Su, Beslenme Hedefleri */}
-                                    <div className="bg-card/60 rounded-[28px] p-5 border border-card-border shadow-sm space-y-4">
-                                        <span className="text-[10px] text-foreground font-black uppercase tracking-wider block ml-1">Günlük Hedefler</span>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] text-secondary font-bold uppercase tracking-wider ml-1">Aktivite (%)</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    max="100"
-                                                    value={newPetActivityTarget} 
-                                                    onChange={e => setNewPetActivityTarget(e.target.value)} 
-                                                    placeholder="Örn: 70" 
-                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold" 
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] text-secondary font-bold uppercase tracking-wider ml-1">Su (ML)</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    value={newPetWaterTarget} 
-                                                    onChange={e => setNewPetWaterTarget(e.target.value)} 
-                                                    placeholder="Örn: 1200" 
-                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold" 
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] text-secondary font-bold uppercase tracking-wider ml-1">Beslenme (KCAL)</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    value={newPetFoodTarget} 
-                                                    onChange={e => setNewPetFoodTarget(e.target.value)} 
-                                                    placeholder="Örn: 1600" 
-                                                    className="w-full bg-card/60 focus:bg-card border border-card-border rounded-2xl px-3 py-3.5 text-foreground text-xs outline-none focus:ring-4 focus:ring-accent-secondary/10 focus:border-accent-secondary transition-all font-semibold" 
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Telefon Göster - Premium Card Slide Toggle */}
-                                    <div className="bg-card/60 border border-card-border rounded-[28px] p-5 shadow-sm relative overflow-hidden group">
-                                        <div className="flex justify-between items-center mb-3 relative z-10">
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", newPetShowPhone ? "bg-accent-secondary/10 text-accent-secondary border border-accent-secondary/20" : "bg-secondary text-secondary border border-card-border")}>
-                                                    <PhoneCall className="w-5 h-5" />
-                                                </div>
-                                                <div>
-                                                    <span className="font-black text-foreground text-sm tracking-tight block leading-none">Telefonu Göster</span>
-                                                    <p className="text-[9px] text-secondary font-bold uppercase tracking-wider mt-1.5 leading-none">SOS Arama Yetkisi</p>
-                                                </div>
-                                            </div>
-                                            <div
-                                                className={cn("w-12 h-6.5 rounded-full p-1 cursor-pointer transition-all relative border border-card-border shadow-inner", newPetShowPhone ? "bg-accent-secondary" : "bg-secondary")}
-                                                onClick={() => setNewPetShowPhone(!newPetShowPhone)}
-                                            >
-                                                <motion.div
-                                                    animate={{ x: newPetShowPhone ? 22 : 0 }}
-                                                    className="w-4.5 h-4.5 rounded-full bg-white shadow-sm"
-                                                />
-                                            </div>
-                                        </div>
-                                        <p className="text-[10px] text-secondary leading-relaxed font-semibold mt-3 relative z-10">
-                                            Kayıp Modu aktif olduğunda patinizin künyesini okutan kişiler sizinle anında telefon veya WhatsApp üzerinden iletişim kurabilir.
-                                        </p>
                                     </div>
 
                                     <motion.button

@@ -169,7 +169,7 @@ Ayrıca: bir tablo `postgres_changes` ile dinlenecekse, o tablo
   Ana sayfadaki "Beslenme & Su" hızlı erişimi (boş diyet planı penceresini açıyordu) "Pasaport" ile değişti.
 - `NutritionModal` (veteriner diyet planı, `nutrition_plans`, 0 satır) yerinde kalır; alt menü ve `/vet?open=nutrition` ile açılır.
 - Claude'un kararı: ayrı bir "beslenme sayfası" şimdilik gerekli değil. Mama markası/porsiyon/kalori gibi ayrıntılı beslenme, ileride sağlık
-  tarafında (veteriner diyet planıyla birleşik) tasarlanır; o zaman Baran'la konuşulur. `NutritionModal`'daki "DİYETİSYENE SOR" düğmesi hâlâ ölü.
+  tarafında (veteriner diyet planıyla birleşik) tasarlanır; o zaman Baran'la konuşulur. `NutritionModal` 2026-10-04'te gerçek sütunlara bağlandı (8.67).
 
 ### 5.5 State machine'i localStorage'a bölünmüş şekilde yazarken dikkat (Faz 2-5 kontrolü, `ActivityContext.tsx`)
 
@@ -274,9 +274,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 
 - **8.0–8.1 Plan ve sınırlar.** Yürüyüş yeniden yapımı Faz 1–14 ve 18 tamam; kalan: 15 yönlendirici ödül, 16 analitik, 17 cila.
   Bilinçli yaklaşık çözümler: GPS kalite eşikleri deneysel; `network_unavailable` sadece tarayıcının online/offline'ına bakar;
-  hazırlık kontrol listesi (poşet/su/tasma) state machine'e bağlı değil; `LiveMap.tsx` içine gömülü sahte POI/hazine avı 4 ekranda
-  paylaşılıyor, bilerek dokunulmadı; `bluetoothManager.ts` orphan (gerçek kod, kullanılmıyor); "Bu Yürüyüşü Kaydet" gerçek bir onay
-  kapısı değil (kayıt zaten yapılmış); `LiveMap` Carto altlığı API anahtarı filigranı gösteriyor (veteriner haritası OSM'e geçti).
+  hazırlık kontrol listesi (poşet/su/tasma) state machine'e bağlı değil; "Bu Yürüyüşü Kaydet" gerçek bir onay kapısı değil (kayıt
+  zaten yapılmış). Sahte POI'li eski `LiveMap` 2026-10-04'te silindi (8.67); yürüyüş haritası `WalkMap`.
 - **8.2 Puan sistemi (2026-10-03 kilitlendi).** 🔴 İstemci puan MİKTARI söyleyemez: `award_pati_puan` istemciye kapalı (sadece
   sunucu fonksiyonları sahibi olarak çağırır), yeni ödül `claim_reward(key)` ile. Miktar/dönem (günlük-haftalık-aylık)/günlük 200 sınırı
   `reward_rules` tablosunda; aynı ödül aynı dönemde bir kez (`point_transactions` source='quest', reference_id `kural@dönem`). Yeni ödül
@@ -537,6 +536,49 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - Alt menü (`DynamicNavigation`) görünürlüğü artık türetilir (efektte senkron setState yok); "Stüdyo" yönlendirmesi kaldırıldı.
 - Yönetici finansta iade durumu `returned` (order_items'ta `refunded` yok; iadeler hiç sayılmıyordu).
 
+### Veri katmanı ve sahte ekran temizliği (8.67, 2026-10-04)
+
+- **Veri katmanı tipli:** `supabaseApiService.ts`'te `@ts-nocheck` yok; istemci `SupabaseClient<Database>` (`types/supabase.ts`, Supabase
+  `generate_typescript_types` ile ÜRETİLİR, elle düzenlenmez; şema değişince yeniden üret). `MockApiService`, `IApiService`, `services/interfaces.ts`,
+  `isSupabaseEnabled` bayrağı, `types/business.ts`, `types/database.ts` ve `types/domain.ts`'teki ölü tipler silindi. Servisten tip almak için
+  `Awaited<ReturnType<typeof apiService.x>>` kullan (ikinci bir el yazımı tip tanımlama).
+- 🔴 **Vurgu rengi sistemi kaldırıldı:** varsayılan ayar `accentColor: 'cyan'` → `<html>`'e `theme-cyan` → giriş yapmış herkeste uygulamanın vurgusu
+  camgöbeği/maviydi (Bölüm 5'e aykırı). Artık tek değer `globals.css` `:root --accent`. `GlobalIdentitySync` silindi. ThemeContext değerleri
+  kopyalamaz, hesap ayarından türetir (`useSyncExternalStore` ile cihaz teması).
+- **Hiç kullanılmayan/sahte bağlamlar silindi:** `WellbeingContext` (ekran süresi/sessiz mod hesaplıyordu, hiçbir ekran uygulamıyordu),
+  `SocialContext` (kimse kullanmıyordu, her sayfada sahte gönderi yazıyordu), `LiveEventsContext` + HUD + RareDropSystem + Phase2Loader (uydurma
+  "X kişi yürüyor", rastgele mahalle sırası, hiç ödenmeyen "x2 PP" vaatleri).
+- **Ayarlar = yalnızca çalışan ayarlar.** Kaldırılan anahtarlar (okuyan yoktu): 2FA/biyometrik, gizlilik ve bildirim kanalları, SOS yapılandırması,
+  otomatik video/akış sıralaması, hikâye görünürlüğü, ekran süresi, sert denetim, "Sistem Teşhis", vurgu rengi. Hesap bilgileri `profiles.phone/
+  birth_date/gender`'a yazar; 🔴 sahte "Meta hesap merkezi", bağlı hesaplar, yalnızca yerel veriyi silen "kalıcı sil" ve geri açılmayan "dondur"
+  kaldırıldı, silme tek yol `DeleteAccountButton` (8.57). Yeni bir anahtar eklerken okuyan kodu da yaz; okunmayan ayar ekleme.
+- 🔴 **`AuthContext.updateProfile` tüm `ProfileUpdate`'i iletir:** eskiden yalnızca ad/fotoğraf/biyografi gidiyordu; profil düzenlemedeki telefon ve
+  yorum ayarları (kim yorum yapabilir, gizli kelimeler) HİÇ kaydedilmiyordu. Yorum varsayılanları `user.commentDefaults` (profil sütunları, ayar değil).
+- **Ulaşılamayan pencereler/sayfalar silindi:** `ActionHubDrawer`, `MoffiMapsModal` (+ `LiveMap`, `mockPlaces`), `EcosystemPortal`, `moffi-navigate`
+  olayı, `/demo/hub`, `/ai-dressing` (5 sn bekleyip sahte sonuç), `/wallet` (`mockWallet`), `useHubData`, profilin sahte "Aile" sekmesi
+  (`FamilyMockService`: uydurma "Annem", "Can"). Spotlight: hayvan sonucu sahibinin profiline, gönderi gönderi sayfasına gider.
+- **Sipariş durumu yalnızca gerçek** (`lib/shop/orderStatus.ts`): ödeme (`orders.status`) + satıcı kalemi (`order_items.status`) + kargo bilgisi.
+  OrdersTab saate göre uydurulan "Teslim edildi" ve "Moffi Express sigortası" iddiası kaldırıldı; ödeme dönüşü `OrderPlacedSheet` (sahte kurye haritalı
+  `OrderTrackingModal` silindi). 🔴 PayTR'nin "success" yönlendirmesi ödeme onayı DEĞİLDİR; sipariş webhook → `finalize_paid_order` ile "paid" olur.
+- **Profil cüzdanı = PawCoin:** bakiye `pati_puan_balance`, hareketler `point_transactions` (`getPawCoinHistory`). 🔴 Para birimi tespiti: `coin_balance`
+  ayrı bir "oyun altını" (yalnızca oyunlar + oyun sıralaması, harcama yeri hafıza/zıplama oyununda devam), `wallet_balance`'a hiçbir şey yazmıyor (12.1 karar).
+- **Oyun ekranı gerçek değerler:** `game_status` (oyun altını, bugünkü kalan ödül, hayvanın XP/seviyesi), `game_continue` (süre uzatma/kurtarma,
+  fiyat sunucuda 50). Uydurma 2450 altın, "Pro Rank", "+10" rozetleri kaldırıldı; `mapPetRow` artık `xp/level` taşır. Oyun açıkken alt menü gizlenir.
+- 🔴 **Sahipsiz hasta kaydı sahiplenme güvenliği:** `check_unclaimed_matches(p_phone)` herhangi bir numarayla başkasının hayvan adını/kliniğini
+  gösteriyordu, `request_manual_claim` kaydın kime ait olduğuna bakmıyordu. Yeni: `my_unclaimed_matches()` (yalnızca profildeki kendi telefonun),
+  `request_manual_claim` telefon eşleşmesini denetler + kliniğe `biz_claim` bildirimi; klinik `/business/migration`'da onaylar. Eski fonksiyon
+  kullanıcıya kapalı (silinmesi Baran'da). SMS kodu yolu (`verify_and_claim`) SMS olmadığı için çalışmıyor, arayüzden kaldırıldı.
+- **Diyet planı** (`NutritionModal`) gerçek sütunlarla (`food_type`, `daily_calories`, `feeding_times`, `notes`); eski form olmayan alanları
+  düzenliyordu, kaydedince boş değer yazıyordu. "Veteriner onaylı" işaretini sahip koyamaz (`nutrition_plans_guard`). Ölü "DİYETİSYENE SOR" silindi.
+- **İşletme paneli:** ürünler sayfası `ShopProduct` alanlarını okur (eskiden ham `stock/image_url` okunduğu için her ürün "Tükendi"); kategoriler
+  mağaza vitriniyle tek liste (`lib/shop/categories.ts`). Pano: hep boş "ziyaretçi trafiği" grafiği ve müşteri e-postasını pravatar.cc'ye gönderen
+  yer tutucu kaldırıldı. Randevular: paylaşılan pasaport tarih okunamazsa KAPALI (eskiden açık), kapalı gün çakışması duvar saati günüyle (8.36),
+  localStorage "deneme modu" yolları silindi, `getClinicAppointments` her zaman işletmeye süzer; çalışma günü kaynağı `businesses.working_hours`
+  (`clinic_settings.working_days` ölü sütun). Vet sayfasının ayrı bildirim kanalı kaldırıldı, zil `NotificationContext`'ten (8.37). Randevuda
+  paylaşılan kilo "28 kg kg" yazılıyordu.
+- Görevler: "Lig" sekmesindeki uydurma "Gümüş Lig / İlk 3'e 500 PP" ve sahte podyum silindi, sekme gerçek km sıralamasına (`/walk/leaderboard`) gider.
+- Veri paketi (KVKK) sahte "şifreleniyor" beklemeleri ve sıfır bakiyeler olmadan, PawCoin hareketleriyle birlikte iner.
+
 ### İçerik Stüdyosu ve hikâyeler (8.64, 2026-10-04 — Baran onaylı 5 kanal)
 
 - **Kanallar** (`hooks/useStories.ts`): **Kayıp Alarmı** (otomatik, kullanıcının 25 km çevresi), **<Hayvan>'ın Haftası** (otomatik özet
@@ -650,7 +692,13 @@ ilgili maddeyi tek satırla hatırlat.
       `moffi_prime_yearly`; tüketilebilir `pawcoin_500`, `pawcoin_1200`, `pawcoin_3000`; RevenueCat'te `prime` entitlement + "default" offering.
 - [ ] Vercel'e: `REVENUECAT_WEBHOOK_SECRET` (uzun rastgele; RevenueCat → Webhooks → Authorization'a aynısı; adres
       `https://app.moffi.net/api/revenuecat/webhook`), `NEXT_PUBLIC_REVENUECAT_IOS_KEY`, `NEXT_PUBLIC_REVENUECAT_ANDROID_KEY`.
-- [ ] PawCoin paketi satın alma ekranı nerede olsun (Ödül Marketi'nin üstü / ayrı "Cüzdan")? Katalog ve sunucu hazır.
+- [ ] PawCoin paketi satın alma ekranı nerede olsun (Ödül Marketi'nin üstü / ayrı "Cüzdan")? Katalog ve sunucu hazır. Profilde artık gerçek bir
+      PawCoin cüzdanı (bakiye + hareketler) var; paket satışı oraya eklenebilir (8.67).
+- [ ] 🔴 **Oyun altını (`coin_balance`) ile PawCoin ayrı iki bakiye** (8.67): oyunlar PawCoin değil oyun altını verir (günde en çok 100), altın yalnızca
+      oyunlarda (süre uzatma/kurtarma) harcanır. Böyle kalsın mı, yoksa oyunlar da PawCoin mi versin (o zaman günlük sınır ve ekonomi yeniden)?
+      `wallet_balance` sütununa hiçbir şey yazmıyor: silinebilir.
+- [ ] Profildeki "Aile / ortak bakım" sahteydi, kaldırıldı. Gerçek bir aile paylaşımı (birden fazla kişinin aynı hayvanı yönetmesi) istenirse ayrı iş.
+- [ ] SQL Editor: `check_unclaimed_matches(text)` fonksiyonunu sil (kullanıcıya kapatıldı, yerini `my_unclaimed_matches` aldı; DROP bağlayıcıdan geçmez).
 - [ ] Yapay zekâ fotoğraf analizi (`/api/ai/vision`, Prime ayrıcalığı olarak kararlaştırıldı) hangi ekrandan açılsın (Sağlık Merkezi "fotoğrafla sor",
       mama etiketi okuma)? Şimdilik arayüzde yok, Prime ekranında listelenmiyor.
 - [ ] Kullanılmayan paketler: `ai`, `@ai-sdk/google`, `openai` (Stüdyo silindi), `stripe` / `@stripe/*` (ödeme PayTR): kaldırayım mı? (paket kaldırma onay ister)
@@ -683,13 +731,10 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       bildirimi çıkıyordu; sıfırlandı, rozet anahtarı `moffi_earned_badges_v3`. Çerez bandı kompakt yazıldı, giriş/kurulumda gizli. `/onboarding` açık
       temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
       köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
-- [ ] 🔴 **Kod borcu (2026-10-03 ölçümü, yalnızca azalır):** tip kontrolü (src) **64** hata (+ `supabaseApiService.ts` başında `// @ts-nocheck`:
-      uygulamanın ana veri dosyası HİÇ tip denetlenmiyor, 168 lint hatası; kaldırılınca ortaya çıkacak hatalar bu sayıya eklenecek); lint **~1.150** hata (çoğu `no-explicit-any` ~970,
-      `no-unescaped-entities` ~98, React kuralları ~120). Sıra: (1) tip hataları — gerçek kusurlar önce: `MoffiRunGame` tanımsız değişkenler
-      (oyun bitişinde çöker), `ShopProduct`'ın iki ayrı tanımı (`services/types` ↔ `types/domain`, mağaza), `IApiService`'te eksik metotlar
-      (`getClinicProducts`, `updateOrderTracking`, `getClinicQuests` — çalışıyor ama tipsiz), `PetContext.Pet` ↔ `services/types.Pet`, `AuthContext`
-      `UserProfile`; (2) React kuralları (`set-state-in-effect`, `purity`, `refs`); (3) `any` ve kaçış karakterleri en sonda, dosya dosya.
-      Ölü dosya avı (E aşaması) 2026-10-03'te yapıldı: 48 kullanılmayan dosya silindi (`scratchpad/orphans.cjs` mantığı: hiçbir yerden import edilmeyen modül).
+- [ ] 🔴 **Kod borcu (2026-10-04 ölçümü, yalnızca azalır):** tip kontrolü (src) **0** hata (68'den; artık her değişiklikte 0 kalmalı).
+      Lint **399** hata (1.150'den): `no-explicit-any` 293, `no-unescaped-entities` 48, `set-state-in-effect` 36, `purity` 13, diğer 9.
+      Sıra: React kuralları önce (gerçek davranış hatası saklayabilir), sonra `any`/kaçış karakterleri dosya dosya. Ölü dosya: 0
+      (`scratchpad/orphans.cjs`), kullanılmayan servis metodu: 0 (`scratchpad/used.cjs`).
 - [ ] İşletme kurulum sihirbazı (`OnboardingWizard`) ve işletme panelinin bazı ekranları indigo/mavi tonlarda (Bölüm 5'e aykırı).
 - [ ] Yürüyüş denetimi C/D aşamaları (2026-10-03 raporu): C = görev/rozet/XP sunucuya, görev tiplerinin düzeltilmesi (günlük
       toplam, imkânsız "Çift Yürüyüş"), otomatik günlük hedefin gün içinde sabit kalması (ilk yürüyüşten sonra 1,7→2,3 sıçrıyor),
@@ -698,9 +743,8 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
 - [ ] "Moffi Puanı / PP" yazan arayüz metinleri yeni para birimi adına çevrilecek (isim belli olunca topluca).
 - [ ] `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinecek (içerik 8.45'te taşındı; kolon silme Baran'ın SQL Editor'ından).
 - [ ] Silinen gönderi/hikâyelerin depoda kalan eski dosyaları (8.50).
-- [ ] Bakım modu normal kullanıcıda çalışmıyor (Bölüm 9). `LiveMap` Carto altlığı OSM'e (8.1).
+- [ ] Bakım modu normal kullanıcıda çalışmıyor (Bölüm 9).
+- [ ] Satıcı ürün formunda fotoğraf yükleme yok (ürünler emoji ile görünüyor); mağaza görsel yenilemesiyle birlikte (8.66).
+- [ ] Profil sayfasının "Araçlar" bölümü ve oyun ekranı hâlâ çok renkli/mavi-mor (Bölüm 5); referans tasarım gelince.
 - [ ] Albüm videosu telefonda 720p'ye dönüştürülmüyor (tarayıcıda güvenilir yol yok); native aşamasında yerel sıkıştırma eklentisi (8.65).
 - [ ] İlk gerçek hesap silme talebinde (en erken 2026-11-01) ilk gece çalışmasından sonra sonucu doğrula (8.57).
-- [ ] Sahte veriyle çalışan ekranlar (2026-10-03 ana sayfa turunda bulundu, ana sayfadan/kenar panelinden bağlantıları kaldırıldı):
-      `/wallet` (`data/mockWallet`), `MoffiMapsModal` (sahte işaretler), mağaza ürün yorumları (`petshop` "Ahmet S." vb.),
-      `ActionHubDrawer` ("Moffi Pay cüzdan", "Aile"). Ayarlar'daki "Anlık Bildirimler" anahtarı (`pushEnabled`, Bildirim Ayarları bölümü) hâlâ sadece işaret.

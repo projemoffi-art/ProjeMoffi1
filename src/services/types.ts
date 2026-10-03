@@ -1,4 +1,4 @@
-import { Doctor } from '@/types/domain';
+import type { Json, Tables } from '@/types/supabase';
 // Sunucuya gönderilen tek GPS noktası (append_walk_points / finish_walk).
 export interface WalkPoint {
     lat: number;
@@ -39,51 +39,60 @@ export interface ClinicClient {
     note: string | null;
 }
 
+/** Kayıp moduna ait ayarlar (pets.sos_settings, json). */
+export interface PetSosSettings {
+    auto_post_sos?: boolean;
+    sos_radius?: '2km' | '5km' | '10km' | 'city';
+    secure_proxy_only?: boolean;
+    location_precision?: 'exact' | 'area';
+    emergency_sms_number?: string;
+    reward_amount?: number;
+    reward_currency?: string;
+    finder_message?: string;
+    quiet_hours?: { enabled: boolean; from: string; to: string };
+    emergency_bypass?: boolean;
+    header_sos_alert_enabled?: boolean;
+    reward_enabled?: boolean;
+    last_seen_location?: string;
+}
+
+/**
+ * Evcil hayvan: pets satırının uygulamadaki hâli. TEK tanım (PetContext buradan alır; eskiden iki ayrı ve uyumsuz tanım vardı).
+ * Eşleme tek yerde: supabaseApiService.mapPetRow. Veritabanında karşılığı olmayan alan eklenmez.
+ */
 export interface Pet {
     id: string;
     name: string;
-    image: string;
-    avatar?: string;
-    avatar_url?: string;
-    cover_photo?: string;
-    cover_url?: string;
+    /** Tür: 'dog' | 'cat' | diğer (pets.type) */
     type: string;
     breed: string;
-    age: string;
-    gender: 'Erkek' | 'Dişi' | string;
-    bio?: string;
-    personality?: string;
+    /** Serbest yaş metni (eski kayıtlar); hesap için birthday kullanılır. */
+    age?: string;
+    gender: string;
+    /** Profil fotoğrafı adresi (pets.avatar_url); yoksa boş metin. */
+    image: string;
+    avatar?: string;
+    /** Kapak fotoğrafı (pets.cover_url). */
+    cover_photo?: string;
+    /** "28 kg" biçiminde; kayıt yoksa boş metin. */
+    weight: string;
+    neutered?: boolean;
+    size?: string;
+    microchip?: string;
+    birthday?: string;
+    birth_date_estimated?: boolean;
+    color?: string;
+    petvet_no?: string;
+    passport_no?: string;
+    character?: string;
+    features?: string[];
+    gallery_urls?: string[];
     is_lost?: boolean;
-    microchip_id?: string;
-    is_neutered?: boolean;
-    size?: 'small' | 'medium' | 'large';
-    species?: string;
-    photo_url?: string;
-    owner_id?: string;
-    sos_settings?: {
-        auto_post_sos: boolean;
-        sos_radius: '2km' | '5km' | '10km' | 'city';
-        secure_proxy_only: boolean;
-        location_precision: 'exact' | 'area';
-        emergency_sms_number: string;
-        reward_amount: number;
-        reward_currency: string;
-        last_seen_location?: string;
-        finder_message: string;
-        reward_enabled: boolean;
-        header_sos_alert_enabled: boolean;
-    };
-}
-
-export interface WalletTransaction {
-    id: string | number;
-    user_id?: string;
-    type: 'earned' | 'spent' | 'system' | 'gift';
-    amount: number;
-    description: string;
-    reference_id?: string; // Optional reference to game/order/etc
-    created_at: string;
-    icon?: string; // Client side mapped
+    created_at?: string;
+    sos_settings?: PetSosSettings;
+    /** Oyun deneyimi (pets.xp / pets.level; yalnızca add_game_reward yazar). */
+    xp?: number;
+    level?: number;
 }
 
 export interface Post {
@@ -115,32 +124,48 @@ export interface Post {
     scheduled_at?: string | null;
 }
 
+/** Profil (kendi profilinde profiles, başkasınınkinde profile_cards). Eşleme tek yer: supabaseApiService.getUserProfile. */
 export interface UserProfile {
     id: string;
     name: string;
     username: string;
-    avatar: string;
+    avatar?: string;
     cover_photo?: string;
-    bio?: string;
-    is_verified?: boolean;
-    subscription_status?: 'free' | 'pro' | 'elite';
-    working_hours?: any;
-    wallet_balance?: number;
-    moffi_coins?: number;
-    aura_settings?: {
-        fontFamily: string;
-        frameStyle: 'minimal' | 'glass' | 'neon' | 'metal';
-        accentColor: string;
-        badges: string[];
-    };
-    default_allow_comments?: boolean;
-    default_comment_privacy?: 'everyone' | 'followers' | 'none';
-    comment_filter_words?: string[];
-    phone?: string;
-    birth_date?: string;
-    gender?: string;
-    account_status?: string;
+    bio?: string | null;
+    petName?: string | null;
+    role: string;
+    is_prime: boolean;
+    prime_until: string | null;
+    created_at?: string | null;
+    default_allow_comments: boolean;
+    default_comment_privacy: string;
+    comment_filter_words: string[];
+    phone?: string | null;
+    /** İl / ilçe (profil kartında herkese açık). */
+    province?: string | null;
+    district?: string | null;
+    birth_date?: string | null;
+    gender?: string | null;
+    account_status: string;
+    // Eski tek-işletme alanları (profil satırında); işletmenin asıl kaydı businesses tablosunda (8.54).
+    businessType?: string | null;
+    businessName?: string | null;
+    businessApproved?: boolean | null;
+    kybStatus?: string | null;
+    taxId?: string | null;
+    iban?: string | null;
+    address?: string | null;
+    ownerName?: string | null;
+    working_hours?: Json | null;
+    wallet_balance: number;
+    moffi_coins: number;
+    settings: Json | null;
+    stats: { followers: number; following: number };
 }
+
+/** updateProfile'ın değiştirebildiği alanlar (rol, onay, bakiye gibi alanlar istemciden değişmez; tetikleyiciler korur). */
+export type ProfileUpdate = Partial<Pick<UserProfile, 'name' | 'username' | 'avatar' | 'cover_photo' | 'bio' | 'petName' |
+    'default_allow_comments' | 'default_comment_privacy' | 'comment_filter_words' | 'phone' | 'birth_date' | 'gender' | 'account_status'>>;
 
 export interface LostPet {
     id: number | string;
@@ -196,7 +221,8 @@ export type OrderStatus = 'pending' | 'paid' | 'confirmed' | 'awaiting_payment' 
 export interface ShopOrder {
     id: string;
     userId: string;
-    items: Array<{ product: ShopProduct; quantity: number }>;
+    /** status: satıcının kalem durumu (awaiting_payment → preparing → shipped → delivered | cancelled). */
+    items: Array<{ product: ShopProduct; quantity: number; status?: string }>;
     totalPrice: number;
     discountCode?: string;
     discountAmount?: number;
@@ -204,6 +230,10 @@ export interface ShopOrder {
     status: OrderStatus;
     createdAt: string;
     updatedAt: string;
+    /** Ödenmemiş siparişin son geçerlilik zamanı (sonra iptal sayılır). */
+    expiresAt?: string | null;
+    carrier?: string | null;
+    trackingNumber?: string | null;
 }
 
 // Faz 24: Sosyal Meydan Okumalar
@@ -252,263 +282,8 @@ export interface BusinessProfileData {
     gallery: string[];
 }
 
-export interface IApiService {
-    // Auth & Profile
-    getCurrentUser(): Promise<UserProfile | null>;
-    getUserProfile(id: string): Promise<UserProfile | null>;
-    updateProfile(updates: Partial<UserProfile>): Promise<UserProfile>;
-    isUsernameAvailable(username: string): Promise<boolean>;
-    
-    // Pets
-    getPets(): Promise<Pet[]>;
-    getActivePet(): Promise<Pet | null>;
-    setActivePet(id: string): Promise<void>;
-    addPet(pet: Partial<Pet>): Promise<Pet>;
-    updatePet(id: string, updates: Partial<Pet>): Promise<Pet>;
-    deletePet(id: string): Promise<void>;
-    
-    // Community
-    fetchMarketPlaces(): Promise<any[]>;
-    fetchVets(): Promise<any[]>;
-    getInboxMessages(): Promise<any[]>;
-    
-    // Shop
-    getProducts(category?: ShopCategory): Promise<ShopProduct[]>;
-    getCart(): Promise<ShopCartItem[]>;
-    addToCart(productId: string, quantity: number): Promise<void>;
-    updateCartItem(productId: string, quantity: number): Promise<void>;
-    removeFromCart(productId: string): Promise<void>;
-    clearCart(): Promise<void>;
-
-    getOrders(): Promise<ShopOrder[]>;
-
-    // Subscriptions & Advanced Features
-    upgradeSubscription(status: 'free' | 'plus' | 'pro'): Promise<void>;
-    addBalance(amount: number, type: 'fiat' | 'coin'): Promise<void>;
-    updateAuraSettings(settings: any): Promise<void>;
-
-    // Puan sadece sunucunun ödül kurallarından verilir (claim_reward); miktarı istemci belirlemez.
-    claimReward(key: string): Promise<{ awarded: number; alreadyClaimed: boolean; capped: boolean; balance: number }>;
-    getPatiPuanBalance(): Promise<number>;
-    getPatiPuanHistory(limit?: number): Promise<Array<{ id: string; amount: number; reason: string | null; source: string; created_at: string }>>;
-
-    // Faz 8: gerçek seri kalkanı (streak shield) — localStorage'daki eski, gerçek seriye
-    // hiç etkisi olmayan sahte versiyonun yerine geçti
-    getStreakShieldStatus(): Promise<{ available: boolean }>;
-    useStreakShield(coveredDate: string): Promise<boolean>;
-
-    // Health & Veterinary
-    getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null, businessType?: string): Promise<any[]>;
-    getClinicDetails(clinicId: string): Promise<any>;
-    createAppointment(dto: any): Promise<any>;
-    getAppointments(userId: string): Promise<any[]>;
-    cancelAppointment(id: string): Promise<void>;
-    getClinicAppointments(clinicId: string): Promise<any[]>;
-    getAvailableSlots(clinicId: string, date: string, durationMinutes: number | null, doctorId: string | null): Promise<{ slot_time: string; available: boolean }[]>;
-    getClinicCalendar(clinicId: string, fromDate: string, days: number): Promise<{ day: string; is_open: boolean }[]>;
-    createBusinessAppointment(input: BusinessAppointmentInput): Promise<string>;
-    rescheduleAppointment(appointmentId: string, newStart: string, doctorId: string | null, ignoreHours: boolean): Promise<void>;
-    getClinicClients(): Promise<ClinicClient[]>;
-    getFavoriteClinicIds(): Promise<string[]>;
-    setFavoriteClinic(clinicId: string, favorite: boolean): Promise<void>;
-    getClinicsByIds(clinicIds: string[]): Promise<any[]>;
-    getReminderPrefs(): Promise<{ h24: boolean; h2: boolean; day: boolean }>;
-    setReminderPrefs(prefs: { h24: boolean; h2: boolean; day: boolean }): Promise<void>;
-    getBusinessProfile(): Promise<BusinessProfileData | null>;
-    updateBusinessProfile(p: BusinessProfileData): Promise<void>;
-    // Aktif işletme (8.54): kişinin adına çalıştığı işletme; panel her şeyi bu kimlikle yapar.
-    getActiveBusinessId(): Promise<string | null>;
-    getMyBusinesses(): Promise<MyBusiness[]>;
-    setActiveBusiness(businessId: string): Promise<void>;
-    getActiveBusiness(): Promise<any | null>;
-    updateActiveBusiness(patch: Record<string, any>): Promise<void>;
-    // Personel daveti (Faz 1c)
-    inviteStaff(businessId: string, email: string, role: string, doctorId?: string): Promise<{ id: string }>;
-    getBusinessInvitations(businessId: string): Promise<any[]>;
-    cancelInvitation(invitationId: string): Promise<void>;
-    getInvitationByToken(token: string): Promise<any>;
-    respondInvitation(token: string, accept: boolean): Promise<any>;
-    getBusinessMembers(businessId: string): Promise<any[]>;
-    removeBusinessMember(businessId: string, userId: string): Promise<void>;
-
-    getClinicOrders(clinicId: string): Promise<ShopOrder[]>;
-    getMySharedPassports(): Promise<{ id: string; clinicName: string; petName: string; date: string; sharedFields: string[] }[]>;
-    requestReschedule(appointmentId: string, newStart: string): Promise<void>;
-    respondReschedule(appointmentId: string, accept: boolean): Promise<void>;
-    getVisitSummary(appointmentId: string): Promise<any | null>;
-    getCancellationNoticeHours(clinicId: string): Promise<number>;
-    saveClientNote(clinicId: string, clientKey: string, note: string): Promise<void>;
-    getClinicServices(clinicId: string): Promise<any[]>;
-    getClinicDoctors(clinicId: string): Promise<Doctor[]>;
-    getAllClinicDoctors(clinicId: string): Promise<Doctor[]>;
-    createDoctor(dto: { clinicId: string; name: string; title?: string; photoUrl?: string }): Promise<Doctor>;
-    updateDoctor(id: string, dto: { name?: string; title?: string; photoUrl?: string; isActive?: boolean }): Promise<Doctor>;
-    updateAppointmentStatus(appointmentId: string, status: string, rejectReason?: string): Promise<void>;
-    updateAttendanceStatus(appointmentId: string, status: 'attended' | 'no_show' | null): Promise<void>;
-    getNoShowCount(userId: string): Promise<number>;
-    getClinicSettings(clinicId: string): Promise<any>;
-    saveClinicSettings(clinicId: string, settings: any): Promise<void>;
-
-    // Health Extension (New)
-    getNutritionPlan(petId: string): Promise<any | null>;
-    updateNutritionPlan(petId: string, plan: any): Promise<void>;
-    getPetDailyStats(petId: string, date: string): Promise<any | null>;
-    savePetDailyStats(petId: string, date: string, stats: any): Promise<void>;
-
-    // Walk & Tracking
-    startWalk(petId?: string, startedAt?: number): Promise<{ id: string }>;
-    discardWalk(sessionId: string): Promise<void>;
-    appendWalkPoints(sessionId: string, points: WalkPoint[]): Promise<void>;
-    uploadWalkPhoto(sessionId: string, file: File): Promise<string>;
-    startBeacon(sessionId: string, petName: string, lat: number, lng: number): Promise<string>;
-    updateBeaconLocation(beaconId: string, lat: number, lng: number): Promise<void>;
-    stopBeacon(beaconId: string): Promise<void>;
-    getBeacon(beaconId: string): Promise<{ lat: number; lng: number; petName: string | null; updatedAt: string; expiresAt: string } | null>;
-    finishWalk(sessionId: string, data: { activeSeconds: number; steps: number; points?: WalkPoint[]; endAtLastPoint?: boolean }): Promise<any>;
-    getWalkHistory(userId: string, limit?: number): Promise<any[]>;
-    getWalkStats(userId: string): Promise<any>;
-    getWalkById(id: string): Promise<any>;
-
-    // --- HİKAYELER (Stories) ---
-
-    // --- SOSYAL AKSİYONLAR ---
-    
-    // User Discovery & Social Interactions
-    getFollowers(userId: string): Promise<UserProfile[]>;
-    getFollowing(userId: string): Promise<UserProfile[]>;
-    
-    // Direct Messaging (Chat)
-    getChatConversations(scope?: 'inbox' | 'clinic'): Promise<any[]>;
-    getChatMessages(otherUserId: string, scope?: 'inbox' | 'clinic', before?: string | null, limit?: number): Promise<any[]>;
-    getChatPartner(userId: string): Promise<{ userId: string; partnerName: string; avatar: string | null; isBusiness: boolean } | null>;
-    sendChatMessage(receiverId: string, content: string, scope?: 'inbox' | 'clinic', associatedAdId?: string, attachmentUrl?: string, replyTo?: string): Promise<any>;
-    markChatAsRead(otherUserId: string, scope?: 'inbox' | 'clinic'): Promise<void>;
-    recallChatMessage(messageId: string): Promise<void>;
-    toggleMessageReaction(messageId: string, emoji: string): Promise<string | null>;
-    setConversationPref(otherUserId: string, pref: { muted?: boolean; clear?: boolean }, scope?: 'inbox' | 'clinic'): Promise<void>;
-    acceptChatRequest(otherUserId: string): Promise<void>;
-    
-    // Media & Storage
-    uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds', onProgress?: (percent: number) => void): Promise<string>;
-
-    // Search
-    globalSearch(query: string): Promise<{
-        profiles: UserProfile[];
-        posts: any[];
-        pets: Pet[];
-    }>;
-
-    // Persistence
-    saveData<T>(key: string, data: T): Promise<void>;
-    loadData<T>(key: string): Promise<T | null>;
-
-    // Admin Shop operations
-    addProduct(product: Partial<ShopProduct>): Promise<ShopProduct>;
-    updateProduct(id: string, product: Partial<ShopProduct>): Promise<ShopProduct>;
-    deleteProduct(id: string): Promise<void>;
-    updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
-    getAllOrders(): Promise<ShopOrder[]>;
-
-
-    // Daily Star Pet (Yıldız Patiler)
-    getAllPetsAdmin(): Promise<Pet[]>;
-    getDailyStars(dateString: string): Promise<any[]>;
-    getDailyStarCandidates(): Promise<any[]>;
-    setDailyStar(dateString: string, rank: number, petId: string, details: any): Promise<void>;
-    removeDailyStar(dateString: string, rank: number): Promise<void>;
-
-    // Global Arena (Leaderboard) & Games
-    getLeaderboard(role: 'user' | 'business', limit?: number): Promise<any[]>;
-    getUserRank(userId: string): Promise<number>;
-    // Faz 13 (referans UI'ye göre düzeltildi): mesafe (km) bazlı sıralama, zaman
-    // aralığı filtreli - bkz. CLAUDE.md 8.8 / design-reference/walk-final/
-    getDistanceLeaderboard(period: 'week' | 'month' | 'all', userIds?: string[] | null, limit?: number): Promise<{ userId: string; totalMeters: number; walkCount: number }[]>;
-    getSameCityUserIds(userId: string): Promise<string[]>;
-    getProfilesByIds(ids: string[]): Promise<{ id: string; name: string; avatar?: string; pet: string }[]>;
-
-    // Faz 22: Kozmetik gardırop — Kombinle prototipinin gerçek, PP-tabanlı sürümü.
-    getCosmeticItems(): Promise<{ id: string; slot: 'body' | 'head' | 'eyes' | 'hands' | 'feet'; itemKey: string; name: string; icon: string; pricePp: number; rarity: 'common' | 'rare' | 'epic' | 'legendary'; isStarter: boolean }[]>;
-    getOwnedCosmeticItemIds(userId: string): Promise<string[]>;
-    redeemCosmeticItem(itemId: string, name: string, pricePp: number): Promise<number>;
-    getPetLook(petId: string): Promise<{ equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }>;
-    updatePetLook(petId: string, look: { equippedApparel: Record<string, string | null>; avatarBodyColor: string; avatarBackground: string | null }): Promise<boolean>;
-
-    // Faz 23: VIP Merkezi — gerçek Prime özelliklerinin (şu an sadece Aura/Neon
-    // profil çerçeveleri) PP karşılığında GEÇİCİ tadımı.
-    getVipPerks(): Promise<{ id: string; perkKey: string; name: string; description: string; icon: string; pricePp: number; durationHours: number; rarity: 'common' | 'rare' | 'epic' | 'legendary' }[]>;
-    getActivePerks(userId: string): Promise<Record<string, string>>;
-    redeemVipPerk(perkId: string, name: string, pricePp: number): Promise<string>;
-
-    // Faz 24: Sosyal Meydan Okumalar — gerçek karşılıklı takip edilen kişilerle
-    // düello (1v1) veya takım görevi (ortak hedef).
-    getMutualFollows(userId: string): Promise<{ id: string; name: string; avatar?: string }[]>;
-    createSocialChallenge(partnerId: string, mode: 'duel' | 'team', durationDays: number, targetKm?: number): Promise<string>;
-    respondSocialChallenge(challengeId: string, accept: boolean): Promise<void>;
-    getSocialChallenges(userId: string): Promise<SocialChallenge[]>;
-    getSocialChallengeProgress(challengeId: string): Promise<{ creatorKm: number; partnerKm: number }>;
-    finalizeSocialChallengeIfDue(challengeId: string): Promise<void>;
-    addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean>;
-    getGameModules(): Promise<any[]>;
-    getPetLeaderboard(limit?: number): Promise<any[]>;
-    /** Başka bir kullanıcının hayvanları: sadece herkese açık kart alanları. */
-    getPublicPetsByOwner(ownerId: string): Promise<{ id: string; name: string; type: string | null; breed: string | null; gender: string | null; image: string }[]>;
-
-    // Feedbacks
-    getFeedbacks(): Promise<SystemFeedback[]>;
-
-    // Unclaimed Patients Migration
-    insertUnclaimedPatient(data: {
-        rawName: string; rawPhone: string; petName?: string;
-        petSpecies?: string; petBreed?: string; legacyNotes?: string;
-    }): Promise<string>;
-    getMyUnclaimedPatients(): Promise<any[]>;
-
-    // SMS Settings & Sending
-    getMySmsStatus(): Promise<{provider: string, sender_id: string, is_active: boolean} | null>;
-    setClinicSmsSettings(provider: string, apiUsername: string, apiKey: string, senderId: string): Promise<boolean>;
-    sendClaimSms(unclaimedPatientId: string): Promise<{mode: string, sent: boolean}>;
-
-    // Claiming / Account Merging
-    checkUnclaimedMatches(phone: string): Promise<any[]>;
-    verifyAndClaim(unclaimedId: string, code: string): Promise<string>;
-    requestManualClaim(unclaimedId: string): Promise<boolean>;
-    approveManualClaim(unclaimedId: string): Promise<string>;
-
-    // CRM / Clinic Patients
-
-    // Clinic Exceptions (Faz 6)
-    getClinicExceptions(clinicId: string, startDate?: string, endDate?: string): Promise<any[]>;
-    upsertClinicException(clinicId: string, date: string, isClosed: boolean, openTime?: string | null, closeTime?: string | null, note?: string): Promise<boolean>;
-    deleteClinicException(clinicId: string, date: string): Promise<boolean>;
-
-    // Clinic Reviews (Faz 7)
-    getClinicReviews(clinicId: string): Promise<{ reviews: ClinicReview[], averageRating: number }>;
-    submitReview(clinicId: string, appointmentId: string, rating: number, comment?: string): Promise<boolean>;
-    getReviewableAppointments(userId: string): Promise<any[]>;
-    replyToReview(reviewId: string, clinicId: string, replyText: string): Promise<boolean>;
-
-    // Clinic Campaigns
-    getClinicDashboardStats(clinicId: string): Promise<any>;
-    getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]>;
-    createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean>;
-    addClinicCampaign(data: any): Promise<boolean>;
-    deleteCampaign(campaignId: string, clinicId: string): Promise<boolean>;
-
-    // Appointment Notifications (Faz 9)
-    getUnreadNotifications(recipientId: string): Promise<any[]>;
-    markNotificationRead(notificationId: string): Promise<boolean>;
-}
-
-export interface ClinicCampaign {
-    id: string;
-    clinic_id: string;
-    title: string;
-    description: string;
-    starts_at: string;
-    ends_at: string | null;
-    is_active?: boolean;
-    created_at: string;
-}
+/** İşletme kampanyası (clinic_campaigns satırı; fırsat hikâyesi bunu canlı okur, 8.64). */
+export type ClinicCampaign = Tables<'clinic_campaigns'>;
 
 export interface ClinicReview {
     id: string;

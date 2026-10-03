@@ -1,5 +1,5 @@
-// Supabase veritabanı şeması (otomatik üretildi: Supabase generate_typescript_types, 2026-10-03). ELLE DÜZENLEME;
-// şema değişince yeniden üret. Kullanım: Tables<'pets'> satır tipi.
+// Supabase veritabanı şeması — OTOMATİK ÜRETİLİR (Supabase generate_typescript_types). Elle düzenleme;
+// şema değişince yeniden üret (scratchpad/gentypes.cjs). Kullanım: Tables<'pets'> satır tipi, Database['public']['Functions'].
 
 export type Json =
   | string
@@ -5627,6 +5627,18 @@ export type Database = {
         Args: { p_user: string }
         Returns: undefined
       }
+      admin_daily_star_candidates: {
+        Args: { p_limit?: number }
+        Returns: {
+          avatar_url: string
+          breed: string
+          name: string
+          owner_username: string
+          pet_id: string
+          walks: number
+          week_km: number
+        }[]
+      }
       admin_review_business: {
         Args: { p_approve: boolean; p_business: string; p_reason?: string }
         Returns: undefined
@@ -6041,6 +6053,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      game_continue: { Args: never; Returns: number }
+      game_status: { Args: { p_pet_id?: string }; Returns: Json }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -6539,6 +6553,16 @@ export type Database = {
           role: string
         }[]
       }
+      my_unclaimed_matches: {
+        Args: never
+        Returns: {
+          clinic_name: string
+          id: string
+          pet_name: string
+          requested: boolean
+        }[]
+      }
+      normalize_tr_phone: { Args: { p_phone: string }; Returns: string }
       notify_business: {
         Args: {
           p_actor: string

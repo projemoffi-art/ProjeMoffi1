@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Phone, ShieldAlert } from 'lucide-react';
 import { useHealth } from '@/components/health/HealthProvider';
 import { ErrorText, Field, HealthCard, HealthHeader, LoadingBlocks, PrimaryButton, SectionTitle, Sheet, SoftButton, TextArea, TextInput } from '@/components/health/HealthUI';
@@ -50,7 +50,7 @@ export default function EmergencyInfoPage() {
     const profile = bundle?.profile;
     const activeMeds = useMemo(() => (bundle?.medications || []).filter(m => isMedicationActive(m, today)).map(m => m.name), [bundle, today]);
     const lastClinic = bundle?.records.find(r => r.source === 'clinic') || null;
-    const chip = pet ? (pet.microchip || pet.microchip_id || pet.microchip_no) : null;
+    const chip = pet ? pet.microchip : null;
 
     const setFlag = async (patch: { showOnLost?: boolean; showOnQr?: boolean }) => {
         if (!pet) return;
@@ -103,7 +103,7 @@ export default function EmergencyInfoPage() {
                                 <Row label="Veteriner" value={[profile?.primaryVetName || lastClinic?.clinicName, profile?.primaryVetPhone].filter(Boolean).join('\n')} empty="Girilmedi" phone={profile?.primaryVetPhone} />
                             </div>
                         </section>
-                        <p className="text-[11px] font-semibold text-secondary px-1">Düzenli ilaçlar İlaçlar bölümünden, çip numarası Kimlik Bilgileri'nden gelir.</p>
+                        <p className="text-[11px] font-semibold text-secondary px-1">Düzenli ilaçlar İlaçlar bölümünden, çip numarası Kimlik Bilgileri&apos;nden gelir.</p>
                         <SoftButton onClick={() => setEditOpen(true)}>Düzenle</SoftButton>
                     </>
                 )}
@@ -121,19 +121,23 @@ function EditSheet({ open, onClose, defaultVet }: { open: boolean; onClose: () =
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        if (!open) return;
-        setF({
+    // Pencere her açılışta güncel kayıtla doldurulur (çizim sırasında önceki açık/kapalı durumuyla karşılaştırma).
+    const [wasOpen, setWasOpen] = useState(false);
+    if (open !== wasOpen) {
+        setWasOpen(open);
+        if (open) {
+            setF({
             allergies: p?.allergies.join(', ') || '', chronic: p?.chronicConditions.join(', ') || '', blood: p?.bloodType || '',
             notes: p?.notes || '',
             // İlk kez dolduruluyorsa sahibin kendi adı ve telefonu önerilir.
             contactName: p?.contactName || (p?.contactPhone ? '' : user?.name || ''),
-            contactPhone: p?.contactPhone || (user as any)?.phone || '',
+            contactPhone: p?.contactPhone || (user as { phone?: string } | null)?.phone || '',
             altName: p?.altContactName || '', altPhone: p?.altContactPhone || '',
             vetName: p?.primaryVetName || defaultVet, vetPhone: p?.primaryVetPhone || '',
-        });
-        setError(null);
-    }, [open, p, defaultVet, user]);
+            });
+            setError(null);
+        }
+    }
 
     const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF(s => ({ ...s, [k]: e.target.value }));
 

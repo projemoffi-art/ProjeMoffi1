@@ -46,12 +46,6 @@ html, body {
   --color-moffi-primary: #22C55E;
 }
 
-/* THEME ACCENT COLORS */
-.theme-green { --accent: #22C55E; }
-.theme-cyan { --accent: #06B6D4; }
-.theme-purple { --accent: #A855F7; }
-.theme-gold { --accent: #F59E0B; }
-.theme-rose { --accent: #F43F5E; }
 
 
 

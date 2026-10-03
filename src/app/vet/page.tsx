@@ -21,8 +21,11 @@ import { VetClinic, Doctor } from "@/types/domain";
 import { Pet, usePet } from "@/context/PetContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/context/NotificationContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { apiService } from "@/services/apiService";
+import { ageText } from "@/lib/health/derive";
+import { todayKey } from "@/lib/appointmentTime";
 import { healthService } from "@/services/healthService";
 import { MyAppointmentsPanel } from "@/components/vet/MyAppointmentsPanel";
 import { BUSINESS_TYPE_ORDER, getBusinessTypeConfig, isBusinessType } from "@/config/businessTypes";
@@ -30,6 +33,10 @@ import type { BusinessType } from "@/context/AuthContext";
 import turkeyCities from "@/data/turkey_cities.json";
 
 const ClinicMapView = dynamic(() => import("@/components/vet/ClinicMapView"), { ssr: false });
+
+type ClinicService = Awaited<ReturnType<typeof apiService.getClinicServices>>[number];
+type ReviewPrompt = Awaited<ReturnType<typeof apiService.getReviewableAppointments>>[number] & { clinicName: string };
+type SharedLog = Awaited<ReturnType<typeof apiService.getMySharedPassports>>[number];
 
 function VetPageContent() {
     const router = useRouter();
@@ -50,7 +57,7 @@ function VetPageContent() {
     useEffect(() => {
         if (user?.id) {
             apiService.getReviewableAppointments(user.id).then(appts => {
-                setReviewableAppointmentIds(new Set(appts.map((a: any) => a.id)));
+                setReviewableAppointmentIds(new Set(appts.map(a => a.id)));
             }).catch(console.error);
         }
     }, [user?.id]);
@@ -147,11 +154,11 @@ function VetPageContent() {
     const activeFilterCount = countActiveFilters(filters);
     const serviceOptions = useMemo(() => {
         const names = new Set<string>();
-        allClinics.forEach((c: any) => (c.features || []).forEach((f: string) => f && names.add(f)));
+        allClinics.forEach(c => (c.features || []).forEach((f: string) => f && names.add(f)));
         return [...names].sort((a, b) => a.localeCompare(b, 'tr'));
     }, [allClinics]);
 
-    const openClinicDetail = (clinic: any) => {
+    const openClinicDetail = (clinic: VetClinic) => {
         setDetailClinicId(clinic.id);
         setDetailClinicData(clinic);
     };
@@ -177,15 +184,16 @@ function VetPageContent() {
 
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
     const [detailClinicId, setDetailClinicId] = useState<string | null>(null);
-    const [detailClinicData, setDetailClinicData] = useState<any>(null);
+    const [detailClinicData, setDetailClinicData] = useState<VetClinic | null>(null);
     const [drawerDefaultReview, setDrawerDefaultReview] = useState(false);
     const [drawerDefaultReviewAppointmentId, setDrawerDefaultReviewAppointmentId] = useState<string | null>(null);
     const [reviewableAppointmentIds, setReviewableAppointmentIds] = useState<Set<string>>(new Set());
-    const [pendingReviewPrompt, setPendingReviewPrompt] = useState<any>(null);
+    const [pendingReviewPrompt, setPendingReviewPrompt] = useState<ReviewPrompt | null>(null);
 
 
-    // Notification State (Faz 9)
-    const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
+    // Randevu bildirimleri: uygulamanın tek bildirim kaynağından (NotificationContext, 8.37).
+    const { notifications, markAsRead } = useNotifications();
+    const appointmentNotifications = notifications.filter(n => n.type === 'appointment' && !n.is_read);
     const [showNotifications, setShowNotifications] = useState(false);
 
     // Data Sharing Consent States
@@ -196,18 +204,19 @@ function VetPageContent() {
 
     // Transparency Logs States
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
-    const [transparencyLogs, setTransparencyLogs] = useState<any[]>([]);
+    const [transparencyLogs, setTransparencyLogs] = useState<SharedLog[]>([]);
 
     const [timeSlots, setTimeSlots] = useState<{ time: string; disabled: boolean }[]>([]);
     const [slotsLoading, setSlotsLoading] = useState(false);
     const [openDays, setOpenDays] = useState<Record<string, boolean>>({});
-    const [clinicServices, setClinicServices] = useState<any[]>([]);
-    const [selectedSvc, setSelectedSvc] = useState<any>(null);
+    const [clinicServices, setClinicServices] = useState<ClinicService[]>([]);
+    // Seçilen hizmet: işletmenin listesinden ya da liste yoksa genel randevu (ad + süre yeterli).
+    const [selectedSvc, setSelectedSvc] = useState<Pick<ClinicService, 'service_name' | 'duration_minutes' | 'price'> | null>(null);
     const [appointmentType, setAppointmentType] = useState<string>('');
 
     // Otomatik Yorum Daveti
     useEffect(() => {
-        if (!user || !isSupabaseEnabled || allClinics.length === 0) return;
+        if (!user || allClinics.length === 0) return;
         if (pendingReviewPrompt) return;
 
         const checkReviewPrompts = async () => {
@@ -231,43 +240,7 @@ function VetPageContent() {
         checkReviewPrompts();
     }, [user, allClinics, pendingReviewPrompt]);
 
-    // Fetch notifications (Faz 9)
-    useEffect(() => {
-        if (!user || !isSupabaseEnabled) return;
-        const fetchNotifications = async () => {
-            try {
-                const notifs = await apiService.getUnreadNotifications(user.id);
-                setUnreadNotifications(prev => {
-                    const locallyReadIds = new Set(prev.filter(p => p.isReadLocally).map(p => p.id));
-                    return (notifs || []).map(n => ({ 
-                        ...n, 
-                        isReadLocally: locallyReadIds.has(n.id) 
-                    }));
-                });
-            } catch (err) {
-                console.error("Error fetching notifications:", err);
-            }
-        };
-        fetchNotifications();
-
-        const channel = supabase
-            .channel(`vet-notifications-${user.id}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload: any) => {
-                if (payload.new?.type === 'appointment') fetchNotifications();
-            })
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
-    }, [user?.id]);
-
-    const handleNotificationClick = async (notifId: string) => {
-        const notif = unreadNotifications.find(n => n.id === notifId);
-        if (notif?.isReadLocally) return;
-
-        apiService.markNotificationRead(notifId).catch(console.error);
-        setUnreadNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isReadLocally: true } : n));
-    };
-
-    const unreadCount = unreadNotifications.filter(n => !n.isReadLocally).length;
+    const unreadCount = appointmentNotifications.length;
 
     // Click outside handler for notifications
     const notifRef = React.useRef<HTMLDivElement>(null);
@@ -470,9 +443,12 @@ function VetPageContent() {
 
     const rebookServiceRef = useRef<string | null>(null);
     const handleRebook = async (clinicId: string, serviceName: string) => {
-        let clinic: any = allClinics.find(c => c.id === clinicId);
+        let clinic: VetClinic | null = allClinics.find(c => c.id === clinicId) ?? null;
         if (!clinic) {
-            try { clinic = await apiService.getClinicDetails(clinicId); } catch { clinic = null; }
+            try {
+                const found = await apiService.getClinicDetails(clinicId);
+                clinic = found?.id ? { ...found, id: found.id, features: found.services.map(svc => svc.service_name) } : null;
+            } catch { clinic = null; }
         }
         if (!clinic) {
             showToast("Bu işletmeye şu an ulaşılamıyor.", "AlertCircle", "text-red-500 font-bold");
@@ -487,7 +463,7 @@ function VetPageContent() {
         rebookServiceRef.current = serviceName || null;
         openAppointment(clinic);
         if (serviceName && selectedClinic?.id === clinic.id && clinicServices.length > 0) {
-            const match = clinicServices.find((s: any) => s.service_name === serviceName);
+            const match = clinicServices.find(s => s.service_name === serviceName);
             rebookServiceRef.current = null;
             if (match) setSelectedSvc(match);
         }
@@ -501,27 +477,10 @@ function VetPageContent() {
 
     useEffect(() => {
         if (!rebookServiceRef.current || clinicServices.length === 0) return;
-        const match = clinicServices.find((s: any) => s.service_name === rebookServiceRef.current);
+        const match = clinicServices.find(s => s.service_name === rebookServiceRef.current);
         rebookServiceRef.current = null;
         if (match) setSelectedSvc(match);
     }, [clinicServices]);
-
-    const calculatePetAge = (pet: any) => {
-        if (pet.age) return pet.age;
-        const bDate = pet.birth_date || pet.birthday;
-        if (bDate) {
-            try {
-                const birth = new Date(bDate);
-                const now = new Date();
-                const diffMs = now.getTime() - birth.getTime();
-                const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
-                return diffYears.toFixed(1);
-            } catch (error) {
-                console.error("Pet age could not be calculated:", error);
-            }
-        }
-        return undefined;
-    };
 
     const handleCreateAppointment = async () => {
         if (!selectedClinic || !selectedTime) {
@@ -531,7 +490,7 @@ function VetPageContent() {
 
         const bookingPet = selectedAppointmentPet || activePet;
 
-        let sharedVaccines: any[] = [];
+        let sharedVaccines: { name: string; date?: string | null; status?: string }[] = [];
         if (shareVaccines && bookingPet) {
             try {
                 // Sağlık Karnesi'ndeki gerçek aşı kayıtları (yapılanlar + planlananlar).
@@ -560,8 +519,8 @@ function VetPageContent() {
             basic: shareBasic && bookingPet ? {
                 name: bookingPet.name,
                 breed: bookingPet.breed || null,
-                weight: bookingPet.weight ? `${bookingPet.weight} kg` : null,
-                age: calculatePetAge(bookingPet)
+                weight: bookingPet.weight || null, // zaten "28 kg" biçiminde (mapPetRow)
+                age: ageText(bookingPet.birthday, bookingPet.age, todayKey())
             } : null,
             vaccines: shareVaccines && sharedVaccines.length > 0 ? sharedVaccines : null,
             healthNotes: shareNotes ? sharedHealthNotes || null : null,
@@ -581,9 +540,10 @@ function VetPageContent() {
                 selectedSvc?.duration_minutes || 30,
                 selectedDoctor?.id
             );
-        } catch (error: any) {
-            showToast(error?.message || "Randevu oluşturulamadı, lütfen tekrar dene.", "AlertCircle", "text-red-500 font-bold");
-            if (error?.code === 'SLOT_TAKEN') {
+        } catch (error) {
+            const err = error as { message?: string; code?: string } | null;
+            showToast(err?.message || "Randevu oluşturulamadı, lütfen tekrar dene.", "AlertCircle", "text-red-500 font-bold");
+            if (err?.code === 'SLOT_TAKEN') {
                 setSelectedTime(null);
                 loadSlots();
             }
@@ -606,13 +566,12 @@ function VetPageContent() {
 
     const mappedAppointments = useMemo(() => {
         if (!appointments) return [];
-        
-        let allApts: any[] = [];
-        Object.keys(appointments).forEach(petId => {
-            const petInfo = pets?.find((p: any) => p.id === petId);
+
+        return Object.keys(appointments).flatMap(petId => {
+            const petInfo = pets?.find(p => p.id === petId);
             const petName = petInfo ? petInfo.name : 'Evcil Hayvan';
-            
-            const mapped = appointments[petId].map((apt: any) => {
+
+            return appointments[petId].map(apt => {
                 let dateStr = 'Tarih Yok';
                 let timeStr = 'Saat Yok';
                 if (apt.appointment_date) {
@@ -653,9 +612,7 @@ function VetPageContent() {
                     _rawCreatedAt: apt.created_at ? new Date(apt.created_at).getTime() : 0
                 };
             });
-            allApts = [...allApts, ...mapped];
         });
-        return allApts;
     }, [appointments, pets, businessConfig.customerFallbackService]);
 
     return (
@@ -694,13 +651,13 @@ function VetPageContent() {
                                         className="absolute top-full right-0 mt-2 w-72 bg-card border border-card-border rounded-xl shadow-xl overflow-hidden z-[170]"
                                     >
                                         <div className="max-h-64 overflow-y-auto">
-                                            {unreadNotifications.length > 0 ? unreadNotifications.map(notif => (
+                                            {appointmentNotifications.length > 0 ? appointmentNotifications.map(notif => (
                                                 <button
                                                     key={notif.id}
-                                                    onClick={() => handleNotificationClick(notif.id)}
-                                                    className={cn("w-full text-left p-4 border-b border-card-border last:border-0 hover:bg-card-border/30", notif.isReadLocally && "opacity-50")}
+                                                    onClick={() => { markAsRead(notif.id).catch(console.error); }}
+                                                    className="w-full text-left p-4 border-b border-card-border last:border-0 hover:bg-card-border/30"
                                                 >
-                                                    <p className="text-xs font-bold text-foreground mb-1 leading-relaxed">{notif.message}</p>
+                                                    <p className="text-xs font-bold text-foreground mb-1 leading-relaxed">{notif.content || notif.title}</p>
                                                     <span className="text-[10px] font-semibold text-secondary">{new Date(notif.created_at).toLocaleString('tr-TR')}</span>
                                                 </button>
                                             )) : (
@@ -741,7 +698,7 @@ function VetPageContent() {
                                     disabled={!(selectedProv || userProvince)}
                                 >
                                     <option value="" disabled>İlçe seç</option>
-                                    {turkeyCities.find(c => c.name === (selectedProv || userProvince))?.districts.map((d: any) => (
+                                    {turkeyCities.find(c => c.name === (selectedProv || userProvince))?.districts.map(d => (
                                         <option key={d.name} value={d.name}>{d.name}</option>
                                     ))}
                                 </select>
@@ -998,7 +955,7 @@ function VetPageContent() {
                     <motion.div key="appointment-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[3100] bg-black/50 dark:bg-black/85 backdrop-blur-sm">
                         <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed top-0 right-0 z-[3101] h-full w-full sm:w-[480px] bg-background shadow-[-20px_0_50px_rgba(0,0,0,0.05)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-card-border flex flex-col overflow-hidden text-foreground p-6 pt-12 sm:pt-6">
 
-                            
+
                             <div className="flex justify-between items-center mb-6 mt-2 sm:mt-0">
                                 <h2 className="text-lg font-black tracking-tight">{businessConfig.customerRequestTitle}</h2>
                                 <button onClick={() => setActiveModal(null)} className="w-8 h-8 bg-card rounded-full flex items-center justify-center border border-card-border hover:bg-card-border/80 text-foreground transition-all"><X className="w-4 h-4" /></button>
@@ -1062,7 +1019,7 @@ function VetPageContent() {
                                             <div className="bg-card border border-card-border rounded-2xl p-6 text-center">
                                                 <p className="text-sm font-bold text-secondary mb-4">Bu işletme henüz hizmet listesini eklemedi.</p>
                                                 <button
-                                                    onClick={() => setSelectedSvc({ service_name: businessConfig.customerFallbackService, duration_minutes: 30 })}
+                                                    onClick={() => setSelectedSvc({ service_name: businessConfig.customerFallbackService, duration_minutes: 30, price: null })}
                                                     className="px-6 py-2 bg-accent/10 text-accent text-xs font-black rounded-xl transition-colors hover:bg-accent/20 inline-block"
                                                 >
                                                     {businessConfig.customerBookingLabel}
@@ -1070,7 +1027,7 @@ function VetPageContent() {
                                             </div>
                                         ) : (
                                             <div className="space-y-2.5">
-                                                {clinicServices.map((svc: any) => (
+                                                {clinicServices.map(svc => (
                                                     <button
                                                         key={svc.id}
                                                         onClick={() => setSelectedSvc(svc)}
@@ -1105,14 +1062,14 @@ function VetPageContent() {
                                                     {selectedSvc.price != null && <> · {Number(selectedSvc.price).toLocaleString('tr-TR')} ₺</>}
                                                 </div>
                                             </div>
-                                            <button 
+                                            <button
                                                 onClick={() => { setSelectedSvc(null); setSelectedDate(''); setSelectedTime(null); }}
                                                 className="text-[9px] font-black text-accent/70 hover:text-accent uppercase tracking-widest px-3 py-1.5 bg-accent/10 rounded-lg transition-colors"
                                             >
                                                 Değiştir
                                             </button>
                                         </div>
-                                        
+
                                         {/* DOCTOR SELECTOR */}
                                         {clinicDoctors.length > 0 && (
                                             <div className="mt-4 mb-4">
@@ -1142,7 +1099,7 @@ function VetPageContent() {
                                                             <div className="text-[9px] font-black text-accent uppercase tracking-wider mb-0.5">Seçilen doktor</div>
                                                             <div className="text-sm font-black text-foreground tracking-tight">{selectedDoctor.name}</div>
                                                         </div>
-                                                        <button 
+                                                        <button
                                                             onClick={() => setSelectedDoctor(null)}
                                                             className="text-[9px] font-black text-accent/70 hover:text-accent uppercase tracking-widest px-3 py-1.5 bg-accent/10 rounded-lg transition-colors"
                                                         >
@@ -1156,7 +1113,7 @@ function VetPageContent() {
                                 {/* DATE SELECTOR */}
                                 <div>
                                     <label className="text-[10px] font-black text-secondary uppercase tracking-wider mb-2.5 block px-1">Tarih seçimi</label>
-                                    <div 
+                                    <div
                                         ref={dateScroll.ref}
                                         onMouseDown={dateScroll.onMouseDown}
                                         onMouseLeave={dateScroll.onMouseLeave}
@@ -1229,7 +1186,7 @@ function VetPageContent() {
                                     <div className="text-[8px] font-black text-secondary uppercase tracking-widest mb-3.5 flex items-center gap-1.5">
                                         <Syringe className="w-3.5 h-3.5 text-accent" /> TIBBİ VERİ PAYLAŞIM TERCİHLERİ
                                     </div>
-                                    
+
                                     <div className="space-y-2.5">
                                         {/* Basic Info (Always Checked / Disabled) */}
                                         <div className="flex items-center justify-between p-3 rounded-xl bg-card/50 border border-card-border opacity-70 cursor-not-allowed select-none transition-all">
@@ -1245,7 +1202,7 @@ function VetPageContent() {
                                         </div>
 
                                         {/* Vaccine History (Optional toggle switch) */}
-                                        <div 
+                                        <div
                                             onClick={() => handlePreferenceChange('vaccines', !shareVaccines)}
                                             className="flex items-center justify-between p-3 rounded-xl bg-card border border-card-border hover:border-card-border cursor-pointer transition-all duration-200 select-none active:scale-[0.98]"
                                         >
@@ -1265,7 +1222,7 @@ function VetPageContent() {
                                         </div>
 
                                         {/* Health Notes (Optional toggle switch) */}
-                                        <div 
+                                        <div
                                             onClick={() => handlePreferenceChange('notes', !shareNotes)}
                                             className="flex items-center justify-between p-3 rounded-xl bg-card border border-card-border hover:border-card-border cursor-pointer transition-all duration-200 select-none active:scale-[0.98]"
                                         >
@@ -1285,7 +1242,7 @@ function VetPageContent() {
                                         </div>
 
                                         {/* Owner Info (Optional toggle switch) */}
-                                        <div 
+                                        <div
                                             onClick={() => handlePreferenceChange('owner', !shareOwner)}
                                             className="flex items-center justify-between p-3 rounded-xl bg-card border border-card-border hover:border-card-border cursor-pointer transition-all duration-200 select-none active:scale-[0.98]"
                                         >
@@ -1329,8 +1286,8 @@ function VetPageContent() {
                 )}
 
 
-                <ClinicListModal 
-                    isOpen={activeModal === 'clinicList'} 
+                <ClinicListModal
+                    isOpen={activeModal === 'clinicList'}
                     onClose={() => setActiveModal(null)}
                     clinics={allClinics}
                     onSelectClinic={(clinic) => openAppointment(clinic)}
@@ -1339,11 +1296,11 @@ function VetPageContent() {
 
                 {/* REVIEW PROMPT TOAST */}
                 {pendingReviewPrompt && (
-                    <motion.div 
-                        key="review-toast" 
-                        initial={{ y: 50, opacity: 0 }} 
-                        animate={{ y: 0, opacity: 1 }} 
-                        exit={{ y: 50, opacity: 0 }} 
+                    <motion.div
+                        key="review-toast"
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 50, opacity: 0 }}
                         className="fixed bottom-24 inset-x-4 md:inset-x-auto md:right-8 md:bottom-24 flex justify-center md:justify-end z-[250]"
                     >
                         <div className="bg-card text-foreground p-4 rounded-2xl shadow-2xl border border-card-border flex items-center justify-between gap-3 w-full md:w-auto max-w-sm">
@@ -1354,7 +1311,7 @@ function VetPageContent() {
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button 
+                                <button
                                     onClick={() => {
                                         localStorage.setItem(`moffi_review_prompt_shown_${pendingReviewPrompt.id}`, "true");
                                         const clinicData = allClinics.find(c => c.id === pendingReviewPrompt.clinic_id);
@@ -1367,7 +1324,7 @@ function VetPageContent() {
                                 >
                                     Değerlendir
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => {
                                         localStorage.setItem(`moffi_review_prompt_shown_${pendingReviewPrompt.id}`, "true");
                                         setPendingReviewPrompt(null);
@@ -1388,7 +1345,7 @@ function VetPageContent() {
                     <motion.div key="log-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/60 dark:bg-black/90 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
                         <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-background rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[70vh] flex flex-col border border-card-border text-foreground relative border-t border-t-accent/20">
                             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-card-border rounded-full sm:hidden" />
-                            
+
                             <div className="flex justify-between items-center mb-5 mt-2 sm:mt-0">
                                 <div className="text-left">
                                     <span className="text-[9px] font-black text-accent uppercase tracking-widest block mb-0.5">Şeffaf paylaşım günlüğü</span>
@@ -1437,7 +1394,7 @@ function VetPageContent() {
             </AnimatePresence>
 
             {/* 5. SIDE DRAWER (Clinic Details) */}
-                <ClinicDetailDrawer 
+                <ClinicDetailDrawer
                     clinicId={detailClinicId}
                     clinicData={detailClinicData}
                     businessType={selectedBusinessType}

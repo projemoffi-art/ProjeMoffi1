@@ -1,15 +1,15 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
-import { useAuth } from './AuthContext';
+import { useAuth, type AccessibilitySettings } from './AuthContext';
 
 type Theme = 'light' | 'dark';
 /** Kullanıcının seçimi: açık, koyu ya da cihazın ayarı. Varsayılan açık (Baran, 2026-10-03). */
 export type ThemePreference = 'light' | 'dark' | 'system';
 const isPreference = (v: unknown): v is ThemePreference => v === 'light' || v === 'dark' || v === 'system';
 type FontSize = 'small' | 'medium' | 'large';
-type ColorBlindMode = 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
+export type ColorBlindMode = 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 
 interface ThemeContextType {
     /** O an uygulanan tema (sistem seçiliyse cihazın ayarına göre çözülmüş hâli). */
@@ -36,193 +36,97 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Cihazdaki tema seçimi (girişten önce de geçerli). Aynı sekmedeki değişiklik özel olayla duyurulur.
+const THEME_KEY = 'moffi-theme';
+const THEME_EVENT = 'moffi-theme-change';
+const subscribeStoredTheme = (cb: () => void) => {
+    window.addEventListener('storage', cb);
+    window.addEventListener(THEME_EVENT, cb);
+    return () => { window.removeEventListener('storage', cb); window.removeEventListener(THEME_EVENT, cb); };
+};
+const readStoredTheme = (): ThemePreference | null => {
+    try { const v = localStorage.getItem(THEME_KEY); return isPreference(v) ? v : null; } catch { return null; }
+};
+const writeStoredTheme = (v: ThemePreference) => {
+    try { localStorage.setItem(THEME_KEY, v); } catch { /* gizli pencere: yalnızca hesaba yazılır */ }
+    window.dispatchEvent(new Event(THEME_EVENT));
+};
+
+const subscribeSystemDark = (cb: () => void) => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', cb);
+    return () => mq.removeEventListener('change', cb);
+};
+const readSystemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+const AUTH_PATHS = ['/', '/onboarding', '/login', '/register', '/business-register', '/reset-password', '/auth/callback'];
+
+// Tema ve erişilebilirlik değerleri kopyalanmaz, kaynağından türetilir: hesap ayarları (settings.appearance.theme,
+// settings.accessibility) önce, yoksa cihazdaki seçim. updateSettings kullanıcıyı anında güncellediği için ayrı state gerekmez.
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const { user, updateSettings } = useAuth();
-    const [preference, setPreferenceState] = useState<ThemePreference>('light');
-    const [systemDark, setSystemDark] = useState(false);
+    const pathname = usePathname();
+    const storedTheme = useSyncExternalStore(subscribeStoredTheme, readStoredTheme, () => null);
+    const systemDark = useSyncExternalStore(subscribeSystemDark, readSystemDark, () => false);
+
+    const accountTheme = user?.settings?.appearance?.theme;
+    const preference: ThemePreference = (isPreference(accountTheme) ? accountTheme : null) ?? storedTheme ?? 'light';
     const theme: Theme = preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
 
-    // Cihazın açık/koyu ayarı (yalnızca 'system' seçiliyken etkili)
+    const acc = user?.settings?.accessibility;
+    const fontSize: FontSize = acc?.fontSize || 'medium';
+    const colorBlindMode: ColorBlindMode = acc?.colorBlindMode || 'none';
+    const boldText = !!acc?.boldText;
+    const highContrast = !!acc?.highContrast;
+    const reduceMotion = !!acc?.reduceMotion;
+    const reduceTransparency = !!acc?.reduceTransparency;
+    const seniorMode = !!acc?.seniorMode;
+    const font = user?.settings?.appearance?.font || 'font-sans';
+
+    // Hesaptaki seçim bu cihaza da yazılır: çıkış yapınca ya da giriş ekranında aynı tema kalsın.
     useEffect(() => {
-        const mq = window.matchMedia('(prefers-color-scheme: dark)');
-        const update = () => setSystemDark(mq.matches);
-        update();
-        mq.addEventListener('change', update);
-        return () => mq.removeEventListener('change', update);
-    }, []);
-    const [fontSize, setFontSizeState] = useState<FontSize>('medium');
-    const [colorBlindMode, setColorBlindModeState] = useState<ColorBlindMode>('none');
-    
-    // Accessibility States
-    const [boldText, setBoldTextState] = useState(false);
-    const [highContrast, setHighContrastState] = useState(false);
-    const [reduceMotion, setReduceMotionState] = useState(false);
-    const [reduceTransparency, setReduceTransparencyState] = useState(false);
-    const [seniorMode, setSeniorModeState] = useState(false);
+        if (isPreference(accountTheme) && accountTheme !== readStoredTheme()) writeStoredTheme(accountTheme);
+    }, [accountTheme]);
 
-    // localStorage'dan theme'i yükle (sadece ilk açılışta)
-    useEffect(() => {
-        const saved = localStorage.getItem('moffi-theme');
-        setPreferenceState(isPreference(saved) ? saved : 'light');
-    }, []);
-
-    // Load Accessibility Settings from user profile
-    useEffect(() => {
-        if (user?.settings?.accessibility) {
-            const acc = user.settings.accessibility;
-            if (acc.fontSize) setFontSizeState(acc.fontSize);
-            if (acc.colorBlindMode) setColorBlindModeState(acc.colorBlindMode);
-            if (acc.boldText !== undefined) setBoldTextState(acc.boldText);
-            if (acc.highContrast !== undefined) setHighContrastState(acc.highContrast);
-            if (acc.reduceMotion !== undefined) setReduceMotionState(acc.reduceMotion);
-            if (acc.reduceTransparency !== undefined) setReduceTransparencyState(acc.reduceTransparency);
-            if (acc.seniorMode !== undefined) setSeniorModeState(acc.seniorMode);
-        }
-    }, [user?.settings?.accessibility]);
-
-    const pathname = usePathname();
-
-    // Apply classes to document root
+    // Sınıfları <html>'e uygula (giriş ve kurulum ekranları her zaman açık tema)
     useEffect(() => {
         const root = document.documentElement;
-        
-        const classesToRemove = [
+        root.classList.remove(
             'apple-midnight', 'apple-light', 'pastel-soft', 'prime-cyber', 'light', 'dark',
             'font-size-small', 'font-size-medium', 'font-size-large',
             'font-sans', 'font-serif', 'font-mono', 'font-pacifico', 'font-satisfy', 'font-playfair',
             'cb-protanopia', 'cb-deuteranopia', 'cb-tritanopia',
             'bold-text', 'high-contrast', 'reduce-motion', 'reduce-transparency', 'senior-mode',
-            'theme-green', 'theme-cyan', 'theme-purple', 'theme-gold', 'theme-rose'
-        ];
-        root.classList.remove(...classesToRemove);
-
-        // Determine if current path should force light mode
-        const authPaths = ['/', '/onboarding', '/login', '/register', '/business-register', '/reset-password', '/auth/callback'];
-        const isAuthPage = authPaths.includes(pathname || '');
-        const activeTheme = isAuthPage ? 'light' : theme;
-
-        // Apply new classes
-        root.classList.add(activeTheme);
+            'theme-green', 'theme-cyan', 'theme-purple', 'theme-gold', 'theme-rose',
+        );
+        root.classList.add(AUTH_PATHS.includes(pathname || '') ? 'light' : theme);
         root.classList.add(`font-size-${fontSize}`);
-        
-        // Apply Global Font from settings if exists
-        const activeFont = user?.settings?.appearance?.font || 'font-sans';
-        root.classList.add(activeFont);
-
-        // Apply Accent Color from settings if exists
-        const activeAccentColor = user?.settings?.appearance?.accentColor || 'green';
-        root.classList.add(`theme-${activeAccentColor}`);
-
+        root.classList.add(font);
         if (colorBlindMode !== 'none') root.classList.add(`cb-${colorBlindMode}`);
         if (boldText) root.classList.add('bold-text');
         if (highContrast) root.classList.add('high-contrast');
         if (reduceMotion) root.classList.add('reduce-motion');
         if (reduceTransparency) root.classList.add('reduce-transparency');
         if (seniorMode) root.classList.add('senior-mode');
-    }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode, pathname, user?.settings?.appearance?.font, user?.settings?.appearance?.accentColor]);
+    }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode, pathname, font]);
 
     const setTheme = React.useCallback((next: ThemePreference) => {
-        setPreferenceState(next);
-        localStorage.setItem('moffi-theme', next);
+        writeStoredTheme(next);
         updateSettings('appearance', { theme: next });
     }, [updateSettings]);
 
-    const setFontSize = React.useCallback((size: FontSize) => {
-        setFontSizeState(size);
-        updateSettings('accessibility', { fontSize: size });
-    }, [updateSettings]);
+    const setAccessibility = React.useCallback((patch: AccessibilitySettings) => { updateSettings('accessibility', patch); }, [updateSettings]);
 
-    const setColorBlindMode = React.useCallback((mode: ColorBlindMode) => {
-        setColorBlindModeState(mode);
-        updateSettings('accessibility', { colorBlindMode: mode });
-    }, [updateSettings]);
-
-    const setBoldText = React.useCallback((v: boolean) => {
-        setBoldTextState(v);
-        updateSettings('accessibility', { boldText: v });
-    }, [updateSettings]);
-
-    const setHighContrast = React.useCallback((v: boolean) => {
-        setHighContrastState(v);
-        updateSettings('accessibility', { highContrast: v });
-    }, [updateSettings]);
-
-    const setReduceMotion = React.useCallback((v: boolean) => {
-        setReduceMotionState(v);
-        updateSettings('accessibility', { reduceMotion: v });
-    }, [updateSettings]);
-
-    const setReduceTransparency = React.useCallback((v: boolean) => {
-        setReduceTransparencyState(v);
-        updateSettings('accessibility', { reduceTransparency: v });
-    }, [updateSettings]);
-
-    const setSeniorMode = React.useCallback((v: boolean) => {
-        setSeniorModeState(v);
-        updateSettings('accessibility', { seniorMode: v });
-    }, [updateSettings]);
-
-    const themeValue = React.useMemo(() => ({
+    const themeValue = React.useMemo<ThemeContextType>(() => ({
         theme, setTheme, preference,
-        fontSize, setFontSize,
-        colorBlindMode, setColorBlindMode,
-        boldText, setBoldText,
-        highContrast, setHighContrast,
-        reduceMotion, setReduceMotion,
-        reduceTransparency, setReduceTransparency,
-        seniorMode, setSeniorMode
-    }), [
-        theme, preference, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode,
-        setTheme, setFontSize, setColorBlindMode, setBoldText, setHighContrast, setReduceMotion, setReduceTransparency, setSeniorMode
-    ]);
-
-    // Sync from LocalStorage / AuthContext with redundancy check
-    useEffect(() => {
-        // 1. Initial LocalStorage load (Client-side only)
-        const saved = localStorage.getItem('moffi-theme');
-        const validPreference: ThemePreference = isPreference(saved) ? saved : 'light';
-        if (validPreference !== preference) setPreferenceState(validPreference);
-
-        // 2. Sync from AuthContext (Stable primitives)
-        if (user?.settings?.appearance?.theme) {
-            const userTheme = user.settings.appearance.theme;
-            if (isPreference(userTheme) && userTheme !== preference) {
-                setPreferenceState(userTheme);
-                localStorage.setItem('moffi-theme', userTheme);
-            }
-        }
-
-        // 2. Sync from AuthContext (Stable primitives)
-        if (user?.settings?.accessibility) {
-            const acc = user.settings.accessibility;
-            if (acc.fontSize !== fontSize) setFontSizeState(acc.fontSize || 'medium');
-            if (acc.colorBlindMode !== colorBlindMode) setColorBlindModeState(acc.colorBlindMode || 'none');
-            
-            const bText = !!acc.boldText;
-            if (bText !== boldText) setBoldTextState(bText);
-            
-            const hCont = !!acc.highContrast;
-            if (hCont !== highContrast) setHighContrastState(hCont);
-            
-            const rMot = !!acc.reduceMotion;
-            if (rMot !== reduceMotion) setReduceMotionState(rMot);
-            
-            const rTrans = !!acc.reduceTransparency;
-            if (rTrans !== reduceTransparency) setReduceTransparencyState(rTrans);
-
-            const sMode = !!(acc as any).seniorMode;
-            if (sMode !== seniorMode) setSeniorModeState(sMode);
-        }
-    }, [
-        user?.id, 
-        user?.settings?.accessibility?.fontSize,
-        user?.settings?.accessibility?.colorBlindMode,
-        user?.settings?.accessibility?.boldText,
-        user?.settings?.accessibility?.highContrast,
-        user?.settings?.accessibility?.reduceMotion,
-        user?.settings?.accessibility?.reduceTransparency,
-        (user?.settings?.accessibility as any)?.seniorMode
-    ]);
+        fontSize, setFontSize: (v) => setAccessibility({ fontSize: v }),
+        colorBlindMode, setColorBlindMode: (v) => setAccessibility({ colorBlindMode: v }),
+        boldText, setBoldText: (v) => setAccessibility({ boldText: v }),
+        highContrast, setHighContrast: (v) => setAccessibility({ highContrast: v }),
+        reduceMotion, setReduceMotion: (v) => setAccessibility({ reduceMotion: v }),
+        reduceTransparency, setReduceTransparency: (v) => setAccessibility({ reduceTransparency: v }),
+        seniorMode, setSeniorMode: (v) => setAccessibility({ seniorMode: v }),
+    }), [theme, setTheme, preference, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode, setAccessibility]);
 
     return (
         <ThemeContext.Provider value={themeValue}>

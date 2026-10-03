@@ -13,16 +13,13 @@ import { ActiveWalkMiniWidget } from "@/components/walk/ActiveWalkMiniWidget";
 import { useActivity } from "@/context/ActivityContext";
 
 // Lazy loaded overlays — only the ones that SHOULD be overlays
-const ActionHubDrawer = dynamic(() => import("@/components/community/ActionHubDrawer").then(mod => mod.ActionHubDrawer), { ssr: false });
 const WalkQuickSheet = dynamic(() => import("@/components/walk/WalkQuickSheet").then(mod => mod.WalkQuickSheet), { ssr: false });
 const SettingsDrawer = dynamic(() => import("@/components/community/SettingsDrawer").then(mod => mod.SettingsDrawer), { ssr: false });
 const InboxModal = dynamic(() => import("@/components/community/InboxModal").then(mod => mod.InboxModal), { ssr: false });
-const MoffiMapsModal = dynamic(() => import("@/components/maps/MoffiMapsModal").then(mod => mod.MoffiMapsModal), { ssr: false });
 const SOSCommandCenter = dynamic(() => import("@/components/profile/SOSCommandCenter").then(mod => mod.SOSCommandCenter), { ssr: false });
 const SpotlightSearch = dynamic(() => import("@/components/community/SpotlightSearch").then(mod => mod.SpotlightSearch), { ssr: false });
 const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod => mod.default), { ssr: false });
 const NotificationDrawer = dynamic(() => import("@/components/notifications/NotificationDrawer").then(mod => mod.NotificationDrawer), { ssr: false });
-const EcosystemPortal = dynamic(() => import("@/components/community/EcosystemPortal").then(mod => mod.EcosystemPortal), { ssr: false });
 const SubscriptionManagementModal = dynamic(() => import("@/components/community/modals/SubscriptionManagementModal").then(mod => mod.SubscriptionManagementModal), { ssr: false });
 const PremiumUpgradeModal = dynamic(() => import("@/components/community/modals/PremiumUpgradeModal").then(mod => mod.PremiumUpgradeModal), { ssr: false });
 
@@ -42,15 +39,12 @@ export function DynamicNavigation() {
     const { walkData } = useActivity();
 
     // Overlay states — only for things that are genuinely overlays
-    const [isActionHubOpen, setIsActionHubOpen] = useState(false);
     const [isWalkOpen, setIsWalkOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isMapsOpen, setIsMapsOpen] = useState(false);
     const [isSOSOpen, setIsSOSOpen] = useState(false);
     const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-    const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
     // Alt menü görünürlüğü türetilir: yerel pencere açık değil + dış pencere izin veriyor + kaydırmayla gizlenmemiş.
     const [isNavAllowedByExternalOverlays, setIsNavAllowedByExternalOverlays] = useState(true);
     const [scrollHidden, setScrollHidden] = useState(false);
@@ -58,16 +52,13 @@ export function DynamicNavigation() {
     const [sosPetOverride, setSosPetOverride] = useState<Pet | null>(null);
     const sosActivePet = sosPetOverride ?? activePet ?? pets[0] ?? null;
 
-    const isAnyLocalOverlayOpen = 
-        isActionHubOpen || 
-        isWalkOpen || 
-        isSettingsOpen || 
-        isMapsOpen ||
+    const isAnyLocalOverlayOpen =
+        isWalkOpen ||
+        isSettingsOpen ||
         isSOSOpen ||
-        isSpotlightOpen || 
-        isAuthOpen || 
-        isNotificationOpen ||
-        isEcosystemPortalOpen;
+        isSpotlightOpen ||
+        isAuthOpen ||
+        isNotificationOpen;
     const isNavVisible = !isAnyLocalOverlayOpen && isNavAllowedByExternalOverlays && !scrollHidden;
 
     // Sayfa değişince menü geri gelir ve yürüyüş paneli kapanır; yerel pencere kapanınca kaydırma gizlemesi sıfırlanır.
@@ -131,13 +122,6 @@ export function DynamicNavigation() {
 
 
     useEffect(() => {
-        const handleOpenActionHub = () => {
-            window.history.pushState({ modal: 'action-hub' }, "");
-            setIsSettingsOpen(false);
-            setIsWalkOpen(false);
-            setIsActionHubOpen(true);
-        };
-
         const handleOpenWalk = () => {
             // Baran'ın bulduğu gerçek hata: aktif bir yürüyüş varken "open-walk-panel"
             // (ana sayfadaki "Devam Et"/"Takibi Gör" butonları dahil) her zaman
@@ -153,25 +137,14 @@ export function DynamicNavigation() {
                 return;
             }
             window.history.pushState({ modal: 'walk' }, "");
-            setIsActionHubOpen(false);
             setIsSettingsOpen(false);
             setIsWalkOpen(true);
         };
 
         const handleOpenSettings = () => {
             window.history.pushState({ modal: 'settings' }, "");
-            setIsActionHubOpen(false);
             setIsWalkOpen(false);
-            setIsMapsOpen(false);
             setIsSettingsOpen(true);
-        };
-
-        const handleOpenMaps = () => {
-            window.history.pushState({ modal: 'maps' }, "");
-            setIsActionHubOpen(false);
-            setIsWalkOpen(false);
-            setIsSettingsOpen(false);
-            setIsMapsOpen(true);
         };
 
         const handleOpenSOS = (e: Event) => {
@@ -195,79 +168,20 @@ export function DynamicNavigation() {
             setIsNotificationOpen(true);
         };
 
-        const handleOpenEcosystem = () => {
-            window.history.pushState({ modal: 'ecosystem' }, "");
-            setIsEcosystemPortalOpen(true);
-        };
-
         // BACK BUTTON INTERCEPTOR
         const handlePopState = (e: PopStateEvent) => {
             const modal = e.state?.modal;
-            setIsActionHubOpen(modal === 'action-hub');
             setIsWalkOpen(modal === 'walk');
             setIsSettingsOpen(modal === 'settings');
-            setIsMapsOpen(modal === 'maps');
             setIsSOSOpen(modal === 'sos');
             setIsSpotlightOpen(modal === 'spotlight');
             setIsAuthOpen(modal === 'auth');
             setIsNotificationOpen(modal === 'notifications');
-            setIsEcosystemPortalOpen(modal === 'ecosystem');
 
             if (modal !== 'ai') {
                 window.dispatchEvent(new CustomEvent('close-ai-assistant'));
             } else {
                 window.dispatchEvent(new CustomEvent('open-ai-assistant'));
-            }
-        };
-
-        // Global navigation handler — now routes pages directly
-        const handleGlobalNavigate = (e: Event) => {
-            const id = (e as CustomEvent<string>).detail;
-            if (!id) return;
-
-
-            const profileViews = ['wallet', 'passport', 'family', 'orders', 'routes', 'bookmarks', 'identity'];
-
-            if (id === 'carehub') {
-                // Sağlığın tek adresi Sağlık Merkezi (design-reference/health-final).
-                router.push('/health');
-            } else if (id === 'nutrition') {
-                // Beslenme penceresi kök düzende (GlobalCareModals) her sayfada hazır.
-                window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }));
-            } else if (id === 'appointments') {
-                // Randevuların tek ekranı: Veteriner → Randevularım.
-                router.push('/vet?view=appointments');
-            } else if (id === 'feed') {
-                router.push('/community');
-            } else if (id === 'radar') {
-                // Kayıp & Bulunan ve Sahiplendirme ayrı panelde (design-reference/community-final).
-                router.push('/kayip');
-            } else if (id === 'lost_pet') {
-                router.push('/kayip/ilan-ver');
-            } else if (id === 'adoption') {
-                router.push('/sahiplendirme');
-            } else if (id === 'profile') {
-                if (user?.id) router.push(`/profile/${user.id}`);
-            } else if (id === 'passport') {
-                if (user?.id) router.push(`/profile/${user.id}?view=passport`);
-                else window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            } else if (profileViews.includes(id)) {
-                if (user?.id) router.push(`/profile/${user.id}?view=${id}`);
-                else window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            } else if (id === 'settings') {
-                handleOpenSettings();
-            } else if (id === 'maps') {
-                handleOpenMaps();
-            } else if (id === 'market') {
-                router.push('/petshop');           // ← Sayfa
-            } else if (id === 'vet') {
-                router.push('/vet');               // ← Sayfa
-            } else if (id === 'game') {
-                router.push('/game');              // ← Sayfa
-            } else if (id === 'quests') {
-                router.push('/quests');            // ← Sayfa
-            } else if (id === 'moffinet') {
-                handleOpenEcosystem();
             }
         };
 
@@ -313,31 +227,23 @@ export function DynamicNavigation() {
         };
 
         window.addEventListener('popstate', handlePopState);
-        window.addEventListener('open-moffi-hub', handleOpenActionHub);
         window.addEventListener('open-walk-panel', handleOpenWalk);
         window.addEventListener('open-moffi-settings', handleOpenSettings);
-        window.addEventListener('open-moffi-maps', handleOpenMaps);
         window.addEventListener('open-sos-center', handleOpenSOS);
         window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
         window.addEventListener('open-auth-modal', handleOpenAuth);
         window.addEventListener('open-notification-drawer', handleOpenNotifications);
-        window.addEventListener('open-ecosystem-portal', handleOpenEcosystem);
-        window.addEventListener('moffi-navigate', handleGlobalNavigate);
         window.addEventListener('scroll', handleGlobalScroll, { capture: true, passive: true });
         window.addEventListener('moffi-toggle-nav', handleToggleNav);
         window.addEventListener('open-add-post', handleOpenPostGlobal);
 
         return () => {
-            window.removeEventListener('open-moffi-hub', handleOpenActionHub);
             window.removeEventListener('open-walk-panel', handleOpenWalk);
             window.removeEventListener('open-moffi-settings', handleOpenSettings);
-            window.removeEventListener('open-moffi-maps', handleOpenMaps);
             window.removeEventListener('open-sos-center', handleOpenSOS);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
             window.removeEventListener('open-auth-modal', handleOpenAuth);
             window.removeEventListener('open-notification-drawer', handleOpenNotifications);
-            window.removeEventListener('open-ecosystem-portal', handleOpenEcosystem);
-            window.removeEventListener('moffi-navigate', handleGlobalNavigate);
             window.removeEventListener('moffi-toggle-nav', handleToggleNav);
             window.removeEventListener('popstate', handlePopState);
             window.removeEventListener('scroll', handleGlobalScroll, { capture: true });
@@ -357,16 +263,6 @@ export function DynamicNavigation() {
             <EdgePanel hidden={isAnyLocalOverlayOpen || !isNavAllowedByExternalOverlays || pathname?.startsWith('/business') || pathname?.startsWith('/admin')} />
             <ActiveWalkMiniWidget />
 
-            <ActionHubDrawer
-                isOpen={isActionHubOpen}
-                onClose={() => { clearModalHistoryState(); setIsActionHubOpen(false); }}
-                onNavigate={(id) => {
-                    clearModalHistoryState();
-                    setIsActionHubOpen(false);
-                    window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: id }));
-                }}
-            />
-
             {/* Walk stays as overlay — instant start makes sense */}
             <WalkQuickSheet
                 isOpen={isWalkOpen}
@@ -380,11 +276,6 @@ export function DynamicNavigation() {
             />
 
             <InboxModal />
-
-            <MoffiMapsModal
-                isOpen={isMapsOpen}
-                onClose={() => { clearModalHistoryState(); setIsMapsOpen(false); }}
-            />
 
             <SOSCommandCenter
                 isOpen={isSOSOpen}
@@ -400,15 +291,9 @@ export function DynamicNavigation() {
                 onNavigate={(type, id) => {
                     clearModalHistoryState();
                     setIsSpotlightOpen(false);
-                    if (type === 'action') {
-                        window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: id }));
-                    } else if (type === 'pet') {
-                        window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'passport' }));
-                    } else if (type === 'user') {
-                        router.push(`/profile/${id}`);
-                    } else if (type === 'link') {
-                        if (id === 'market') router.push('/petshop');
-                    }
+                    // Hayvan sonucu sahibinin profiline gider (hayvan kaydı yalnızca sahibine açık, 8.45).
+                    if (type === 'user' || type === 'pet') router.push(`/profile/${id}`);
+                    else if (type === 'post') router.push(`/community/gonderi/${id}`);
                 }}
             />
 
@@ -422,10 +307,6 @@ export function DynamicNavigation() {
                 onClose={() => { clearModalHistoryState(); setIsNotificationOpen(false); }}
             />
 
-            <EcosystemPortal
-                isOpen={isEcosystemPortalOpen}
-                onClose={() => { clearModalHistoryState(); setIsEcosystemPortalOpen(false); }}
-            />
 
             <SubscriptionManagementModal />
             <PremiumUpgradeModal />

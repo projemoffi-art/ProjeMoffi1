@@ -48,9 +48,12 @@ export default function FoodCatchGame({ onGameOver, onClose }: GameProps) {
     const itemsRef = useRef<GameItem[]>([]);
     const lastSpawnTimeRef = useRef(0);
     const timeInStageRef = useRef(0);
-    const lastTimeRef = useRef(performance.now());
+    // İlk karede ölçülür (çizim sırasında saat okunmaz).
+    const lastTimeRef = useRef<number | null>(null);
+    // Döngü kendini bir sonraki karede çağırır; en güncel sürüm ref üzerinden.
+    const loopRef = useRef<(t: number) => void>(() => {});
     
-    const rAFRef = useRef<number>();
+    const rAFRef = useRef<number | undefined>(undefined);
     const containerRef = useRef<HTMLDivElement>(null);
     const itemsContainerRef = useRef<HTMLDivElement>(null);
     const playerDOMRef = useRef<HTMLDivElement>(null);
@@ -118,7 +121,7 @@ export default function FoodCatchGame({ onGameOver, onClose }: GameProps) {
     const gameLoop = useCallback((timestamp: number) => {
         if (gameOverScreen) return; 
         
-        let deltaTime = timestamp - lastTimeRef.current;
+        let deltaTime = lastTimeRef.current === null ? 16 : timestamp - lastTimeRef.current;
         if (deltaTime > 64) deltaTime = 16; // Prevent massive jumps if tab inactive
         lastTimeRef.current = timestamp;
         
@@ -210,10 +213,11 @@ export default function FoodCatchGame({ onGameOver, onClose }: GameProps) {
             return;
         }
 
-        rAFRef.current = requestAnimationFrame(gameLoop);
+        rAFRef.current = requestAnimationFrame(t => loopRef.current(t));
     }, [gameOverScreen]);
 
     useEffect(() => {
+        loopRef.current = gameLoop;
         setTimeout(() => setStageAnnounce(null), 2000);
         rAFRef.current = requestAnimationFrame(gameLoop);
         
@@ -319,7 +323,8 @@ export default function FoodCatchGame({ onGameOver, onClose }: GameProps) {
                 <div
                     ref={playerDOMRef}
                     className="absolute bottom-[15%] left-0 w-[134px] h-[134px] pointer-events-none will-change-transform z-20"
-                    style={{ transform: `translate3d(calc(${playerXRef.current}vw - 50%), 0, 0)` }}
+                    // Başlangıç konumu sabit; oyun sırasında konum döngüde doğrudan DOM'a yazılır (her çizimde aynı değer, React dokunmaz).
+                    style={{ transform: "translate3d(calc(50vw - 50%), 0, 0)" }}
                 >
                     <div className="relative w-full h-full flex flex-col items-center justify-end">
                         <div className="absolute bottom-[-10px] w-[134px] h-6 bg-cyan-500/30 rounded-full blur-md" />

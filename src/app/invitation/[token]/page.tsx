@@ -54,9 +54,10 @@ export default function InvitationPage() {
         setLoading(true);
         setError(null);
         try {
-            setInv(await apiService.getInvitationByToken(token));
-        } catch (e: any) {
-            setError(e?.message || 'Davet yüklenemedi.');
+            // get_invitation_by_token'ın JSON yanıtı; alanlar InvitationView ile aynı (hata hâlinde yalnızca error).
+            setInv((await apiService.getInvitationByToken(token)) as unknown as InvitationView | null);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Davet yüklenemedi.');
         } finally {
             setLoading(false);
         }
@@ -83,10 +84,11 @@ export default function InvitationPage() {
                 setDone('accepted');
                 setTimeout(goToPanel, 1200);
             } else {
-                setDone(res?.status === 'declined' ? 'declined' : null);
+                const declined = !!res && typeof res === 'object' && !Array.isArray(res) && res.status === 'declined';
+                setDone(declined ? 'declined' : null);
             }
-        } catch (e: any) {
-            setError(e?.message || 'İşlem tamamlanamadı.');
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'İşlem tamamlanamadı.');
             await load();
         } finally {
             setBusy(null);

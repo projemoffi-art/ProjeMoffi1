@@ -3,22 +3,14 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    User, Bell, Lock, HelpCircle, 
-    LogOut, ChevronRight, MessageCircle, 
-    Activity, X, Check, ShieldAlert, MapPin, ShieldCheck, 
-    Radar, Palette, Smartphone, Footprints,
-    Fingerprint, Heart, Send, Sparkles, Zap, Shield, BrainCircuit,
-    Settings, Database, Trash2, Cpu, Globe, Laptop,
-    ShieldPlus, Download, Info, ArrowLeft, MoreVertical,
-    Users, Eye, MessageSquare, Tag, Plus,
-    ArrowRight, Monitor, Layout,
-    EyeOff, BellRing, Mail, AlertTriangle,
-    Clock, Moon, Sun, Timer, Coffee, Type, Glasses, Layers, Briefcase, Crown, QrCode, Building2, Store
+import {
+    User, LogOut, ChevronRight, Activity, X, Check, ShieldAlert, ShieldCheck, Palette, Smartphone,
+    Sparkles, Zap, Shield, BrainCircuit, Trash2, Download, ArrowLeft, MessageSquare, Tag, Plus,
+    BellRing, Type, Glasses, Layers, Crown, Building2, Store, Lock,
 } from 'lucide-react';
 import { cn, showToast } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext';
-import { useTheme } from '@/context/ThemeContext';
+import { useAuth, type User as AuthUser, type SettingsCategory } from '@/context/AuthContext';
+import { useTheme, type ColorBlindMode } from '@/context/ThemeContext';
 import { useQuestEngine } from '@/context/QuestEngineContext';
 import { exportUserData } from '@/lib/utils/dataExport';
 import { apiService } from '@/services/apiService';
@@ -36,7 +28,7 @@ interface SettingsDrawerProps {
     onClose: () => void;
 }
 
-type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'sidebar_config' | 'ai_assistant' | 'account_settings' | 'profile_personalization';
+type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'accessibility' | 'password' | 'notifications' | 'sidebar_config' | 'ai_assistant' | 'account_settings' | 'profile_personalization';
 
 // --- Shared Interfaces ---
 interface SectionProps {
@@ -44,19 +36,8 @@ interface SectionProps {
     children: React.ReactNode;
 }
 
-interface ToggleRowProps {
-    icon: any;
-    label: string;
-    desc: string;
-    category: string;
-    id: string;
-    color?: string;
-    user: any;
-    onToggle: (category: any, settingId: string) => void;
-}
-
 interface ActionRowProps {
-    icon: any;
+    icon: typeof User;
     label: string;
     desc?: string;
     onClick?: () => void;
@@ -65,39 +46,9 @@ interface ActionRowProps {
 }
 
 interface ViewProps {
-    user: any;
+    user: AuthUser;
     setView: (view: DrawerView) => void;
-    updateSettings: any;
-    handleToggle: (category: any, id: string) => void;
-    handleExport: () => void;
-    isExporting: boolean;
-    onClose: () => void;
-    logout: () => void;
-    handleResetSystem: () => void;
-    exportStatus?: string;
-    fontSize?: string;
-    setFontSize?: (s: any) => void;
-    colorBlindMode?: string;
-    setColorBlindMode?: (m: any) => void;
-    boldText?: boolean;
-    setBoldText?: (v: boolean) => void;
-    highContrast?: boolean;
-    setHighContrast?: (v: boolean) => void;
-    reduceMotion?: boolean;
-    setReduceMotion?: (v: boolean) => void;
-    reduceTransparency?: boolean;
-    setReduceTransparency?: (v: boolean) => void;
-    seniorMode?: boolean;
-    setSeniorMode?: (v: boolean) => void;
-    newWord?: string;
-    setNewWord?: (s: string) => void;
-    handleAddWord?: () => void;
-    handleRemoveWord?: (s: string) => void;
-    handleUnblock?: (id: string) => void;
-    signOutOtherDevices?: () => Promise<{ success: boolean; error?: string }>;
-    changePassword?: (old: string, newP: string) => Promise<{ success: boolean; error?: string }>;
-    theme?: any;
-    setTheme?: (t: any) => void;
+    updateSettings: (category: string, data: SettingsCategory) => Promise<void>;
 }
 
 // --- Helper Components ---
@@ -112,35 +63,6 @@ const Section = React.memo(({ title, children }: SectionProps) => (
     </div>
 ));
 Section.displayName = 'Section';
-
-const ToggleRow = React.memo(({ icon: Icon, label, desc, category, id, color, user, onToggle }: ToggleRowProps) => {
-    const isActive = (user?.settings as any)?.[category]?.[id];
-    return (
-        <button 
-            onClick={() => onToggle(category, id)}
-            className="w-full flex items-center justify-between py-2.5 px-2 hover:bg-foreground/[0.03] transition-all group border-b border-card-border last:border-0 rounded-2xl transform-gpu will-change-transform text-left"
-        >
-            <div className="flex items-center gap-3">
-                <div className={cn("flex items-center justify-center transition-transform group-hover:scale-110", color ? `text-accent` : "text-foreground/40")}>
-                    <Icon className="w-4 h-4" />
-                </div>
-                <div>
-                    <p className="text-[12px] font-black text-foreground uppercase tracking-tight leading-none">{label}</p>
-                    <p className="text-[9px] text-secondary mt-1 leading-none font-bold max-w-[200px] uppercase tracking-tighter">{desc}</p>
-                </div>
-            </div>
-            <div 
-                className={cn(
-                    "w-8 h-4.5 rounded-full transition-all relative border border-card-border shrink-0",
-                    isActive ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5"
-                )}
-            >
-                <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-card transition-all shadow-moffi-card", isActive ? "left-4" : "left-0.5")} />
-            </div>
-        </button>
-    );
-});
-ToggleRow.displayName = 'ToggleRow';
 
 const ActionRow = React.memo(({ icon: Icon, label, desc, onClick, danger, rightElement }: ActionRowProps) => (
     <button
@@ -167,60 +89,17 @@ const ActionRow = React.memo(({ icon: Icon, label, desc, onClick, danger, rightE
 ));
 ActionRow.displayName = 'ActionRow';
 
-const ChoiceRow = React.memo(({ label, options, current, onSelect, category, field }: { label: string, options: any[], current: string, onSelect: any, category: string, field: string }) => (
-    <div className="py-3 px-2 border-b border-foreground/[0.03] last:border-0 transform-gpu">
-        <p className="text-[10px] font-black text-foreground/20 uppercase tracking-[0.2em] mb-3 px-1">{label}</p>
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
-            {options.map((opt) => (
-                <button
-                    key={opt.id}
-                    onClick={() => onSelect(category, { [field]: opt.id })}
-                    className={cn(
-                        "px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap",
-                        current === opt.id ? "bg-foreground text-background shadow-lg shadow-foreground/10" : "bg-foreground/[0.03] text-foreground/40 hover:bg-foreground/5 text-shadow-none"
-                    )}
-                >
-                    {opt.label}
-                </button>
-            ))}
-        </div>
-    </div>
-));
-ChoiceRow.displayName = 'ChoiceRow';
-
-const SliderRow = React.memo(({ label, value, min, max, unit, onChange, category, field }: { label: string, value: number, min: number, max: number, unit?: string, onChange: any, category: string, field: string }) => (
-    <div className="py-4 px-2 border-b border-card-border last:border-0 hover:bg-foreground/[0.01] transition-all rounded-2xl transform-gpu will-change-transform">
-        <div className="flex justify-between items-center mb-3 px-1 text-shadow-none">
-            <p className="text-[10px] font-black text-secondary uppercase tracking-[0.2em]">{label}</p>
-            <p className="text-[14px] font-black text-foreground italic tracking-tighter">{value}<span className="text-[9px] not-italic text-secondary ml-1 uppercase">{unit}</span></p>
-        </div>
-        <div className="px-1">
-            <input 
-                type="range" 
-                min={min} 
-                max={max} 
-                step="1" 
-                value={value} 
-                onChange={(e) => onChange(category, { [field]: parseInt(e.target.value) })}
-                className="w-full h-[3px] bg-foreground/10 rounded-full appearance-none accent-accent transition-all cursor-pointer" 
-            />
-        </div>
-    </div>
-));
-SliderRow.displayName = 'SliderRow';
-
 // --- View Components ---
 
 const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps) => {
-    const isPrime = user?.is_prime;
+    const isPrime = !!user.is_prime;
     // Faz 23: Neon/Metal artık Prime OLMADAN da Ödül Merkezi'nden alınan
     // geçici bir VIP perk'iyle açılabiliyor (bkz. src/lib/vipFrames.ts) —
     // seçim ekranı bunu da hesaba katmalı, yoksa kullanıcı PP ile satın aldığı
     // çerçeveyi burada hâlâ "Prime" kilitli görüp seçemezdi.
     const { activePerks } = useQuestEngine();
     const router = useRouter();
-    // @ts-ignore
-    const currentFrame = user?.settings?.appearance?.frameStyle || 'minimal';
+    const currentFrame = user.settings?.appearance?.frameStyle || 'minimal';
 
     const handleSelect = (style: FrameStyle, locked: boolean) => {
         if (locked) {
@@ -239,10 +118,10 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
     ];
 
     return (
-        <motion.div 
-            initial={{ x: -20, opacity: 0 }} 
-            animate={{ x: 0, opacity: 1 }} 
-            exit={{ x: -20, opacity: 0 }} 
+        <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -20, opacity: 0 }}
             className="flex-1 overflow-y-auto pr-2 custom-scrollbar scroll-smooth space-y-4"
             style={{ maxHeight: 'calc(94vh - 180px)' }}
         >
@@ -252,7 +131,7 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
                 </button>
                 <h2 className="text-xl font-black uppercase tracking-tighter">Profil Kişiselleştirme</h2>
             </div>
-            
+
             <p className="text-[11px] text-secondary mb-6 font-medium leading-relaxed">
                 Profil fotoğrafı çerçeveni seç. Neon ve Metal Aura tarzları Prime üyelerine özeldir — veya{' '}
                 <button
@@ -261,7 +140,7 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
                 >
                     Ödül Merkezi
                 </button>
-                'nden Moffi Puanı ile birkaç günlüğüne dene!
+                {'\'nden Moffi Puanı ile birkaç günlüğüne dene!'}
             </p>
 
             <div className="space-y-6">
@@ -317,27 +196,6 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
                     </div>
                 </div>
 
-                {/* 2. Vurgu Rengi */}
-                <ChoiceRow 
-                    label="2. Tema Vurgu Rengi" 
-                    category="appearance" 
-                    field="accentColor" 
-                    current={user?.settings?.appearance?.accentColor || 'green'} 
-                    onSelect={(cat: any, val: any) => {
-                        if (val.accentColor === 'gold' && !isPrime) {
-                            window.dispatchEvent(new CustomEvent('open-premium-modal'));
-                        } else {
-                            updateSettings(cat, val);
-                        }
-                    }}
-                    options={[
-                        { id: 'green', label: 'Doğa Yeşili' },
-                        { id: 'cyan', label: 'Siber Mavi' },
-                        { id: 'purple', label: 'Galaksi Moru' },
-                        { id: 'rose', label: 'Neon Pembe' },
-                        { id: 'gold', label: 'Prime Altın 👑' }
-                    ]}
-                />
             </div>
 
             {!isPrime && (
@@ -345,11 +203,11 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
                     <Crown className="w-8 h-8 text-[#FFD700] mx-auto mb-2 drop-shadow-md" />
                     <h3 className="text-sm font-black text-foreground uppercase tracking-widest mb-1">Daha Fazlasını İstiyor Musun?</h3>
                     <p className="text-[10px] text-secondary mb-4 font-bold">Aura çerçeveleri, animasyonlu rozetler ve prestijli profil görünümleri için Prime kulübüne katıl.</p>
-                    <button 
+                    <button
                         onClick={() => window.dispatchEvent(new CustomEvent('open-premium-modal'))}
                         className="w-full py-3 bg-gradient-to-r from-[#FFD700] to-[#B8860B] hover:brightness-110 text-black rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)]"
                     >
-                        Moffi Prime'a Yükselt
+                        Moffi Prime&apos;a Yükselt
                     </button>
                 </div>
             )}
@@ -376,8 +234,50 @@ const BusinessPortalSection = () => {
     );
 };
 
-const MainView = ({ user, setView, handleToggle, handleExport, isExporting, exportStatus, onClose, logout, handleResetSystem, updateSettings }: ViewProps) => (
-    <motion.div 
+const MainView = ({ user, setView, onClose }: ViewProps & { onClose: () => void }) => {
+    const { logout } = useAuth();
+    const { totalPatiPuan } = useQuestEngine();
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportStatus, setExportStatus] = useState('');
+
+    // KVKK veri paketi: hesabın gerçek kayıtları tek JSON dosyasında.
+    const handleExport = async () => {
+        setIsExporting(true);
+        try {
+            setExportStatus('Evcil hayvanlar ve gönderiler toplanıyor…');
+            const [pets, posts] = await Promise.all([apiService.getPets(), socialService.myPostsForExport()]);
+            setExportStatus('İlanlar, bildirimler ve mesajlar toplanıyor…');
+            const [adoptions, notifications, chats] = await Promise.all([
+                adoptionService.mine().catch(() => []),
+                apiService.getInboxMessages(),
+                apiService.getChatConversations(),
+            ]);
+            setExportStatus('Siparişler, yürüyüşler ve PawCoin toplanıyor…');
+            const [orders, walkStats, history] = await Promise.all([apiService.getOrders(), apiService.getWalkStats(user.id), apiService.getPawCoinHistory(1000)]);
+            exportUserData({ user, pets, posts, adoptions, notifications, orders, chats, walkStats, pawCoin: { balance: totalPatiPuan, history } });
+        } catch (error) {
+            console.error('Dışa aktarma başarısız:', error);
+            showToast('Veri paketi hazırlanamadı, tekrar dene.', 'AlertCircle', 'text-red-500');
+        } finally {
+            setIsExporting(false);
+            setExportStatus('');
+        }
+    };
+
+    // Yalnızca bu cihazda tutulan tercihleri siler (oturum anahtarları korunur); hesap verisine dokunmaz.
+    const handleClearDevice = () => {
+        if (!confirm('Bu cihazda tutulan tercihler ve önbellek silinecek. Hesabın ve kayıtların etkilenmez. Devam edilsin mi?')) return;
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && !key.startsWith('sb-')) keysToRemove.push(key);
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        window.location.reload();
+    };
+
+    return (
+    <motion.div
         initial={{ x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: -20, opacity: 0 }}
@@ -385,7 +285,7 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
         style={{ maxHeight: 'calc(94vh - 180px)' }}
     >
         {/* PREMIUM BANNER / SUBSCRIPTION MANAGEMENT */}
-        {!user?.is_prime ? (
+        {!user.is_prime ? (
             <div className="mx-2 mb-6 mt-2 relative group overflow-hidden rounded-[2rem] border border-accent/30 bg-card p-5 shadow-lg cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-premium-modal'))}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 blur-3xl group-hover:bg-accent/20 transition-all rounded-full" />
                 <div className="relative flex items-center justify-between">
@@ -425,210 +325,53 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
 
         <BusinessPortalSection />
 
-        <Section title="Hesap Merkezi & Profil">
-            <ActionRow icon={User} label="Hesap Ayarları ve Bilgiler" desc="Kişisel detaylar, e-posta, telefon ve bağlantılar." onClick={() => setView('account_settings')} />
-            <ActionRow icon={Palette} label="Profil Kişiselleştirme" desc="Aura çerçeveleri ve profil görünümü." onClick={() => setView('profile_personalization')} />
+        <Section title="Hesap ve Profil">
+            <ActionRow icon={User} label="Hesap Bilgileri" desc="E-posta, telefon, doğum tarihi, hesabı silme." onClick={() => setView('account_settings')} />
+            <ActionRow icon={Palette} label="Profil Çerçevesi" desc="Profil fotoğrafının çerçevesi." onClick={() => setView('profile_personalization')} />
         </Section>
 
-        <Section title="Erişilebilirlik ve Görünüm">
-            <ActionRow icon={Layers} label="Kenar Paneli" desc="Kenar panelindeki kısayolları seç." onClick={() => setView('sidebar_config')} />
+        <Section title="Görünüm">
             <ActionRow icon={Type} label="Görünüm ve tema" desc="Açık/koyu tema, yazı boyutu, görme desteği." onClick={() => setView('accessibility')} />
+            <ActionRow icon={Layers} label="Kenar Paneli" desc="Kenar panelindeki kısayolları seç." onClick={() => setView('sidebar_config')} />
         </Section>
-        
-        <Section title="Moffi AI & Akıllı Asistan">
+
+        <Section title="Moffi AI">
             <ActionRow icon={BrainCircuit} label="Moffi AI tercihleri" desc="Konuşma tonu ve yanıt uzunluğu." onClick={() => setView('ai_assistant')} />
         </Section>
 
-        <Section title="Akış & İçerik Tercihleri">
-            <div className="space-y-1">
-                <ToggleRow user={user} onToggle={handleToggle} category="feed" id="autoplay" icon={Plus} color="blue" label="Otomatik Video Oynatma" desc="Hücresel veya Wi-Fi ağında videoların otomatik başlamasını yönetir." />
-                <ChoiceRow 
-                    label="Akış Sıralama Önceliği" 
-                    category="feed" 
-                    field="defaultSort" 
-                    current={user?.settings?.feed?.defaultSort || 'new'} 
-                    onSelect={updateSettings}
-                    options={[{ id: 'new', label: 'En Yeni' }, { id: 'popular', label: 'Popüler' }]}
-                />
-            </div>
+        <Section title="Bildirimler">
+            <ActionRow icon={BellRing} label="Anlık bildirimler" desc="Bu cihazda bildirim almayı aç ya da kapat." onClick={() => setView('notifications')} />
         </Section>
 
-        <Section title="Zaman Yönetimi ve Sağlık">
-            <div className="space-y-1">
-                <ActionRow icon={Clock} label="Ekran Süresi ve Limit" onClick={() => setView('wellbeing')} />
-                <ActionRow icon={BellRing} label="Bildirim Tercihleri" desc="Peki, bildirimlerin nasıl gelsin?" onClick={() => setView('notifications')} />
-            </div>
+        <Section title="Sosyal">
+            <ActionRow icon={ShieldAlert} label="Engellenenler" desc="Engellediğin hesaplar." onClick={() => setView('blocked')} />
+            <ActionRow icon={MessageSquare} label="Gizli Kelimeler" desc="Gönderi ve yorumlarda *** olarak görünür." onClick={() => setView('words')} />
         </Section>
 
-        <Section title="Sosyal Etkileşim ve Moderasyon">
-            <div className="space-y-1">
-                <ActionRow icon={ShieldAlert} label="Engellenenler Listesi" onClick={() => setView('blocked')} />
-                <ActionRow icon={MessageSquare} label="Gizli Kelimeler" onClick={() => setView('words')} />
-                <ActionRow icon={Eye} label="Hikaye Ayarları" onClick={() => setView('stories')} />
-            </div>
+        <Section title="Güvenlik">
+            <ActionRow icon={Lock} label="Şifre Değiştir" desc="Mevcut şifrenle doğrulanır." onClick={() => setView('password')} />
+            <ActionRow icon={Smartphone} label="Oturumlar" desc="Diğer cihazlardan çıkış yap." onClick={() => setView('activity')} />
         </Section>
 
-        
-        <Section title="Güvenlik ve Gizlilik">
-            <div className="space-y-1">
-                <ActionRow icon={ShieldCheck} label="Gizlilik Ayarları" desc="Kimler neleri görebilir?" onClick={() => setView('privacy')} />
-                <ToggleRow user={user} onToggle={handleToggle} category="security" id="twoFactorEnabled" color="emerald" icon={ShieldPlus} label="2-Faktörlü Doğrulama" desc="Girişlerde ekstra güvenlik katmanı." />
-                <ToggleRow user={user} onToggle={handleToggle} category="security" id="biometricEnabled" color="cyan" icon={Fingerprint} label="Biyometrik Giriş" desc="FaceId veya Parmak İzi ile hızlı erişim." />
-                <ActionRow icon={Lock} label="Şifre ve Güvenlik" desc="Şifreni güncelle veya güvenlik anahtarlarını yönet." onClick={() => setView('password')} />
-                <ActionRow icon={Smartphone} label="Giriş Hareketleri" desc="Aktif oturumlarını ve cihazlarını yönet." onClick={() => setView('activity')} />
-            </div>
-        </Section>
-
-        <Section title="Veri ve Taşınabilirlik">
-            <ActionRow 
-                icon={Download} 
-                label="Veri Paketini İndir" 
-                desc={exportStatus || "Tüm geçmişini KVKK uyumlu dosya olarak al."} 
-                onClick={handleExport} 
-                rightElement={isExporting ? <Activity className="w-3 h-3 animate-spin text-emerald-400" /> : undefined} 
+        <Section title="Veri">
+            <ActionRow
+                icon={Download}
+                label="Veri Paketini İndir"
+                desc={exportStatus || "Hesabındaki kayıtları KVKK kapsamında tek dosya olarak al."}
+                onClick={isExporting ? undefined : handleExport}
+                rightElement={isExporting ? <Activity className="w-3 h-3 animate-spin text-emerald-400" /> : undefined}
             />
-        </Section>
-
-
-
-
-
-        <Section title="SOS & GÜVENLİK RADARI">
-            <div className="space-y-1">
-                <ActionRow icon={Radar} label="SOS Yapılandırması" desc="Arama yarıçapı ve sesli alarmlar." onClick={() => setView('sos_config')} />
-            </div>
-        </Section>
-
-        <Section title="Gizlilik Kontrolleri">
-            <div className="space-y-1">
-                <ToggleRow user={user} onToggle={handleToggle} category="privacy" id="petIdDataSharing" icon={Fingerprint} color="emerald" label="PET-ID Veri Paylaşımı" desc="ID taramalarında detaylı sağlık verisi." />
-                <ToggleRow user={user} onToggle={handleToggle} category="privacy" id="allowComments" icon={MessageCircle} color="cyan" label="Yorum İzinleri" />
-                <ToggleRow user={user} onToggle={handleToggle} category="privacy" id="locationSharing" icon={MapPin} color="emerald" label="Konum Sinyali" />
-                <ToggleRow user={user} onToggle={handleToggle} category="privacy" id="showPassport" icon={Fingerprint} color="violet" label="Pasaportu Sergile" />
-            </div>
-        </Section>
-
-        <Section title="Bildirim Ayarları">
-            <div className="space-y-1">
-                <ToggleRow user={user} onToggle={handleToggle} category="notifications" id="sosNotifications" icon={Radar} color="red" label="Kayıp Alarmları" />
-                <ToggleRow user={user} onToggle={handleToggle} category="notifications" id="socialActivity" icon={Heart} color="pink" label="Sosyal Etkileşimler" />
-                <ToggleRow user={user} onToggle={handleToggle} category="notifications" id="pushEnabled" icon={Smartphone} color="cyan" label="Anlık Bildirimler" />
-            </div>
-        </Section>
-
-        {user?.role === 'admin' && (
-            <Section title="Sistem Politikaları">
-                <ToggleRow user={user} onToggle={handleToggle} category="admin" id="strictModeration" icon={ShieldCheck} color="emerald" label="Sert Denetim Modu" />
-            </Section>
-        )}
-
-        <Section title="Gelişmiş & Labs">
-            <div className="space-y-1">
-                <ActionRow icon={Activity} label="Sistem Teşhis" desc="Uygulama performansını incele." />
-                <ActionRow icon={Trash2} danger label="Sistem Verilerini Sıfırla" desc="Tüm ayarları fabrika haline döndür." onClick={handleResetSystem} />
-            </div>
+            <ActionRow icon={Trash2} label="Bu cihazdaki tercihleri temizle" desc="Hesabın ve kayıtların etkilenmez." onClick={handleClearDevice} />
         </Section>
 
         <Section title="Oturum">
-            <ActionRow danger icon={LogOut} label="Hub'dan Çıkış Yap" onClick={async () => { await logout(); window.location.replace('/'); }} />
+            <ActionRow danger icon={LogOut} label="Çıkış Yap" onClick={async () => { onClose(); await logout(); window.location.replace('/'); }} />
         </Section>
 
         <div className="h-40" />
     </motion.div>
-);
-
-
-
-const SOSConfigView = ({ user, setView, updateSettings }: ViewProps) => {
-    const sos = user?.settings?.sos || { radius: 5, emergencyBypass: true, soundAlerts: true };
-    return (
-        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-            <div className="space-y-8 pb-10 px-2">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3 px-1">
-                        <div className="w-8 h-8 rounded-2xl bg-orange-500/10 flex items-center justify-center"><AlertTriangle className="w-4 h-4 text-orange-400" /></div>
-                        <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">SOS Yapılandırması</h3>
-                    </div>
-                    <div className="bg-foreground/[0.03] rounded-[2.5rem] p-8 border border-card-border">
-                        <div className="flex justify-between items-end mb-6">
-                            <span className="text-[11px] font-black text-secondary uppercase tracking-widest">Arama Yarıçapı</span>
-                            <span className="text-[32px] font-black text-foreground italic tracking-tighter leading-none">{sos.radius} <span className="text-[12px] uppercase not-italic text-secondary">KM</span></span>
-                        </div>
-                        <input 
-                            type="range" 
-                            min="1" max="50" step="1" 
-                            value={sos.radius} 
-                            onChange={(e) => updateSettings('sos', { radius: parseInt(e.target.value) })} 
-                            className="w-full h-1.5 bg-foreground/10 rounded-full appearance-none accent-orange-500 cursor-pointer" 
-                        />
-                        <div className="flex justify-between mt-3 text-[9px] font-black text-secondary uppercase tracking-widest">
-                            <span>1 KM</span>
-                            <span>Maks: 50 KM</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-3">
-                    <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                        <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !sos[i] })} category="sos" id="emergencyBypass" icon={Zap} label="Kritik Uyarı Bypass" desc="Sessiz modda bile SOS alarmı çalar." />
-                        <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !sos[i] })} category="sos" id="soundAlerts" icon={BellRing} label="Özel Sesli Uyarılar" desc="Siren ve yüksek sesli alarmları aktif eder." />
-                    </div>
-                </div>
-            </div>
-            <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
-        </motion.div>
     );
 };
-
-const PrivacyView = ({ user, setView, updateSettings }: ViewProps) => (
-    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-        <div className="space-y-8 pb-10 px-2">
-            <div className="space-y-4">
-                <div className="flex items-center gap-3 px-1">
-                    <div className="w-8 h-8 rounded-2xl bg-accent/10 flex items-center justify-center"><User className="w-4 h-4 text-accent" /></div>
-                    <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Profil Görünürlüğü</h3>
-                </div>
-                <div className="bg-foreground/5 p-1 rounded-[2.5rem] flex relative h-14 border border-card-border backdrop-blur-sm overflow-hidden">
-                    <motion.div 
-                        className="absolute bg-foreground rounded-[2rem] shadow-xl"
-                        initial={false}
-                        animate={{ x: user?.settings?.privacy?.profileVisibility === 'public' ? '0%' : '100%', width: '50%' }}
-                        style={{ height: 'calc(100% - 8px)', top: '4px', left: '4px' }}
-                    />
-                    {[{ id: 'public', label: 'HERKESE AÇIK' }, { id: 'followers', label: 'TAKİPÇİLER' }].map((opt) => (
-                        <button key={opt.id} onClick={() => updateSettings('privacy', { profileVisibility: opt.id })} className={cn("flex-1 relative z-10 text-[10px] font-black transition-colors uppercase tracking-widest", user?.settings?.privacy?.profileVisibility === opt.id ? "text-background" : "text-secondary")}>{opt.label}</button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Veri ve Keşfedenler</p>
-                <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.privacy?.[i as keyof typeof user.settings.privacy] })} category="privacy" id="showPets" icon={Heart} label="Evcil Hayvanlarımı Göster" desc="Profilinde patili dostlarını listeler." />
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.privacy?.[i as keyof typeof user.settings.privacy] })} category="privacy" id="showPassport" icon={Database} label="Dijital Pasaportu Paylaş" desc="Tıbbi kayıtların doğrulanmış kişilerce görülür." />
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.privacy?.[i as keyof typeof user.settings.privacy] })} category="privacy" id="locationSharing" icon={MapPin} label="Konum Paylaşımı" desc="Yakındaki etkinlikler için konumunu kullanır." />
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Etkileşim ve Güvenlik</p>
-                <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.privacy?.[i as keyof typeof user.settings.privacy] })} category="privacy" id="allowComments" icon={MessageCircle} label="Yorumlara İzin Ver" desc="Gönderilerine herkes yorum yapabilir." />
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.privacy?.[i as keyof typeof user.settings.privacy] })} category="privacy" id="messages" icon={Send} label="Direkt Mesajlar" desc="Takip etmediğin kişilerden mesaj alabilirsin." />
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.privacy?.[i as keyof typeof user.settings.privacy] })} category="privacy" id="aiModeration" icon={BrainCircuit} label="AI İçerik Filtresi" desc="Spam ve kötü niyetli içerikleri otomatik engeller." />
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] px-1">Tehlikeli bölge</p>
-                <div className="bg-red-500/5 rounded-[2.5rem] p-2 border border-red-500/10">
-                    <DeleteAccountButton />
-                </div>
-            </div>
-        </div>
-        <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
-    </motion.div>
-);
 
 // Bu cihazın gerçek bildirim aboneliği (push_subscriptions). Eskiden yalnızca bir ayar işaretini değiştiriyordu;
 // ana sayfadaki "Moffi Hesabım" penceresindeki izin yönetimi de buraya taşındı.
@@ -660,37 +403,37 @@ function PushSubscriptionRow({ userId }: { userId?: string }) {
     );
 }
 
-const NotificationsView = ({ user, setView, updateSettings }: ViewProps) => (
+const NotificationsView = ({ user, setView }: ViewProps) => (
     <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-        <div className="space-y-8 pb-10 px-2">
-            <div className="space-y-4">
-                <div className="flex items-center gap-3 px-1">
-                    <div className="w-8 h-8 rounded-2xl bg-rose-500/10 flex items-center justify-center"><BellRing className="w-4 h-4 text-rose-400" /></div>
-                    <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Bildirim Merkezi</h3>
-                </div>
-                <PushSubscriptionRow userId={user?.id} />
+        <div className="space-y-4 pb-10 px-2">
+            <div className="flex items-center gap-3 px-1">
+                <div className="w-8 h-8 rounded-2xl bg-accent/10 flex items-center justify-center"><BellRing className="w-4 h-4 text-accent" /></div>
+                <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Bildirimler</h3>
             </div>
-
-            <div className="space-y-3">
-                <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Bildirim Kanalları</p>
-                <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.notifications?.[i as keyof typeof user.settings.notifications] })} category="notifications" id="socialActivity" icon={Users} label="Sosyal Hareketler" desc="Beğeni, takip ve yorum bildirimleri." />
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.notifications?.[i as keyof typeof user.settings.notifications] })} category="notifications" id="systemAlerts" icon={ShieldAlert} label="Sistem Uyarıları" desc="Güvenlik ve hesap güncellemeleri." />
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.notifications?.[i as keyof typeof user.settings.notifications] })} category="notifications" id="emailNotifications" icon={Mail} label="E-Posta Bülteni" desc="Haftalık özet ve özel fırsatlar." />
-                    <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.notifications?.[i as keyof typeof user.settings.notifications] })} category="notifications" id="sosNotifications" icon={AlertTriangle} label="SOS Bildirimleri" desc="Yakındaki acil durum ve kayıp ilanları." />
-                </div>
-            </div>
+            <PushSubscriptionRow userId={user.id} />
+            <p className="text-[12px] font-semibold text-secondary leading-relaxed px-1">
+                Uygulama içi bildirimler (zil simgesi) her zaman gelir. Bu anahtar yalnızca bu cihaza gönderilen anlık bildirimleri yönetir.
+            </p>
         </div>
         <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
     </motion.div>
 );
 
-const AccessibilityView = ({ 
-    setView, fontSize, setFontSize, colorBlindMode, setColorBlindMode,
-    boldText, setBoldText, highContrast, setHighContrast,
-    reduceMotion, setReduceMotion, reduceTransparency, setReduceTransparency,
-    seniorMode, setSeniorMode
-}: ViewProps) => (
+const COLOR_FILTERS: { id: ColorBlindMode; label: string; desc: string }[] = [
+    { id: 'none', label: 'Standart (YOK)', desc: 'Ekran renkleri varsayılan halindedir.' },
+    { id: 'protanopia', label: 'Protanopi', desc: 'Kırmızı görme eksikliği için filtre.' },
+    { id: 'deuteranopia', label: 'Döteranopi', desc: 'Yeşil görme eksikliği için filtre.' },
+    { id: 'tritanopia', label: 'Tritanopi', desc: 'Mavi görme eksikliği için filtre.' },
+];
+
+const AccessibilityView = ({ setView }: Pick<ViewProps, 'setView'>) => {
+    const {
+        fontSize, setFontSize, colorBlindMode, setColorBlindMode,
+        boldText, setBoldText, highContrast, setHighContrast,
+        reduceMotion, setReduceMotion, reduceTransparency, setReduceTransparency,
+        seniorMode, setSeniorMode,
+    } = useTheme();
+    return (
     <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar pr-1" style={{ maxHeight: 'calc(94vh - 180px)' }}>
         <div className="space-y-8 pb-10">
             {/* Tema */}
@@ -708,16 +451,16 @@ const AccessibilityView = ({
                     </div>
                     <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Ekran ve Metin Puntosu</h3>
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-3">
                     {(['small', 'medium', 'large'] as const).map((s) => (
-                        <button 
-                            key={s} 
-                            onClick={() => setFontSize?.(s)} 
+                        <button
+                            key={s}
+                            onClick={() => setFontSize(s)}
                             className={cn(
                                 "py-6 rounded-[2.5rem] transition-all text-center flex flex-col items-center justify-center gap-3 border border-card-border overflow-hidden relative group",
-                                fontSize === s 
-                                    ? "bg-foreground text-background shadow-2xl scale-105 z-10" 
+                                fontSize === s
+                                    ? "bg-foreground text-background shadow-2xl scale-105 z-10"
                                     : "bg-foreground/[0.03] text-secondary hover:bg-foreground/10"
                             )}
                         >
@@ -738,7 +481,7 @@ const AccessibilityView = ({
                     <h3 className="text-[12px] font-black text-amber-500 uppercase tracking-[0.2em]">Büyüklere Özel Kolay Mod</h3>
                 </div>
                 <div className="bg-amber-500/5 rounded-[2.5rem] p-5 border-2 border-amber-500/30 mb-8">
-                    <button onClick={() => setSeniorMode?.(!seniorMode)} className="flex items-center justify-between text-left w-full gap-4">
+                    <button onClick={() => setSeniorMode(!seniorMode)} className="flex items-center justify-between text-left w-full gap-4">
                         <div>
                             <p className="text-[14px] font-black text-amber-400 uppercase tracking-tight">Kolay Mod (Senior Mode)</p>
                             <p className="text-[10px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Daha büyük yazılar, basitleştirilmiş dev butonlar ve sesli Türkçe kılavuz ile uygulamayı en kolay şekilde kullanın.</p>
@@ -759,7 +502,7 @@ const AccessibilityView = ({
                     <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Görsel Geliştirmeler</h3>
                 </div>
                 <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                    <button onClick={() => setBoldText?.(!boldText)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
+                    <button onClick={() => setBoldText(!boldText)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
                         <div>
                             <p className="text-[13px] font-black text-foreground uppercase tracking-tight">Kalın Metin</p>
                             <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Tüm yazıları daha belirgin hale getirir.</p>
@@ -768,7 +511,7 @@ const AccessibilityView = ({
                             <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-card transition-all shadow-moffi-card", boldText ? "left-5" : "left-0.5")} />
                         </div>
                     </button>
-                    <button onClick={() => setHighContrast?.(!highContrast)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
+                    <button onClick={() => setHighContrast(!highContrast)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
                         <div>
                             <p className="text-[13px] font-black text-foreground uppercase tracking-tight">Kontrastı Artır</p>
                             <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Renkler ve çizgiler arası netliği artırır.</p>
@@ -789,7 +532,7 @@ const AccessibilityView = ({
                     <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Hareket ve Saydamlık</h3>
                 </div>
                 <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                    <button onClick={() => setReduceMotion?.(!reduceMotion)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
+                    <button onClick={() => setReduceMotion(!reduceMotion)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
                         <div>
                             <p className="text-[13px] font-black text-foreground uppercase tracking-tight">Hareketi Azalt</p>
                             <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Göz yorgunluğu için animasyonları kısıtlar.</p>
@@ -798,7 +541,7 @@ const AccessibilityView = ({
                             <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-card transition-all shadow-moffi-card", reduceMotion ? "left-5" : "left-0.5")} />
                         </div>
                     </button>
-                    <button onClick={() => setReduceTransparency?.(!reduceTransparency)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
+                    <button onClick={() => setReduceTransparency(!reduceTransparency)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
                         <div>
                             <p className="text-[13px] font-black text-foreground uppercase tracking-tight">Saydamlığı Azalt</p>
                             <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Blur efektlerini kaldırıp odaklanmayı artırır.</p>
@@ -819,15 +562,10 @@ const AccessibilityView = ({
                     <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Renk Filtreleri</h3>
                 </div>
                 <div className="grid grid-cols-1 gap-2.5 px-0.5">
-                    {[
-                        { id: 'none', label: 'Standart (YOK)', desc: 'Ekran renkleri varsayılan halindedir.' },
-                        { id: 'protanopia', label: 'Protanopi', desc: 'Kırmızı görme eksikliği için filtre.' },
-                        { id: 'deuteranopia', label: 'Döteranopi', desc: 'Yeşil görme eksikliği için filtre.' },
-                        { id: 'tritanopia', label: 'Tritanopi', desc: 'Mavi görme eksikliği için filtre.' }
-                    ].map((mode) => (
-                        <button 
-                            key={mode.id} 
-                            onClick={() => setColorBlindMode?.(mode.id as any)} 
+                    {COLOR_FILTERS.map((mode) => (
+                        <button
+                            key={mode.id}
+                            onClick={() => setColorBlindMode(mode.id)}
                             className={cn(
                                 "w-full p-5 rounded-[2.5rem] border text-left transition-all relative group overflow-hidden",
                                 colorBlindMode === mode.id ? "bg-foreground text-background border-transparent shadow-2xl" : "bg-foreground/[0.03] border-card-border hover:bg-foreground/5"
@@ -849,65 +587,17 @@ const AccessibilityView = ({
             <ArrowLeft className="w-4 h-4" /> Seçimleri Onayla ve Geri Dön
         </button>
     </motion.div>
-);
-
-const WellbeingView = ({ user, setView, updateSettings }: ViewProps) => {
-    const wellbeing = user?.settings?.wellbeing || { dailyLimit: 60, quietMode: { enabled: false, from: '23:00', to: '07:00' } };
-    return (
-        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-            <div className="space-y-10 pb-10 px-2">
-                <div>
-                    <h3 className="text-[11px] font-black text-secondary uppercase tracking-[0.3em] mb-6 px-1">Günlük Limit Kontrolü</h3>
-                    <div className="bg-foreground/[0.03] rounded-[2.5rem] p-8 border border-card-border">
-                        <div className="flex justify-between items-end mb-6">
-                            <span className="text-[11px] font-black text-secondary uppercase tracking-widest">Kullanım Süresi</span>
-                            <span className="text-[32px] font-black text-foreground italic tracking-tighter leading-none">{wellbeing.dailyLimit} <span className="text-[12px] uppercase not-italic text-secondary ml-1">Dk</span></span>
-                        </div>
-                        <input type="range" min="15" max="240" step="15" value={wellbeing.dailyLimit} onChange={(e) => updateSettings('wellbeing', { dailyLimit: parseInt(e.target.value) })} className="w-full h-1.5 bg-foreground/10 rounded-full appearance-none accent-amber-500 cursor-pointer" />
-                        <div className="flex justify-between mt-3 text-[9px] font-black text-secondary uppercase tracking-widest">
-                            <span>15 Dakika</span>
-                            <span>4 Saat (Maks)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 className="text-[11px] font-black text-secondary uppercase tracking-[0.3em] mb-6 px-1 flex items-center gap-3">
-                        <Moon className="w-4 h-4 text-accent" /> Sessiz Mod
-                    </h3>
-                    <div className="bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                        <button onClick={() => updateSettings('wellbeing', { quietMode: { ...wellbeing.quietMode, enabled: !wellbeing.quietMode.enabled } })} className="flex items-center justify-between p-6 w-full text-left group">
-                            <div className="flex items-center gap-3"><span className="text-[13px] font-black text-foreground uppercase tracking-tight">Sessiz Mod Aktivasyonu</span></div>
-                            <div className={cn("w-12 h-6 rounded-full transition-all relative border border-card-border shrink-0", wellbeing.quietMode.enabled ? "bg-accent border-transparent shadow-lg shadow-accent/20" : "bg-foreground/5")}>
-                                <div className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-card transition-all shadow-lg", wellbeing.quietMode.enabled ? "left-6.5" : "left-0.5")} />
-                            </div>
-                        </button>
-                        <div className={cn("grid grid-cols-2 gap-3 transition-all p-2", wellbeing.quietMode.enabled ? "opacity-100" : "opacity-30 pointer-events-none grayscale")}>
-                            <div className="bg-foreground/[0.05] p-5 rounded-3xl border border-card-border text-center">
-                                <p className="text-[9px] font-black text-secondary uppercase mb-2">Başlangıç</p>
-                                <input type="time" value={wellbeing.quietMode.from} onChange={(e) => updateSettings('wellbeing', { quietMode: { ...wellbeing.quietMode, from: e.target.value } })} className="bg-transparent text-foreground font-black text-[18px] outline-none text-center" />
-                            </div>
-                            <div className="bg-foreground/[0.05] p-5 rounded-3xl border border-card-border text-center">
-                                <p className="text-[9px] font-black text-secondary uppercase mb-2">Bitiş</p>
-                                <input type="time" value={wellbeing.quietMode.to} onChange={(e) => updateSettings('wellbeing', { quietMode: { ...wellbeing.quietMode, to: e.target.value } })} className="bg-transparent text-foreground font-black text-[18px] outline-none text-center" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
-        </motion.div>
     );
 };
 
 // Engellenenler gerçek engelleme tablosundan (Keşfet → gönderi/profil menüsü → "Bu hesabı engelle").
-const BlockedUsersView = ({ setView }: ViewProps) => {
+const BlockedUsersView = ({ setView }: Pick<ViewProps, 'setView'>) => {
     const [list, setList] = React.useState<PersonCard[] | null>(null);
     const load = React.useCallback(() => { socialService.blockedUsers().then(setList).catch(() => setList([])); }, []);
     React.useEffect(() => { load(); }, [load]);
     const unblock = async (id: string) => {
         try { await socialService.unblock(id); load(); }
-        catch (e: any) { showToast(e?.message || 'Engel kaldırılamadı.', 'AlertCircle', 'text-red-500'); }
+        catch (e) { showToast(e instanceof Error ? e.message : 'Engel kaldırılamadı.', 'AlertCircle', 'text-red-500'); }
     };
     return (
         <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
@@ -938,57 +628,53 @@ const BlockedUsersView = ({ setView }: ViewProps) => {
     );
 };
 
-const HiddenWordsView = ({ user, setView, newWord, setNewWord, handleAddWord, handleRemoveWord }: ViewProps) => (
-    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-        <div>
-            <h3 className="text-sm font-black text-white uppercase tracking-tighter mb-3 flex items-center gap-3 px-2">
-                <Tag className="w-4 h-4 text-indigo-400" /> Gizli Kelimeler
-            </h3>
-            <div className="py-2">
-                <div className="flex gap-2 mb-4">
-                    <input type="text" value={newWord} onChange={(e) => setNewWord?.(e.target.value)} placeholder="Yeni kelime..." className="flex-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:border-indigo-500/30" onKeyDown={(e) => e.key === 'Enter' && handleAddWord?.()} />
-                    <button onClick={handleAddWord} className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white active:scale-95 transition-all"><Plus className="w-4 h-4" /></button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                    {user?.settings?.content?.hiddenWords?.map((word: string) => (
-                        <div key={word} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
-                            <span className="text-[11px] font-bold text-indigo-400 uppercase">{word}</span>
-                            <button onClick={() => handleRemoveWord?.(word)}><X className="w-2.5 h-2.5" /></button>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-        <button onClick={() => setView('main')} className="mt-6 w-full py-3 rounded-xl bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 font-black text-[11px] uppercase tracking-widest hover:bg-black/10 dark:bg-white/10 transition-all flex items-center justify-center gap-2"><ArrowLeft className="w-3 h-3" /> Geri Dön</button>
-    </motion.div>
-);
-
-const StorySettingsView = ({ user, setView, updateSettings }: ViewProps) => (
-    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-        <div className="space-y-6">
-            <div>
-                <h3 className="text-[17px] font-black text-white uppercase tracking-tighter mb-3 flex items-center gap-3 px-2">
-                    <Eye className="w-4 h-4 text-cyan-400" /> Görünürlük
-                </h3>
-                <div className="py-2">
-                    <div className="space-y-2">
-                        {[{ id: 'all', label: 'Herkes' }, { id: 'followers', label: 'Takipçiler' }, { id: 'close_friends', label: 'Yakın Arkadaşlar' }].map((opt) => (
-                            <button key={opt.id} onClick={() => updateSettings('content', { stories: { ...user?.settings?.content?.stories, visibility: opt.id } })} className={cn("w-full p-4 rounded-xl border text-left transition-all font-bold text-[12px] uppercase justify-between flex items-center", user?.settings?.content?.stories?.visibility === opt.id ? "bg-cyan-500/10 border-cyan-500/30 text-white" : "bg-black/5 dark:bg-white/5 border-card-border text-gray-600")}>{opt.label} {user?.settings?.content?.stories?.visibility === opt.id && <Check className="w-3 h-3" />}</button>
-                        ))}
+const HiddenWordsView = ({ user, setView, updateSettings }: ViewProps) => {
+    const [newWord, setNewWord] = useState('');
+    const raw = user.settings?.content?.hiddenWords;
+    const words = Array.isArray(raw) ? raw.filter((w): w is string => typeof w === 'string') : [];
+    const add = () => {
+        const w = newWord.trim();
+        if (!w || words.some(x => x.toLocaleLowerCase('tr-TR') === w.toLocaleLowerCase('tr-TR'))) { setNewWord(''); return; }
+        updateSettings('content', { hiddenWords: [...words, w] });
+        setNewWord('');
+    };
+    const remove = (word: string) => updateSettings('content', { hiddenWords: words.filter(w => w !== word) });
+    return (
+        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
+            <div className="space-y-4 px-2">
+                <div className="flex items-center gap-3 px-1">
+                    <div className="w-8 h-8 rounded-2xl bg-accent/10 flex items-center justify-center"><Tag className="w-4 h-4 text-accent" /></div>
+                    <div>
+                        <h3 className="text-[14px] font-black text-foreground">Gizli kelimeler</h3>
+                        <p className="text-[12px] font-semibold text-secondary">Gönderi ve yorumlarda sana *** olarak görünür.</p>
                     </div>
                 </div>
+                <div className="flex gap-2">
+                    <input type="text" value={newWord} maxLength={40} onChange={(e) => setNewWord(e.target.value)} placeholder="Yeni kelime" className="flex-1 bg-foreground/[0.04] border border-card-border rounded-xl px-4 py-3 text-foreground text-[14px] outline-none focus:border-accent" onKeyDown={(e) => e.key === 'Enter' && add()} />
+                    <button onClick={add} aria-label="Ekle" className="w-12 rounded-xl bg-accent flex items-center justify-center text-white active:scale-95 transition-all"><Plus className="w-5 h-5" /></button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {words.map(word => (
+                        <span key={word} className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-foreground/[0.05] border border-card-border rounded-lg">
+                            <span className="text-[13px] font-bold text-foreground">{word}</span>
+                            <button onClick={() => remove(word)} aria-label={`${word} kaldır`} className="text-secondary"><X className="w-3.5 h-3.5" /></button>
+                        </span>
+                    ))}
+                    {words.length === 0 && <p className="text-[13px] text-secondary px-1">Henüz kelime eklemedin.</p>}
+                </div>
             </div>
-        </div>
-        <button onClick={() => setView('main')} className="mt-6 w-full py-3 rounded-xl bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 font-black text-[11px] uppercase tracking-widest hover:bg-black/10 dark:bg-white/10 transition-all flex items-center justify-center gap-2"><ArrowLeft className="w-3 h-3" /> Geri Dön</button>
-    </motion.div>
-);
+            <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
+        </motion.div>
+    );
+};
 
-const LoginActivityView = ({ setView, signOutOtherDevices }: ViewProps) => {
+const LoginActivityView = ({ setView }: Pick<ViewProps, 'setView'>) => {
+    const { signOutOtherDevices } = useAuth();
     const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
     const run = async () => {
         if (!confirm('Bu cihaz dışındaki tüm cihazlarda oturumun kapatılsın mı?')) return;
         setState('busy');
-        const res = await signOutOtherDevices?.();
+        const res = await signOutOtherDevices();
         setState(res?.success ? 'done' : 'error');
     };
     return (
@@ -1009,7 +695,8 @@ const LoginActivityView = ({ setView, signOutOtherDevices }: ViewProps) => {
     );
 };
 
-const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
+const PasswordChangeView = ({ setView }: Pick<ViewProps, 'setView'>) => {
+    const { changePassword } = useAuth();
     const [oldPass, setOldPass] = useState('');
     const [newPass, setNewPass] = useState('');
     const [loading, setLoading] = useState(false);
@@ -1020,7 +707,7 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
         setError('');
         if (newPass.length < 8) { setError('Yeni şifre en az 8 karakter olmalı.'); return; }
         setLoading(true);
-        const res = await changePassword?.(oldPass, newPass);
+        const res = await changePassword(oldPass, newPass);
         setLoading(false);
         if (res?.success) {
             showToast('Şifren güncellendi, diğer cihazlardaki oturumlar kapatıldı.', 'CheckCircle2', 'text-emerald-500');
@@ -1041,8 +728,8 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                 <div className="space-y-4">
                     <div className="bg-black/5 dark:bg-white/5 rounded-3xl p-4 border border-card-border">
                         <label className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest block mb-2 px-1">Mevcut Şifre</label>
-                        <input 
-                            type="password" 
+                        <input
+                            type="password"
                             value={oldPass}
                             onChange={e => setOldPass(e.target.value)}
                             className="w-full bg-transparent text-sm font-bold text-foreground dark:text-white outline-none px-1"
@@ -1051,8 +738,8 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                     </div>
                     <div className="bg-black/5 dark:bg-white/5 rounded-3xl p-4 border border-card-border">
                         <label className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest block mb-2 px-1">Yeni Şifre</label>
-                        <input 
-                            type="password" 
+                        <input
+                            type="password"
                             value={newPass}
                             onChange={e => setNewPass(e.target.value)}
                             className="w-full bg-transparent text-sm font-bold text-foreground dark:text-white outline-none px-1"
@@ -1065,7 +752,7 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                     {error && <p className="text-sm text-red-600 px-4">{error}</p>}
                 </div>
 
-                <button 
+                <button
                     disabled={loading || !oldPass || !newPass}
                     onClick={handleSave}
                     className="w-full py-4 rounded-3xl bg-card text-black font-black text-[13.5px] uppercase tracking-widest hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-50 mt-4 shadow-xl shadow-white/5"
@@ -1080,163 +767,48 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
 
 // --- Main Drawer Component ---
 export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
-    const { user, logout, updateSettings } = useAuth();
-    const { 
-        theme, setTheme,
-        fontSize, setFontSize, 
-        colorBlindMode, setColorBlindMode,
-        boldText, setBoldText,
-        highContrast, setHighContrast,
-        reduceMotion, setReduceMotion,
-        reduceTransparency, setReduceTransparency,
-        seniorMode, setSeniorMode
-    } = useTheme();
-
-    const { signOutOtherDevices, changePassword } = useAuth();
-    
+    const { user, updateSettings } = useAuth();
     const [view, setView] = useState<DrawerView>('main');
-    const [isExporting, setIsExporting] = useState(false);
-    const [exportStatus, setExportStatus] = useState('');
-    const [newWord, setNewWord] = useState('');
-    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
-    const handleToggle = (category: any, settingId: string) => {
-        const currentValue = (user?.settings as any)?.[category]?.[settingId];
-        updateSettings(category, { [settingId]: !currentValue });
-    };
-
-    const handleExport = async () => {
-        if (!user) return;
-        setIsExporting(true);
-        
-        try {
-            const { apiService } = await import('@/services/apiService');
-            
-            setExportStatus('Profil verileri hazırlanıyor...');
-            await new Promise(r => setTimeout(r, 600));
-
-            setExportStatus('Evcil hayvanlar taranıyor...');
-            const pets = await apiService.getPets();
-            await new Promise(r => setTimeout(r, 600));
-
-            setExportStatus('Gönderiler ve içerikler toplanıyor...');
-            const userPosts = await socialService.myPostsForExport();
-            await new Promise(r => setTimeout(r, 600));
-
-            setExportStatus('İlanlar ve bildirimler paketleniyor...');
-            const [userAds, notifications] = await Promise.all([
-                adoptionService.mine().catch(() => []),
-                apiService.getInboxMessages()
-            ]);
-            await new Promise(r => setTimeout(r, 600));
-
-            setExportStatus('Mesajlaşma geçmişi şifreleniyor...');
-            const chats = await apiService.getChatConversations();
-            await new Promise(r => setTimeout(r, 600));
-
-            setExportStatus('Ticaret ve sağlık kayıtları ekleniyor...');
-            const orders = await apiService.getOrders();
-            const walkStats = await apiService.getWalkStats(user.id);
-            await new Promise(r => setTimeout(r, 600));
-
-            setExportStatus('Paket mühürleniyor...');
-            exportUserData({
-                user,
-                pets,
-                posts: userPosts,
-                adoptions: userAds,
-                notifications,
-                orders,
-                chats,
-                walkStats
-            });
-        } catch (error) {
-            console.error("Dışa aktarma başarısız:", error);
-        } finally {
-            setIsExporting(false);
-            setExportStatus('');
-        }
-    };
-
-    const handleAddWord = () => {
-        if (!newWord.trim() || !user?.settings?.content) return;
-        const currentWords = user.settings.content.hiddenWords || [];
-        if (currentWords.includes(newWord.trim())) return;
-        updateSettings('content', { hiddenWords: [...currentWords, newWord.trim()] });
-        setNewWord('');
-    };
-
-    const handleRemoveWord = (word: string) => {
-        if (!user?.settings?.content) return;
-        const currentWords = user.settings.content.hiddenWords || [];
-        updateSettings('content', { hiddenWords: currentWords.filter(w => w !== word) });
-    };
-
-    const handleResetSystem = () => {
-        if (confirm("Tüm sistem verileri ve ayarların sıfırlanacak. Bu işlem geri alınamaz. Emin misin?")) {
-            // Clear all localStorage keys except Supabase authentication tokens (to keep user logged in)
-            const keysToRemove: string[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && !key.startsWith('sb-')) {
-                    keysToRemove.push(key);
-                }
-            }
-            keysToRemove.forEach(k => localStorage.removeItem(k));
-            window.location.reload();
-        }
-    };
-
-    const viewProps: ViewProps = {
-        user, setView, updateSettings, handleToggle, handleExport, 
-        isExporting, onClose, logout, handleResetSystem,
-        fontSize, setFontSize, colorBlindMode, setColorBlindMode,
-        boldText, setBoldText, highContrast, setHighContrast,
-        reduceMotion, setReduceMotion, reduceTransparency, setReduceTransparency,
-        newWord, setNewWord, handleAddWord, handleRemoveWord,
-        signOutOtherDevices, changePassword,
-        exportStatus,
-        theme, setTheme,
-        seniorMode, setSeniorMode
-    };
+    if (!user) return null;
+    const viewProps: ViewProps = { user, setView, updateSettings };
 
     return (
         <AnimatePresence mode="wait">
             {isOpen && (
                 <>
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }} 
-                        onClick={onClose} 
-                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9998]" 
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9998]"
                     />
-                    <motion.div 
-                        initial={{ y: "100%", opacity: 0 }} 
-                        animate={{ y: 0, opacity: 1 }} 
-                        exit={{ y: "100%", opacity: 0 }} 
-                        transition={{ type: "spring", damping: 28, stiffness: 180 }} 
+                    <motion.div
+                        initial={{ y: "100%", opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: "100%", opacity: 0 }}
+                        transition={{ type: "spring", damping: 28, stiffness: 180 }}
                         className="fixed inset-x-0 bottom-0 h-[94%] bg-background/85 backdrop-blur-2xl z-[9999] rounded-t-[3.5rem] p-3 flex flex-col shadow-2xl border-t border-card-border overflow-hidden transform-gpu will-change-transform"
                     >
                         <div className="w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full mx-auto mb-8 cursor-pointer" onClick={onClose} />
-                        
+
                         <div className="flex items-center justify-between mb-8 px-4">
                             <div className="flex items-center gap-3">
                                 {view !== 'main' && (
-                                    <button 
-                                        onClick={() => setView('main')} 
+                                    <button
+                                        onClick={() => setView('main')}
+                                        aria-label="Geri"
                                         className="w-8 h-8 rounded-xl bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors"
                                     >
                                         <ArrowLeft className="w-4 h-4 text-foreground" />
                                     </button>
                                 )}
-                                <div className="text-left">
-                                    <h1 className="text-[29px] font-black text-foreground italic tracking-tighter uppercase leading-none">Ayarlar</h1>
-                                    <p className="text-[10px] text-secondary font-black uppercase tracking-[0.3em] mt-1.5">Moffi Core Dynamics</p>
-                                </div>
+                                <h1 className="text-[29px] font-black text-foreground italic tracking-tighter uppercase leading-none">Ayarlar</h1>
                             </div>
-                            <button 
-                                onClick={onClose} 
+                            <button
+                                onClick={onClose}
+                                aria-label="Kapat"
                                 className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors border border-card-border"
                             >
                                 <X className="w-5 h-5 text-foreground" />
@@ -1246,25 +818,17 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                         <div className="flex-1 relative">
                             <AnimatePresence mode="wait">
                                 {view === 'main' ? (
-                                    <MainView key="main" {...viewProps} />
+                                    <MainView key="main" {...viewProps} onClose={onClose} />
                                 ) : view === 'activity' ? (
-                                    <LoginActivityView key="activity" {...viewProps} />
+                                    <LoginActivityView key="activity" setView={setView} />
                                 ) : view === 'blocked' ? (
-                                    <BlockedUsersView key="blocked" {...viewProps} />
+                                    <BlockedUsersView key="blocked" setView={setView} />
                                 ) : view === 'words' ? (
                                     <HiddenWordsView key="words" {...viewProps} />
-                                ) : view === 'stories' ? (
-                                    <StorySettingsView key="stories" {...viewProps} />
-                                ) : view === 'wellbeing' ? (
-                                    <WellbeingView key="wellbeing" {...viewProps} />
                                 ) : view === 'password' ? (
-                                    <PasswordChangeView key="password" {...viewProps} />
-                                ) : view === 'privacy' ? (
-                                    <PrivacyView key="privacy" {...viewProps} />
+                                    <PasswordChangeView key="password" setView={setView} />
                                 ) : view === 'notifications' ? (
                                     <NotificationsView key="notifications" {...viewProps} />
-                                ) : view === 'sos_config' ? (
-                                    <SOSConfigView key="sos" {...viewProps} />
                                 ) : view === 'sidebar_config' ? (
                                     <SidebarConfigView key="sidebar" {...viewProps} />
                                 ) : view === 'ai_assistant' ? (
@@ -1274,7 +838,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                                 ) : view === 'profile_personalization' ? (
                                     <ProfilePersonalizationView key="personalization" {...viewProps} />
                                 ) : (
-                                    <AccessibilityView key="accessibility" {...viewProps} />
+                                    <AccessibilityView key="accessibility" setView={setView} />
                                 )}
                             </AnimatePresence>
                         </div>
@@ -1287,7 +851,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
 
 // Kenar paneli kısayolları: panelin kendi "Düzenle" ekranıyla aynı katalog ve aynı ayar (settings.edge).
 const SidebarConfigView = ({ user, setView, updateSettings }: ViewProps) => {
-    const edge = readEdgeSettings(user?.settings?.edge);
+    const edge = readEdgeSettings(user.settings?.edge);
     const toggle = (id: EdgeShortcutId) => {
         const on = edge.shortcuts.includes(id);
         if (on && edge.shortcuts.length <= MIN_EDGE_SHORTCUTS) return;
@@ -1333,7 +897,7 @@ const SidebarConfigView = ({ user, setView, updateSettings }: ViewProps) => {
 // --- Moffi AI tercihleri ---
 // Yalnızca sunucunun gerçekten uyguladığı iki tercih (api/ai/chat): konuşma tonu ve yanıt uzunluğu.
 const AIAssistantView = ({ user, setView, updateSettings }: ViewProps) => {
-    const ai = (user?.settings?.ai || {}) as { personality?: string; detailLevel?: string };
+    const ai = (user.settings?.ai || {}) as { personality?: string; detailLevel?: string };
     const personality = ai.personality === 'casual' ? 'friendly' : ai.personality === 'technical' ? 'professional' : ai.personality || 'friendly';
     const detailLevel = ai.detailLevel || 'medium';
     const Option = ({ active, label, desc, onClick }: { active: boolean; label: string; desc: string; onClick: () => void }) => (
@@ -1388,285 +952,96 @@ const AIAssistantView = ({ user, setView, updateSettings }: ViewProps) => {
     );
 };
 
-// --- Account Settings / Hesap Merkezi View ---
-const AccountSettingsView = ({ user, setView, updateSettings }: ViewProps) => {
-    // Load existing overrides or defaults
-    const [email, setEmail] = useState(() => {
-        if (typeof window !== 'undefined') {
-            try { const saved = JSON.parse(localStorage.getItem('moffi_account_email') || 'null'); if (saved) return saved; } catch {}
-        }
-        return user?.email || 'kullanici@moffi.app';
-    });
-    const [phone, setPhone] = useState(() => {
-        if (typeof window !== 'undefined') {
-            try { const saved = JSON.parse(localStorage.getItem('moffi_account_phone') || 'null'); if (saved) return saved; } catch {}
-        }
-        return user?.user_metadata?.phone || '+90 555 123 4567';
-    });
-    const [birthDate, setBirthDate] = useState(() => {
-        if (typeof window !== 'undefined') {
-            try { const saved = JSON.parse(localStorage.getItem('moffi_account_birth') || 'null'); if (saved) return saved; } catch {}
-        }
-        return user?.user_metadata?.birthDate || '2000-01-01';
-    });
-    const [gender, setGender] = useState(() => {
-        if (typeof window !== 'undefined') {
-            try { const saved = JSON.parse(localStorage.getItem('moffi_account_gender') || 'null'); if (saved) return saved; } catch {}
-        }
-        return user?.user_metadata?.gender || 'Belirtmek İstemiyorum';
-    });
+// --- Hesap bilgileri ---
+// Telefon, doğum tarihi ve cinsiyet profiles tablosuna yazılır (başkalarına profile_cards'ta görünmez, 8.46).
+// Hesap silme gerçek 30 günlük süreçtir (DeleteAccountButton, 8.57). Eski "Meta hesap merkezi", sahte bağlı hesaplar,
+// yalnızca yerel veriyi silen "kalıcı sil" ve hiçbir yerde geri açılmayan "dondur" kaldırıldı.
+type AccountForm = { phone: string; birthDate: string; gender: string };
+const GENDERS = ['Kadın', 'Erkek', 'Diğer'];
 
-    const [activeTab, setActiveTab] = useState<'details' | 'connections' | 'verification' | 'control'>('details');
-    const [statusMsg, setStatusMsg] = useState('');
+const AccountSettingsView = ({ user, setView }: ViewProps) => {
+    const [form, setForm] = useState<AccountForm | null>(null);
+    const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-    const handleSaveDetails = async () => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('moffi_account_email', JSON.stringify(email));
-            localStorage.setItem('moffi_account_phone', JSON.stringify(phone));
-            localStorage.setItem('moffi_account_birth', JSON.stringify(birthDate));
-            localStorage.setItem('moffi_account_gender', JSON.stringify(gender));
-            
-            try {
-                await apiService.updateProfile({
-                    phone,
-                    birth_date: birthDate,
-                    gender
-                });
-            } catch (err) {
-                console.warn("Backend update skipped or failed:", err);
-            }
+    React.useEffect(() => {
+        let alive = true;
+        apiService.getUserProfile(user.id)
+            .then(p => { if (alive) setForm({ phone: p?.phone || '', birthDate: p?.birth_date || '', gender: p?.gender || '' }); })
+            .catch(() => { if (alive) setForm({ phone: '', birthDate: '', gender: '' }); });
+        return () => { alive = false; };
+    }, [user.id]);
 
-            // Dispatch event to sync topbar/profile if needed
-            window.dispatchEvent(new Event('moffi_account_updated'));
-            
-            setStatusMsg('Kişisel Bilgiler başarıyla güncellendi!');
-            setTimeout(() => setStatusMsg(''), 3000);
+    const set = (patch: Partial<AccountForm>) => { setForm(f => (f ? { ...f, ...patch } : f)); setStatus('idle'); };
+
+    const save = async () => {
+        if (!form) return;
+        setStatus('saving');
+        try {
+            await apiService.updateProfile({ phone: form.phone.trim() || null, birth_date: form.birthDate || null, gender: form.gender || null });
+            setStatus('saved');
+        } catch (err) {
+            console.error('Hesap bilgileri kaydedilemedi:', err);
+            setStatus('error');
         }
     };
 
-    const handleDeactivate = async () => {
-        if (confirm("Hesabını geçici olarak dondurmak istediğine emin misin? Profilin, fotoğrafların ve yorumların sen tekrar giriş yapana kadar gizlenecektir.")) {
-            try {
-                await apiService.updateProfile({
-                    account_status: 'deactivated'
-                });
-            } catch (err) {
-                console.warn("Soft delete mutation warning:", err);
-            }
-            alert("Hesabın başarıyla donduruldu. Tekrar giriş yaptığında otomatik olarak aktif edilecektir.");
-            if (typeof window !== 'undefined') {
-                localStorage.clear();
-                window.location.replace('/');
-            }
-        }
-    };
+    const today = new Date().toISOString().slice(0, 10);
+    const genderOptions = form?.gender && !GENDERS.includes(form.gender) ? [...GENDERS, form.gender] : GENDERS;
+    const input = "w-full bg-background border border-card-border rounded-xl px-4 py-3 text-[14px] font-semibold text-foreground outline-none focus:border-accent transition-all";
+    const label = "text-[12px] font-black text-secondary block mb-1.5";
 
     return (
         <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
             <div className="space-y-6 pb-10 px-2">
-                {/* META STYLE BANNER */}
-                <div className="p-5 rounded-[2.5rem] bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 border border-indigo-500/20 relative overflow-hidden">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                            <Database className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-[13px] font-black text-foreground uppercase tracking-widest">Hesap Merkezi</h3>
-                            <p className="text-[9px] text-secondary font-bold uppercase tracking-tighter">Meta / Moffi Global Accounts System</p>
-                        </div>
+                <div className="flex items-center gap-3 px-1">
+                    <div className="w-8 h-8 rounded-2xl bg-accent/10 flex items-center justify-center"><User className="w-4 h-4 text-accent" /></div>
+                    <div>
+                        <h3 className="text-[14px] font-black text-foreground">Hesap bilgileri</h3>
+                        <p className="text-[12px] font-semibold text-secondary">Telefonun yalnızca sana ve randevu aldığın işletmeye görünür.</p>
                     </div>
-                    <p className="text-[10px] text-secondary font-medium leading-relaxed mt-2">
-                        Instagram, Facebook ve Moffi platformlarındaki bağlı deneyimlerini, kişisel bilgilerini ve hesap güvenliğini tek bir yerden tam yetkiyle yönet.
-                    </p>
                 </div>
 
-                {/* TABS */}
-                <div className="flex gap-1.5 p-1 bg-foreground/[0.03] rounded-2xl border border-card-border overflow-x-auto no-scrollbar">
-                    {[
-                        { id: 'details', label: 'Kişisel Bilgiler', icon: User },
-                        { id: 'connections', label: 'Bağlı Hesaplar', icon: Globe },
-                        { id: 'verification', label: 'Doğrulama & Meta', icon: ShieldCheck },
-                        { id: 'control', label: 'Sahiplik & Kontrol', icon: Lock }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={cn(
-                                "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
-                                activeTab === tab.id ? "bg-foreground text-background shadow-md" : "text-secondary hover:text-foreground"
-                            )}
-                        >
-                            <tab.icon className="w-3 h-3" />
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="space-y-4 bg-foreground/[0.02] rounded-[2rem] p-5 border border-card-border">
+                    <div>
+                        <span className={label}>E-posta</span>
+                        <p className="px-1 text-[14px] font-semibold text-foreground break-all">{user.email}</p>
+                    </div>
+                    {!form ? (
+                        <p className="text-[13px] text-secondary px-1">Yükleniyor…</p>
+                    ) : (
+                        <>
+                            <label className="block">
+                                <span className={label}>Telefon</span>
+                                <input type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={form.phone} onChange={e => set({ phone: e.target.value })} placeholder="05xx xxx xx xx" className={input} />
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className="block">
+                                    <span className={label}>Doğum tarihi</span>
+                                    <input type="date" max={today} value={form.birthDate} onChange={e => set({ birthDate: e.target.value })} className={input} />
+                                </label>
+                                <label className="block">
+                                    <span className={label}>Cinsiyet</span>
+                                    <select value={form.gender} onChange={e => set({ gender: e.target.value })} className={cn(input, "appearance-none")}>
+                                        <option value="">Belirtme</option>
+                                        {genderOptions.map(g => <option key={g} value={g}>{g}</option>)}
+                                    </select>
+                                </label>
+                            </div>
+                            {status === 'saved' && <p className="text-[13px] font-bold text-emerald-600 px-1">Kaydedildi.</p>}
+                            {status === 'error' && <p className="text-[13px] font-bold text-red-600 px-1">Kaydedilemedi, tekrar dene.</p>}
+                            <button onClick={save} disabled={status === 'saving'} className="w-full py-3.5 rounded-xl bg-foreground text-background font-black text-[13px] hover:opacity-90 transition-opacity disabled:opacity-50">
+                                {status === 'saving' ? 'Kaydediliyor…' : 'Kaydet'}
+                            </button>
+                        </>
+                    )}
                 </div>
 
-                {/* TAB CONTENT */}
-                <AnimatePresence mode="wait">
-                    {activeTab === 'details' && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-                            <div className="space-y-3 bg-foreground/[0.02] rounded-[2.5rem] p-5 border border-card-border">
-                                <div>
-                                    <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1.5">E-Posta Adresi</label>
-                                    <input 
-                                        type="email" 
-                                        value={email} 
-                                        onChange={e => setEmail(e.target.value)} 
-                                        className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-xs font-bold text-foreground outline-none focus:border-accent transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1.5">Telefon Numarası</label>
-                                    <input 
-                                        type="text" 
-                                        value={phone} 
-                                        onChange={e => setPhone(e.target.value)} 
-                                        className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-xs font-bold text-foreground outline-none focus:border-accent transition-all"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1.5">Doğum Tarihi</label>
-                                        <input 
-                                            type="date" 
-                                            value={birthDate} 
-                                            onChange={e => setBirthDate(e.target.value)} 
-                                            className="w-full bg-background border border-card-border rounded-xl px-3 py-3 text-xs font-bold text-foreground outline-none focus:border-accent transition-all"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1.5">Cinsiyet</label>
-                                        <select 
-                                            value={gender} 
-                                            onChange={e => setGender(e.target.value)} 
-                                            className="w-full bg-background border border-card-border rounded-xl px-3 py-3 text-xs font-bold text-foreground outline-none focus:border-accent transition-all appearance-none"
-                                        >
-                                            <option>Kadın</option>
-                                            <option>Erkek</option>
-                                            <option>Belirtmek İstemiyorum</option>
-                                            <option>Özel</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {statusMsg && (
-                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center animate-pulse pt-2">
-                                        {statusMsg}
-                                    </p>
-                                )}
-
-                                <button 
-                                    onClick={handleSaveDetails}
-                                    className="w-full py-3.5 rounded-xl bg-foreground text-background font-black text-xs uppercase tracking-widest hover:opacity-90 transition-opacity mt-2"
-                                >
-                                    Değişiklikleri Kaydet
-                                </button>
-                            </div>
-                            <p className="text-[9px] text-secondary font-bold uppercase tracking-tighter text-center italic">
-                                ℹ️ Meta veri politikaları gereği, iletişim bilgilerin anında senkronize edilir.
-                            </p>
-                        </motion.div>
-                    )}
-
-                    {activeTab === 'connections' && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
-                            {[
-                                { id: 'ig', name: 'Instagram', desc: 'Hikaye ve gönderi çapraz paylaşımı', color: 'text-pink-500' },
-                                { id: 'tt', name: 'TikTok', desc: 'Reels video senkronizasyonu', color: 'text-cyan-500' },
-                                { id: 'fb', name: 'Facebook', desc: 'Sayfa ve grup entegrasyonu', color: 'text-blue-500' }
-                            ].map(conn => (
-                                <div key={conn.id} className="flex items-center justify-between p-4 rounded-2xl bg-foreground/[0.02] border border-card-border opacity-70">
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn("w-10 h-10 rounded-xl bg-background flex items-center justify-center font-black text-lg", conn.color)}>
-                                            {conn.name[0]}
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-black text-foreground uppercase tracking-tight flex items-center gap-1.5">
-                                                {conn.name} 
-                                                <span className="text-[7.5px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded uppercase tracking-widest border border-orange-500/20">Çok Yakında</span>
-                                            </p>
-                                            <p className="text-[9px] text-secondary font-bold uppercase tracking-tighter mt-0.5">{conn.desc}</p>
-                                        </div>
-                                    </div>
-                                    <button 
-                                        disabled
-                                        className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-foreground/5 text-secondary cursor-not-allowed"
-                                    >
-                                        Yakında
-                                    </button>
-                                </div>
-                            ))}
-                        </motion.div>
-                    )}
-
-                    {activeTab === 'verification' && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-                            <div className="p-5 rounded-2xl bg-foreground/[0.02] border border-card-border text-center space-y-3 opacity-70">
-                                <div className="w-12 h-12 rounded-full bg-gray-200/50 flex items-center justify-center mx-auto text-gray-500 dark:text-gray-400">
-                                    <ShieldCheck className="w-6 h-6 stroke-[3]" />
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest flex items-center justify-center gap-2">
-                                        Meta / Moffi Verified 
-                                        <span className="text-[7.5px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded uppercase tracking-widest border border-orange-500/20">Çok Yakında</span>
-                                    </h4>
-                                    <p className="text-[10px] text-secondary font-bold uppercase tracking-tighter mt-1">
-                                        Resmi kimlik doğrulama sistemi yapım aşamasındadır.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-left flex gap-3">
-                                <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                                <p className="text-[10px] text-amber-500/90 font-medium leading-relaxed">
-                                    Yakında, resmi belgelerinle profilini doğrulayabilecek ve profilinde özel bir Moffi Blue Badge rozeti taşıyabileceksin.
-                                </p>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {activeTab === 'control' && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
-                            <div className="p-4 rounded-2xl bg-foreground/[0.02] border border-card-border space-y-4">
-                                <div>
-                                    <h4 className="text-xs font-black text-foreground uppercase tracking-tight">Hesabı Dondur (Deaktivasyon)</h4>
-                                    <p className="text-[10px] text-secondary font-medium mt-1">
-                                        Hesabını geçici olarak gizle. Tekrar giriş yaptığında hiçbir veri kaybı olmadan kaldığın yerden devam edersin.
-                                    </p>
-                                </div>
-                                <button 
-                                    onClick={handleDeactivate}
-                                    className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 font-black text-[11px] uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all w-full text-center"
-                                >
-                                    Hesabımı Geçici Olarak Dondur
-                                </button>
-                            </div>
-
-                            <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 space-y-4">
-                                <div>
-                                    <h4 className="text-xs font-black text-red-500 uppercase tracking-tight">Hesabı Kalıcı Olarak Sil</h4>
-                                    <p className="text-[10px] text-red-500/70 font-medium mt-1">
-                                        Bu işlem geri alınamaz. Tüm gönderilerin, patili dostların, pasaport verilerin ve yorumların veritabanından kalıcı olarak silinir.
-                                    </p>
-                                </div>
-                                <button 
-                                    onClick={() => {
-                                        if (confirm("DİKKAT: Hesabını kalıcı olarak silmek üzeresin. Bu işlem kesinlikle geri alınamaz. Devam etmek istiyor musun?")) {
-                                            alert("Hesap silme talebin alındı. Meta güvenlik protokolü gereği 30 gün içinde tekrar giriş yapmazsan tüm verilerin silinecektir.");
-                                            if (typeof window !== 'undefined') {
-                                                localStorage.clear();
-                                                window.location.replace('/');
-                                            }
-                                        }
-                                    }}
-                                    className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[11px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all w-full text-center"
-                                >
-                                    Hesabımı Kalıcı Olarak Sil
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <div className="space-y-2">
+                    <p className="text-[12px] font-black text-red-500 px-1">Hesabı silme</p>
+                    <div className="bg-red-500/5 rounded-[2rem] p-2 border border-red-500/10">
+                        <DeleteAccountButton />
+                    </div>
+                </div>
             </div>
             <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
         </motion.div>

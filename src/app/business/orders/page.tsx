@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 
 import { useActiveBusiness } from "@/context/BusinessTypeContext";
-import { OrderStatus } from "@/types/business";
 import { cn, showToast } from "@/lib/utils";
 import {
     ClipboardList, Search, Menu, X, Package, Truck, CheckCircle, XCircle,
@@ -13,6 +12,49 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { supabase } from "@/lib/supabase";
 import { apiService } from "@/services/apiService";
+import type { SellerOrder, SellerOrderItem } from "@/services/supabaseApiService";
+
+/** Ekrandaki sipariş: yalnızca bu işletmenin kalemleri; tutar ve komisyon siparişin kendi oranıyla. */
+interface OrderView {
+    id: string;
+    customerName: string;
+    customerPhone: string | null;
+    items: SellerOrderItem[];
+    totalAmount: number;
+    commissionRate: number;
+    commission: number;
+    netAmount: number;
+    orderStatus: string;
+    status: string;
+    shippingAddress: string;
+    trackingNumber: string;
+    carrier: string;
+    orderedAt: string;
+}
+
+// Ödemesi alınmış sipariş durumları (finalize_paid_order 'paid' ya da 'confirmed' yazar).
+const PAID_ORDER = ['paid', 'confirmed'];
+
+function toView(order: SellerOrder): OrderView {
+    const total = order.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const commission = Math.round(total * order.commissionRate) / 100;
+    return {
+        id: order.id,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        items: order.items,
+        totalAmount: total,
+        commissionRate: order.commissionRate,
+        commission,
+        netAmount: total - commission,
+        orderStatus: order.status,
+        status: order.items[0]?.status || 'awaiting_payment',
+        shippingAddress: order.shippingAddress,
+        trackingNumber: order.trackingNumber,
+        carrier: order.carrier,
+        orderedAt: order.date,
+    };
+}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
     awaiting_payment: { label: 'Ödeme Bekliyor', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', icon: Clock },
@@ -31,53 +73,28 @@ export default function BusinessOrdersPage() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
     const [search, setSearch] = useState('');
-    const [detailModal, setDetailModal] = useState<any | null>(null);
+    const [detailModal, setDetailModal] = useState<OrderView | null>(null);
 
-    const [allOrders, setAllOrders] = useState<any[]>([]);
+    const [allOrders, setAllOrders] = useState<OrderView[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchOrders = async () => {
+    const fetchOrders = useCallback(async () => {
         if (!businessId) return;
-        setIsLoading(true);
         try {
             const rawOrders = await apiService.getClinicOrders(businessId);
-            const mappedOrders = rawOrders.map((order: any) => {
-                const myItems = order.items.filter((i: any) => i.product.owner_id === businessId);
-                
-                return {
-                    id: order.id,
-                    businessId: businessId,
-                    customerName: order.user?.full_name || "Müşteri",
-                    customerEmail: order.user?.email || "-",
-                    items: myItems.map((i: any) => ({
-                        itemId: i.id || i.product.id,
-                        productName: i.product.name,
-                        quantity: i.quantity,
-                        price: i.price,
-                        status: i.status || 'awaiting_payment'
-                    })),
-                    totalAmount: myItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0),
-                    orderStatus: order.status,
-                    status: myItems[0]?.status || 'awaiting_payment',
-                    shippingAddress: order.shipping_address || '',
-                    trackingNumber: order.tracking_number || '',
-                    carrier: order.carrier || '',
-                    notes: '',
-                    orderedAt: order.date || new Date().toISOString()
-                };
-            }).filter((o: any) => o.items.length > 0);
-            
-            setAllOrders(mappedOrders);
+            setAllOrders(rawOrders.map(toView).filter(o => o.items.length > 0));
         } catch (error) {
             console.error("Siparişler yüklenirken hata:", error);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [businessId]);
 
     useEffect(() => {
-        if (businessId) fetchOrders();
-    }, [businessId]);
+        if (!businessId) return;
+        const t = setTimeout(() => { fetchOrders(); }, 0);
+        return () => clearTimeout(t);
+    }, [businessId, fetchOrders]);
 
     const filtered = useMemo(() => {
         let result = [...allOrders];
@@ -184,7 +201,7 @@ export default function BusinessOrdersPage() {
 
                                         {/* Items */}
                                         <div className="flex items-center gap-2 flex-shrink-0">
-                                            {order.items.slice(0, 3).map((item: any, i: number) => (
+                                            {order.items.slice(0, 3).map((item, i) => (
                                                 <div key={i} className="bg-gray-100 rounded-lg px-2 py-1 text-[10px] font-medium text-gray-600 max-w-[120px] truncate">
                                                     {item.quantity}x {item.productName.split(' ').slice(0, 2).join(' ')}
                                                 </div>
@@ -214,7 +231,7 @@ export default function BusinessOrdersPage() {
                         onStatusUpdate={async (newStatus) => {
                             // Update local state manually so it feels instant
                             setAllOrders(prev => prev.map(o => o.id === detailModal.id ? { ...o, status: newStatus } : o));
-                            setDetailModal((prev: any) => prev ? { ...prev, status: newStatus } : null);
+                            setDetailModal(prev => prev ? { ...prev, status: newStatus } : null);
                         }}
                     />
                 )}
@@ -227,7 +244,7 @@ export default function BusinessOrdersPage() {
 // Order Detail Modal
 // ==================
 
-function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onClose: () => void; onStatusUpdate: (status: string) => void }) {
+function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: OrderView; onClose: () => void; onStatusUpdate: (status: string) => void }) {
     const [updating, setUpdating] = useState(false);
     const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || '');
     const [carrier, setCarrier] = useState(order.carrier || '');
@@ -237,10 +254,10 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
     const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(order.status) + 1] || null;
 
     const handleAdvanceStatus = async () => {
-        if (!nextStatus || order.orderStatus !== 'paid') return;
+        if (!nextStatus || !PAID_ORDER.includes(order.orderStatus)) return;
         setUpdating(true);
         try {
-            const itemIds = order.items.map((i: any) => i.itemId);
+            const itemIds = order.items.map(i => i.id);
             const { error } = await supabase
                 .from('order_items')
                 .update({ status: nextStatus })
@@ -302,7 +319,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                             </div>
                             <div>
                                 <div className="font-bold text-foreground text-sm">{order.customerName}</div>
-                                <div className="text-xs text-gray-500">{order.customerEmail}</div>
+                                {order.customerPhone && <div className="text-xs text-gray-500">{order.customerPhone}</div>}
                             </div>
                         </div>
                     </div>
@@ -320,7 +337,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                     <div>
                         <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Ürünler</h4>
                         <div className="space-y-2">
-                            {order.items.map((item: any, i: number) => (
+                            {order.items.map((item, i) => (
                                 <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-zinc-800/30 rounded-xl p-3">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 dark:text-gray-400">
@@ -340,7 +357,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                     {/* Financial Summary */}
                     <div className="bg-gray-50 dark:bg-zinc-800/30 rounded-xl p-4 space-y-2">
                         <div className="flex justify-between text-sm"><span className="text-gray-500">Ara Toplam</span><span className="font-bold text-foreground">₺{order.totalAmount.toLocaleString('tr-TR')}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-gray-500">Komisyon (%10)</span><span className="font-bold text-red-600">-₺{order.commission.toFixed(2)}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-gray-500">Komisyon (%{order.commissionRate.toLocaleString('tr-TR')})</span><span className="font-bold text-red-600">-₺{order.commission.toFixed(2)}</span></div>
                         <div className="border-t border-card-border pt-2 flex justify-between text-sm"><span className="font-bold text-foreground">Net Gelir</span><span className="font-black text-green-600 text-base">₺{order.netAmount.toFixed(2)}</span></div>
                     </div>
 
@@ -375,12 +392,6 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                         </div>
                     )}
 
-                    {/* Notes */}
-                    {order.notes && (
-                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-700">
-                            <strong>Not:</strong> {order.notes}
-                        </div>
-                    )}
                 </div>
 
                 {/* Actions */}
@@ -391,13 +402,13 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                     {nextStatus && order.status !== 'cancelled' && order.status !== 'returned' && (
                         <button
                             onClick={handleAdvanceStatus}
-                            disabled={updating || order.orderStatus !== 'paid'}
+                            disabled={updating || !PAID_ORDER.includes(order.orderStatus)}
                             className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {updating ? <><Loader2 className="w-4 h-4 animate-spin" /> Güncelleniyor</> : (
                                 <>
                                     <ArrowRightLeft className="w-4 h-4" />
-                                    {order.orderStatus === 'paid' ? `${STATUS_CONFIG[nextStatus].label} Yap` : 'Ödeme Bekleniyor'}
+                                    {PAID_ORDER.includes(order.orderStatus) ? `${STATUS_CONFIG[nextStatus].label} Yap` : 'Ödeme Bekleniyor'}
                                 </>
                             )}
                         </button>

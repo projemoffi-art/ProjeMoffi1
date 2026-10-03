@@ -86,7 +86,14 @@ function Wizard() {
     const canShelter = myBusinesses.some(b => b.businessType === 'shelter' && b.approved && (b.role === 'owner' || b.role === 'manager'));
 
     useEffect(() => { currentPosition(8000).then(p => { if (p) setFallback([p.lat, p.lng]); }); }, []);
-    useEffect(() => { if (!editId) setPhone((user as any)?.phone || ''); }, [user, editId]);
+    // Ön doldurma: yeni ilanda kullanıcının telefonu, seçilen hayvanın pasaport bilgileri ve aşı durumu
+    // (çizim sırasında önceki değerle karşılaştırma; düzenlemede ilanın kendi değerleri kullanılır).
+    const userPhone = (user as { phone?: string } | null)?.phone || '';
+    const [phoneFor, setPhoneFor] = useState<string | null>(null);
+    if (!editId && user && phoneFor !== userPhone) {
+        setPhoneFor(userPhone);
+        setPhone(userPhone);
+    }
 
     // Düzenleme: mevcut ilanı forma yükle.
     useEffect(() => {
@@ -106,19 +113,21 @@ function Wizard() {
     }, [editId]);
 
     // Pasaporttaki hayvan seçilince kayıtlı bilgiler forma gelir (kullanıcı değiştirebilir).
-    useEffect(() => {
-        if (!pet || editId) return;
+    const [petFilledFor, setPetFilledFor] = useState<string | null>(null);
+    if (pet && !editId && petFilledFor !== pet.id) {
+        setPetFilledFor(pet.id);
         setName(pet.name); setSpecies(toSpecies(pet.type)); setBreed(pet.breed || '');
         setGender(genderLabel(pet.gender) || '');
         setAge(ageText(pet.birthday, pet.age, todayKey()) || '');
         setAgeGroup(ageGroupFromBirthday(pet.birthday) || '');
-        setHealth(h => ({ ...h, neutered: !!pet.neutered, microchipped: !!(pet.microchip_no || pet.microchip || pet.microchip_id) }));
+        setHealth(h => ({ ...h, neutered: !!pet.neutered, microchipped: !!pet.microchip }));
         setPhotos(pet.image ? [{ url: pet.image, preview: pet.image }] : []);
-    }, [pet, editId]);
-    useEffect(() => {
-        if (!pet || editId || !bundle) return;
+    }
+    const [vaccinesFilledFor, setVaccinesFilledFor] = useState<string | null>(null);
+    if (pet && !editId && bundle && vaccinesFilledFor !== pet.id) {
+        setVaccinesFilledFor(pet.id);
         setHealth(h => ({ ...h, vaccinated: bundle.vaccines.some(v => v.status === 'completed') }));
-    }, [bundle, pet, editId]);
+    }
 
     const next = () => {
         setError(null);
@@ -156,8 +165,8 @@ function Wizard() {
             }
             const res = await adoptionService.create(input, publishNow);
             router.replace(publishNow ? `/sahiplendirme/${res.id}/yayinlandi?n=${res.notified}` : `/sahiplendirme/${res.id}/yonet`);
-        } catch (e: any) {
-            setError(e?.message || 'İlan kaydedilemedi.');
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'İlan kaydedilemedi.');
             setSaving(false);
         }
     };
@@ -175,7 +184,7 @@ function Wizard() {
                         <h2 className="text-base font-black">Hangi hayvan için ilan veriyorsun?</h2>
                         {!editId && pets.length > 0 && (
                             <div className="bg-card border border-card-border rounded-2xl p-3 space-y-2">
-                                <div className="text-xs font-bold text-secondary">Moffi'deki hayvanım · pasaporttaki bilgiler kullanılır</div>
+                                <div className="text-xs font-bold text-secondary">Moffi&apos;deki hayvanım · pasaporttaki bilgiler kullanılır</div>
                                 {pets.map(p => (
                                     <button key={p.id} onClick={() => setPetId(p.id)}
                                         className={cn('w-full flex items-center gap-3 p-2.5 rounded-2xl border text-left', petId === p.id ? 'border-accent bg-accent/5' : 'border-card-border bg-background')}>
@@ -252,7 +261,7 @@ function Wizard() {
                             <CheckRow checked={compat.cats} onChange={v => setCompat(c => ({ ...c, cats: v }))} label="Kedilerle uyumlu" />
                             <CheckRow checked={compat.dogs} onChange={v => setCompat(c => ({ ...c, dogs: v }))} label="Köpeklerle uyumlu" />
                             <CheckRow checked={compat.others} onChange={v => setCompat(c => ({ ...c, others: v }))} label="Diğer hayvanlarla uyumlu" />
-                            <p className="text-[11px] font-semibold text-secondary pb-1">Emin olmadıklarını işaretleme; ilanda "bilinmiyor" görünür.</p>
+                            <p className="text-[11px] font-semibold text-secondary pb-1">Emin olmadıklarını işaretleme; ilanda &quot;bilinmiyor&quot; görünür.</p>
                         </div>
                     </section>
                 )}
@@ -299,7 +308,7 @@ function Wizard() {
                                 hint={canShelter ? 'İlanınız barınak profili altında, "Barınak" etiketiyle yayınlanır.' : 'Sadece onaylı barınak işletme hesaplarında açılır.'} />
                         </div>
                         <p className="text-[11px] font-semibold text-secondary px-1">
-                            Moffi'de sahiplendirme ücretsizdir; ilanda satış, fiyat ya da ödeme bilgisi olamaz.
+                            Moffi&apos;de sahiplendirme ücretsizdir; ilanda satış, fiyat ya da ödeme bilgisi olamaz.
                         </p>
                     </section>
                 )}

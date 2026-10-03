@@ -1,162 +1,141 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Package, Truck, CheckCircle, Package2, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Package, Package2, ChevronRight, Truck, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiService } from '@/services/apiService';
-import { ShopOrder } from '@/services/types';
+import type { ShopOrder } from '@/services/types';
+import { orderStage, partialNote, ORDER_STAGE_LABEL, ITEM_STATUS_LABEL, type OrderStage } from '@/lib/shop/orderStatus';
 
-export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
-    const [orders, setOrders] = React.useState<ShopOrder[]>([]);
-    const [loading, setLoading] = React.useState(true);
-    const [expandedOrder, setExpandedOrder] = React.useState<string | null>(null);
+const STEPS: OrderStage[] = ['preparing', 'shipped', 'delivered'];
+const tl = (n: number) => `${n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₺`;
+
+const stageTone = (stage: OrderStage) =>
+    stage === 'delivered' ? 'text-emerald-600 bg-emerald-500/10'
+        : stage === 'cancelled' ? 'text-secondary bg-foreground/[0.06]'
+            : 'text-accent bg-accent/10';
+
+/** Kullanıcının siparişleri: durum yalnızca veritabanından (ödeme + satıcının kalem durumu + kargo bilgisi). */
+export function OrdersTab() {
+    const [orders, setOrders] = React.useState<ShopOrder[] | null>(null);
+    const [expanded, setExpanded] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                const data = await apiService.getOrders();
-                setOrders(data);
-            } catch (err) {
-                console.error("Orders fetch error:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchOrders();
+        let alive = true;
+        apiService.getOrders()
+            .then(data => { if (alive) setOrders(data); })
+            .catch(err => { console.error('Siparişler okunamadı:', err); if (alive) setOrders([]); });
+        return () => { alive = false; };
     }, []);
 
-    const getSimulatedStatus = (order: ShopOrder) => {
-        const diffMs = new Date().getTime() - new Date(order.createdAt).getTime();
-        const diffHrs = diffMs / (1000 * 60 * 60);
-
-        if (diffHrs < 1) return { status: 'preparing', text: 'Hazırlanıyor', progress: 33 };
-        if (diffHrs < 24) return { status: 'shipped', text: 'Yolda', progress: 66 };
-        return { status: 'delivered', text: 'Teslim Edildi', progress: 100 };
-    };
-
-    if (loading) {
-        return <div className="py-20 text-center opacity-40 font-black text-zinc-900 dark:text-white uppercase italic tracking-[0.5em]">Yükleniyor...</div>;
+    if (orders === null) {
+        return <p className="py-16 text-center text-[13px] font-semibold text-secondary">Yükleniyor…</p>;
     }
 
     if (orders.length === 0) {
         return (
-            <div className="py-20 text-center flex flex-col items-center gap-6 opacity-40">
-                <Package2 className="w-20 h-20 text-gray-500" />
-                <p className="text-[11px] font-black uppercase tracking-widest text-gray-500">Henüz bir siparişiniz yok</p>
+            <div className="py-16 text-center flex flex-col items-center gap-3">
+                <Package2 className="w-12 h-12 text-secondary/40" />
+                <p className="text-[14px] font-bold text-secondary">Henüz siparişin yok</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 pb-10">
-            <h3 className="px-2 text-xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter decoration-emerald-500/50">Siparişlerim</h3>
-
-            <div className="space-y-4">
-                {Array.isArray(orders) && orders.map(order => {
-                    const sim = getSimulatedStatus(order);
-                    const isExpanded = expandedOrder === order.id;
-                    const firstItem = order.items[0];
-                    const itemCount = order.items.length;
-                    
-                    return (
-                        <div key={order.id} className="bg-white dark:bg-[#12121A] border border-zinc-200 dark:border-card-border rounded-[2.5rem] overflow-hidden group transition-all">
-                            <div 
-                                onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                                className="p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-white/5"
-                            >
-                                <div className="flex items-center gap-5">
-                                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-zinc-200 dark:border-card-border bg-zinc-100 dark:bg-gray-900 shrink-0 flex items-center justify-center text-2xl font-black text-zinc-900 dark:text-white">
-                                        {firstItem?.product.image ? (
-                                            <img src={firstItem.product.image} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <Package className="w-8 h-8 opacity-20" />
-                                        )}
-                                    </div>
-                                    <div className="text-left">
-                                        <h4 className="text-zinc-900 dark:text-white font-black text-sm uppercase tracking-tight leading-tight">
-                                            {firstItem?.product.name || "Sipariş"}
-                                            {itemCount > 1 && <span className="text-zinc-500 dark:text-gray-500 lowercase"> + {itemCount - 1} ürün</span>}
-                                        </h4>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 px-2 py-0.5 bg-emerald-500/20 rounded-md border border-emerald-500/10 italic">{order.totalPrice} TL</span>
-                                            <span className="text-[9px] font-bold text-zinc-500 dark:text-gray-600 uppercase tracking-widest">{new Date(order.createdAt).toLocaleDateString('tr-TR')}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className={cn(
-                                        "flex items-center gap-2 justify-end mb-1",
-                                        sim.status === 'delivered' ? "text-emerald-400" : "text-orange-400"
-                                    )}>
-                                        <span className="text-[9px] font-black uppercase tracking-widest">{sim.text}</span>
-                                        {sim.status === 'delivered' ? <CheckCircle className="w-3.5 h-3.5" /> : <Truck className="w-3.5 h-3.5" />}
-                                    </div>
-                                    <ChevronRight className={cn("w-4 h-4 text-gray-600 ml-auto transition-transform", isExpanded ? "rotate-90" : "")} />
-                                </div>
+        <div className="space-y-4 pb-10">
+            <h3 className="px-2 text-[18px] font-black text-foreground">Siparişlerim</h3>
+            {orders.map(order => {
+                const stage = orderStage(order);
+                const isOpen = expanded === order.id;
+                const first = order.items[0];
+                const note = partialNote(order);
+                const stepIndex = STEPS.indexOf(stage);
+                return (
+                    <div key={order.id} className="bg-card border border-card-border rounded-[1.5rem] overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => setExpanded(isOpen ? null : order.id)}
+                            className="w-full p-4 flex items-center gap-4 text-left"
+                        >
+                            <div className="w-14 h-14 rounded-xl overflow-hidden bg-foreground/[0.04] shrink-0 flex items-center justify-center">
+                                {first?.product.image
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    ? <img src={first.product.image} alt="" className="w-full h-full object-cover" />
+                                    : <Package className="w-6 h-6 text-secondary/40" />}
                             </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[14px] font-black text-foreground truncate">
+                                    {first?.product.name || 'Sipariş'}
+                                    {order.items.length > 1 && <span className="text-secondary font-semibold"> + {order.items.length - 1} ürün</span>}
+                                </p>
+                                <p className="text-[12px] font-semibold text-secondary mt-0.5">
+                                    {tl(order.totalPrice)} · {new Date(order.createdAt).toLocaleDateString('tr-TR')}
+                                </p>
+                                <span className={cn('inline-block mt-1.5 px-2 py-0.5 rounded-md text-[11px] font-black', stageTone(stage))}>
+                                    {ORDER_STAGE_LABEL[stage]}
+                                </span>
+                            </div>
+                            <ChevronRight className={cn('w-4 h-4 text-secondary shrink-0 transition-transform', isOpen && 'rotate-90')} />
+                        </button>
 
-                            {isExpanded && (
-                                <div className="px-8 pb-8 pt-2 border-t border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-black/20">
-                                    {/* Timeline */}
-                                    <div className="mb-8 pt-4">
-                                        <div className="relative h-1 bg-black/10 dark:bg-white/5 rounded-full overflow-hidden">
-                                            <motion.div 
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${sim.progress}%` }}
-                                                className="absolute h-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-                                            />
+                        {isOpen && (
+                            <div className="px-4 pb-4 pt-1 border-t border-card-border space-y-4">
+                                {stepIndex >= 0 && (
+                                    <div className="pt-3">
+                                        <div className="flex gap-1.5">
+                                            {STEPS.map((s, i) => (
+                                                <span key={s} className={cn('h-1.5 flex-1 rounded-full', i <= stepIndex ? 'bg-accent' : 'bg-foreground/10')} />
+                                            ))}
                                         </div>
-                                        <div className="flex justify-between mt-3 px-1">
-                                            <span className="text-[9px] font-black uppercase text-zinc-900 dark:text-white">Hazırlanıyor</span>
-                                            <span className={cn("text-[9px] font-black uppercase", sim.progress >= 66 ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-gray-600")}>Yolda</span>
-                                            <span className={cn("text-[9px] font-black uppercase", sim.progress === 100 ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-gray-600")}>Teslim Edildi</span>
+                                        <div className="flex justify-between mt-2 text-[11px] font-bold">
+                                            {STEPS.map((s, i) => (
+                                                <span key={s} className={i <= stepIndex ? 'text-foreground' : 'text-secondary/60'}>{ORDER_STAGE_LABEL[s]}</span>
+                                            ))}
                                         </div>
+                                        {note && <p className="mt-2 text-[12px] font-semibold text-secondary">{note}</p>}
                                     </div>
+                                )}
+                                {stage === 'awaiting_payment' && (
+                                    <p className="text-[12px] font-semibold text-secondary">Ödeme onayı gelince satıcıya iletilir.</p>
+                                )}
 
-                                    {/* Items List */}
-                                    <div className="space-y-4">
-                                        <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-500/80 mb-4">Sipariş İçeriği</h5>
-                                        {order.items.map((item, idx) => (
-                                            <div key={idx} className="flex items-center justify-between py-2 border-b border-zinc-200 dark:border-card-border last:border-0">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center font-black text-[10px] text-zinc-900 dark:text-white">
-                                                        {item.quantity}x
-                                                    </div>
-                                                    <span className="text-xs font-bold text-zinc-700 dark:text-gray-300">{item.product.name}</span>
-                                                </div>
-                                                <span className="text-xs font-black text-zinc-900 dark:text-white">{item.product.price} TL</span>
+                                <div className="divide-y divide-card-border">
+                                    {order.items.map((item, idx) => (
+                                        <div key={idx} className="flex items-center justify-between gap-3 py-2">
+                                            <div className="min-w-0">
+                                                <p className="text-[13px] font-bold text-foreground truncate">{item.quantity} × {item.product.name}</p>
+                                                {item.status && <p className="text-[11px] font-semibold text-secondary">{ITEM_STATUS_LABEL[item.status] || item.status}</p>}
                                             </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="mt-8 p-4 bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-2xl flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Truck className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                                            <div>
-                                                <p className="text-[9px] font-black text-zinc-500 dark:text-gray-500 uppercase">Teslimat Adresi</p>
-                                                <p className="text-[10px] font-bold text-zinc-900 dark:text-white truncate max-w-[200px]">{order.shippingAddress}</p>
-                                            </div>
+                                            <span className="text-[13px] font-black text-foreground shrink-0">{tl(item.product.price * item.quantity)}</span>
                                         </div>
-                                        <button className="px-4 py-2 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl text-[9px] font-black text-zinc-900 dark:text-white uppercase hover:bg-black/10 dark:hover:bg-white/10 transition-all">Detaylar</button>
-                                    </div>
+                                    ))}
                                 </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
 
-            {/* TRACKING CARD */}
-            <div className="bg-gradient-to-br from-[#12121A] to-[#0A0A0E] border border-card-border p-8 rounded-[3.5rem] flex flex-col gap-6 items-center text-center">
-                <div className="w-16 h-16 rounded-[1.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                    <ShieldCheck className="w-8 h-8 text-emerald-400" />
-                </div>
-                <div>
-                    <h4 className="text-white font-black text-lg italic tracking-tighter uppercase mb-2">Moffi Express <span className="text-emerald-400">Güvencesi</span></h4>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed max-w-[200px]">Tüm siparişleriniz Moffi garantisi ile sigortalanmaktadır.</p>
-                </div>
-            </div>
+                                {(order.carrier || order.trackingNumber) && (
+                                    <div className="flex items-start gap-3 p-3 rounded-xl bg-foreground/[0.03]">
+                                        <Truck className="w-4 h-4 text-secondary mt-0.5 shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-black text-secondary">Kargo</p>
+                                            <p className="text-[13px] font-bold text-foreground break-all">
+                                                {[order.carrier, order.trackingNumber && `Takip no ${order.trackingNumber}`].filter(Boolean).join(' · ')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                                {order.shippingAddress && (
+                                    <div className="flex items-start gap-3 p-3 rounded-xl bg-foreground/[0.03]">
+                                        <MapPin className="w-4 h-4 text-secondary mt-0.5 shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-black text-secondary">Teslimat adresi</p>
+                                            <p className="text-[13px] font-semibold text-foreground">{order.shippingAddress}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
         </div>
     );
 }

@@ -23,8 +23,11 @@ const WalkMap = dynamic(() => import("@/components/walk/WalkMap"), {
 function maxSpeedKmh(raw: unknown): number {
     if (!Array.isArray(raw)) return 0;
     const pts = raw
-        .map((p: any) => (p && typeof p.lat === 'number' && typeof p.lng === 'number' && p.timestamp)
-            ? { lat: p.lat, lng: p.lng, t: new Date(p.timestamp).getTime() } : null)
+        .map((raw: unknown) => {
+            const p = raw as { lat?: unknown; lng?: unknown; timestamp?: unknown } | null;
+            return (p && typeof p.lat === 'number' && typeof p.lng === 'number' && (typeof p.timestamp === 'string' || typeof p.timestamp === 'number'))
+                ? { lat: p.lat, lng: p.lng, t: new Date(p.timestamp).getTime() } : null;
+        })
         .filter((p): p is { lat: number; lng: number; t: number } => !!p && Number.isFinite(p.t));
     let max = 0;
     for (let i = 1; i < pts.length; i++) {
@@ -36,18 +39,8 @@ function maxSpeedKmh(raw: unknown): number {
     return max;
 }
 
-interface WalkDetail {
-    id: string;
-    pet_id?: string | null;
-    distance_meters?: number;
-    start_time?: string;
-    end_time?: string;
-    active_seconds?: number | null;
-    steps?: number | null;
-    calories_kcal?: number | null;
-    path_coordinates?: unknown;
-    photo_urls?: string[];
-}
+/** Kayıtlı yürüyüş (getWalkById: walk_sessions satırı). */
+type WalkDetail = NonNullable<Awaited<ReturnType<typeof apiService.getWalkById>>>;
 
 export default function WalkDetailPage() {
     const router = useRouter();
@@ -68,7 +61,7 @@ export default function WalkDetailPage() {
         let cancelled = false;
         apiService.getWalkById(id).then(data => {
             if (cancelled) return;
-            if (data?.id && data.status === 'completed') { setWalk(data); setState('ready'); }
+            if (data && data.status === 'completed') { setWalk(data); setState('ready'); }
             else setState('missing');
         });
         return () => { cancelled = true; };

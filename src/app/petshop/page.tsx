@@ -15,7 +15,7 @@ import { usePetShop } from "@/hooks/usePetShop";
 import type { ShopCategory, ShopProduct } from "@/types/domain";
 import { usePet } from "@/context/PetContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { OrderTrackingModal } from '@/components/shop/OrderTrackingModal';
+import { OrderPlacedSheet } from '@/components/shop/OrderPlacedSheet';
 import confetti from 'canvas-confetti';
 
 const getImgUrl = (url: string) => {
@@ -805,14 +805,9 @@ export default function PetShopPage() {
                 )}
             </AnimatePresence>
 
-            {/* HYBRID TRACKING MODAL */}
-            {lastOrderId && (
-                <OrderTrackingModal 
-                    isOpen={showTracking}
-                    onClose={() => setShowTracking(false)}
-                    orderId={lastOrderId}
-                    status="out_for_delivery"
-                />
+            {/* Ödemeden dönüş: siparişin gerçek durumu */}
+            {lastOrderId && showTracking && (
+                <OrderPlacedSheet orderId={lastOrderId} onClose={() => setShowTracking(false)} />
             )}
 
             {/* PRODUCT DETAIL MODAL */}

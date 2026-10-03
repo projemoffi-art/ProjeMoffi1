@@ -1,86 +1,23 @@
-export interface User {
-    id: string;
-    name: string;
-    username?: string;
-    display_name?: string;
-    avatar: string;
-    bio?: string;
-    is_verified?: boolean;
-    subscription_status?: 'free' | 'plus' | 'pro';
-    joined_at?: string;
-}
-
-export interface FamilyMember extends User {
-    role: 'Owner' | 'Admin' | 'Member';
-    status: 'online' | 'busy' | 'offline';
-    statusText: string;
-}
-
-export interface FamilyLog {
-    id: string;
-    user: string;
-    action: string;
-    time: string;
-    iconType: 'Footprints' | 'Utensils' | 'Activity' | 'Heart' | 'Clock'; // Store string reference to icon
-    color: string;
-}
-
-// Data Transfer Objects (if needed later)
-export interface InviteRequest {
-    email: string;
-    role: FamilyMember['role'];
-}
-
-// --- WEATHER ---
-export interface WeatherState {
-    condition: 'sunny' | 'rainy' | 'cloudy' | 'snowy';
-    temp: number;
-}
+// Uygulama düzeyi alan tipleri (veritabanı satır tipleri: types/supabase.ts). 2026-10-04: hiçbir yerde kullanılmayan
+// tipler (aile, hava, aşı kural seti, ilaç günlüğü, oyun skoru, yürüyüş oturumu vb. — eski sahte servislerden kalma) silindi.
 
 // --- VET / HEALTH ---
+/** İşletmenin aktif personeli (doctors: ad, unvan, fotoğraf). */
 export interface VetDoctor {
     id: string;
     name: string;
-    specialization: string;
-    imageUrl: string;
-    bio: string;
-    workingHours: string;
+    specialization: string | null;
+    imageUrl: string | null;
 }
 
 export interface Doctor {
     id: string;
     clinic_id: string;
     name: string;
-    title?: string;
-    photo_url?: string;
+    title?: string | null;
+    photo_url?: string | null;
     is_active: boolean;
     created_at?: string;
-}
-
-export interface BusinessInvitation {
-    id: string;
-    business_id: string;
-    email: string;
-    role: 'manager' | 'staff';
-    doctor_id: string | null;
-    doctor_name?: string | null;
-    invited_by: string;
-    status: 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
-    accepted_by: string | null;
-    expires_at: string;
-    created_at: string;
-}
-
-export interface BusinessMember {
-    business_id: string;
-    user_id: string;
-    role: 'owner' | 'manager' | 'staff';
-    doctor_id: string | null;
-    created_at: string;
-    user_name?: string | null;
-    user_email?: string | null;
-    user_avatar?: string | null;
-    doctor_name?: string | null;
 }
 
 export interface VetReview {
@@ -95,13 +32,14 @@ export interface VetReview {
 export interface VetClinic {
     id: string;
     name: string;
-    location: { lat: number; lng: number };
+    /** Konumu girilmemiş işletmede yok. */
+    location: { lat: number; lng: number } | null;
     address: string;
     rating: number;
     reviewCount: number;
-    isPremium: boolean;
-    features: string[]; // e.g. "7/24", "Surgery"
-    imageUrl: string;
+    isPremium?: boolean;
+    features?: string[]; // e.g. "7/24", "Surgery"
+    imageUrl: string | null;
     isOpenNow?: boolean;
     distance?: string; // Calculated UI prop
     /** Kullanıcı konumuna göre sunucu sorgusunda hesaplanan mesafe (km); konum yoksa tanımsız. */
@@ -124,91 +62,10 @@ export interface VetAppointment {
     price?: number;
 }
 
-// --- GLOBAL VACCINE MODULE ---
-export interface VaccineDefinition {
-    id: string; // e.g. 'rabies'
-    name: string;
-    description: string;
-    isCore: boolean; // "Zorunlu"
-    frequencyMonths: number;
-    minAgeWeeks: number;
-    tags: string[]; // ['viral', 'zoonotic']
-}
-
-export interface VaccineRuleset {
-    countryCode: string; // 'TR', 'US'
-    version: string; // '2025.1'
-    source: string; // 'Veterinary Association of Turkey'
-    lastUpdated: string;
-    definitions: VaccineDefinition[];
-}
-
-export interface UserVaccineRecord {
-    id: string;
-    petId: string;
-    vaccineId: string; // Ref to Definition
-    dateAdministered?: string;
-    dueDate: string;
-    status: 'completed' | 'pending' | 'overdue' | 'snoozed';
-    vetName?: string;
-}
-
-// --- HEALTH EXTENSION ---
-export interface PetMedication {
-    id: string;
-    petId: string;
-    name: string;
-    dosage: string;
-    frequency: string;
-    instructions: string;
-    startDate: string; // ISO
-    endDate: string | null;
-    isActive: boolean;
-    lastLog?: string; // ISO of last taken time
-}
-
-export interface MedicationLog {
-    id: string;
-    medicationId: string;
-    loggedAt: string;
-}
-
-export interface NutritionPlan {
-    id: string;
-    petId: string;
-    foodName: string;
-    amountGrams: number;
-    mealsPerDay: number;
-    targetWeight: number;
-    notes: string;
-    isActive: boolean;
-}
-
 // --- PETSHOP --- (tek tanım services/types'ta)
 export type { ShopCategory, ShopProduct, ShopCartItem, ShopOrder, OrderStatus } from '@/services/types';
 
 // --- WALK ---
-export interface WalkCheckpoint {
-    lat: number;
-    lng: number;
-    timestamp: string;
-}
-
-export interface WalkSession {
-    id: string;
-    userId: string;
-    petId: string;
-    startTime: string;
-    endTime?: string;
-    distanceKm: number;
-    durationMinutes: number;
-    route: WalkCheckpoint[];
-    caloriesBurned?: number;
-    weather?: WeatherState;
-    mood?: 'happy' | 'tired' | 'excited' | 'calm';
-    notes?: string;
-}
-
 export interface WalkStats {
     totalWalks: number;
     totalDistanceKm: number;
@@ -217,26 +74,4 @@ export interface WalkStats {
     longestWalkKm: number;
     currentStreak: number; // consecutive days
     bestStreak: number;
-}
-
-// --- GAME ---
-export interface GameScore {
-    id: string;
-    userId: string;
-    petId: string;
-    score: number;
-    coins: number;
-    distance: number;
-    missionsCompleted: number;
-    playedAt: string;
-    duration: number; // seconds
-}
-
-export interface LeaderboardEntry {
-    rank: number;
-    userId: string;
-    username: string;
-    avatar: string;
-    highScore: number;
-    totalCoins: number;
 }
