@@ -38,6 +38,8 @@ export interface VetClinic {
     rating: number;
     reviewCount: number;
     isPremium?: boolean;
+    /** Platform onaylı işletme (businesses.approved). */
+    isVerified?: boolean;
     features?: string[]; // e.g. "7/24", "Surgery"
     imageUrl: string | null;
     isOpenNow?: boolean;

@@ -12,7 +12,7 @@ import { Avatar, PersonRow } from '@/components/social/SocialUI';
 import { renderEdited, DEFAULT_EDIT } from '@/components/social/MediaEditor';
 import { socialService, timeAgo, type PersonCard, type StoryGroup } from '@/services/socialService';
 import { useAuth } from '@/context/AuthContext';
-import { cn, showToast } from '@/lib/utils';
+import { cn, errorMessage, showToast } from '@/lib/utils';
 
 const STORY_MS = 5000;
 
@@ -81,12 +81,12 @@ function NewStorySheet({ file, onClose, onDone }: { file: File | null; onClose: 
             await socialService.addStory(new File([blob], 'hikaye.jpg', { type: 'image/jpeg' }), caption);
             showToast('Hikâyen 24 saat boyunca görünecek.', 'CheckCircle2', 'text-emerald-500 font-bold');
             onDone();
-        } catch (e: any) { setError(e?.message || 'Paylaşılamadı.'); }
+        } catch (e) { setError(errorMessage(e, 'Paylaşılamadı.')); }
         finally { setSaving(false); }
     };
     return (
         <Sheet open={!!file} onClose={onClose} title="Yeni hikâye">
-            {preview && <img src={preview} alt="" className="w-full max-h-[50vh] object-contain rounded-2xl bg-black" />}
+            {preview && <img loading="lazy" decoding="async" src={preview} alt="" className="w-full max-h-[50vh] object-contain rounded-2xl bg-black" />}
             <input value={caption} onChange={e => setCaption(e.target.value)} maxLength={120} placeholder="Kısa bir not (isteğe bağlı)"
                 className="w-full h-12 px-4 rounded-2xl bg-card border border-card-border text-sm font-semibold outline-none focus:border-accent" />
             <ErrorText>{error}</ErrorText>
@@ -143,14 +143,14 @@ function StoryViewer({ groups, start, onClose }: { groups: StoryGroup[]; start: 
     };
     const remove = async () => {
         try { await socialService.deleteStory(story.id); setDeleted(d => new Set(d).add(story.id)); showToast('Hikâye silindi.', 'CheckCircle2', 'text-emerald-500 font-bold'); }
-        catch (e: any) { showToast(e?.message || 'Silinemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
+        catch (e) { showToast(errorMessage(e, 'Silinemedi.'), 'AlertCircle', 'text-red-500 font-bold'); }
     };
     const openViewers = () => { setShowViewers(true); setViewers(null); socialService.storyViewers(story.id).then(setViewers); };
 
     return createPortal(
         <div className="theme-vet fixed inset-0 z-[3200] bg-black flex items-center justify-center">
             <div className="relative w-full h-full max-w-lg">
-                <img src={story.mediaUrl} alt="" className="w-full h-full object-contain" />
+                <img loading="lazy" decoding="async" src={story.mediaUrl} alt="" className="w-full h-full object-contain" />
                 <div className="absolute inset-0 flex" onPointerDown={() => setPaused(true)} onPointerUp={() => setPaused(false)} onPointerLeave={() => setPaused(false)}>
                     <button className="w-1/3 h-full" onClick={prev} aria-label="Önceki" />
                     <button className="w-2/3 h-full" onClick={next} aria-label="Sonraki" />

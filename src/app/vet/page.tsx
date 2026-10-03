@@ -620,7 +620,7 @@ function VetPageContent() {
             {/* Minimal solid design - no cheap floating background blobs */}
 
             {/* Referans Ekran 2 — Veteriner ana ekranı */}
-            <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-card-border">
+            <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-card-border pt-[env(safe-area-inset-top,0px)]">
                 <div className="px-5 pt-7 pb-4 flex flex-col gap-4">
                     <div className="flex justify-between items-center w-full min-w-0 gap-2">
                         <div className="flex items-center gap-3 min-w-0">

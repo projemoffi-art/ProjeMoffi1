@@ -238,7 +238,7 @@ export default function PetShopPage() {
         <div className="min-h-screen pb-32 font-sans selection:bg-orange-500/30">
 
             {/* HEADER */}
-            <div className="sticky top-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-3xl border-b border-card-border dark:border-card-border transition-colors">
+            <div className="sticky top-0 z-50 pt-[env(safe-area-inset-top,0px)] bg-white/70 dark:bg-black/70 backdrop-blur-3xl border-b border-card-border dark:border-card-border transition-colors">
                 <div className="flex items-center justify-between px-5 pt-4 pb-2">
                     <button 
                         onClick={() => {
@@ -396,14 +396,14 @@ export default function PetShopPage() {
                                     <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={e => { e.stopPropagation(); toggleFav(product.id); }}
-                                        className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 backdrop-blur-md flex items-center justify-center shadow-lg border border-card-border"
+                                        className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 flex items-center justify-center shadow-lg border border-card-border"
                                     >
                                         <Heart className={cn("w-4 h-4 transition-all", favorites.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-500 dark:text-gray-400")} />
                                     </motion.button>
                                     
                                     {/* Vet Approved Badge - Conditional */}
                                     {product.isVetApproved && (
-                                        <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 dark:bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-emerald-500/30 shadow-sm">
+                                        <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 dark:bg-black/80 px-1.5 py-0.5 rounded-lg border border-emerald-500/30 shadow-sm">
                                             <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
                                             <span className="text-[7px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">Vet Onaylı</span>
                                         </div>

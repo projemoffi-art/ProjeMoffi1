@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ChevronLeft, Navigation } from 'lucide-react';
 import { ClinicCard, FilterChips, directionsUrl } from '@/components/vet/VetShared';
+import type { VetClinic } from '@/types/domain';
 
 type MapFilter = 'all' | 'open' | 'emergency' | 'verified';
 
@@ -13,7 +14,7 @@ function escapeAttr(value: string) {
     return value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
 }
 
-function pinIcon(clinic: any, selected: boolean) {
+function pinIcon(clinic: VetClinic, selected: boolean) {
     const size = selected ? 52 : 42;
     const inner = clinic.imageUrl
         ? `<img src="${escapeAttr(clinic.imageUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:9999px" />`
@@ -38,10 +39,10 @@ function FitBounds({ points }: { points: [number, number][] }) {
 }
 
 interface Props {
-    clinics: any[];
+    clinics: VetClinic[];
     userLocation: [number, number] | null;
     onClose: () => void;
-    onOpenClinic: (clinic: any) => void;
+    onOpenClinic: (clinic: VetClinic) => void;
     isFavorite: (id: string) => boolean;
     onToggleFavorite: (id: string) => void;
 }
@@ -51,7 +52,7 @@ export default function ClinicMapView({ clinics, userLocation, onClose, onOpenCl
     const [filter, setFilter] = useState<MapFilter>('all');
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    const located = useMemo(() => clinics.filter(c => c.location?.lat && c.location?.lng).filter(c => {
+    const located = useMemo(() => clinics.filter((c): c is VetClinic & { location: { lat: number; lng: number } } => !!c.location?.lat && !!c.location?.lng).filter(c => {
         if (filter === 'open') return c.isOpenNow;
         if (filter === 'verified') return c.isVerified;
         if (filter === 'emergency') return (c.features || []).some((f: string) => f.toLocaleLowerCase('tr-TR').includes('acil'));
@@ -65,7 +66,7 @@ export default function ClinicMapView({ clinics, userLocation, onClose, onOpenCl
 
     return (
         <div className="fixed inset-0 z-[3000] bg-background flex flex-col">
-            <div className="px-4 pt-6 pb-3 space-y-3 bg-background border-b border-card-border">
+            <div className="px-4 pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-3 space-y-3 bg-background border-b border-card-border">
                 <div className="flex items-center gap-3">
                     <button onClick={onClose} aria-label="Geri" className="w-10 h-10 rounded-xl bg-card border border-card-border flex items-center justify-center">
                         <ChevronLeft className="w-5 h-5" />

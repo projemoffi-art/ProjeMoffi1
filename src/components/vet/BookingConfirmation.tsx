@@ -5,9 +5,10 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, Navigation, PawPrint, CheckCircle2 } from 'lucide-react';
 import { directionsUrl } from '@/components/vet/VetShared';
 import { formatDateKeyTr } from '@/lib/appointmentTime';
+import type { VetClinic } from '@/types/domain';
 
 export interface BookingSummary {
-    clinic: any;
+    clinic: VetClinic;
     serviceName: string;
     dateKey: string;
     time: string;
@@ -80,7 +81,7 @@ export function BookingConfirmation({ summary, onViewAppointments, onClose }: {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[3200] bg-background overflow-y-auto"
         >
-            <div className="max-w-md mx-auto px-6 pt-14 pb-[calc(32px+env(safe-area-inset-bottom,0px))] flex flex-col items-center text-center">
+            <div className="max-w-md mx-auto px-6 pt-[calc(env(safe-area-inset-top,0px)+40px)] pb-[calc(32px+env(safe-area-inset-bottom,0px))] flex flex-col items-center text-center">
                 <motion.div
                     initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', damping: 14 }}
                     className="w-36 h-36 rounded-full bg-accent/10 flex items-center justify-center"

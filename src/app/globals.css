@@ -20,6 +20,8 @@
 html, body {
   overflow-x: hidden;
   width: 100%;
+  /* Uygulama hissi: en üstte/altta sayfanın esneyip boşluk göstermesi kapalı (iç listeler kendi kaydırmasını korur). */
+  overscroll-behavior-y: none;
 }
 
 @theme {
@@ -503,6 +505,13 @@ nextjs-portal,
   backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+/* .photo-chip → fotoğraf ızgaralarında TEKRAR EDEN küçük rozetler (albüm, liste). Buzlu cam her karede yeniden hesaplanır;
+   kaydırılan ızgarada onlarca tane iPhone'da takılmaya yol açıyordu. Görünüm .glass-photo'ya yakın, bulanıklık yok. */
+.photo-chip {
+  background: rgba(24, 20, 16, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .card-premium {
   background: linear-gradient(180deg, var(--card-bg) 0%, color-mix(in srgb, var(--card-bg) 93%, var(--background)) 100%);

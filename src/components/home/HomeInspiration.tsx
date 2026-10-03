@@ -40,7 +40,7 @@ export function HomeInspiration({ items = [] }: { items?: FeedItem[] }) {
                         onClick={link ? () => { if (s.id) contentService.track(s.id, 'tap'); if (link.kind === 'route') router.push(link.href); else device.openExternal(link.href); } : undefined}
                         className={`snap-center shrink-0 w-full relative h-[188px] rounded-[22px] overflow-hidden ${link ? 'cursor-pointer' : ''}`}
                     >
-                        <img src={s.image} alt="" className="absolute inset-0 w-full h-full object-cover scale-[1.04]" style={{ objectPosition: s.position }} />
+                        <img loading="lazy" decoding="async" src={s.image} alt="" className="absolute inset-0 w-full h-full object-cover scale-[1.04]" style={{ objectPosition: s.position }} />
                         <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(20,17,13,0.72) 0%, rgba(20,17,13,0.35) 48%, rgba(20,17,13,0) 75%)' }} />
                         <Heart className="absolute top-4 right-4 w-6 h-6 text-white/90" strokeWidth={1.8} />
                         <figcaption className="relative h-full flex flex-col justify-center px-5 max-w-[64%]">

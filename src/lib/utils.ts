@@ -5,6 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Yakalanan hatanın kullanıcıya gösterilecek mesajı. Supabase hataları Error değil, `message` alanlı düz nesnedir. */
+export function errorMessage(e: unknown, fallback: string): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (e && typeof e === 'object' && 'message' in e && typeof (e as { message: unknown }).message === 'string' && (e as { message: string }).message) {
+    return (e as { message: string }).message;
+  }
+  return fallback;
+}
+
 /**
  * Faz 10 kontrolü: `walk_sessions.path_coordinates` DB'de gerçekte
  * `{lat, lng, timestamp}[]` şeklinde saklanıyor (bkz. append_walk_points),

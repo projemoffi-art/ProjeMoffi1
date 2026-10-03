@@ -74,7 +74,7 @@ function Shell({ children, onBack }: { children: React.ReactNode; onBack?: () =>
     const router = useRouter();
     return (
         <main className="min-h-[100dvh] bg-[#F7F5FB] dark:bg-[#0E0D12] text-foreground">
-            <header className="sticky top-0 z-10 bg-[#F7F5FB]/90 dark:bg-[#0E0D12]/90 backdrop-blur px-4 h-14 flex items-center justify-between max-w-xl mx-auto">
+            <header className="sticky top-0 z-10 bg-[#F7F5FB]/90 dark:bg-[#0E0D12]/90 backdrop-blur px-4 pt-[env(safe-area-inset-top,0px)] h-[calc(56px+env(safe-area-inset-top,0px))] flex items-center justify-between max-w-xl mx-auto">
                 <button type="button" onClick={onBack || (() => router.back())} aria-label="Geri" className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center active:bg-black/5 dark:active:bg-white/10">
                     <ArrowLeft className="w-5 h-5" />
                 </button>

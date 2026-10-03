@@ -12,7 +12,7 @@ import { Sheet, LoadingBlocks } from '@/components/health/HealthUI';
 import { ReportModal } from '@/components/common/modals/ReportModal';
 import { socialService, timeAgo, type GridPost, type PersonCard, type SocialPost } from '@/services/socialService';
 import { useAuth } from '@/context/AuthContext';
-import { cn, showToast } from '@/lib/utils';
+import { cn, errorMessage, showToast } from '@/lib/utils';
 import { speciesLabel } from '@/lib/petIdentity';
 import { filterCss } from '@/lib/mediaFilters';
 import { haptics, share as shareApi } from "@/native";
@@ -20,7 +20,7 @@ import { openShare } from '@/components/common/ShareSheet';
 
 export function Avatar({ src, name, className }: { src?: string | null; name: string; className?: string }) {
     return src
-        ? <img src={src} alt="" className={cn('rounded-full object-cover bg-card-border/40 shrink-0', className)} />
+        ? <img loading="lazy" decoding="async" src={src} alt="" className={cn('rounded-full object-cover bg-card-border/40 shrink-0', className)} />
         : <span className={cn('rounded-full bg-accent/15 text-accent font-black flex items-center justify-center shrink-0', className)}>{(name || 'M').trim().charAt(0).toLocaleUpperCase('tr-TR')}</span>;
 }
 
@@ -90,9 +90,10 @@ export function PawButton({ pawed, count, onToggle }: { pawed: boolean; count: n
 
 /** Sayı değişince yukarı/aşağı kayarak yenilenir. */
 export function RollingCount({ value, className }: { value: number; className?: string }) {
-    const prev = useRef(value);
-    const dir = value >= prev.current ? 1 : -1;
-    useEffect(() => { prev.current = value; }, [value]);
+    // Önceki değer render sırasında ref'ten değil state'ten (değer değişince yön bir kez hesaplanır)
+    const [last, setLast] = useState<{ value: number; dir: 1 | -1 }>({ value, dir: 1 });
+    let dir = last.dir;
+    if (last.value !== value) { dir = value >= last.value ? 1 : -1; setLast({ value, dir }); }
     return (
         <span className={cn('relative inline-flex overflow-hidden tabular-nums', className)}>
             <AnimatePresence mode="popLayout" initial={false}>
@@ -190,7 +191,8 @@ function MediaCarousel({ post, onDoubleTap }: { post: SocialPost; onDoubleTap: (
 /** Ayarlar → Gizlenen kelimeler: bu kelimeler gönderi ve yorumlarda *** olarak görünür. */
 export function useMaskHidden() {
     const { user } = useAuth();
-    const words: string[] = (user as any)?.settings?.content?.hiddenWords || [];
+    const rawWords = user?.settings?.content?.hiddenWords;
+    const words = Array.isArray(rawWords) ? rawWords.filter((w): w is string => typeof w === 'string') : [];
     const escape = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return (text: string) => words.reduce((t, w) => (w?.trim()
         ? t.replace(new RegExp(escape(w.trim()), 'gi'), m => '*'.repeat(m.length)) : t), text);
@@ -272,14 +274,14 @@ export function PostCard({ post, onChange, onRemoved, onBlocked, detail = false 
         if (on === p.isLiked) return;
         const prev = p;
         update({ ...p, isLiked: on, likes: Math.max(0, p.likes + (on ? 1 : -1)) });
-        try { await socialService.setLike(p.id, on); } catch (e: any) { update(prev); showToast(e?.message || 'Beğenilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
+        try { await socialService.setLike(p.id, on); } catch (e) { update(prev); showToast(errorMessage(e, 'Beğenilemedi.'), 'AlertCircle', 'text-red-500 font-bold'); }
     };
     const paw = async () => {
         if (needLogin()) return;
         const prev = p;
         update({ ...p, isPawed: !p.isPawed, paws: Math.max(0, p.paws + (p.isPawed ? -1 : 1)) });
         try { const r = await socialService.togglePaw(p.id); update({ ...prev, isPawed: r.pawed, paws: r.paws }); }
-        catch (e: any) { update(prev); showToast(e?.message || 'Pati bırakılamadı.', 'AlertCircle', 'text-red-500 font-bold'); }
+        catch (e) { update(prev); showToast(errorMessage(e, 'Pati bırakılamadı.'), 'AlertCircle', 'text-red-500 font-bold'); }
     };
     const save = async () => {
         if (needLogin()) return;
@@ -289,7 +291,7 @@ export function PostCard({ post, onChange, onRemoved, onBlocked, detail = false 
             await socialService.setSave(p.id, !prev.isSaved);
             haptics.tap();
             if (!prev.isSaved) showToast('Kaydedildi · profilindeki Kaydedilenler sekmesinde.', 'CheckCircle2', 'text-emerald-500 font-bold');
-        } catch (e: any) { update(prev); showToast(e?.message || 'Kaydedilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
+        } catch (e) { update(prev); showToast(errorMessage(e, 'Kaydedilemedi.'), 'AlertCircle', 'text-red-500 font-bold'); }
     };
     const commentsHref = `/community/gonderi/${p.id}/yorumlar`;
 
@@ -378,7 +380,7 @@ export function PostActionsSheet({ open, onClose, post, onChange, onRemoved, onB
             await socialService.setSave(post.id, !post.isSaved);
             onChange({ ...post, isSaved: !post.isSaved });
             showToast(post.isSaved ? 'Kaydedilenlerden çıkarıldı.' : 'Kaydedildi.', 'CheckCircle2', 'text-emerald-500 font-bold');
-        } catch (e: any) { showToast(e?.message || 'Kaydedilemedi.', 'AlertCircle', 'text-red-500 font-bold'); }
+        } catch (e) { showToast(errorMessage(e, 'Kaydedilemedi.'), 'AlertCircle', 'text-red-500 font-bold'); }
         onClose();
     };
     const run = async () => {
@@ -387,7 +389,7 @@ export function PostActionsSheet({ open, onClose, post, onChange, onRemoved, onB
             if (confirm === 'delete') { await socialService.remove(post.id); showToast('Gönderi silindi.', 'CheckCircle2', 'text-emerald-500 font-bold'); onRemoved(post.id); }
             else if (confirm === 'block') { await socialService.block(post.userId); showToast(`${post.author.name} engellendi.`, 'CheckCircle2', 'text-emerald-500 font-bold'); onBlocked(post.userId); }
             onClose();
-        } catch (e: any) { showToast(e?.message || 'İşlem yapılamadı.', 'AlertCircle', 'text-red-500 font-bold'); }
+        } catch (e) { showToast(errorMessage(e, 'İşlem yapılamadı.'), 'AlertCircle', 'text-red-500 font-bold'); }
         finally { setBusy(false); }
     };
 
@@ -436,8 +438,15 @@ export function PostActionsSheet({ open, onClose, post, onChange, onRemoved, onB
 }
 
 export function LikersSheet({ open, onClose, postId }: { open: boolean; onClose: () => void; postId: string }) {
-    const [list, setList] = useState<(PersonCard & { isFollowing: boolean })[] | null>(null);
-    useEffect(() => { if (open) { setList(null); socialService.likers(postId).then(setList).catch(() => setList([])); } }, [open, postId]);
+    // Liste gönderiye bağlı tutulur: başka gönderiye geçince eski liste gösterilmez (efektte senkron sıfırlama yok)
+    const [state, setState] = useState<{ postId: string; list: (PersonCard & { isFollowing: boolean })[] } | null>(null);
+    useEffect(() => {
+        if (!open) return;
+        let alive = true;
+        socialService.likers(postId).then(list => alive && setState({ postId, list })).catch(() => alive && setState({ postId, list: [] }));
+        return () => { alive = false; };
+    }, [open, postId]);
+    const list = state?.postId === postId ? state.list : null;
     return (
         <Sheet open={open} onClose={onClose} title="Beğenenler">
             {!list ? <LoadingBlocks count={3} /> : list.length === 0 ? <p className="text-sm font-semibold text-secondary">Henüz beğenen yok.</p> : (
@@ -459,7 +468,7 @@ export function FollowButton({ userId, initial, className, onChange }: { userId:
         if (needLogin() || busy) return;
         setBusy(true);
         try { await socialService.setFollow(userId, !on); setOn(!on); onChange?.(!on); }
-        catch (err: any) { showToast(err?.message || 'Takip işlemi yapılamadı.', 'AlertCircle', 'text-red-500 font-bold'); }
+        catch (err) { showToast(errorMessage(err, 'Takip işlemi yapılamadı.'), 'AlertCircle', 'text-red-500 font-bold'); }
         finally { setBusy(false); }
     };
     return (

@@ -207,7 +207,7 @@ export function LeaderboardSection() {
                             {top3[1] && (
                                 <div className="flex flex-col items-center">
                                     <div className={cn("w-14 h-14 rounded-full border-4 border-slate-300 relative mb-2 shadow-lg", currentUser?.id === top3[1].id ? "border-orange-500" : "")}>
-                                        <img src={top3[1].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[1].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
+                                        <img loading="lazy" decoding="async" src={top3[1].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[1].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
                                         <div className="absolute -bottom-2 inset-x-0 mx-auto w-5 h-5 bg-slate-300 text-white font-bold rounded-full flex items-center justify-center text-[10px] shadow">2</div>
                                     </div>
                                     <div className="text-[10px] font-bold text-foreground dark:text-gray-200 text-center line-clamp-1 w-16">{currentUser?.id === top3[1].id ? 'Sen' : top3[1].name}</div>
@@ -219,7 +219,7 @@ export function LeaderboardSection() {
                                 <div className="flex flex-col items-center -mt-6">
                                     <span className="text-xl mb-1">👑</span>
                                     <div className={cn("w-20 h-20 rounded-full border-4 border-amber-400 relative mb-2 shadow-xl shadow-amber-500/20", currentUser?.id === top3[0].id ? "ring-4 ring-orange-500/30" : "")}>
-                                        <img src={top3[0].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[0].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
+                                        <img loading="lazy" decoding="async" src={top3[0].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[0].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
                                         <div className="absolute -bottom-2.5 inset-x-0 mx-auto w-6 h-6 bg-amber-400 text-white font-bold rounded-full flex items-center justify-center text-[11px] shadow">1</div>
                                     </div>
                                     <div className="text-xs font-black text-foreground dark:text-white text-center line-clamp-1 w-20">{currentUser?.id === top3[0].id ? 'Sen' : top3[0].name}</div>
@@ -230,7 +230,7 @@ export function LeaderboardSection() {
                             {top3[2] && (
                                 <div className="flex flex-col items-center">
                                     <div className={cn("w-14 h-14 rounded-full border-4 border-orange-300 relative mb-2 shadow-lg", currentUser?.id === top3[2].id ? "border-orange-500" : "")}>
-                                        <img src={top3[2].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[2].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
+                                        <img loading="lazy" decoding="async" src={top3[2].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[2].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
                                         <div className="absolute -bottom-2 inset-x-0 mx-auto w-5 h-5 bg-orange-400 text-white font-bold rounded-full flex items-center justify-center text-[10px] shadow">3</div>
                                     </div>
                                     <div className="text-[10px] font-bold text-foreground dark:text-gray-200 text-center line-clamp-1 w-16">{currentUser?.id === top3[2].id ? 'Sen' : top3[2].name}</div>
@@ -258,7 +258,7 @@ export function LeaderboardSection() {
                                 >
                                     <div className="font-bold text-gray-500 dark:text-gray-400 w-6 text-center text-xs">{rank}</div>
                                     <div className="w-10 h-10 rounded-full mx-3">
-                                        <img src={item.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${item.id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
+                                        <img loading="lazy" decoding="async" src={item.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${item.id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
                                     </div>
                                     <div className="flex-1">
                                         <div className="font-black text-[11px] text-foreground dark:text-white flex items-center gap-1.5 uppercase tracking-wide">
@@ -270,7 +270,7 @@ export function LeaderboardSection() {
                                             aradaki gerçek mesafe farkı gösteriliyor (uydurma bir hedef değil). */}
                                         {isMe && !isSearching && rank > 1 && rows[rank - 2] ? (
                                             <div className="text-[9px] font-bold text-orange-500/80 mt-0.5">
-                                                {(rows[rank - 2].km - item.km).toFixed(1).replace('.', ',')} km kaldı — {rows[rank - 2].name}'i geçebilirsin! 🔥
+                                                {(rows[rank - 2].km - item.km).toFixed(1).replace('.', ',')} km kaldı — {rows[rank - 2].name}&apos;i geçebilirsin! 🔥
                                             </div>
                                         ) : (
                                             <div className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5">{item.pet}</div>
@@ -293,7 +293,7 @@ export function LeaderboardSection() {
                             <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-3.5 flex items-center">
                                 <div className="font-black w-9 text-center text-orange-600 text-xs">{myRankFallback.rank}+</div>
                                 <div className="w-10 h-10 rounded-full mx-3 overflow-hidden">
-                                    <img src={currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.id}`} className="w-full h-full object-cover" />
+                                    <img loading="lazy" decoding="async" src={currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.id}`} className="w-full h-full object-cover" />
                                 </div>
                                 <div className="flex-1 font-black text-[11px] text-foreground dark:text-white uppercase tracking-wide">Sen</div>
                                 <div className="font-black text-xs text-orange-600">{myRankFallback.km.toFixed(1).replace('.', ',')} km</div>

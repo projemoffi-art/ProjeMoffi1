@@ -51,7 +51,7 @@ export function AccountDeletionBanner() {
     };
 
     return (
-        <div role="alert" className="fixed top-0 inset-x-0 z-[3500] bg-red-600 text-white px-4 py-2.5 flex items-center justify-center gap-3 text-sm shadow-lg">
+        <div role="alert" className="fixed top-0 inset-x-0 z-[3500] bg-red-600 text-white px-4 pb-2.5 pt-[calc(env(safe-area-inset-top,0px)+10px)] flex items-center justify-center gap-3 text-sm shadow-lg">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span className="min-w-0">Hesabın <b>{formatDate(date)}</b> tarihinde kalıcı olarak silinecek.{error && ` ${error}`}</span>
             <button onClick={cancel} disabled={busy} className="shrink-0 px-3 py-1 rounded-full bg-white text-red-700 font-semibold text-xs disabled:opacity-60">

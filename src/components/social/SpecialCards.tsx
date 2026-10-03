@@ -25,7 +25,7 @@ export function LostFeedCard({ listing, km }: { listing: LostListing; km: number
                 <span className="text-[11px] font-semibold text-secondary">{relativeTime(listing.createdAt)}</span>
             </div>
             <div className="flex gap-3 p-4">
-                {listing.photos[0] && <img src={listing.photos[0]} alt="" className="w-24 h-24 rounded-2xl object-cover shrink-0" />}
+                {listing.photos[0] && <img loading="lazy" decoding="async" src={listing.photos[0]} alt="" className="w-24 h-24 rounded-2xl object-cover shrink-0" />}
                 <div className="flex-1 min-w-0 space-y-1">
                     <div className="text-lg font-black truncate">{listingTitle(listing)}</div>
                     <div className="text-xs font-semibold text-secondary truncate">
@@ -47,7 +47,7 @@ export function LostFeedCard({ listing, km }: { listing: LostListing; km: number
 export function AdoptionFeedCard({ listing, km }: { listing: AdoptionListing; km: number | null }) {
     return (
         <Link href={`/sahiplendirme/${listing.id}`} className="mx-4 my-3 flex gap-3 rounded-3xl border border-card-border bg-card p-3">
-            {listing.photos[0] && <img src={listing.photos[0]} alt="" className="w-24 h-24 rounded-2xl object-cover shrink-0" />}
+            {listing.photos[0] && <img loading="lazy" decoding="async" src={listing.photos[0]} alt="" className="w-24 h-24 rounded-2xl object-cover shrink-0" />}
             <div className="flex-1 min-w-0 space-y-1 py-0.5">
                 <div className="text-[11px] font-black text-accent">Yuva arıyor 🏡</div>
                 <div className="text-base font-black truncate">{listing.petName}</div>

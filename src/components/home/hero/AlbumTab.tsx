@@ -70,8 +70,8 @@ function MemoryCard({ m }: { m: Memory }) {
                 ? <img src={m.cover.thumbUrl} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
                 : <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 70% 20%, #F4A77F 0%, #E2734F 50%, #8E4A33 100%)' }} />}
             <div className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(20,15,10,0.78) 0%, rgba(20,15,10,0) 60%)' }} />
-            <span className="absolute left-2.5 top-2.5 glass-photo w-8 h-8 rounded-full flex items-center justify-center"><Icon className="w-4 h-4 text-white" /></span>
-            {m.media.some(x => x.kind === 'video') && <span className="absolute right-2.5 top-2.5 glass-photo w-8 h-8 rounded-full flex items-center justify-center"><Play className="w-3.5 h-3.5 text-white" fill="currentColor" /></span>}
+            <span className="absolute left-2.5 top-2.5 photo-chip w-8 h-8 rounded-full flex items-center justify-center"><Icon className="w-4 h-4 text-white" /></span>
+            {m.media.some(x => x.kind === 'video') && <span className="absolute right-2.5 top-2.5 photo-chip w-8 h-8 rounded-full flex items-center justify-center"><Play className="w-3.5 h-3.5 text-white" fill="currentColor" /></span>}
             <span className="absolute inset-x-2.5 bottom-2.5 text-white">
                 <span className="block text-[13.5px] font-extrabold leading-tight line-clamp-2">{m.title}</span>
                 <span className="block text-[11.5px] font-semibold text-white/80 mt-0.5">{memoryDate(m.date)}</span>

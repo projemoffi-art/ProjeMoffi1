@@ -57,7 +57,7 @@ export function HomeRecommendations({ products, onAddToCart }: {
                     >
                         <div className="h-[124px] bg-foreground/[0.05] relative">
                             {p.image && !broken.has(p.id) ? (
-                                <img src={p.image} alt={p.name} className="w-full h-full object-cover" onError={() => setBroken(prev => new Set(prev).add(p.id))} />
+                                <img loading="lazy" decoding="async" src={p.image} alt={p.name} className="w-full h-full object-cover" onError={() => setBroken(prev => new Set(prev).add(p.id))} />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
                                     <PawPrint className="w-8 h-8 text-foreground/20" />

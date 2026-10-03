@@ -20,7 +20,7 @@ export function WalkHeader({ title, right, onBack, transparent }: { title: strin
         else router.replace('/home');
     };
     return (
-        <header className={cn("sticky top-0 z-30 px-4 pt-4 pb-3 grid grid-cols-[44px_1fr_44px] items-center", transparent ? "bg-transparent" : "bg-background/90 backdrop-blur-md")}>
+        <header className={cn("sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-3 grid grid-cols-[44px_1fr_44px] items-center", transparent ? "bg-transparent" : "bg-background/90 backdrop-blur-md")}>
             <button type="button" onClick={back} aria-label="Geri" className="w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-transform">
                 <ChevronLeft className="w-6 h-6 text-foreground" />
             </button>

@@ -154,16 +154,17 @@ export function FilterTabs<T extends string>({ options, value, onChange }: { opt
     );
 }
 
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+/** layer='top': her yerden açılabilen ortak pencereler (paylaşım) için; açık çekmece ve tam ekran panellerin (z ≤ 9999) üstünde açılır. */
+export function Sheet({ open, onClose, title, children, layer = 'page' }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; layer?: 'page' | 'top' }) {
     return (
         <AnimatePresence>
             {open && (
                 <>
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
-                        className="fixed inset-0 z-[3100] bg-black/50 backdrop-blur-sm" />
+                        className={cn('fixed inset-0 bg-black/50 backdrop-blur-sm', layer === 'top' ? 'z-[10000]' : 'z-[3100]')} />
                     <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 28, stiffness: 240 }}
-                        className="theme-vet fixed bottom-0 inset-x-0 z-[3101] bg-background text-foreground rounded-t-3xl border-t border-card-border max-h-[90vh] flex flex-col"
+                        className={cn('theme-vet fixed bottom-0 inset-x-0 bg-background text-foreground rounded-t-3xl border-t border-card-border max-h-[90vh] flex flex-col', layer === 'top' ? 'z-[10001]' : 'z-[3101]')}
                         role="dialog" aria-label={title}>
                         <div className="flex items-center justify-between px-5 pt-5 pb-3 max-w-2xl w-full mx-auto">
                             <h3 className="text-lg font-black">{title}</h3>

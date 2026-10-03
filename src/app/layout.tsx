@@ -12,13 +12,13 @@ import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
 import { AccountDeletionBanner } from "@/components/account/AccountDeletion";
 import { DynamicNavigation } from "@/components/common/DynamicNavigation";
 import { GlobalCareModals } from "@/components/common/GlobalCareModals";
-import { GlobalAuraBackground } from "@/components/common/GlobalAuraBackground";
 import { WeatherProvider } from "@/context/WeatherContext";
 import { DailyProgressProvider } from "@/context/DailyProgressContext";
 import { QuestCelebration } from "@/components/quests/QuestCelebration";
 import { GlobalToast } from "@/components/common/GlobalToast";
 import CookieBanner from "@/components/common/CookieBanner";
 import { ShareSheetHost } from "@/components/common/ShareSheet";
+import { StatusBarScrim } from "@/components/common/StatusBarScrim";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -31,12 +31,19 @@ export const viewport = {
   maximumScale: 1,
   viewportFit: "cover",
   userScalable: false,
+  // Android ve tarayıcı üst çubuğu uygulama zemininde (iPhone black-translucent ile içerik çentiğin altına uzanır, bkz. StatusBarScrim)
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F7F3EA" },
+    { media: "(prefers-color-scheme: dark)", color: "#1E1A15" },
+  ],
 };
 
 export const metadata: Metadata = {
   title: "Moffi",
   description: "Evcil hayvanın için sağlık takibi, yürüyüş, kayıp ve sahiplendirme, veteriner ve topluluk tek uygulamada.",
   manifest: "/manifest.json",
+  // Geçici simge (public/icons, src/app/icon.svg); gerçek uygulama simgesi gelince yalnızca dosyalar değişir.
+  icons: { apple: "/icons/apple-touch-icon.png" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -76,7 +83,7 @@ export default function RootLayout({
                                   <ReportProvider>
                                     <ClientAuthWrapper>
                                       <AccountDeletionBanner />
-                                      <GlobalAuraBackground />
+                                      <StatusBarScrim />
                                       <div id="modal-root" className="pointer-events-none fixed inset-0 z-[99999]"></div>
                                       <div className="min-h-screen relative">
                                         <ErrorBoundary>

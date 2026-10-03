@@ -859,7 +859,7 @@ export class SupabaseApiService {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Favorilere eklemek için giriş yapmalısın.');
         const { error } = favorite
-            ? await supabase.from('favorite_clinics').upsert({ user_id: user.id, clinic_id: clinicId })
+            ? await supabase.from('favorite_clinics').upsert({ user_id: user.id, clinic_id: clinicId }, { onConflict: 'user_id,clinic_id', ignoreDuplicates: true })
             : await supabase.from('favorite_clinics').delete().eq('user_id', user.id).eq('clinic_id', clinicId);
         if (error) throw error;
     }

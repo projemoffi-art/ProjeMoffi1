@@ -7,6 +7,7 @@ import { Check } from "lucide-react";
 import { useActivity, type WalkFinishStage } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
 import { PrimaryButton, SoftButton } from "@/components/walk/WalkUI";
+import { errorMessage } from "@/lib/utils";
 
 // Ekran 6 (İşleme). Her adım gerçek bir işin bitişine bağlı: noktaların gönderilmesi, sunucuda mesafe/süre/
 // kalori hesabı (finish_walk), istatistik ve kazanımların yenilenmesi. Kayıt başarısız olursa yürüyüş
@@ -53,8 +54,8 @@ function ProcessingContent() {
             params.set('status', result.status);
             if (result.sessionId) params.set('id', result.sessionId);
             router.replace(`/walk/summary?${params.toString()}`);
-        } catch (e: any) {
-            setError(e?.message === 'Giriş gerekli'
+        } catch (e) {
+            setError(errorMessage(e, '') === 'Giriş gerekli'
                 ? 'Yürüyüşü kaydetmek için giriş yapmış olman gerekiyor.'
                 : 'Yürüyüş kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene; yürüyüşün kaybolmadı.');
         }
@@ -77,7 +78,7 @@ function ProcessingContent() {
     };
 
     return (
-        <div className="min-h-[100dvh] flex flex-col px-6 pt-16 pb-10">
+        <div className="min-h-[100dvh] flex flex-col px-6 pt-[calc(env(safe-area-inset-top,0px)+48px)] pb-10">
             <div className="flex-1 flex flex-col items-center justify-center">
                 <motion.div
                     animate={error ? {} : { y: [0, -8, 0] }}

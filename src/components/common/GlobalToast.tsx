@@ -51,7 +51,7 @@ export function GlobalToast() {
     const removeToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
     return (
-        <div aria-live="polite" className="fixed inset-x-4 top-[calc(env(safe-area-inset-top)+12px)] sm:left-auto sm:right-6 z-[9999] flex flex-col items-center sm:items-end gap-2 pointer-events-none select-none">
+        <div aria-live="polite" className="fixed inset-x-4 top-[calc(env(safe-area-inset-top)+12px)] sm:left-auto sm:right-6 z-[10050] flex flex-col items-center sm:items-end gap-2 pointer-events-none select-none">
             <AnimatePresence>
                 {toasts.map(toast => {
                     const IconComponent = IconMap[toast.icon] || Bell;

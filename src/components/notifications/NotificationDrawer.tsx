@@ -44,7 +44,7 @@ const targetOf = (n: { type: string; entity_id?: string | null; actor_id?: strin
     : n.type === 'appointment' ? '/vet?view=appointments'
     : n.type === 'staff_invitation' && n.entity_id ? `/invitation/${n.entity_id}`
     : n.type === 'admin_business' ? '/admin/businesses'
-    : ['team_invite', 'challenge_invite', 'challenge_finished'].includes(n.type) ? '/quests/birlikte' : null;
+    : ['team_invite', 'challenge_invite', 'challenge_accepted', 'challenge_declined', 'challenge_finished'].includes(n.type) ? '/quests/birlikte' : null;
 
 function TypeBadge({ type }: { type: string }) {
   const icon = type === 'like' ? <Heart className="w-3 h-3 fill-current" />

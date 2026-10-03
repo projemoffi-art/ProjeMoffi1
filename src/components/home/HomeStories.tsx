@@ -4,7 +4,7 @@
 // görülmemiş hikâye varsa yanar: İçerik Stüdyosu öğelerinde sunucudaki kayıt, otomatik kanallarda bu cihaz.
 // Otomatik özet hikâyeleri görsel yerine tasarlanmış kart olarak çizilir.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BellRing, Clock, Gift, PawPrint, Stethoscope, X } from 'lucide-react';
@@ -32,27 +32,40 @@ const CARD_BG: Record<StoryCard['tone'], string> = {
     ink: 'linear-gradient(160deg, #4A4038 0%, #2A231D 60%, #15110D 100%)',
 };
 
+// Görülen hikâyeler cihazda (localStorage); ekran onu dış kaynak olarak okur (efektte senkron setState yok, sunucuda boş küme).
+const SEEN_EVENT = 'moffi-stories-seen';
+const NO_SEEN = new Set<string>();
+let seenCache: { raw: string | null; set: Set<string> } = { raw: null, set: NO_SEEN };
 function readSeen(): Set<string> {
-    try { return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')); } catch { return new Set(); }
+    let raw: string | null = null;
+    try { raw = localStorage.getItem(SEEN_KEY); } catch { /* gizli sekme vb. */ }
+    if (raw !== seenCache.raw) {
+        let list: string[] = [];
+        try { list = JSON.parse(raw || '[]'); } catch { /* bozuk kayıt: boş başla */ }
+        seenCache = { raw, set: new Set(list) };
+    }
+    return seenCache.set;
 }
-function writeSeen(seen: Set<string>) {
-    try { localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seen).slice(-400))); } catch { /* gizli sekme vb. */ }
+function subscribeSeen(cb: () => void) {
+    window.addEventListener(SEEN_EVENT, cb);
+    window.addEventListener('storage', cb);
+    return () => { window.removeEventListener(SEEN_EVENT, cb); window.removeEventListener('storage', cb); };
+}
+function addSeen(id: string) {
+    const seen = readSeen();
+    if (seen.has(id)) return;
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify([...Array.from(seen), id].slice(-400))); } catch { /* gizli sekme vb. */ }
+    window.dispatchEvent(new Event(SEEN_EVENT));
 }
 
 export function HomeStories({ groups }: { groups: UserStoryGroup[] }) {
-    const [seen, setSeen] = useState<Set<string>>(new Set());
+    const seen = useSyncExternalStore(subscribeSeen, readSeen, () => NO_SEEN);
     const [open, setOpen] = useState<{ group: number; story: number } | null>(null);
-    useEffect(() => { setSeen(readSeen()); }, []);
 
     const markSeen = useCallback((story: Story) => {
         if (story.contentId && !story.seen) contentService.track(story.contentId, 'view');
-        setSeen(prev => {
-            if (prev.has(story.id)) return prev;
-            const next = new Set(prev); next.add(story.id);
-            return next;
-        });
+        addSeen(story.id);
     }, []);
-    useEffect(() => { if (seen.size > 0) writeSeen(seen); }, [seen]);
 
     const isSeen = (s: Story) => !!s.seen || seen.has(s.id);
 
@@ -82,7 +95,7 @@ export function HomeStories({ groups }: { groups: UserStoryGroup[] }) {
                                 >
                                     <span className="block w-full h-full rounded-full border-[2.5px] border-background overflow-hidden">
                                         {g.author_avatar ? (
-                                            <img src={g.author_avatar} alt="" className="w-full h-full object-cover" />
+                                            <img loading="lazy" decoding="async" src={g.author_avatar} alt="" className="w-full h-full object-cover" />
                                         ) : (
                                             <span className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${style.color} 70%, #fff) 0%, ${style.color} 55%, color-mix(in srgb, ${style.color} 80%, #000) 100%)` }}>
                                                 {style.Icon && <style.Icon className="w-6 h-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]" strokeWidth={2.2} />}
@@ -101,6 +114,7 @@ export function HomeStories({ groups }: { groups: UserStoryGroup[] }) {
             <AnimatePresence>
                 {open && groups[open.group] && (
                     <StoryViewer
+                        key={`${groups[open.group].user_id}:${open.story}`}
                         group={groups[open.group]}
                         startIndex={open.story}
                         onSeen={markSeen}
@@ -119,7 +133,7 @@ function CardSlide({ card }: { card: StoryCard }) {
             <div className="absolute -right-16 -top-16 w-72 h-72 rounded-full bg-white/10 blur-2xl" />
             <div className="absolute -left-10 bottom-24 w-56 h-56 rounded-full bg-black/10 blur-2xl" />
             {card.image && (
-                <img src={card.image} alt="" className="relative w-28 h-28 rounded-[32px] object-cover border-4 border-white/80 shadow-xl mb-6" />
+                <img loading="lazy" decoding="async" src={card.image} alt="" className="relative w-28 h-28 rounded-[32px] object-cover border-4 border-white/80 shadow-xl mb-6" />
             )}
             {card.eyebrow && <p className="relative text-[14px] font-extrabold uppercase tracking-wide text-white/75">{card.eyebrow}</p>}
             {card.big && (
@@ -141,12 +155,13 @@ function StoryViewer({ group, startIndex, onSeen, onClose, onNextGroup }: {
 }) {
     const router = useRouter();
     const [index, setIndex] = useState(startIndex);
+    const [openedAt] = useState(() => Date.now());
     const [progress, setProgress] = useState(0);
     const [paused, setPaused] = useState(false);
     const pressStart = useRef(0);
+    const elapsed = useRef(0);
     const story: Story | undefined = group.stories[index];
 
-    useEffect(() => { setIndex(startIndex); setProgress(0); }, [group.user_id, startIndex]);
     useEffect(() => { if (story) onSeen(story); }, [story?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Hikâye açıkken alt menü gizlenir.
@@ -156,19 +171,24 @@ function StoryViewer({ group, startIndex, onSeen, onClose, onNextGroup }: {
     }, []);
 
     const next = useCallback(() => {
-        setProgress(0);
+        elapsed.current = 0; setProgress(0);
         if (index < group.stories.length - 1) setIndex(i => i + 1);
         else onNextGroup();
     }, [index, group.stories.length, onNextGroup]);
-    const prev = () => { setProgress(0); if (index > 0) setIndex(i => i - 1); };
+    const prev = () => { elapsed.current = 0; setProgress(0); if (index > 0) setIndex(i => i - 1); };
 
     useEffect(() => {
         if (paused || !story) return;
         const step = 50;
-        const t = setInterval(() => setProgress(p => Math.min(100, p + (step / STORY_MS) * 100)), step);
+        // Süre dolunca geçiş zamanlayıcının içinde (ilerleme değerine bakan ayrı efekt yok)
+        const t = setInterval(() => {
+            elapsed.current += step;
+            const p = Math.min(100, (elapsed.current / STORY_MS) * 100);
+            setProgress(p);
+            if (p >= 100) { clearInterval(t); next(); }
+        }, step);
         return () => clearInterval(t);
-    }, [paused, story?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-    useEffect(() => { if (progress >= 100) next(); }, [progress, next]);
+    }, [paused, story?.id, next]); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!story) return null;
 
@@ -187,7 +207,7 @@ function StoryViewer({ group, startIndex, onSeen, onClose, onNextGroup }: {
         else router.push(value);
     };
 
-    const remaining = story.expires_at ? new Date(story.expires_at).getTime() - Date.now() : null;
+    const remaining = story.expires_at ? new Date(story.expires_at).getTime() - openedAt : null;
     const tapZone = (dir: 'prev' | 'next') => ({
         onPointerDown: () => { pressStart.current = Date.now(); setPaused(true); },
         onPointerUp: () => { setPaused(false); if (Date.now() - pressStart.current < 250) { if (dir === 'prev') prev(); else next(); } },
@@ -205,7 +225,7 @@ function StoryViewer({ group, startIndex, onSeen, onClose, onNextGroup }: {
             <div className="relative w-full h-full md:max-w-md md:h-[820px] md:rounded-[28px] overflow-hidden bg-neutral-900">
                 {story.card ? <CardSlide card={story.card} /> : (
                     <>
-                        <img src={story.media_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        <img loading="lazy" decoding="async" src={story.media_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/85" />
                     </>
                 )}

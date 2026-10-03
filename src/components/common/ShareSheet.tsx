@@ -12,7 +12,7 @@ import { Sheet } from '@/components/health/HealthUI';
 import { Avatar } from '@/components/social/SocialUI';
 import { socialService, type PersonCard } from '@/services/socialService';
 import { useAuth } from '@/context/AuthContext';
-import { useChat } from '@/context/ChatContext';
+import { useChat, type ChatPartner } from '@/context/ChatContext';
 import { haptics, share as shareApi, device } from '@/native';
 import { cn, showToast } from '@/lib/utils';
 
@@ -108,7 +108,7 @@ export function ShareSheetHost() {
     useEffect(() => {
         if (!p || !user) return;
         socialService.following().then(list => {
-            const recent: PersonCard[] = (inboxMessages || []).map((m: any) => ({ id: m.userId, name: m.partnerName, username: null, avatar: m.avatar || null, isBusiness: false }));
+            const recent: PersonCard[] = (inboxMessages || []).map((m: ChatPartner) => ({ id: m.userId, name: m.partnerName, username: null, avatar: m.avatar || null, isBusiness: false }));
             const seen = new Set<string>(); const out: PersonCard[] = [];
             for (const x of [...recent, ...list]) if (x.id && x.id !== user.id && !seen.has(x.id)) { seen.add(x.id); out.push(x); }
             setPeople(out);
@@ -168,7 +168,7 @@ export function ShareSheetHost() {
     );
 
     return (
-        <Sheet open={!!p} onClose={close} title="Paylaş">
+        <Sheet open={!!p} onClose={close} title="Paylaş" layer="top">
             <div className="flex items-center gap-3 bg-card border border-card-border rounded-2xl p-2.5">
                 {p.image ? <img src={p.image} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" /> : <span className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center text-2xl shrink-0">🐾</span>}
                 <span className="min-w-0">
@@ -179,7 +179,7 @@ export function ShareSheetHost() {
 
             {user && (
                 <section className="space-y-2.5">
-                    <div className="text-sm font-black">Moffi'de gönder</div>
+                    <div className="text-sm font-black">Moffi&apos;de gönder</div>
                     {people === null ? (
                         <div className="h-20 rounded-2xl bg-card-border/40 animate-pulse" />
                     ) : people.length === 0 ? (

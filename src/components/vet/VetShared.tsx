@@ -4,7 +4,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, Heart, ShieldAlert, ShieldCheck, Smile, Star, Stethoscope, Syringe } from 'lucide-react';
 import { apiService } from '@/services/apiService';
-import { cn, showToast } from '@/lib/utils';
+import { cn, errorMessage, showToast } from '@/lib/utils';
+import type { VetClinic } from '@/types/domain';
 
 // Referans (design-reference/vet-final) Ekran 2, 3, 11 ve 12 aynı klinik kartını kullanır;
 // bu dosya o kartın ve ortak parçaların tek kaynağıdır.
@@ -29,13 +30,13 @@ export function useFavoriteClinics() {
         });
         try {
             await apiService.setFavoriteClinic(clinicId, next);
-        } catch (err: any) {
+        } catch (err) {
             setIds(prev => {
                 const copy = new Set(prev);
                 if (next) copy.delete(clinicId); else copy.add(clinicId);
                 return copy;
             });
-            showToast(err?.message || 'Favori güncellenemedi.', 'AlertCircle', 'text-red-500 font-bold');
+            showToast(errorMessage(err, 'Favori güncellenemedi.'), 'AlertCircle', 'text-red-500 font-bold');
         }
     }, [ids]);
 
@@ -60,7 +61,7 @@ export function directionsUrl(c: { name?: string; address?: string; location?: {
 }
 
 interface ClinicCardProps {
-    clinic: any;
+    clinic: VetClinic;
     onOpen: () => void;
     isFavorite?: boolean;
     onToggleFavorite?: () => void;
@@ -83,7 +84,7 @@ export function ClinicCard({ clinic, onOpen, isFavorite, onToggleFavorite, empha
         >
             <div className="w-[72px] h-[72px] rounded-xl overflow-hidden border border-card-border shrink-0 bg-card-border/40">
                 {clinic.imageUrl ? (
-                    <img src={clinic.imageUrl} alt="" className="w-full h-full object-cover" />
+                    <img loading="lazy" decoding="async" src={clinic.imageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-xl font-black text-secondary">
                         {(clinic.name || 'K').charAt(0).toLocaleUpperCase('tr-TR')}

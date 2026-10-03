@@ -80,7 +80,7 @@ export function BusinessHeader({ onMenuClick }: HeaderProps) {
     };
 
     return (
-        <header className="h-16 md:h-20 bg-white dark:bg-[#121212] border-b border-gray-100 dark:border-[#27272a] px-4 md:px-6 flex items-center justify-between gap-4 shrink-0 sticky top-0 z-[2000]">
+        <header className="h-[calc(64px+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] md:h-20 md:pt-0 bg-white dark:bg-[#121212] border-b border-gray-100 dark:border-[#27272a] px-4 md:px-6 flex items-center justify-between gap-4 shrink-0 sticky top-0 z-[2000]">
             <div className="flex items-center gap-3 min-w-0">
                 <button
                     onClick={onMenuClick}

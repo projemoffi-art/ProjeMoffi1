@@ -7,15 +7,16 @@ import { useChatMediaUrl } from "@/lib/chatMedia";
 
 export interface ChatBubbleMessage {
     id: string;
-    text: string;
+    /** Yalnızca görsel olan mesajda boş olabilir. */
+    text: string | null;
     attachmentUrl?: string | null;
     sentByMe: boolean;
-    createdAt?: string;
+    createdAt?: string | null;
     deleted?: boolean;
 }
 
 // Bugünse sadece saat ("14:32"), değilse gün + saat ("17 Eyl 14:32")
-export function formatBubbleTime(createdAt?: string): string {
+export function formatBubbleTime(createdAt?: string | null): string {
     if (!createdAt) return "";
     const date = new Date(createdAt);
     if (isNaN(date.getTime())) return "";

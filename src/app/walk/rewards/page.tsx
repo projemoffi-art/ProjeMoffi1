@@ -136,7 +136,7 @@ export default function RewardsPage() {
 
     return (
         <main className="min-h-screen max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans flex flex-col border-x border-card-border">
-            <div className="bg-card px-6 py-6 border-b border-card-border sticky top-0 z-20">
+            <div className="bg-card px-6 pb-6 pt-[calc(env(safe-area-inset-top,0px)+24px)] border-b border-card-border sticky top-0 z-20">
                 <div className="flex items-center justify-between mb-5">
                     <button onClick={() => router.back()} className="w-10 h-10 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center hover:bg-gray-100 transition active:scale-90">
                         <ArrowLeft className="w-5 h-5 text-foreground" />

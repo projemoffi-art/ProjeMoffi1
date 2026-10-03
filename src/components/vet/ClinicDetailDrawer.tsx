@@ -6,7 +6,7 @@ import {
     X, Phone, Navigation, Star, MapPin, Calendar, Clock, ShieldCheck, ChevronRight, ChevronLeft,
     Users, MessageSquare, Megaphone, Tag, Heart, Share2, Globe, CheckCircle2
 } from "lucide-react";
-import { cn, showToast } from "@/lib/utils";
+import { cn, errorMessage, showToast } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { uploadChatImage } from "@/lib/chatMedia";
 import { ChatMessageList, ChatComposer } from "@/components/chat/MessageThread";
@@ -19,12 +19,21 @@ import type { BusinessType } from "@/context/AuthContext";
 import { usePet } from "@/context/PetContext";
 import { CategoryTile, FilterChips, directionsUrl, formatDistance, openStatusText } from "@/components/vet/VetShared";
 import { openShare } from '@/components/common/ShareSheet';
+import type { User } from '@supabase/supabase-js';
+
+type ClinicDetails = NonNullable<Awaited<ReturnType<typeof apiService.getClinicDetails>>>;
+/** Liste kartından gelen veri + sunucudaki ayrıntı (ayrıntı önceliklidir). */
+type ClinicView = Omit<Partial<VetClinic>, keyof ClinicDetails> & Omit<ClinicDetails, 'id'> & { id: string; calculated_distance?: number };
+type Review = Awaited<ReturnType<typeof apiService.getClinicReviews>>['reviews'][number];
+type ReviewableAppointment = Awaited<ReturnType<typeof apiService.getReviewableAppointments>>[number];
+type Campaign = Awaited<ReturnType<typeof apiService.getClinicCampaigns>>[number];
+type ChatMessage = Awaited<ReturnType<typeof apiService.getChatMessages>>[number];
 
 // Referans Ekran 4 (klinik detayı) + 8 (yorumlar) + 9 (ekip) + 10 (hizmetler): design-reference/vet-final.
 
 interface ClinicDetailDrawerProps {
     clinicId: string | null;
-    clinicData?: any;
+    clinicData?: VetClinic | null;
     businessType?: BusinessType;
     onClose: () => void;
     onBookAppointment: (clinic: VetClinic, serviceName?: string) => void;
@@ -43,26 +52,26 @@ export function ClinicDetailDrawer({
 }: ClinicDetailDrawerProps) {
     const { activePet } = usePet();
     const businessConfig = getBusinessTypeConfig(businessType);
-    const [clinic, setClinic] = useState<any>(null);
+    const [clinic, setClinic] = useState<ClinicView | null>(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('info');
     const drawerRef = useRef<HTMLDivElement>(null);
 
-    const [reviews, setReviews] = useState<any[]>([]);
+    const [reviews, setReviews] = useState<Review[]>([]);
     const [averageRating, setAverageRating] = useState<number>(0);
     const [reviewSort, setReviewSort] = useState<ReviewSort>('all');
-    const [reviewableAppointments, setReviewableAppointments] = useState<any[]>([]);
+    const [reviewableAppointments, setReviewableAppointments] = useState<ReviewableAppointment[]>([]);
     const [activeReviewAppointmentId, setActiveReviewAppointmentId] = useState<string | null>(null);
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-    const [currentUser, setCurrentUser] = useState<any>(null);
-    const [campaigns, setCampaigns] = useState<any[]>([]);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
     const [isChatOpen, setIsChatOpen] = useState(false);
-    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
 
     const targetId = clinicData ? clinicData.id : clinicId;
@@ -136,7 +145,7 @@ export function ClinicDetailDrawer({
 
     const loadReviewable = async (userId: string) => {
         const rAppts = await apiService.getReviewableAppointments(userId);
-        setReviewableAppointments(rAppts.filter((apt: any) => apt.clinic_id === targetId));
+        setReviewableAppointments(rAppts.filter(apt => apt.clinic_id === targetId));
     };
 
     const fetchDetails = async () => {
@@ -152,11 +161,12 @@ export function ClinicDetailDrawer({
             setClinic({
                 ...(clinicData || {}),
                 ...res,
+                id: res.id ?? targetId!,
                 calculated_distance: clinicData?.calculated_distance,
             });
 
             apiService.getClinicCampaigns(targetId!).then(camps => {
-                setCampaigns(camps.filter((c: any) => {
+                setCampaigns(camps.filter(c => {
                     if (c.status && c.status !== 'active') return false;
                     const expirationStr = c.expires_at || c.ends_at;
                     if (expirationStr && new Date(expirationStr) <= new Date()) return false;
@@ -188,8 +198,8 @@ export function ClinicDetailDrawer({
                 if (currentUser) await loadReviewable(currentUser.id);
                 showToast("Değerlendirmen yayınlandı, teşekkürler!", "CheckCircle2", "text-emerald-500 font-bold");
             }
-        } catch (err: any) {
-            showToast(err?.message || "Değerlendirme gönderilemedi.", "AlertCircle", "text-red-500 font-bold");
+        } catch (err) {
+            showToast(errorMessage(err, "Değerlendirme gönderilemedi."), "AlertCircle", "text-red-500 font-bold");
         } finally {
             setIsSubmittingReview(false);
         }
@@ -201,7 +211,7 @@ export function ClinicDetailDrawer({
     };
 
     const offeredShortcuts = useMemo(() => {
-        const features: string[] = (clinic?.services || []).map((s: any) => (s.service_name || '').toLocaleLowerCase('tr-TR'));
+        const features: string[] = (clinic?.services || []).map(s => (s.service_name || '').toLocaleLowerCase('tr-TR'));
         return businessConfig.customerShortcuts.filter(sc => features.some(f => sc.keywords.some(k => f.includes(k))));
     }, [clinic?.services, businessConfig]);
 
@@ -242,13 +252,13 @@ export function ClinicDetailDrawer({
                         >
                             {isChatOpen ? (
                                 <div className="flex flex-col h-full bg-card">
-                                    <div className="flex items-center gap-3 p-4 border-b border-card-border sticky top-0 bg-card z-10">
+                                    <div className="flex items-center gap-3 p-4 pt-[calc(env(safe-area-inset-top,0px)+16px)] border-b border-card-border sticky top-0 bg-card z-10">
                                         <button onClick={() => setIsChatOpen(false)} aria-label="Geri" className="w-9 h-9 rounded-full bg-card-border/40 flex items-center justify-center">
                                             <ChevronLeft className="w-4 h-4" />
                                         </button>
                                         <div className="w-10 h-10 rounded-full overflow-hidden bg-card-border/40 flex items-center justify-center shrink-0">
-                                            {clinic?.logoUrl || clinic?.imageUrl
-                                                ? <img src={clinic.logoUrl || clinic.imageUrl} className="w-full h-full object-cover" alt="" />
+                                            {clinic?.imageUrl
+                                                ? <img loading="lazy" decoding="async" src={clinic.imageUrl} className="w-full h-full object-cover" alt="" />
                                                 : <span className="font-black text-secondary">{(clinic?.name || 'K').charAt(0)}</span>}
                                         </div>
                                         <div className="min-w-0">
@@ -283,7 +293,7 @@ export function ClinicDetailDrawer({
                                     <div className="relative h-56 shrink-0 bg-card-border/40">
                                         {heroUrl ? (
                                             <button onClick={() => setLightboxUrl(heroUrl)} className="w-full h-full" aria-label="Fotoğrafı büyüt">
-                                                <img src={heroUrl} className="w-full h-full object-cover" alt={clinic.name} />
+                                                <img loading="lazy" decoding="async" src={heroUrl} className="w-full h-full object-cover" alt={clinic.name} />
                                             </button>
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
@@ -291,7 +301,7 @@ export function ClinicDetailDrawer({
                                             </div>
                                         )}
                                         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-transparent pointer-events-none" />
-                                        <div className="absolute top-5 inset-x-5 flex items-center justify-between">
+                                        <div className="absolute top-[calc(env(safe-area-inset-top,0px)+20px)] inset-x-5 flex items-center justify-between">
                                             <button onClick={onClose} aria-label="Kapat" className="w-10 h-10 bg-white/90 text-zinc-900 rounded-full flex items-center justify-center">
                                                 <ChevronLeft className="w-5 h-5" />
                                             </button>
@@ -372,7 +382,7 @@ export function ClinicDetailDrawer({
                                                         </button>
                                                         {expandedCampaignId === camp.id && (
                                                             <div className="p-3.5 pt-0 text-[12px] text-secondary">
-                                                                {camp.media_url && <img src={camp.media_url} className="w-full rounded-xl mb-2.5 max-h-40 object-cover" alt="" />}
+                                                                {camp.media_url && <img loading="lazy" decoding="async" src={camp.media_url} className="w-full rounded-xl mb-2.5 max-h-40 object-cover" alt="" />}
                                                                 {camp.description && <p className="mb-2.5 font-medium">{camp.description}</p>}
                                                                 {camp.coupon_code && (
                                                                     <span className="inline-flex items-center gap-1.5 bg-card px-2.5 py-1 rounded-lg border border-accent/20">
@@ -438,7 +448,7 @@ export function ClinicDetailDrawer({
                                                     <EmptyState icon={CheckCircle2} text="İşletme henüz hizmet listesini eklemedi." />
                                                 ) : (
                                                     <div className="space-y-2.5">
-                                                        {clinic.services.map((svc: any) => (
+                                                        {clinic.services.map(svc => (
                                                             <button
                                                                 key={svc.id || svc.service_name}
                                                                 onClick={() => { haptics.tap(); onBookAppointment(clinic, svc.service_name); }}
@@ -465,7 +475,7 @@ export function ClinicDetailDrawer({
                                                 <div>
                                                     {reviewableAppointments.length > 0 && (
                                                         <div className="mb-6 space-y-3">
-                                                            {reviewableAppointments.map((apt: any) => (
+                                                            {reviewableAppointments.map(apt => (
                                                                 <div key={apt.id}>
                                                                     {activeReviewAppointmentId !== apt.id ? (
                                                                         <button onClick={() => setActiveReviewAppointmentId(apt.id)} className="w-full bg-accent/5 border border-accent/20 rounded-2xl py-3.5 flex flex-col items-center gap-0.5">
@@ -537,16 +547,16 @@ export function ClinicDetailDrawer({
                                                                 ]}
                                                             />
                                                             <div className="space-y-5">
-                                                                {sortedReviews.map((review: any, index: number) => (
+                                                                {sortedReviews.map((review, index) => (
                                                                     <div key={review.id || `rev-${index}`}>
                                                                         <div className="flex justify-between items-start mb-1.5 gap-3">
                                                                             <div className="flex items-center gap-2.5 min-w-0">
-                                                                                {review.user?.avatar ? <img src={review.user.avatar} className="w-9 h-9 rounded-full object-cover" alt="" /> : (
+                                                                                {review.user?.avatar ? <img loading="lazy" decoding="async" src={review.user.avatar} className="w-9 h-9 rounded-full object-cover" alt="" /> : (
                                                                                     <div className="w-9 h-9 rounded-full bg-card-border/60 flex items-center justify-center"><span className="text-[12px] font-black text-secondary">{(review.user?.name || 'K').charAt(0)}</span></div>
                                                                                 )}
                                                                                 <div className="min-w-0">
                                                                                     <span className="text-[13px] font-black block truncate">{review.user?.name || 'Moffi kullanıcısı'}</span>
-                                                                                    <span className="text-[11px] font-semibold text-secondary">{new Date(review.created_at).toLocaleDateString('tr-TR')}</span>
+                                                                                    {review.created_at && <span className="text-[11px] font-semibold text-secondary">{new Date(review.created_at).toLocaleDateString('tr-TR')}</span>}
                                                                                 </div>
                                                                             </div>
                                                                             <div className="flex gap-0.5 shrink-0 mt-1">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-3 h-3", s <= review.rating ? "text-amber-400 fill-amber-400" : "text-card-border")} />)}</div>
@@ -572,10 +582,10 @@ export function ClinicDetailDrawer({
                                                 <div className="space-y-6">
                                                     {(clinic.doctors || []).length > 0 ? (
                                                         <div className="space-y-2.5">
-                                                            {clinic.doctors.map((doctor: any) => (
+                                                            {clinic.doctors.map(doctor => (
                                                                 <div key={doctor.id} className="bg-card rounded-2xl p-3.5 border border-card-border flex items-center gap-3">
                                                                     <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-card-border/50 flex items-center justify-center">
-                                                                        {doctor.imageUrl ? <img src={doctor.imageUrl} className="w-full h-full object-cover" alt="" /> : <span className="font-black text-secondary">{(doctor.name || 'D').charAt(0)}</span>}
+                                                                        {doctor.imageUrl ? <img loading="lazy" decoding="async" src={doctor.imageUrl} className="w-full h-full object-cover" alt="" /> : <span className="font-black text-secondary">{(doctor.name || 'D').charAt(0)}</span>}
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
                                                                         <span className="text-[14px] font-black block truncate">{doctor.name}</span>
@@ -594,7 +604,7 @@ export function ClinicDetailDrawer({
                                                             <div className="grid grid-cols-3 gap-2">
                                                                 {clinic.gallery.map((url: string) => (
                                                                     <button key={url} onClick={() => setLightboxUrl(url)} className="aspect-square rounded-xl overflow-hidden bg-card-border/40">
-                                                                        <img src={url} alt="" className="w-full h-full object-cover" />
+                                                                        <img loading="lazy" decoding="async" src={url} alt="" className="w-full h-full object-cover" />
                                                                     </button>
                                                                 ))}
                                                             </div>
@@ -635,8 +645,8 @@ export function ClinicDetailDrawer({
                         onClick={() => setLightboxUrl(null)}
                         className="fixed inset-0 z-[6300] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
                     >
-                        <img src={lightboxUrl} className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} alt="" />
-                        <button onClick={() => setLightboxUrl(null)} aria-label="Kapat" className="absolute top-6 right-6 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white">
+                        <img loading="lazy" decoding="async" src={lightboxUrl} className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} alt="" />
+                        <button onClick={() => setLightboxUrl(null)} aria-label="Kapat" className="absolute top-[calc(env(safe-area-inset-top,0px)+24px)] right-6 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white">
                             <X className="w-5 h-5" />
                         </button>
                     </motion.div>

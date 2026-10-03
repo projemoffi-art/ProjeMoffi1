@@ -110,7 +110,7 @@ function SummaryContent() {
             <div className="relative h-72">
                 <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-background" />
-                <div className="absolute top-4 inset-x-4 flex justify-end">
+                <div className="absolute top-[calc(env(safe-area-inset-top,0px)+16px)] inset-x-4 flex justify-end">
                     <button type="button" onClick={handleShare} aria-label="Paylaş" className="w-11 h-11 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow">
                         <Share2 className="w-[18px] h-[18px] text-[#201B16]" />
                     </button>
