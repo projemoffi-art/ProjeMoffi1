@@ -9,6 +9,10 @@ import type { BusinessProfileData } from "@/services/types";
 import { useBusinessType } from "@/context/BusinessTypeContext";
 import { showToast } from "@/lib/utils";
 import turkeyCities from "@/data/turkey_cities.json";
+import { formatTrPhone, normalizeTrPhone } from "@/lib/trIdentity";
+
+type Cities = { name: string; districts: { name: string }[] }[];
+const errText = (e: unknown, fallback: string) => (e instanceof Error && e.message) || fallback;
 
 const LocationPicker = dynamic(() => import("@/components/business/LocationPicker"), {
     ssr: false,
@@ -16,7 +20,7 @@ const LocationPicker = dynamic(() => import("@/components/business/LocationPicke
 });
 
 const MAX_GALLERY = 8;
-const input = "w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-foreground outline-none focus:border-indigo-500";
+const input = "w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-foreground outline-none focus:border-[#5B4D9D]";
 const card = "bg-white dark:bg-[#121212] rounded-3xl p-5 md:p-6 border border-zinc-200 dark:border-zinc-800 space-y-4";
 
 // İşletme vitrini: müşterinin klinik detay ekranında (tanıtım, iletişim, çalışma saatleri dışı bilgiler,
@@ -33,16 +37,16 @@ export default function BusinessProfilePage() {
 
     useEffect(() => {
         apiService.getBusinessProfile()
-            .then(p => setForm(p || { businessName: '', about: '', phone: '', website: '', address: '', province: '', district: '', lat: null, lng: null, logoUrl: null, coverUrl: null, gallery: [] }))
+            .then(p => setForm(p ? { ...p, phone: p.phone ? formatTrPhone(p.phone) : '' } : { businessName: '', about: '', phone: '', website: '', address: '', province: '', district: '', lat: null, lng: null, logoUrl: null, coverUrl: null, gallery: [] }))
             .catch(() => showToast("Profil yüklenemedi.", "AlertCircle", "text-red-500 font-bold"));
     }, []);
 
     if (!form) {
-        return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
+        return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-[#5B4D9D]" /></div>;
     }
 
     const set = <K extends keyof BusinessProfileData>(k: K, v: BusinessProfileData[K]) => setForm(f => f ? { ...f, [k]: v } : f);
-    const districts = (turkeyCities as any[]).find(c => c.name === form.province)?.districts || [];
+    const districts = (turkeyCities as Cities).find(c => c.name === form.province)?.districts || [];
 
     const upload = async (kind: 'cover' | 'logo' | 'gallery', files: FileList | null) => {
         if (!files || files.length === 0) return;
@@ -57,8 +61,8 @@ export default function BusinessProfilePage() {
                 const url = await apiService.uploadMedia(files[0], kind === 'logo' ? 'avatars' : 'posts');
                 set(kind === 'logo' ? 'logoUrl' : 'coverUrl', url);
             }
-        } catch (e: any) {
-            showToast(e?.message || "Görsel yüklenemedi.", "AlertCircle", "text-red-500 font-bold");
+        } catch (e) {
+            showToast(errText(e, "Görsel yüklenemedi."), "AlertCircle", "text-red-500 font-bold");
         } finally {
             setUploading(null);
         }
@@ -76,15 +80,17 @@ export default function BusinessProfilePage() {
     const save = async () => {
         if (!form.businessName.trim()) { showToast("İşletme adı boş bırakılamaz.", "AlertCircle", "text-red-500 font-bold"); return; }
         if (!form.province || !form.district) { showToast("İl ve ilçe seç; müşteriler seni bu bölgede bulur.", "AlertCircle", "text-red-500 font-bold"); return; }
+        const phone = form.phone.trim() ? normalizeTrPhone(form.phone) : '';
+        if (phone === null) { showToast("Geçerli bir Türkiye telefon numarası yaz (örn. 0532 123 45 67).", "AlertCircle", "text-red-500 font-bold"); return; }
         const site = form.website.trim();
         const website = site && !/^https?:\/\//i.test(site) ? `https://${site}` : site;
         setSaving(true);
         try {
-            await apiService.updateBusinessProfile({ ...form, website });
-            setForm(f => f ? { ...f, website } : f);
+            await apiService.updateBusinessProfile({ ...form, phone, website });
+            setForm(f => f ? { ...f, phone: phone ? formatTrPhone(phone) : '', website } : f);
             showToast("Profil kaydedildi.", "CheckCircle2", "text-emerald-500 font-bold");
-        } catch (e: any) {
-            showToast(e?.message || "Profil kaydedilemedi.", "AlertCircle", "text-red-500 font-bold");
+        } catch (e) {
+            showToast(errText(e, "Profil kaydedilemedi."), "AlertCircle", "text-red-500 font-bold");
         } finally {
             setSaving(false);
         }
@@ -134,7 +140,7 @@ export default function BusinessProfilePage() {
                 <div className="grid md:grid-cols-2 gap-3">
                     <label className="block">
                         <span className="text-xs font-bold text-zinc-500 mb-1.5 block">Telefon</span>
-                        <input className={input} type="tel" inputMode="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="0 5xx xxx xx xx" />
+                        <input className={input} type="tel" inputMode="tel" value={form.phone} maxLength={19} onChange={e => set('phone', e.target.value.replace(/[^0-9+()\s-]/g, ''))} placeholder="0532 000 00 00" />
                     </label>
                     <label className="block">
                         <span className="text-xs font-bold text-zinc-500 mb-1.5 block">Web sitesi</span>
@@ -147,18 +153,18 @@ export default function BusinessProfilePage() {
             <div className={card}>
                 <div className="flex items-center justify-between gap-3">
                     <h2 className="text-base font-black text-foreground">Konum</h2>
-                    <button onClick={useMyLocation} disabled={locating} className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 flex items-center gap-1.5 disabled:opacity-50">
+                    <button onClick={useMyLocation} disabled={locating} className="h-9 px-3 rounded-xl text-xs font-bold text-[#5B4D9D] dark:text-[#B9AEE8] bg-[#5B4D9D]/10 flex items-center gap-1.5 disabled:opacity-50">
                         <MapPin className="w-3.5 h-3.5" />{locating ? 'Konum alınıyor…' : 'Şu anki konumumu kullan'}
                     </button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <select aria-label="İl" className={input} value={form.province} onChange={e => { set('province', e.target.value); set('district', ''); }}>
                         <option value="">İl seç</option>
-                        {(turkeyCities as any[]).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        {(turkeyCities as Cities).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                     </select>
                     <select aria-label="İlçe" className={input} value={form.district} disabled={!form.province} onChange={e => set('district', e.target.value)}>
                         <option value="">İlçe seç</option>
-                        {districts.map((d: any) => <option key={d.name} value={d.name}>{d.name}</option>)}
+                        {districts.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
                     </select>
                 </div>
                 <label className="block">
@@ -196,7 +202,7 @@ export default function BusinessProfilePage() {
             </div>
 
             <div className="sticky bottom-24 md:bottom-4 flex justify-end">
-                <button onClick={save} disabled={saving || uploading !== null} className="h-12 px-6 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg disabled:opacity-50">
+                <button onClick={save} disabled={saving || uploading !== null} className="h-12 px-6 rounded-2xl bg-[#5B4D9D] text-white font-black text-sm shadow-lg disabled:opacity-50">
                     {saving ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
                 </button>
             </div>

@@ -147,6 +147,12 @@ function ReviewPanel({ row, onClose, onDone }: { row: AdminBusinessRow; onClose:
         }
     };
 
+    const openDoc = async () => {
+        if (!row.taxDocPath) return;
+        try { window.open(await businessApplicationService.taxDocumentUrl(row.taxDocPath), "_blank", "noopener"); }
+        catch (e) { showToast(e instanceof Error ? e.message : "Belge açılamadı.", "AlertCircle", "text-red-500 font-bold"); }
+    };
+
     const mapUrl = row.lat != null && row.lng != null ? `https://www.openstreetmap.org/?mlat=${row.lat}&mlon=${row.lng}#map=17/${row.lat}/${row.lng}` : null;
 
     return (
@@ -170,13 +176,14 @@ function ReviewPanel({ row, onClose, onDone }: { row: AdminBusinessRow; onClose:
                     <Field k="Yetkili (beyan)" v={row.ownerName} />
                     <Field k="Telefon" v={row.phone} />
                     <Field k="Vergi / T.C. no" v={row.taxId} mono />
-                    <Field k="IBAN" v={row.iban ? formatIban(row.iban) : null} mono />
+                    <Field k="Vergi levhası" v={row.taxDocPath ? <button onClick={openDoc} className="inline-flex items-center gap-1 text-amber-600 font-bold">Belgeyi aç<ExternalLink className="w-3 h-3" /></button> : null} />
+                    <Field k="IBAN" v={row.iban ? formatIban(row.iban) : row.type === "petshop" ? null : "Gerekmez (satış yapmaz)"} mono={!!row.iban} />
                     <Field k="İl / ilçe" v={[row.district, row.province].filter(Boolean).join(", ")} />
                     <Field k="Adres" v={row.address} />
                     <Field k="Konum" v={mapUrl ? <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-amber-600 font-bold"><MapPin className="w-3.5 h-3.5" />Haritada aç<ExternalLink className="w-3 h-3" /></a> : null} />
                 </div>
                 <p className="mt-3 text-[11px] font-semibold text-zinc-500 leading-relaxed">
-                    Kontrol önerisi: vergi numarasını GİB&apos;in &quot;Vergi Levhası Sorgulama&quot; ekranından, veteriner kliniğini il tarım müdürlüğü ruhsat kaydından doğrula; IBAN&apos;daki ad işletme/yetkiliyle uyuşmalı.
+                    Kontrol önerisi: vergi levhasındaki unvan ve numara beyanla aynı olmalı; numarayı GİB&apos;in &quot;Vergi Levhası Sorgulama&quot; ekranından da doğrula, veteriner kliniğini il tarım müdürlüğü ruhsat kaydından doğrula; IBAN&apos;daki ad işletme/yetkiliyle uyuşmalı.
                 </p>
 
                 {rejecting ? (

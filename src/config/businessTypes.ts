@@ -174,6 +174,14 @@ export function getBusinessTypeConfig(businessType?: BusinessType | null): Busin
   return BUSINESS_TYPE_CONFIG[businessType || 'vet'] || BUSINESS_TYPE_CONFIG.vet;
 }
 
+/**
+ * Moffi mağazasında ürün satan tür (sipariş akışı = pet shop). Yalnızca bunlardan IBAN istenir; sunucu aynı kuralı
+ * submit_business_application ve ürün ekleme kuralında (business_can_sell) uygular.
+ */
+export function sellsProducts(businessType: BusinessType): boolean {
+  return getBusinessTypeConfig(businessType).primaryFlow === 'order';
+}
+
 export function isBusinessType(value: string | null): value is BusinessType {
   return value !== null && Object.prototype.hasOwnProperty.call(BUSINESS_TYPE_CONFIG, value);
 }

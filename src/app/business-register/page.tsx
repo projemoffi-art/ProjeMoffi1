@@ -20,6 +20,7 @@ import turkeyCities from "@/data/turkey_cities.json";
 import {
     businessApplicationService, formatIban, isValidTrIban, type BusinessApplicationInput,
 } from "@/services/businessApplicationService";
+import { sellsProducts } from "@/config/businessTypes";
 import { formatTrPhone, isValidTaxId, normalizeTrPhone } from "@/lib/trIdentity";
 
 const LocationPicker = dynamic(() => import("@/components/business/LocationPicker"), {
@@ -101,7 +102,7 @@ function Intro() {
                 <ol className="mt-7 space-y-3">
                     {[
                         { t: "Moffi hesabınla giriş yap", d: "Hesabın yoksa e-postanla birkaç dakikada açılır." },
-                        { t: "İşletme bilgilerini gir", d: "Tür, iletişim, vergi numarası, IBAN ve konum." },
+                        { t: "İşletme bilgilerini gir", d: "Tür, iletişim, vergi numarası, vergi levhası ve konum; pet shop için IBAN." },
                         { t: "Moffi incelesin", d: "Genellikle 1–2 iş günü. Sonuç bildirim ve e-postayla gelir." },
                     ].map((s, i) => (
                         <li key={s.t} className="flex gap-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
@@ -131,9 +132,13 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
     const router = useRouter();
     const [step, setStep] = useState(0);
     const [form, setForm] = useState<BusinessApplicationInput>(() => ({
-        type: "vet", name: "", ownerName: defaultOwner, phone: "", taxId: "", iban: "TR",
+        type: "vet", name: "", ownerName: defaultOwner, phone: "", taxId: "", iban: "TR", taxDocPath: null,
         address: "", province: "", district: "", lat: NaN, lng: NaN,
     }));
+    // Vergi levhası: gösterilen ad ve yeniden gönderimde sunucudaki önceki belge (değiştirilirse başarıdan sonra silinir).
+    const [docName, setDocName] = useState<string | null>(null);
+    const [savedDocPath, setSavedDocPath] = useState<string | null>(null);
+    const [uploadingDoc, setUploadingDoc] = useState(false);
     const [typeChosen, setTypeChosen] = useState(false);
     const [agree, setAgree] = useState(false);
     const [locating, setLocating] = useState(false);
@@ -155,7 +160,9 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                 if (!own || own.kybStatus !== "rejected") { setError("Bu başvuru düzenlenemez; yalnızca reddedilen başvuru yeniden gönderilir."); return; }
                 const { kybStatus: _s, rejectionReason, ...rest } = own;
                 void _s;
-                setForm({ ...rest, iban: formatIban(rest.iban) });
+                setForm({ ...rest, iban: formatIban(rest.iban || "TR") });
+                setSavedDocPath(rest.taxDocPath);
+                if (rest.taxDocPath) setDocName("Önceki başvurudaki belge");
                 setTypeChosen(true);
                 setRejection(rejectionReason);
             })
@@ -171,12 +178,13 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
     const taxTyped = taxDigits.length === 10 || taxDigits.length === 11;
     const taxOk = taxTyped && isValidTaxId(taxDigits);
     const ibanOk = isValidTrIban(form.iban);
+    const sells = sellsProducts(form.type);
     const hasPin = Number.isFinite(form.lat) && Number.isFinite(form.lng);
 
     const stepValid = [
         typeChosen,
         form.name.trim().length >= 2 && form.ownerName.trim().length >= 2 && phoneOk,
-        taxOk && ibanOk && !!form.province && !!form.district && form.address.trim().length >= 5 && hasPin,
+        taxOk && (!sells || ibanOk) && !!form.taxDocPath && !uploadingDoc && !!form.province && !!form.district && form.address.trim().length >= 5 && hasPin,
         agree,
     ][step];
 
@@ -189,11 +197,35 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
             .finally(() => setLocating(false));
     };
 
+    const pickDocument = async (file: File | undefined) => {
+        if (!file) return;
+        setUploadingDoc(true);
+        setError("");
+        try {
+            const path = await businessApplicationService.uploadTaxDocument(file);
+            // Bu oturumda yüklenip değiştirilen dosya bırakılmaz (sunucudaki önceki belge başarıdan sonra silinir).
+            if (form.taxDocPath && form.taxDocPath !== savedDocPath) void businessApplicationService.removeTaxDocument(form.taxDocPath);
+            set("taxDocPath", path);
+            setDocName(file.name);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Vergi levhası yüklenemedi.");
+        } finally {
+            setUploadingDoc(false);
+        }
+    };
+
+    const viewDocument = async () => {
+        if (!form.taxDocPath) return;
+        try { window.open(await businessApplicationService.taxDocumentUrl(form.taxDocPath), "_blank", "noopener"); }
+        catch (e) { setError(e instanceof Error ? e.message : "Belge açılamadı."); }
+    };
+
     const submit = async () => {
         setSubmitting(true);
         setError("");
         try {
-            await businessApplicationService.submit({ ...form, iban: form.iban.replace(/\s/g, "") }, resubmitId);
+            await businessApplicationService.submit({ ...form, iban: sells ? form.iban.replace(/\s/g, "") : "" }, resubmitId);
+            if (savedDocPath && savedDocPath !== form.taxDocPath) void businessApplicationService.removeTaxDocument(savedDocPath);
             invalidateMyBusinesses();
             setLastPanel("business");
             setDone(true);
@@ -311,7 +343,10 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                     {step === 2 && (
                         <>
                             <h1 className="text-[24px] font-black tracking-tight">Yasal bilgiler ve konum</h1>
-                            <p className="text-[14px] text-zinc-500 font-medium mt-1">Vergi numarası ve IBAN yalnızca Moffi ekibine ve işletme yöneticilerine görünür.</p>
+                            <p className="text-[14px] text-zinc-500 font-medium mt-1">
+                                Vergi numarası{sells ? ", vergi levhası ve IBAN" : " ve vergi levhası"} yalnızca Moffi ekibine ve işletme yöneticilerine görünür; işletmenin
+                                gerçek olduğunu doğrulamak için istenir.
+                            </p>
                             <div className="mt-5 space-y-4">
                                 <div>
                                     <label className={label} htmlFor="b-tax">Vergi numarası (şahıs işletmesiyse T.C. kimlik no)</label>
@@ -321,6 +356,26 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                                     )}
                                 </div>
                                 <div>
+                                    <span className={label}>Vergi levhası</span>
+                                    <label className={cn("flex items-center gap-3 p-3.5 rounded-2xl border-2 border-dashed cursor-pointer",
+                                        form.taxDocPath ? "border-emerald-300 bg-emerald-50/60 dark:bg-emerald-950/20" : "border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-white/5")}>
+                                        <input type="file" className="sr-only" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+                                            disabled={uploadingDoc} onChange={e => { void pickDocument(e.target.files?.[0]); e.target.value = ""; }} />
+                                        <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${ACCENT}14`, color: ACCENT }}>
+                                            {uploadingDoc ? <Loader2 className="w-5 h-5 animate-spin" /> : form.taxDocPath ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <FileText className="w-5 h-5" />}
+                                        </span>
+                                        <span className="flex-1 min-w-0">
+                                            <span className="block text-[14px] font-extrabold truncate">{uploadingDoc ? "Yükleniyor…" : docName || "PDF ya da fotoğraf yükle"}</span>
+                                            <span className="block text-[12px] font-medium text-zinc-500">
+                                                {form.taxDocPath ? "Değiştirmek için dokun" : "Güncel yılın vergi levhası; e-Devlet ya da GİB'den indirilebilir. En çok 10 MB."}
+                                            </span>
+                                        </span>
+                                    </label>
+                                    {form.taxDocPath && (
+                                        <button type="button" onClick={viewDocument} className="text-[12px] font-bold mt-1.5" style={{ color: ACCENT }}>Yüklenen belgeyi görüntüle</button>
+                                    )}
+                                </div>
+                                {sells && <div>
                                     <label className={label} htmlFor="b-iban">IBAN</label>
                                     <input
                                         id="b-iban"
@@ -332,9 +387,9 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                                         autoCapitalize="characters"
                                     />
                                     <p className={cn("text-[12px] font-semibold mt-1.5", ibanOk ? "text-emerald-600" : "text-zinc-500")}>
-                                        {ibanOk ? "IBAN biçimi doğru. Hesap işletmenin ya da yetkilinin adına olmalı." : "Ödemelerin (satış, komisyon sonrası tutar) bu hesaba yapılır."}
+                                        {ibanOk ? "IBAN biçimi doğru. Hesap işletmenin ya da yetkilinin adına olmalı." : "Mağaza satışlarının ödemesi (komisyon sonrası tutar) bu hesaba yapılır."}
                                     </p>
-                                </div>
+                                </div>}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className={label} htmlFor="b-prov">İl</label>
@@ -383,7 +438,8 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                                     ["Yetkili", form.ownerName.trim()],
                                     ["Telefon", form.phone.trim()],
                                     ["Vergi / T.C. no", taxDigits],
-                                    ["IBAN", `${form.iban.replace(/\s/g, "").slice(0, 4)} •••• ${form.iban.replace(/\s/g, "").slice(-4)}`],
+                                    ["Vergi levhası", docName || "Yüklendi"],
+                                    ...(sells ? [["IBAN", `${form.iban.replace(/\s/g, "").slice(0, 4)} •••• ${form.iban.replace(/\s/g, "").slice(-4)}`]] : []),
                                     ["Konum", `${form.district}, ${form.province}`],
                                 ].map(([k, v]) => (
                                     <div key={k} className="flex justify-between gap-4 px-4 py-3">
@@ -396,7 +452,7 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                                 <input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} className="mt-0.5 w-5 h-5 shrink-0" style={{ accentColor: ACCENT }} />
                                 <span className="text-[13px] text-zinc-600 dark:text-zinc-300 font-medium leading-relaxed">
                                     Bilgilerin doğru olduğunu ve <a href="/terms" target="_blank" className="font-bold underline">Moffi kullanım koşullarını</a> kabul ettiğimi onaylıyorum.
-                                    Mağaza satışlarında platform komisyonu uygulanır.
+                                    {sells && " Mağaza satışlarında platform komisyonu uygulanır."}
                                 </span>
                             </label>
                             <p className="mt-3 flex items-center gap-2 text-[12px] font-semibold text-zinc-500">

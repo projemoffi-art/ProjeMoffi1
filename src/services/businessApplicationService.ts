@@ -1,6 +1,7 @@
 // İşletme başvurusu ve yönetici onayı (8.54 modeli). Tek yazma yolu sunucu fonksiyonları:
 // submit_business_application (yeni başvuru ya da reddedileni düzeltip yeniden gönderme), admin_review_business (yönetici + 2FA).
-// İstemcinin businesses/business_members tablolarına yazma yetkisi yok.
+// İstemci IBAN / vergi no / yetkili adını doğrudan değiştiremez (sütun yetkisi kapalı). Vergi levhası özel `business-docs`
+// deposunda `<kullanıcı>/<dosya>`; sunucu başvuruda dosyanın gerçekten yüklendiğini denetler. IBAN yalnızca satış yapan türde.
 
 import { supabase } from '@/lib/supabase';
 import type { BusinessType } from '@/context/AuthContext';
@@ -11,7 +12,10 @@ export interface BusinessApplicationInput {
     ownerName: string;
     phone: string;
     taxId: string;
+    /** Yalnızca satış yapan türde (sellsProducts); diğerlerinde boş gönderilir, sunucu tutmaz. */
     iban: string;
+    /** business-docs deposundaki vergi levhası yolu (uploadTaxDocument). */
+    taxDocPath: string | null;
     address: string;
     province: string;
     district: string;
@@ -32,6 +36,7 @@ export interface AdminBusinessRow {
     phone: string | null;
     taxId: string | null;
     iban: string | null;
+    taxDocPath: string | null;
     address: string | null;
     province: string | null;
     district: string | null;
@@ -62,7 +67,35 @@ export function isValidTrIban(raw: string): boolean {
 /** IBAN'ı 4'lü gruplar hâlinde gösterir (TR00 0000 ...). */
 export const formatIban = (raw: string) => raw.replace(/\s/g, '').toUpperCase().replace(/(.{4})/g, '$1 ').trim();
 
+const TAX_DOC_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+export const TAX_DOC_MAX_BYTES = 10 * 1024 * 1024;
+
 export const businessApplicationService = {
+    /** Vergi levhasını yükler (PDF ya da fotoğraf, ≤10 MB, sıkıştırılmaz: okunaklı kalmalı). Depodaki yolu döner. */
+    async uploadTaxDocument(file: File): Promise<string> {
+        if (!TAX_DOC_TYPES.includes(file.type)) throw new Error('Vergi levhası PDF ya da fotoğraf (JPG, PNG, WEBP, HEIC) olmalı.');
+        if (file.size > TAX_DOC_MAX_BYTES) throw new Error('Dosya en fazla 10 MB olabilir.');
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth.user) throw new Error('Giriş gerekli');
+        const ext = file.type === 'application/pdf' ? 'pdf' : file.type.split('/')[1].replace('jpeg', 'jpg');
+        const path = `${auth.user.id}/vergi-levhasi-${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from('business-docs').upload(path, file, { contentType: file.type, upsert: false });
+        if (error) fail(error, 'Vergi levhası yüklenemedi.');
+        return path;
+    },
+
+    /** Kullanılmayan (değiştirilen) yüklemeyi kaldırır; yalnızca kendi klasörü. Hata kullanıcıyı durdurmaz. */
+    async removeTaxDocument(path: string): Promise<void> {
+        await supabase.storage.from('business-docs').remove([path]);
+    },
+
+    /** Vergi levhasını kısa süreli bağlantıyla açar (sahibi ya da yönetici). */
+    async taxDocumentUrl(path: string): Promise<string> {
+        const { data, error } = await supabase.storage.from('business-docs').createSignedUrl(path, 300);
+        if (error || !data) fail(error, 'Belge açılamadı.');
+        return data.signedUrl;
+    },
+
     /** Yeni başvuru (businessId boş) ya da reddedilen başvuruyu düzeltip yeniden gönderme. İşletme kimliğini döner. */
     async submit(input: BusinessApplicationInput, businessId: string | null = null): Promise<string> {
         const { data, error } = await supabase.rpc('submit_business_application', {
@@ -78,6 +111,7 @@ export const businessApplicationService = {
             p_district: input.district,
             p_lat: input.lat,
             p_lng: input.lng,
+            p_tax_document: input.taxDocPath ?? '',
         });
         if (error) fail(error, 'Başvuru gönderilemedi.');
         return data as string;
@@ -87,14 +121,14 @@ export const businessApplicationService = {
     async loadOwn(businessId: string): Promise<(BusinessApplicationInput & { kybStatus: KybStatus; rejectionReason: string | null }) | null> {
         const { data, error } = await supabase
             .from('businesses')
-            .select('business_type, name, owner_name, phone, tax_id, iban, address, province, district, lat, lng, kyb_status, kyb_rejection_reason')
+            .select('business_type, name, owner_name, phone, tax_id, iban, tax_certificate_path, address, province, district, lat, lng, kyb_status, kyb_rejection_reason')
             .eq('id', businessId)
             .maybeSingle();
         if (error) fail(error, 'Başvuru okunamadı.');
         if (!data) return null;
         return {
             type: data.business_type as BusinessType, name: data.name ?? '', ownerName: data.owner_name ?? '', phone: data.phone ?? '',
-            taxId: data.tax_id ?? '', iban: data.iban ?? '', address: data.address ?? '', province: data.province ?? '',
+            taxId: data.tax_id ?? '', iban: data.iban ?? '', taxDocPath: data.tax_certificate_path, address: data.address ?? '', province: data.province ?? '',
             district: data.district ?? '', lat: Number(data.lat), lng: Number(data.lng),
             kybStatus: data.kyb_status as KybStatus, rejectionReason: data.kyb_rejection_reason,
         };
@@ -104,7 +138,7 @@ export const businessApplicationService = {
     async adminList(): Promise<AdminBusinessRow[]> {
         const { data, error } = await supabase
             .from('businesses')
-            .select('id, name, business_type, approved, kyb_status, kyb_rejection_reason, owner_name, phone, tax_id, iban, address, province, district, lat, lng, created_at, updated_at, created_by')
+            .select('id, name, business_type, approved, kyb_status, kyb_rejection_reason, owner_name, phone, tax_id, iban, tax_certificate_path, address, province, district, lat, lng, created_at, updated_at, created_by')
             .order('created_at', { ascending: false })
             .limit(500);
         if (error) fail(error, 'İşletmeler okunamadı.');
@@ -129,7 +163,7 @@ export const businessApplicationService = {
             return {
                 id: r.id, name: r.name, type: r.business_type as BusinessType | null, approved: !!r.approved,
                 kybStatus: (r.kyb_status || 'pending') as KybStatus, rejectionReason: r.kyb_rejection_reason,
-                ownerName: r.owner_name, phone: r.phone, taxId: r.tax_id, iban: r.iban, address: r.address,
+                ownerName: r.owner_name, phone: r.phone, taxId: r.tax_id, iban: r.iban, taxDocPath: r.tax_certificate_path, address: r.address,
                 province: r.province, district: r.district,
                 lat: r.lat == null ? null : Number(r.lat), lng: r.lng == null ? null : Number(r.lng),
                 createdAt: r.created_at, updatedAt: r.updated_at,

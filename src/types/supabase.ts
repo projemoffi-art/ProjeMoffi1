@@ -711,6 +711,7 @@ export type Database = {
           phone: string | null
           province: string | null
           settings: Json
+          tax_certificate_path: string | null
           tax_id: string | null
           updated_at: string
           website: string | null
@@ -740,6 +741,7 @@ export type Database = {
           phone?: string | null
           province?: string | null
           settings?: Json
+          tax_certificate_path?: string | null
           tax_id?: string | null
           updated_at?: string
           website?: string | null
@@ -769,6 +771,7 @@ export type Database = {
           phone?: string | null
           province?: string | null
           settings?: Json
+          tax_certificate_path?: string | null
           tax_id?: string | null
           updated_at?: string
           website?: string | null
@@ -5721,6 +5724,7 @@ export type Database = {
         Returns: number
       }
       block_user: { Args: { p_target: string }; Returns: undefined }
+      business_can_sell: { Args: { p_business: string }; Returns: boolean }
       business_display_name: { Args: { p_id: string }; Returns: string }
       business_member_role: { Args: { p_business: string }; Returns: string }
       can_handle_appointment: {
@@ -7527,23 +7531,42 @@ export type Database = {
         }
         Returns: string
       }
-      submit_business_application: {
-        Args: {
-          p_address: string
-          p_business: string
-          p_district: string
-          p_iban: string
-          p_lat: number
-          p_lng: number
-          p_name: string
-          p_owner_name: string
-          p_phone: string
-          p_province: string
-          p_tax_id: string
-          p_type: string
-        }
-        Returns: string
-      }
+      submit_business_application:
+        | {
+            Args: {
+              p_address: string
+              p_business: string
+              p_district: string
+              p_iban: string
+              p_lat: number
+              p_lng: number
+              p_name: string
+              p_owner_name: string
+              p_phone: string
+              p_province: string
+              p_tax_id: string
+              p_type: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_address: string
+              p_business: string
+              p_district: string
+              p_iban: string
+              p_lat: number
+              p_lng: number
+              p_name: string
+              p_owner_name: string
+              p_phone: string
+              p_province: string
+              p_tax_document: string
+              p_tax_id: string
+              p_type: string
+            }
+            Returns: string
+          }
       submit_sighting: {
         Args: {
           p_contact: string
@@ -7566,6 +7589,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      tckn_is_valid: { Args: { p: string }; Returns: boolean }
       toggle_comment_like: {
         Args: { p_comment_id: string }
         Returns: {
@@ -7591,6 +7615,7 @@ export type Database = {
           paws_count: number
         }[]
       }
+      tr_phone_e164: { Args: { p: string }; Returns: string }
       transition_appointment: {
         Args: { p_appointment_id: string; p_reason?: string; p_status: string }
         Returns: undefined
@@ -7612,6 +7637,7 @@ export type Database = {
         Args: { p_code: string; p_unclaimed_id: string }
         Returns: string
       }
+      vkn_is_valid: { Args: { p: string }; Returns: boolean }
       walk_calories: {
         Args: { p_distance_m: number; p_weight_kg: number }
         Returns: number
