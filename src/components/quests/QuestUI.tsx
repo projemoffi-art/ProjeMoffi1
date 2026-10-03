@@ -219,7 +219,7 @@ export function questAction(q: Pick<DailyQuest, 'route'>): QuestAction {
 
 /** Görev ilerlemesini insan diliyle yaz: "3,2 / 5 km", "1 / 2 öğün". */
 export function progressText(q: Pick<DailyQuest, 'progress' | 'target' | 'unit'>) {
-    const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString('tr-TR', { maximumFractionDigits: 1 }));
+    const fmt = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 1 });
     return `${fmt(q.progress)} / ${fmt(q.target)} ${q.unit}`.trim();
 }
 

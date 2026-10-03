@@ -1,7 +1,7 @@
 'use client';
 
 // "Bugünkü Yürüyüş" — ana sayfanın amiral kartı (home-final referansı üzerine).
-// Rakamlar yürüyüş ekranlarıyla aynı kaynaktan: bugünkü mesafe/süre/hedef DailyProgressContext'ten, kalori lib/walkMetrics'ten,
+// Rakamlar yürüyüş ekranlarıyla aynı kaynaktan: bugünkü adım/mesafe/süre/hedef DailyProgressContext'ten (hedef ADIM), kalori lib/walkMetrics'ten,
 // canlı yürüyüş ve geçmiş ActivityContext'ten (useWalk), seri walkStats'ten, hava WeatherContext'ten.
 // Durumlar: canlı yürüyüş > bugün hedef tamam > 3+ gündür yürünmedi > ilk yürüyüş > normal.
 
@@ -10,11 +10,10 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Cloud, CloudLightning, CloudRain, CloudSun, Flame, Footprints, Navigation, Play, Snowflake, Sun, ThermometerSun } from 'lucide-react';
 import { useDailyProgress } from '@/context/DailyProgressContext';
-import { useActivity } from '@/context/ActivityContext';
 import { useWalk } from '@/hooks/useWalk';
 import { useWeather, isHotForPaws } from '@/context/WeatherContext';
 import { haptics } from '@/native';
-import { formatClock, formatKm, formatMinutes, petWeightKg, walkCalories } from '@/lib/walkMetrics';
+import { creditedSteps, formatClock, formatKm, formatMinutes, petWeightKg, walkCalories } from '@/lib/walkMetrics';
 import type { Pet } from '@/context/PetContext';
 import { baloo } from './homeUI';
 
@@ -69,23 +68,20 @@ function ProgressRing({ percent, live }: { percent: number; live: boolean }) {
 export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet | null }) {
     const router = useRouter();
     const { todayDistanceKm, todayDurationMin, todaySteps, dailyGoal } = useDailyProgress();
-    const { stepsSupported } = useActivity();
     const { activeSession, history, stats } = useWalk();
     const { weather } = useWeather();
 
     const walkingPet = activeSession?.petId ? pets.find(p => String(p.id) === String(activeSession.petId)) || null : null;
     const pet = walkingPet || activePet;
-    const goalKm = Math.max(0.1, dailyGoal.distance);
-    const percent = Math.min(100, Math.round((todayDistanceKm / goalKm) * 100));
-    const remainingKm = Math.max(0, goalKm - todayDistanceKm);
+    const goalSteps = Math.max(1, dailyGoal.steps);
+    const percent = Math.min(100, Math.round((todaySteps / goalSteps) * 100));
+    const remainingSteps = Math.max(0, goalSteps - todaySteps);
     const kcal = walkCalories(todayDistanceKm, petWeightKg(pet));
     const streak = stats?.currentStreak || 0;
-    // Adım öne çıkar (kullanıcıların en çok baktığı ölçü). Adım sensörü olmayan cihazda büyük rakam mesafe olur;
-    // hedef ve halka her durumda mesafe hedefine göredir (puan da mesafeden verilir, 8.20).
-    // Sensör "var" görünüp adım üretmiyorsa (izin reddi vb.) mesafe yürüdüğü hâlde 0 adım göstermeyiz.
-    const shownSteps = activeSession ? activeSession.realSteps || 0 : todaySteps;
+    // Büyük rakam ve hedef ADIM. Sayılan adım = ölçülen adım ile mesafenin adım karşılığının büyüğü (sunucudaki görevle aynı);
+    // adım sayacı olmayan ya da izni kapalı telefonda da yürüdükçe artar.
+    const shownSteps = activeSession ? creditedSteps(activeSession.realSteps, activeSession.distanceKm) : todaySteps;
     const shownKm = activeSession ? activeSession.distanceKm : todayDistanceKm;
-    const stepsFirst = stepsSupported && !(shownKm > 0.05 && shownSteps === 0);
 
     // Sayfa açık kalırsa "kaç gündür" ve hafta şeridi dakikada bir tazelenir.
     const [now, setNow] = useState(() => Date.now());
@@ -118,7 +114,7 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
     const picked = pickedDay === null ? null : week[pickedDay];
 
     const state: CardState = activeSession ? 'active'
-        : todayDistanceKm >= goalKm ? 'done'
+        : todaySteps >= goalSteps ? 'done'
         : daysSinceLastWalk === null ? 'first'
         : daysSinceLastWalk >= LAPSED_DAYS ? 'lapsed'
         : 'normal';
@@ -143,7 +139,7 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
     const metrics = [
         { value: activeSession ? formatClock(activeSession.activeSeconds) : formatMinutes(todayDurationMin), unit: '', label: 'Süre' },
         { value: `${kcal}`, unit: 'kcal', label: 'Kalori' },
-        { value: formatKm(remainingKm, 1), unit: 'km', label: 'Kalan' },
+        { value: remainingSteps.toLocaleString('tr-TR'), unit: '', label: 'Kalan adım' },
     ];
 
     return (
@@ -152,7 +148,7 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
             tabIndex={0}
             onClick={open}
             onKeyDown={e => { if (e.key === 'Enter') open(); }}
-            aria-label={`${title}. Bugün ${formatKm(todayDistanceKm, 1)} kilometre, hedef ${formatKm(goalKm, 1)} kilometre.`}
+            aria-label={`${title}. Bugün ${todaySteps.toLocaleString('tr-TR')} adım, hedef ${goalSteps.toLocaleString('tr-TR')} adım.`}
             className="relative -mx-1 rounded-[28px] overflow-hidden bg-[#2B2A24] cursor-pointer active:scale-[0.99] transition-transform shadow-[0_22px_44px_-18px_rgba(32,27,22,0.55)]"
         >
             <AnimatePresence mode="wait">
@@ -209,14 +205,14 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
                     <div className="min-w-0">
                         <div className="flex items-baseline gap-1.5 text-white">
                             <span className={`${baloo.className} text-[52px] leading-[0.95] font-bold tracking-tight`} style={{ textShadow: '0 4px 18px rgba(0,0,0,0.35)' }}>
-                                {stepsFirst ? shownSteps.toLocaleString('tr-TR') : formatKm(shownKm, activeSession ? 2 : 1)}
+                                {shownSteps.toLocaleString('tr-TR')}
                             </span>
-                            <span className="text-[20px] font-extrabold">{stepsFirst ? 'adım' : 'km'}</span>
+                            <span className="text-[20px] font-extrabold">adım</span>
                         </div>
                         <p className="text-white/75 text-[13px] font-bold mt-1">
-                            {stepsFirst
-                                ? `${formatKm(shownKm, activeSession ? 2 : 1)} km · hedef ${formatKm(goalKm, 1)} km`
-                                : activeSession ? `Bugün toplam ${formatKm(todayDistanceKm, 1)} km` : `Hedef ${formatKm(goalKm, 1)} km`}
+                            {activeSession
+                                ? `${formatKm(shownKm, 2)} km · bugün ${todaySteps.toLocaleString('tr-TR')} adım`
+                                : `${formatKm(shownKm, 1)} km · hedef ${goalSteps.toLocaleString('tr-TR')} adım`}
                         </p>
                         {weather && WeatherIcon && (
                             <button
@@ -265,7 +261,7 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
                                 <span className="text-white/85 truncate text-right">
                                     {picked.agg
                                         ? [`${picked.agg.count} yürüyüş`, `${formatKm(picked.agg.km, 1)} km`, picked.agg.steps > 0 ? `${picked.agg.steps.toLocaleString('tr-TR')} adım` : null, formatMinutes(picked.agg.min)].filter(Boolean).join(' · ')
-                                        : 'Bu gün yürüyüş yok'}
+                                        : 'Yürüyüş yok'}
                                 </span>
                             </div>
                         </motion.div>
@@ -280,7 +276,7 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
                                 <div className="text-white text-[14px] font-extrabold leading-tight truncate">
                                     {m.value}{m.unit && <span className="text-[11px] font-bold text-white/75 ml-0.5">{m.unit}</span>}
                                 </div>
-                                <div className="text-white/65 text-[11px] font-semibold">{m.label}</div>
+                                <div className="text-white/65 text-[11px] font-semibold whitespace-nowrap">{m.label}</div>
                             </div>
                         ))}
                     </div>

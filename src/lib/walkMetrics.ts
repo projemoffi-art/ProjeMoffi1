@@ -37,3 +37,16 @@ export function formatMinutes(totalMinutes: number): string {
 export function formatSteps(steps: number | null | undefined): string {
     return steps && steps > 0 ? steps.toLocaleString('tr-TR') : '—';
 }
+
+// Günlük hedef ADIM (sunucu: walk_steps_per_km, walk_credited_steps; 20261004103200). Bir yürüyüşün hedefe sayılan adımı,
+// algılayıcının ölçtüğü adım ile GPS mesafesinin adım karşılığının büyüğüdür: adım sayacı olmayan telefonda da hedef dolar.
+export const STEPS_PER_KM = 1300;
+export const STEP_GOAL = { min: 1000, max: 30000, step: 500 } as const;
+
+export function creditedSteps(steps: number | null | undefined, distanceKm: number | null | undefined): number {
+    return Math.max(Math.round(steps || 0), Math.round((distanceKm || 0) * STEPS_PER_KM));
+}
+
+export function stepsToKm(steps: number): number {
+    return steps / STEPS_PER_KM;
+}

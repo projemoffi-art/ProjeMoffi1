@@ -12,7 +12,7 @@ import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
 import { useDailyProgress } from '@/context/DailyProgressContext';
 import { haptics, sensors, geolocation } from "@/native";
-import { formatKm, formatClock, formatMinutes } from "@/lib/walkMetrics";
+import { formatKm, formatClock, formatMinutes, stepsToKm, STEP_GOAL } from "@/lib/walkMetrics";
 import { useWeather, isHotForPaws } from "@/context/WeatherContext";
 import { PrimaryButton, SoftButton } from "@/components/walk/WalkUI";
 import { audioCues } from "@/lib/audioCues";
@@ -54,7 +54,7 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
     const router = useRouter();
     const { walkHistory, walkStats, startWalk, recoverableWalk, continueRecoveredWalk, discardRecoveredWalk, enterReadyPhase, exitToIdlePhase } = useActivity();
     const { activePet, pets, switchPet } = usePet();
-    const { dailyGoal, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm, todayDistanceKm } = useDailyProgress();
+    const { dailyGoal, autoDailyGoalSteps, manualDailyGoalSteps, setManualDailyGoalSteps, todaySteps } = useDailyProgress();
     const [starting, setStarting] = React.useState(false);
     const [resolving, setResolving] = React.useState(false);
     const [geoPermission, setGeoPermission] = React.useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
@@ -84,8 +84,8 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
     };
 
     // Tahmini süre: kullanıcının gerçek ortalama temposu (dk/km); geçmiş yoksa ortalama köpek yürüyüşü (14 dk/km).
-    const remainingKm = Math.max(0, dailyGoal.distance - todayDistanceKm);
-    const plannedKm = remainingKm > 0.05 ? remainingKm : dailyGoal.distance;
+    const remainingSteps = Math.max(0, dailyGoal.steps - todaySteps);
+    const plannedKm = stepsToKm(remainingSteps > 50 ? remainingSteps : dailyGoal.steps);
     const estimate = React.useMemo(() => {
         const km = walkHistory.reduce((s, w) => s + w.distanceKm, 0);
         const min = walkHistory.reduce((s, w) => s + w.activeSeconds / 60, 0);
@@ -103,8 +103,8 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
 
     const adjustGoal = (delta: number) => {
         haptics.tap();
-        const base = manualDailyGoalKm ?? autoDailyGoalKm;
-        setManualDailyGoalKm(Math.max(0.5, Math.min(20, Math.round((base + delta) * 2) / 2)));
+        const base = manualDailyGoalSteps ?? autoDailyGoalSteps;
+        void setManualDailyGoalSteps(Math.max(STEP_GOAL.min, Math.min(STEP_GOAL.max, base + delta)));
     };
 
     const handleStart = async () => {
@@ -235,16 +235,16 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
                                 <div className="mx-4 mt-4 card-premium rounded-[24px] p-4">
                                     <div className="flex items-center justify-between">
                                         <span className="flex items-center gap-2 text-[14px] font-extrabold"><Target className="w-5 h-5 text-[#5C9B2E]" /> Günlük hedef</span>
-                                        <button type="button" onClick={() => { haptics.tap(); setManualDailyGoalKm(null); }} className={cn("h-8 px-3 rounded-full text-[12px] font-bold", manualDailyGoalKm === null ? "bg-foreground text-background" : "bg-foreground/[0.06] text-secondary")}>Otomatik</button>
+                                        <button type="button" onClick={() => { haptics.tap(); void setManualDailyGoalSteps(null); }} className={cn("h-8 px-3 rounded-full text-[12px] font-bold", manualDailyGoalSteps === null ? "bg-foreground text-background" : "bg-foreground/[0.06] text-secondary")}>Otomatik</button>
                                     </div>
                                     <div className="mt-3 flex items-center gap-3">
-                                        <button type="button" aria-label="Hedefi azalt" onClick={() => adjustGoal(-0.5)} className="w-11 h-11 rounded-full bg-foreground/[0.06] text-[22px] font-bold active:scale-95">−</button>
-                                        <span className="flex-1 text-center text-[26px] font-extrabold">{formatKm(dailyGoal.distance, 1)} <span className="text-[15px] text-secondary">km</span></span>
-                                        <button type="button" aria-label="Hedefi artır" onClick={() => adjustGoal(0.5)} className="w-11 h-11 rounded-full bg-accent text-white text-[22px] font-bold active:scale-95">+</button>
+                                        <button type="button" aria-label="Hedefi azalt" onClick={() => adjustGoal(-STEP_GOAL.step)} className="w-11 h-11 rounded-full bg-foreground/[0.06] text-[22px] font-bold active:scale-95">−</button>
+                                        <span className="flex-1 text-center text-[26px] font-extrabold">{dailyGoal.steps.toLocaleString('tr-TR')} <span className="text-[15px] text-secondary">adım</span></span>
+                                        <button type="button" aria-label="Hedefi artır" onClick={() => adjustGoal(STEP_GOAL.step)} className="w-11 h-11 rounded-full bg-accent text-white text-[22px] font-bold active:scale-95">+</button>
                                     </div>
                                     <div className="mt-3 pt-3 border-t border-card-border flex flex-col gap-1 text-[13px] font-semibold text-secondary">
                                         <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-accent" /> Tahmini {estimate}</span>
-                                        <span>{todayDistanceKm > 0.05 ? `Bugün ${formatKm(todayDistanceKm, 1)} km yürüdün` : 'Bugün henüz yürümedin'}</span>
+                                        <span>{todaySteps > 0 ? `Bugün ${todaySteps.toLocaleString('tr-TR')} adım attın${remainingSteps > 0 ? `, ${remainingSteps.toLocaleString('tr-TR')} kaldı` : ', hedef tamam'}` : 'Bugün henüz yürümedin'}</span>
                                     </div>
                                 </div>
 

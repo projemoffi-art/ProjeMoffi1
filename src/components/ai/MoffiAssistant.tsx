@@ -138,7 +138,7 @@ export function MoffiAssistant() {
     const { user } = useAuth();
     const { pets, activePet } = usePet();
     const { walkHistory } = useActivity();
-    const { todayDistanceKm, dailyGoal } = useDailyProgress();
+    const { todayDistanceKm, todaySteps, dailyGoal } = useDailyProgress();
 
     const [isOpen, setIsOpen] = useState(false);
     // Bileşen yalnızca tarayıcıda yüklenir (AIWidgetLoader, ssr:false); geçmiş ilk durumda okunur.
@@ -230,7 +230,7 @@ export function MoffiAssistant() {
             sex: pet.gender || undefined,
             neutered: typeof pet.neutered === 'boolean' ? pet.neutered : undefined,
             weightKg: bundle ? weightSummary(bundle.weights, today).latest?.weightKg ?? petWeightKg(pet) : petWeightKg(pet),
-            walks: { todayKm: todayDistanceKm, goalKm: dailyGoal.distance, weekCount: week.length, weekKm: week.reduce((s, w) => s + (w.distanceKm || 0), 0) },
+            walks: { todayKm: todayDistanceKm, todaySteps, goalSteps: dailyGoal.steps, weekCount: week.length, weekKm: week.reduce((s, w) => s + (w.distanceKm || 0), 0) },
         };
         if (bundle) {
             data.health = {

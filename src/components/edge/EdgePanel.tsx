@@ -106,7 +106,7 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
     const { user, updateSettings } = useAuth();
     const { pets, activePet } = usePet();
     const { walkData } = useActivity();
-    const { todayDistanceKm, dailyGoal } = useDailyProgress();
+    const { todaySteps, dailyGoal } = useDailyProgress();
     const { unreadCount } = useNotifications();
     const { unreadCount: unreadMessages, setIsInboxOpen } = useChat();
     const myBusinesses = useMyBusinesses();
@@ -198,8 +198,8 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
 
     const side = settings.position;
     const walkActive = walkData.isActive;
-    const goalKm = Math.max(0.1, dailyGoal.distance);
-    const percent = Math.min(100, Math.round((todayDistanceKm / goalKm) * 100));
+    const goalSteps = Math.max(1, dailyGoal.steps);
+    const percent = Math.min(100, Math.round((todaySteps / goalSteps) * 100));
     const nextCare = care[0];
     const WeatherIcon = weather ? WEATHER_ICON[weather.iconKey] || Sun : Sun;
 
@@ -270,7 +270,7 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
                                                     ) : (
                                                         <>
                                                             <span className="block text-[12px] font-bold text-secondary">Bugün</span>
-                                                            <span className="block text-[20px] font-extrabold leading-tight">{formatKm(todayDistanceKm, 1)} <span className="text-[13px] text-secondary">/ {formatKm(goalKm, 1)} km</span></span>
+                                                            <span className="block text-[20px] font-extrabold leading-tight">{todaySteps.toLocaleString('tr-TR')} <span className="text-[13px] text-secondary">/ {goalSteps.toLocaleString('tr-TR')} adım</span></span>
                                                             <span className="block text-[12px] font-bold text-accent">Yürüyüşe başla</span>
                                                         </>
                                                     )}

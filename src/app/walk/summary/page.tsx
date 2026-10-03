@@ -31,7 +31,7 @@ function SummaryContent() {
     const bestSplitSeconds = bestSplitRaw ? parseInt(bestSplitRaw, 10) : null;
 
     const { pets, activePet } = usePet();
-    const { dailyGoal, todayDistanceKm } = useDailyProgress();
+    const { dailyGoal, todaySteps } = useDailyProgress();
     const { walkStats } = useActivity();
     const [walk, setWalk] = useState<SavedWalk | null>(null);
     const [loading, setLoading] = useState(!!id && status === 'completed');
@@ -55,7 +55,7 @@ function SummaryContent() {
     const activeSeconds = walk?.active_seconds ?? 0;
     const calories = walk?.calories_kcal ?? 0;
     const hasSteps = (walk?.steps || 0) > 0;
-    const goalPercent = Math.round(Math.min(100, (todayDistanceKm / Math.max(0.1, dailyGoal.distance)) * 100));
+    const goalPercent = Math.round(Math.min(100, (todaySteps / Math.max(1, dailyGoal.steps)) * 100));
     const streak = walkStats?.currentStreak || 0;
 
     const isLongest = !!walk && (walkStats?.totalWalks || 0) > 1 && distanceKm > 0 && distanceKm + 0.05 >= (walkStats?.longestWalkKm || 0);
@@ -148,7 +148,7 @@ function SummaryContent() {
                         <span className="text-[16px] font-extrabold">%{goalPercent}</span>
                     </div>
                     <ProgressBar percent={goalPercent} />
-                    <p className="text-[12px] text-secondary font-semibold mt-2">{formatKm(todayDistanceKm)} / {formatKm(dailyGoal.distance, 1)} km</p>
+                    <p className="text-[12px] text-secondary font-semibold mt-2">{todaySteps.toLocaleString('tr-TR')} / {dailyGoal.steps.toLocaleString('tr-TR')} adım</p>
                 </WalkCard>
 
                 {(bestSplitSeconds !== null || sniffStops > 0) && (

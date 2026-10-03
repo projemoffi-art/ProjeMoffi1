@@ -14,7 +14,7 @@ import { useDailyProgress } from '@/context/DailyProgressContext';
 import { usePetCare } from '@/hooks/usePetCare';
 import { usePetAlbum } from '@/hooks/usePetAlbum';
 import { petCareService } from '@/services/petCareService';
-import { formatKm, formatMinutes } from '@/lib/walkMetrics';
+import { creditedSteps, formatKm, formatMinutes } from '@/lib/walkMetrics';
 import { daysLeftText } from '@/lib/health/derive';
 import { haptics } from '@/native';
 import { showToast } from '@/lib/utils';
@@ -81,15 +81,16 @@ export function GeneralTab({ pet, userId, today, note, careItems }: { pet: Pet; 
     useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
     // Bu hayvanın bugünkü yürüyüşleri (tamamlanan + şu anki).
-    const { todayKm, lastWalk } = useMemo(() => {
+    // Hedef ADIM: her yürüyüşte sayılan adım (ölçülen adım ile mesafenin adım karşılığının büyüğü; lib/walkMetrics)
+    const { todayStepsDone, lastWalk } = useMemo(() => {
         const mine = history.filter(w => w.petId === pet.id && w.started_at && new Date(w.started_at).toLocaleDateString('sv-SE') === today);
-        const km = mine.reduce((t, w) => t + (w.distanceKm || 0), 0);
+        const steps = mine.reduce((t, w) => t + creditedSteps(w.steps, w.distanceKm), 0);
         const latest = [...mine].sort((a, b) => (b.started_at || '').localeCompare(a.started_at || ''))[0] || null;
-        return { todayKm: km, lastWalk: latest };
+        return { todayStepsDone: steps, lastWalk: latest };
     }, [history, pet.id, today]);
     const walkingNow = activeSession && activeSession.petId === pet.id ? activeSession : null;
-    const kmNow = todayKm + (walkingNow ? walkingNow.distanceKm : 0);
-    const goal = Math.max(0.1, dailyGoal.distance);
+    const stepsNow = todayStepsDone + (walkingNow ? creditedSteps(walkingNow.realSteps, walkingNow.distanceKm) : 0);
+    const goal = Math.max(1, dailyGoal.steps);
     const nextCare = careItems.find(c => c.petId === pet.id && c.kind !== 'medication') || careItems.find(c => c.petId === pet.id) || null;
 
     const log = async (kind: 'meal' | 'water', undoing = false) => {
@@ -149,8 +150,8 @@ export function GeneralTab({ pet, userId, today, note, careItems }: { pet: Pet; 
                         value={careError ? 'Okunamadı' : waterDone ? 'Tazelendi' : 'Tazele'} onClick={() => log('water', waterDone)} />
                     <Tile label="Mama" Icon={UtensilsCrossed} tint="#E0892E" done={mealsGiven >= mealsTarget} busy={busy === 'meal' || !care}
                         progress={mealsGiven / mealsTarget} value={careError ? 'Okunamadı' : `${mealsGiven}/${mealsTarget} öğün`} onClick={() => log('meal')} />
-                    <Tile label="Yürüyüş" Icon={Footprints} tint="#5E9A2E" done={kmNow >= goal} progress={kmNow / goal}
-                        value={`${formatKm(kmNow, 1)} / ${formatKm(goal, 1)} km`}
+                    <Tile label="Yürüyüş" Icon={Footprints} tint="#5E9A2E" done={stepsNow >= goal} progress={stepsNow / goal}
+                        value={`${stepsNow.toLocaleString('tr-TR')} / ${goal.toLocaleString('tr-TR')} adım`}
                         onClick={() => { haptics.tap(); if (walkingNow) router.push('/walk/tracking'); else window.dispatchEvent(new CustomEvent('open-walk-panel')); }} />
                     {nextCare ? (
                         <Tile label={KIND_LABEL[nextCare.kind]} Icon={HeartPulse} tint="#D9432F" href={nextCare.href}

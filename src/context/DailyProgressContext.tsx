@@ -4,31 +4,36 @@
 // Görevler, rozetler, seviye ve ödüller BURADA DEĞİL: Görev Merkezi sunucuda (services/questService.ts, 8.68).
 // (Eski QuestEngineContext; görev/rozet/XP'yi telefonda tuttuğu ve istemciden ödül istediği için 2026-10-03'te kaldırıldı.)
 //
-// Günlük hedef tek kaynak: sunucu (pet_walk_goal / set_pet_walk_goal). Otomatik hedef bugünden önceki yürüyüşlerden
-// hesaplanır, gün içinde değişmez; elle hedef hayvanın kaydında durur (eskiden yalnızca o telefonda).
+// Günlük hedef tek kaynak: sunucu (pet_walk_goal / set_pet_walk_goal_steps) ve birimi ADIM (Baran, 2026-10-04). Otomatik hedef
+// bugünden önceki yürüyüşlerden hesaplanır, gün içinde değişmez; elle hedef hayvanın kaydında durur. Bugünkü adım, sunucudaki
+// görevle aynı kuralla sayılır: her yürüyüşte ölçülen adım ile mesafenin adım karşılığının büyüğü (lib/walkMetrics creditedSteps).
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useActivity } from '@/context/ActivityContext';
 import { usePet } from '@/context/PetContext';
 import { useAuth } from '@/context/AuthContext';
 import { apiService } from '@/services/apiService';
-import { questService } from '@/services/questService';
+import { questService, type WalkGoal } from '@/services/questService';
+import { creditedSteps, stepsToKm, STEPS_PER_KM, STEP_GOAL } from '@/lib/walkMetrics';
 
 /** PawCoin bakiyesi değiştiğinde (ödül, harcama) yayınlanır; bakiye sunucudan tazelenir. */
 export const BALANCE_CHANGED = 'moffi-balance-changed';
 
 const LEGACY_MANUAL_GOAL_KEY = 'moffi_manual_daily_goal_km';
-const FALLBACK_GOAL_KM = 2;
+const FALLBACK_GOAL_STEPS = 2500;
 
 interface DailyProgressValue {
-    dailyGoal: { distance: number; duration: number };
-    autoDailyGoalKm: number;
-    manualDailyGoalKm: number | null;
-    setManualDailyGoalKm: (km: number | null) => Promise<void>;
+    /** steps: günlük adım hedefi; distance: aynı hedefin km karşılığı (tahmini süre için); duration: dakika. */
+    dailyGoal: { steps: number; distance: number; duration: number };
+    autoDailyGoalSteps: number;
+    manualDailyGoalSteps: number | null;
+    setManualDailyGoalSteps: (steps: number | null) => Promise<void>;
+    /** Adım hedefinin yüzdesi (0–100). */
     progressPercent: number;
     durationPercent: number;
     todayDistanceKm: number;
     todayDurationMin: number;
+    /** Bugün hedefe sayılan adım (sunucudaki görevle aynı kural). */
     todaySteps: number;
     totalPatiPuan: number;
     refreshBalance: () => void;
@@ -51,7 +56,7 @@ export function DailyProgressProvider({ children }: { children: React.ReactNode 
     const petId = activePet?.id ?? null;
 
     // Hedef (hayvana göre, sunucudan)
-    const [goal, setGoal] = useState<{ petId: string; goal_km: number; auto_km: number; manual_km: number | null } | null>(null);
+    const [goal, setGoal] = useState<({ petId: string } & WalkGoal) | null>(null);
     useEffect(() => {
         if (!user?.id || !petId) return;
         let alive = true;
@@ -59,8 +64,9 @@ export function DailyProgressProvider({ children }: { children: React.ReactNode 
             // Bir kerelik geçiş: eskiden telefonda tutulan elle hedef hayvanın kaydına taşınır.
             let legacy: string | null = null;
             try { legacy = localStorage.getItem(LEGACY_MANUAL_GOAL_KEY); } catch { /* depolama kapalı */ }
-            if (legacy && g.manual_km == null && Number(legacy) >= 0.5) {
-                try { g = await questService.setWalkGoal(petId, Number(legacy)); } catch { /* sınır dışı değer: otomatikte kalır */ }
+            if (legacy && g.manual_steps == null && Number(legacy) >= 0.5) {
+                const steps = Math.round((Number(legacy) * STEPS_PER_KM) / STEP_GOAL.step) * STEP_GOAL.step;
+                try { g = await questService.setWalkGoalSteps(petId, Math.min(STEP_GOAL.max, Math.max(STEP_GOAL.min, steps))); } catch { /* otomatikte kalır */ }
             }
             try { localStorage.removeItem(LEGACY_MANUAL_GOAL_KEY); } catch { /* depolama kapalı */ }
             if (alive) setGoal({ petId, ...g });
@@ -69,16 +75,17 @@ export function DailyProgressProvider({ children }: { children: React.ReactNode 
     }, [user?.id, petId]);
 
     const current = goal && goal.petId === petId ? goal : null;
-    const goalKm = current?.goal_km ?? FALLBACK_GOAL_KM;
+    const goalSteps = current?.goal_steps ?? FALLBACK_GOAL_STEPS;
+    const goalKm = stepsToKm(goalSteps);
     // Süre hedefi, hayvanın gerçek temposundan (dk/km); veri yoksa 15 dk/km.
     const pace = walkStats && walkStats.totalDistanceKm > 0.5
         ? Math.min(25, Math.max(8, walkStats.totalDurationMinutes / walkStats.totalDistanceKm))
         : 15;
-    const dailyGoal = { distance: goalKm, duration: Math.round(goalKm * pace) };
+    const dailyGoal = { steps: goalSteps, distance: goalKm, duration: Math.round(goalKm * pace) };
 
-    const setManualDailyGoalKm = useCallback(async (km: number | null) => {
+    const setManualDailyGoalSteps = useCallback(async (steps: number | null) => {
         if (!petId) return;
-        const g = await questService.setWalkGoal(petId, km);
+        const g = await questService.setWalkGoalSteps(petId, steps);
         setGoal({ petId, ...g });
     }, [petId]);
 
@@ -89,11 +96,11 @@ export function DailyProgressProvider({ children }: { children: React.ReactNode 
         if (localDay(w.started_at || w.ended_at) !== today) continue;
         doneKm += w.distanceKm ?? (w.distance_meters ? w.distance_meters / 1000 : 0);
         doneMin += w.duration_minutes || 0;
-        doneSteps += w.steps || 0;
+        doneSteps += creditedSteps(w.steps, w.distanceKm ?? (w.distance_meters ? w.distance_meters / 1000 : 0));
     }
     const todayDistanceKm = doneKm + (walkData.isActive ? walkData.distance / 1000 : 0);
     const todayDurationMin = doneMin + (walkData.isActive ? walkData.time / 60 : 0);
-    const todaySteps = doneSteps + (walkData.isActive ? walkData.realSteps : 0);
+    const todaySteps = doneSteps + (walkData.isActive ? creditedSteps(walkData.realSteps, walkData.distance / 1000) : 0);
 
     // PawCoin bakiyesi (tek kaynak profiles.pati_puan_balance)
     const [totalPatiPuan, setTotalPatiPuan] = useState(0);
@@ -150,10 +157,10 @@ export function DailyProgressProvider({ children }: { children: React.ReactNode 
     return (
         <DailyProgressContext.Provider value={{
             dailyGoal,
-            autoDailyGoalKm: current?.auto_km ?? FALLBACK_GOAL_KM,
-            manualDailyGoalKm: current?.manual_km ?? null,
-            setManualDailyGoalKm,
-            progressPercent: Math.min(100, (todayDistanceKm / Math.max(0.01, dailyGoal.distance)) * 100),
+            autoDailyGoalSteps: current?.auto_steps ?? FALLBACK_GOAL_STEPS,
+            manualDailyGoalSteps: current?.manual_steps ?? null,
+            setManualDailyGoalSteps,
+            progressPercent: Math.min(100, (todaySteps / Math.max(1, goalSteps)) * 100),
             durationPercent: Math.min(100, (todayDurationMin / Math.max(1, dailyGoal.duration)) * 100),
             todayDistanceKm, todayDurationMin, todaySteps,
             totalPatiPuan, refreshBalance,

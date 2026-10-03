@@ -84,6 +84,7 @@ export interface TeamGoal {
     /** Kabul eden üye sayısı; hedef en az 2 kişiyle tamamlanır. */
     accepted: number;
 }
+export interface WalkGoal { goal_steps: number; auto_steps: number; manual_steps: number | null; steps_per_km: number }
 export interface TeamInvite { id: string; title: string; kind: TeamKind; target: number; ends_at: string; creator: string | null; members: TeamMember[] }
 export interface Duel {
     id: string; status: 'pending' | 'active' | 'completed' | 'declined' | 'cancelled'; starts_at: string | null; ends_at: string | null;
@@ -168,7 +169,8 @@ export const questService = {
     respondTeamGoal: (id: string, accept: boolean) => rpc<null>('team_goal_respond', { p_goal: id, p_accept: accept }, 'Yanıt kaydedilemedi.'),
     leaveTeamGoal: (id: string) => rpc<null>('team_goal_leave', { p_goal: id }, 'Hedeften ayrılınamadı.'),
 
-    walkGoal: (petId: string) => rpc<{ goal_km: number; auto_km: number; manual_km: number | null }>('pet_walk_goal', { p_pet: petId }, 'Hedef okunamadı.'),
-    setWalkGoal: (petId: string, km: number | null) =>
-        rpc<{ goal_km: number; auto_km: number; manual_km: number | null }>('set_pet_walk_goal', { p_pet: petId, p_km: km }, 'Hedef kaydedilemedi.'),
+    /** Günlük yürüyüş hedefi ADIM (hayvan başına; manual_steps null = otomatik). */
+    walkGoal: (petId: string) => rpc<WalkGoal>('pet_walk_goal', { p_pet: petId }, 'Hedef okunamadı.'),
+    setWalkGoalSteps: (petId: string, steps: number | null) =>
+        rpc<WalkGoal>('set_pet_walk_goal_steps', { p_pet: petId, p_steps: steps }, 'Hedef kaydedilemedi.'),
 };

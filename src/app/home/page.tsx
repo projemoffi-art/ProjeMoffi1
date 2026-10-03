@@ -45,7 +45,7 @@ function HomeContent() {
     const { storyGroups, inspiration, activeLostCount } = useStories(careItems);
     const [addPetOpen, setAddPetOpen] = useState(false);
     const { history } = useWalk();
-    const { todayDistanceKm, dailyGoal } = useDailyProgress();
+    const { todaySteps, dailyGoal } = useDailyProgress();
     const { weather } = useWeather();
 
     // Hiç hayvanı olmayan ve ilk kurulumu bitirmemiş kullanıcı kurulum akışına gider (design-reference/onboarding-final).
@@ -84,7 +84,7 @@ function HomeContent() {
         weather,
         petName: activePetObj?.name || null,
         daysSinceLastWalk: lastWalkDay && today ? daysBetween(lastWalkDay, today) : null,
-        goalDone: todayDistanceKm >= Math.max(0.1, dailyGoal.distance),
+        goalDone: todaySteps >= Math.max(1, dailyGoal.steps),
     });
 
     return (

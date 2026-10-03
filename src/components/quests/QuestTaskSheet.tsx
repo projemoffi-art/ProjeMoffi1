@@ -119,7 +119,7 @@ export function QuestTaskSheet({ quest, pet, onClose }: {
                             {[
                                 { icon: Clock, value: formatMinutes(todayDurationMin), label: 'Süre' },
                                 { icon: Flame, value: `${walkCalories(todayDistanceKm, petWeightKg(pet))} kcal`, label: 'Kalori' },
-                                { icon: MapPin, value: `${Math.max(0, quest.target - quest.progress).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km`, label: 'Kalan' },
+                                { icon: MapPin, value: `${Math.max(0, quest.target - quest.progress).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} ${quest.unit}`, label: 'Kalan' },
                             ].map(s => (
                                 <div key={s.label} className="bg-card border border-card-border rounded-2xl p-3 flex flex-col items-center">
                                     <s.icon className="w-4 h-4 text-accent mb-1" />

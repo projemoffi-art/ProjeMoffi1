@@ -30,7 +30,7 @@ type List = unknown[] | undefined;
 interface PetPayload {
     name?: unknown; species?: unknown; breed?: unknown; age?: unknown; sex?: unknown; neutered?: unknown; weightKg?: unknown;
     health?: { status?: unknown; upcoming?: { title?: unknown; when?: unknown }[]; activeMedications?: List; allergies?: List; chronicConditions?: List; notes?: unknown } | null;
-    walks?: { todayKm?: unknown; goalKm?: unknown; weekCount?: unknown; weekKm?: unknown } | null;
+    walks?: { todayKm?: unknown; todaySteps?: unknown; goalSteps?: unknown; weekCount?: unknown; weekKm?: unknown } | null;
 }
 interface Prefs { personality?: string; detailLevel?: string }
 interface ChatBody { messages?: unknown; petData?: PetPayload | null; prefs?: Prefs; page?: unknown; pay?: unknown }
@@ -73,7 +73,7 @@ function buildSystem(petData: PetPayload | null | undefined, prefs: Prefs | unde
         const w = petData.walks;
         if (w) {
             s += "[Yürüyüş]\n" +
-                `Bugün: ${Number(w.todayKm || 0).toFixed(2)} km, günlük hedef ${Number(w.goalKm || 0).toFixed(1)} km\n` +
+                `Bugün: ${Math.round(Number(w.todaySteps || 0))} adım (${Number(w.todayKm || 0).toFixed(2)} km), günlük hedef ${Math.round(Number(w.goalSteps || 0))} adım\n` +
                 `Son 7 gün: ${Number(w.weekCount || 0)} yürüyüş, toplam ${Number(w.weekKm || 0).toFixed(1)} km\n`;
         }
     }

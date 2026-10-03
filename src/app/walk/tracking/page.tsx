@@ -14,7 +14,7 @@ import { WALK_ISSUE_LABELS } from "@/lib/walkIssueLabels";
 import { haptics, share, device } from "@/native";
 import { audioCues, TONE_THEMES } from "@/lib/audioCues";
 import { apiService } from "@/services/apiService";
-import { walkCalories, petWeightKg, formatKm, formatClock } from "@/lib/walkMetrics";
+import { walkCalories, petWeightKg, formatKm, formatClock, STEP_GOAL } from "@/lib/walkMetrics";
 import { WalkHeader, StatRow, PrimaryButton, SoftButton, ProgressBar } from "@/components/walk/WalkUI";
 
 const WalkMap = dynamic(() => import("@/components/walk/WalkMap"), {
@@ -62,7 +62,7 @@ function TrackingContent() {
     const { walkData, pauseWalk, resumeWalk, walkIssue, walkPhase, autoPauseEnabled, setAutoPauseEnabled, stepsSupported } = useActivity();
     const { activePet, pets } = usePet();
     const { weather } = useWeather();
-    const { dailyGoal, todayDistanceKm, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm } = useDailyProgress();
+    const { dailyGoal, todaySteps, autoDailyGoalSteps, manualDailyGoalSteps, setManualDailyGoalSteps } = useDailyProgress();
 
     const walkingPet = pets.find(p => String(p.id) === String(walkData.petId)) || activePet;
     const petName = walkData.petName || walkingPet?.name || 'Dostun';
@@ -97,8 +97,9 @@ function TrackingContent() {
     const position = walkData.path.length ? walkData.path[walkData.path.length - 1] : null;
     const distKm = walkData.distance / 1000;
     const calories = walkCalories(distKm, petWeightKg(walkingPet));
-    const remainingKm = Math.max(0, dailyGoal.distance - todayDistanceKm);
-    const goalPercent = Math.round(Math.min(100, (todayDistanceKm / Math.max(0.1, dailyGoal.distance)) * 100));
+    // Hedef adım (sayılan adım: ölçülen adım ile mesafenin adım karşılığının büyüğü; DailyProgressContext)
+    const remainingSteps = Math.max(0, dailyGoal.steps - todaySteps);
+    const goalPercent = Math.round(Math.min(100, (todaySteps / Math.max(1, dailyGoal.steps)) * 100));
     const fastestSplit = walkData.splits.length ? Math.min(...walkData.splits.map(s => s.splitSeconds)) : null;
     const pill = gpsPill(walkIssue);
     const pawWarning = pawSafetyWarning(weather?.temp);
@@ -107,8 +108,8 @@ function TrackingContent() {
     useEffect(() => {
         if (!walkData.isActive) return;
         if (goalPercent < 100) { goalCuedRef.current = false; return; }
-        if (!goalCuedRef.current && walkData.distance > 0) { goalCuedRef.current = true; audioCues.goalReached(); haptics.celebrate(); }
-    }, [goalPercent, walkData.isActive, walkData.distance]);
+        if (!goalCuedRef.current && (walkData.distance > 0 || walkData.realSteps > 0)) { goalCuedRef.current = true; audioCues.goalReached(); haptics.celebrate(); }
+    }, [goalPercent, walkData.isActive, walkData.distance, walkData.realSteps]);
 
     // Ekranı açık tut
     useEffect(() => {
@@ -197,8 +198,8 @@ function TrackingContent() {
 
     const adjustDailyGoal = (delta: number) => {
         haptics.tap();
-        const base = manualDailyGoalKm ?? autoDailyGoalKm;
-        setManualDailyGoalKm(Math.max(0.5, Math.min(20, Math.round((base + delta) * 2) / 2)));
+        const base = manualDailyGoalSteps ?? autoDailyGoalSteps;
+        void setManualDailyGoalSteps(Math.max(STEP_GOAL.min, Math.min(STEP_GOAL.max, base + delta)));
     };
 
     const handleFinish = () => {
@@ -324,7 +325,7 @@ function TrackingContent() {
                                 ]}
                             />
                             <div className="mt-5 mb-2 flex items-center justify-between text-[12px] font-bold">
-                                <span className="text-foreground">{remainingKm > 0 ? `Hedefe kalan ${formatKm(remainingKm)} km` : 'Günlük hedef tamam 🎉'}</span>
+                                <span className="text-foreground">{remainingSteps > 0 ? `Hedefe kalan ${remainingSteps.toLocaleString('tr-TR')} adım` : 'Günlük hedef tamam 🎉'}</span>
                                 <span className="text-emerald-600 text-[14px]">%{goalPercent}</span>
                             </div>
                             <ProgressBar percent={goalPercent} />
@@ -390,12 +391,12 @@ function TrackingContent() {
                                 <div className="py-3.5">
                                     <div className="flex items-center justify-between mb-3">
                                         <span className="text-[14px] font-bold">Günlük hedef</span>
-                                        <button type="button" onClick={() => { haptics.tap(); setManualDailyGoalKm(null); }} className={cn("text-[11px] font-bold px-3 py-1 rounded-full", manualDailyGoalKm === null ? "bg-accent text-white" : "bg-black/5 text-secondary")}>Otomatik</button>
+                                        <button type="button" onClick={() => { haptics.tap(); void setManualDailyGoalSteps(null); }} className={cn("text-[11px] font-bold px-3 py-1 rounded-full", manualDailyGoalSteps === null ? "bg-accent text-white" : "bg-black/5 text-secondary")}>Otomatik</button>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <button type="button" onClick={() => adjustDailyGoal(-0.5)} className="w-10 h-10 rounded-full bg-black/5 text-[20px] font-bold">−</button>
-                                        <span className="flex-1 text-center text-[18px] font-extrabold">{formatKm(dailyGoal.distance, 1)} km</span>
-                                        <button type="button" onClick={() => adjustDailyGoal(0.5)} className="w-10 h-10 rounded-full bg-accent text-white text-[20px] font-bold">+</button>
+                                        <button type="button" onClick={() => adjustDailyGoal(-STEP_GOAL.step)} className="w-10 h-10 rounded-full bg-black/5 text-[20px] font-bold">−</button>
+                                        <span className="flex-1 text-center text-[18px] font-extrabold">{dailyGoal.steps.toLocaleString('tr-TR')} adım</span>
+                                        <button type="button" onClick={() => adjustDailyGoal(STEP_GOAL.step)} className="w-10 h-10 rounded-full bg-accent text-white text-[20px] font-bold">+</button>
                                     </div>
                                 </div>
                                 {[
