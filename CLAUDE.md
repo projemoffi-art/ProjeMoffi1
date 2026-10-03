@@ -505,6 +505,38 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   Sağlık belgeleri bilerek sıkıştırılmaz. Eski `utils.compressImage` (kullanılmıyordu, yön bilgisini bozuyordu) silindi.
 - Ortak kısa bildirim `GlobalToast` her temada okunur düz kart (eskiden açık temada koyu zemin üstünde koyu yazı + indigo şeritti).
 
+### Genel kontrol 2026-10-03 (üst karttan sonra) — bulunan ve düzeltilenler (8.66)
+
+- 🔴 **Sahte ödeme sayfası silindi:** `/cart` + `/checkout` Stüdyo'dan kalma ikinci sepetti (`ShopContext`, tarayıcı deposu); `/checkout` kendi
+  formunda KART NUMARASI istiyor ve ödeme olmadan "Ödeme Başarılı" diyordu. Ana sayfa "Sepetim" ve kenar paneli "Sepet" buraya gidiyordu.
+  Tek sepet `usePetShop` (veritabanı) + PayTR, `/petshop` içinde; derin bağlantı `/petshop?view=cart`. `/studio` (Moffi Stüdyo, DALL-E,
+  `actions/ai.ts` yapay zekâ kapısını atlıyordu) ve `ShopContext` da silindi. Site başlığı "Moffi Demo / Advanced Customization Engine" ve
+  manifest "Moffi Pro Studio" düzeltildi (simge bekliyor, 12.1).
+- 🔴 **Ödeme başlatma** (`api/paytr/payment`) yeniden yazıldı: UUID olmayan kimlikle oturum denetimini atlayan "mock" dalı kaldırıldı, kimlik
+  yalnızca oturumdan, adres doğrulanır, aynı ürünün satırları birleşip stok toplamla denetlenir, e-posta oturumdan ("test@" yedeği yok), PayTR
+  hata ayıklama yalnız test modunda. İstemci yalnızca ürün + adet gönderir; sunucu hatası olduğu gibi gösterilir.
+- 🔴 **Mağazadaki uydurma içerik kaldırıldı** (`/petshop`): her ürüne yazılan 4.5 puan (veritabanında puan/yorum sütunu YOK), "Moffi Premium"
+  markası, tarayıcıda üretilen sahte yorumlar ("Ahmet S."), vet onaylı ürünlerde uydurma hekim görüşü ("Dr. Selim Yılmaz"), ürüne bakmadan
+  şablonla yazılan "Moffi AI analizi" (%32 protein vb.), "Akıllı Mağaza" izin penceresi, "₺200 üzeri ücretsiz kargo · aynı gün" ve satın almaya
+  "+PatiPuan" vaadi (`finalize_paid_order` puan vermez), açıklamasız üründe "tamamen doğal" iddiası. Mağazanın ayrı sohbet penceresi
+  (`AdvisorChat`) silindi; düğme tek Moffi AI panelini mağaza sorusuyla açar. `ShopProduct` tek tanım (`services/types`, `types/domain` oradan alır).
+  🔴 Hata: ayrıntı/kıyaslamadaki "Sepete Ekle" `updateCartItem` çağırıyordu → sepette olmayan ürün HİÇ eklenmiyordu; artık `addToCart` (upsert).
+  Mağaza ekranının görsel yenilemesi referans bekliyor (eski gri/italik stil); `products`'ta deneme ürünü "WRHRH" duruyor.
+- 🔴 **Oyun puanı:** `add_game_reward` istemcinin söylediği miktarı (çağrı başına 500) sınırsız veriyordu, girişsiz de çağrılabiliyordu. Günlük
+  sınır sunucuda (`game_reward_days`: 100 oyun puanı + 500 XP, Türkiye günü). `coin_balance` oyun sıralaması içindir, satın alınan PawCoin değil.
+- 🔴 **Profil koruma tetikleyicileri** (`protect_profile_fields`, `protect_profile_security_fields`) JWT'ye (`auth.role()`) bakıyordu: sunucu
+  fonksiyonlarının yaptığı yetkili değişiklikleri de sessizce geri alıyordu (oyun puanı hiç yazılmamıştı). Diğer korumalarla aynı desene geçti:
+  `current_user in ('authenticated','anon')` + SECURITY INVOKER. 🔴 Kural: koruma tetikleyicisinde JWT değil `current_user`; tetikleyici
+  fonksiyonu SECURITY DEFINER yapma (current_user sahibi olur, koruma çalışmaz).
+- Girişsiz çağrılabilen fonksiyonlar kapatıldı: `verify_and_claim` (girişsizken sahipsiz hayvan oluşturuyordu), `request_manual_claim`,
+  `toggle_post_like`, `toggle_comment_like`; `get_user_comment_likes` (başkasının beğenileri) herkese kapalı. `get_active_users_at_location`
+  (yönetici Aktivite) olmayan sütuna bakıp hep 0 dönüyordu: yalnızca yönetici, gerçek son nokta. 16 fonksiyonda search_path sabitlendi.
+- Kalan danışman bulguları bilinçli: `*_cards` görünümleri, PostGIS `st_estimatedextent`, herkese açık olması gereken fonksiyonlar
+  (`get_pet_tag_info`, `get_shared_passport`, `submit_tag_report`, `get_public_emergency_info`, `submit_sighting`, `get_walk_beacon`,
+  `record_*_event`, `get_clinics_open_status`, `get_current_theme`) ve RLS içinde kullanılan yardımcılar (`is_business_member` vb., girişsizde false).
+- Alt menü (`DynamicNavigation`) görünürlüğü artık türetilir (efektte senkron setState yok); "Stüdyo" yönlendirmesi kaldırıldı.
+- Yönetici finansta iade durumu `returned` (order_items'ta `refunded` yok; iadeler hiç sayılmıyordu).
+
 ### İçerik Stüdyosu ve hikâyeler (8.64, 2026-10-04 — Baran onaylı 5 kanal)
 
 - **Kanallar** (`hooks/useStories.ts`): **Kayıp Alarmı** (otomatik, kullanıcının 25 km çevresi), **<Hayvan>'ın Haftası** (otomatik özet
@@ -621,7 +653,7 @@ ilgili maddeyi tek satırla hatırlat.
 - [ ] PawCoin paketi satın alma ekranı nerede olsun (Ödül Marketi'nin üstü / ayrı "Cüzdan")? Katalog ve sunucu hazır.
 - [ ] Yapay zekâ fotoğraf analizi (`/api/ai/vision`, Prime ayrıcalığı olarak kararlaştırıldı) hangi ekrandan açılsın (Sağlık Merkezi "fotoğrafla sor",
       mama etiketi okuma)? Şimdilik arayüzde yok, Prime ekranında listelenmiyor.
-- [ ] `ai` ve `@ai-sdk/google` paketleri artık kullanılmıyor: kaldırayım mı? (paket kaldırma onay ister)
+- [ ] Kullanılmayan paketler: `ai`, `@ai-sdk/google`, `openai` (Stüdyo silindi), `stripe` / `@stripe/*` (ödeme PayTR): kaldırayım mı? (paket kaldırma onay ister)
 - [ ] Mağaza sayfası: açıklama, ekran görüntüleri, gizlilik politikası (`/privacy`), destek e-postası, Apple gizlilik etiketleri (konum, evcil hayvan
       verisi, fotoğraf, e-posta). Claude metin taslağını hazırlayabilir.
 - [ ] Bilgi: Apple kural 4.2 (uygulama canlı siteyi kendi içinde açıyor; arka plan konum/satın alma/bildirim bunu karşılar ama incelemede soru gelebilir).

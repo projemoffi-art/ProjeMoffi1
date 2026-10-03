@@ -4,18 +4,16 @@ import { isImageUrl } from '@/lib/productImage';
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-    Search, ShoppingBag, Heart, Star, ChevronLeft, ChevronRight,
+    Search, ShoppingBag, Heart, ChevronLeft, ChevronRight,
     ShoppingCart, Plus, Minus, X, Bone, Fish,
-    Package, Truck, CheckCircle2, Tag, Sparkles, AlertCircle, Info, ArrowRight,
-    Sliders, CreditCard, MapPin, Lock, ShieldCheck
+    Package, CheckCircle2, Tag, Sparkles, AlertCircle, ArrowRight,
+    Sliders, MapPin, Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { usePetShop } from "@/hooks/usePetShop";
 import type { ShopCategory, ShopProduct } from "@/types/domain";
-import AdvisorChat from "@/components/petshop/AdvisorChat";
 import { usePet } from "@/context/PetContext";
-import { useAuth } from "@/context/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { OrderTrackingModal } from '@/components/shop/OrderTrackingModal';
 import confetti from 'canvas-confetti';
@@ -40,19 +38,19 @@ const getFirstImgUrl = (imageStr: string) => {
 // ==========================================
 // CATEGORY CONFIG
 // ==========================================
-const CATEGORIES: Array<{ id: ShopCategory | 'all'; label: string; icon: any; color: string }> = [
-    { id: 'all', label: 'Tümü', icon: Sparkles, color: 'from-purple-500 to-indigo-500' },
+const CATEGORIES: Array<{ id: ShopCategory | 'all'; label: string; icon: typeof Sparkles; color: string }> = [
+    { id: 'all', label: 'Tümü', icon: Sparkles, color: 'from-orange-500 to-rose-500' },
     { id: 'food', label: 'Mama', icon: Bone, color: 'from-amber-500 to-orange-500' },
     { id: 'snack', label: 'Atıştırmalık', icon: Fish, color: 'from-pink-500 to-rose-500' },
-    { id: 'toy', label: 'Oyuncak', icon: Package, color: 'from-blue-500 to-cyan-500' },
+    { id: 'toy', label: 'Oyuncak', icon: Package, color: 'from-teal-500 to-emerald-500' },
     { id: 'care', label: 'Bakım', icon: Heart, color: 'from-green-500 to-emerald-500' },
-    { id: 'accessory', label: 'Aksesuar', icon: Tag, color: 'from-violet-500 to-purple-500' },
+    { id: 'accessory', label: 'Aksesuar', icon: Tag, color: 'from-stone-500 to-stone-700' },
 ];
 
 // ==========================================
 // EMPTY STATE
 // ==========================================
-function EmptyState({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
+function EmptyState({ icon: Icon, title, description }: { icon: typeof Sparkles; title: string; description: string }) {
     return (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4">
@@ -64,61 +62,8 @@ function EmptyState({ icon: Icon, title, description }: { icon: any; title: stri
     );
 }
 
-// ==========================================
-// TURKISH POSSESSIVE SUFFIX HELPER
-// ==========================================
-const getPossessive = (name: string) => {
-    if (!name) return "";
-    const lastChar = name.slice(-1).toLowerCase();
-    const vowels = ['a', 'e', 'ı', 'i', 'o', 'ö', 'u', 'ü'];
-    const isVowel = vowels.includes(lastChar);
-    
-    let lastVowel = 'a';
-    for (let i = name.length - 1; i >= 0; i--) {
-        const char = name[i].toLowerCase();
-        if (vowels.includes(char)) {
-            lastVowel = char;
-            break;
-        }
-    }
-    
-    let suffix = "";
-    if (['a', 'ı'].includes(lastVowel)) {
-        suffix = isVowel ? "nın" : "ın";
-    } else if (['e', 'i'].includes(lastVowel)) {
-        suffix = isVowel ? "nin" : "in";
-    } else if (['o', 'u'].includes(lastVowel)) {
-        suffix = isVowel ? "nun" : "un";
-    } else if (['ö', 'ü'].includes(lastVowel)) {
-        suffix = isVowel ? "nün" : "ün";
-    } else {
-        suffix = "in";
-    }
-    
-    return `${name}'${suffix}`;
-};
 
 
-
-const getSmartRecommendation = (productName: string, category: string, pet: any) => {
-    if (!pet) return "Moffi Smart Entegrasyonu aktif. En uygun tavsiye için bir evcil hayvan profili ekleyin veya seçin.";
-    
-    const petName = pet.name;
-    const petBreed = pet.breed || "dostunuz";
-    const petWeight = pet.weight || "10";
-    
-    if (category === 'food') {
-        return `🐾 ${petName} (${petBreed}, ${petWeight}kg) için Moffi AI Analizi: Bu kuru mama, ${petName}'in kilosunu koruması ve kas yapısını güçlendirmesi için en uygun besin dengesine (32% protein) sahiptir. Yüksek sindirilebilirlik formülü sayesinde günlük enerji ihtiyacını karşılar.`;
-    } else if (category === 'snack') {
-        return `🐾 Egzersiz Ödülü: Bugün yaptığınız yürüyüşten sonra ${petName}'e bu ödülü vererek hem motivasyonunu artırabilir hem de kaybettiği enerjiyi sağlıklı vitaminlerle geri kazandırabilirsiniz.`;
-    } else if (category === 'toy') {
-        return `🐾 Zihinsel Gelişim: ${petName} oldukça meraklı bir karaktere sahip. Bu oyuncak, onun avcılık ve çiğneme içgüdüsünü uyararak evde yalnız kaldığı süre boyunca sıkılmasını engeller ve kaygısını azaltır.`;
-    } else if (category === 'care') {
-        return `🐾 Tüy & Cilt Sağlığı: ${petBreed} ırkı dostunuzun tüylerinin parlak ve sağlıklı kalması için bu özel PH dengeli formül önerilir. Dökülmeyi ve kaşıntıyı minimuma indiren bitkisel yağlar içerir.`;
-    } else {
-        return `🐾 Konforlu Yürüyüş: ${petName}'in boy ve kilosuna uygun olarak tasarlanan bu aksesuar, yürüyüşlerde tasmayı çektiğinde boynuna baskı yapmaz, göğüs kafesine kuvveti eşit yayarak güvenli bir yürüyüş deneyimi sunar.`;
-    }
-};
 
 const getFrequentlyBoughtWith = (currentProduct: ShopProduct, allProducts: ShopProduct[]) => {
     if (!currentProduct || allProducts.length <= 1) return null;
@@ -140,10 +85,8 @@ const getFrequentlyBoughtWith = (currentProduct: ShopProduct, allProducts: ShopP
 // ==========================================
 export default function PetShopPage() {
     const router = useRouter();
-    const quickBuyScroll = useDragScroll();
     const categoryScroll = useDragScroll();
     const { activePet } = usePet();
-    const { user } = useAuth();
     const {
         products, cart, cartCount, cartTotal,
         isLoading, error,
@@ -157,6 +100,12 @@ export default function PetShopPage() {
         const params = new URLSearchParams(window.location.search);
         const status = params.get('status');
         const orderId = params.get('orderId');
+
+        // "Sepetim" bağlantıları (ana sayfa, kenar paneli) sepeti açık getirir: /petshop?view=cart
+        if (params.get('view') === 'cart') {
+            setShowCart(true);
+            window.history.replaceState({}, '', window.location.pathname);
+        }
 
         if (status === 'success' && orderId) {
             setLastOrderId(orderId);
@@ -179,54 +128,32 @@ export default function PetShopPage() {
     const [activeCategory, setActiveCategory] = useState<ShopCategory | 'all'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [showCart, setShowCart] = useState(false);
-    const [showAdvisor, setShowAdvisor] = useState(false);
     const [favorites, setFavorites] = useState<Set<string>>(new Set());
-    const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'price_high'>('popular');
+    const [sortBy, setSortBy] = useState<'new' | 'price_low' | 'price_high'>('new');
     
     // PAYMENT & TRACKING STATES
     const [showCheckout, setShowCheckout] = useState(false);
     const [showTracking, setShowTracking] = useState(false);
     const [lastOrderId, setLastOrderId] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false); // Local loading for payment
 
     // Custom Checkout States
     const [checkoutMode, setCheckoutMode] = useState<'stripe' | 'custom' | 'paytr'>('custom');
     const [checkoutStep, setCheckoutStep] = useState<'address' | 'payment'>('address');
     const [checkoutAddress, setCheckoutAddress] = useState({ name: "", surname: "", phone: "", detail: "" });
-    const [checkoutCard, setCheckoutCard] = useState({ number: "", expiry: "", cvc: "", holder: "" });
     const [checkoutErrors, setCheckoutErrors] = useState<string[]>([]);
     const [isProcessingCustomPayment, setIsProcessingCustomPayment] = useState(false);
     const [paytrToken, setPaytrToken] = useState<string | null>(null);
 
-    // ECOSYSTEM PREFERENCES
-    const [isSmartShopEnabled, setIsSmartShopEnabled] = useState(true);
-    const [showSmartModal, setShowSmartModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
     const [activeImgIndex, setActiveImgIndex] = useState(0);
-    const [detailTab, setDetailTab] = useState<'overview' | 'specs' | 'smart' | 'reviews'>('overview');
     const [modalQty, setModalQty] = useState(1);
 
     // Advanced features states
     const [comparisonList, setComparisonList] = useState<ShopProduct[]>([]);
     const [showComparison, setShowComparison] = useState(false);
-    const [reviews, setReviews] = useState<Record<string, Array<{
-        id: string;
-        username: string;
-        avatar: string;
-        rating: number;
-        comment: string;
-        date: string;
-        petTag?: string;
-    }>>>({});
-    const [newReviewStar, setNewReviewStar] = useState(5);
-    const [newReviewText, setNewReviewText] = useState("");
-
     useEffect(() => {
         setActiveImgIndex(0);
-        setDetailTab('overview');
         setModalQty(1);
-        setNewReviewStar(5);
-        setNewReviewText("");
     }, [selectedProduct]);
 
     useEffect(() => {
@@ -254,58 +181,6 @@ export default function PetShopPage() {
         }
     }, [products]);
 
-    useEffect(() => {
-        if (products.length > 0) {
-            const initialReviews = { ...reviews };
-            let updated = false;
-            products.forEach(p => {
-                if (!initialReviews[p.id]) {
-                    initialReviews[p.id] = [
-                        {
-                            id: `rev-1-${p.id}`,
-                            username: "Ahmet S.",
-                            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100",
-                            rating: 5,
-                            comment: "Ürünün kalitesi gerçekten çok yüksek. Paketleme çok özenliydi, kurye arkadaşa da hızı için teşekkür ederim. Tavsiye ederim.",
-                            date: "14.05.2026",
-                            petTag: "🐶 Pug sahibi"
-                        },
-                        {
-                            id: `rev-2-${p.id}`,
-                            username: "Selin K.",
-                            avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100",
-                            rating: 4,
-                            comment: "Beklediğimden biraz daha küçük geldi ama kalitesi çok güzel. Bizimki elinden düşürmüyor, iştahla tüketiyor/keyifle oynuyor.",
-                            date: "02.06.2026",
-                            petTag: "🐱 Tekir sahibi"
-                        }
-                    ];
-                    updated = true;
-                }
-            });
-            if (updated) {
-                setReviews(initialReviews);
-            }
-        }
-    }, [products]);
-
-    useEffect(() => {
-        const smartSaved = localStorage.getItem('moffi_smart_shop_enabled');
-        if (smartSaved !== null) setIsSmartShopEnabled(smartSaved === 'true');
-
-        const modalShown = localStorage.getItem('moffi_smart_shop_modal_shown');
-        if (!modalShown && smartSaved === null) {
-            setTimeout(() => setShowSmartModal(true), 2000);
-        }
-    }, []);
-
-    const handleEnableSmart = (enable: boolean) => {
-        setIsSmartShopEnabled(enable);
-        localStorage.setItem('moffi_smart_shop_enabled', String(enable));
-        localStorage.setItem('moffi_smart_shop_modal_shown', 'true');
-        setShowSmartModal(false);
-    };
-
     // Handle category change
     const handleCategoryChange = (catId: ShopCategory | 'all') => {
         setActiveCategory(catId);
@@ -325,7 +200,7 @@ export default function PetShopPage() {
         const list = [...products];
         if (sortBy === 'price_low') return list.sort((a, b) => a.price - b.price);
         if (sortBy === 'price_high') return list.sort((a, b) => b.price - a.price);
-        return list.sort((a, b) => b.reviews - a.reviews);
+        return list; // Veritabanından en yeni önce gelir.
     }, [products, sortBy]);
 
     // Cart helpers
@@ -334,7 +209,7 @@ export default function PetShopPage() {
     const toggleFav = (id: string) => {
         setFavorites(prev => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
     };
@@ -357,17 +232,7 @@ export default function PetShopPage() {
         const query = params.toString();
         window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
         handleCheckoutInit();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cart.length]);
-
-    // Dynamic Filter for Quick Buy Bar
-    const quickBuyProducts = useMemo(() => {
-        if (isSmartShopEnabled) {
-            return products.filter(p => p.isRecentlyBought);
-        }
-        // Fallback: Trend Products (Top rated)
-        return products.filter(p => p.rating >= 4.8).slice(0, 5);
-    }, [products, isSmartShopEnabled]);
 
     return (
         <div className="min-h-screen pb-32 font-sans selection:bg-orange-500/30">
@@ -408,59 +273,6 @@ export default function PetShopPage() {
                             placeholder="Ürün veya marka ara..."
                             className="w-full h-11 pl-10 pr-4 bg-gray-200/50 dark:bg-white/5 rounded-2xl text-sm text-foreground dark:text-white placeholder:text-gray-500 outline-none border-2 border-transparent focus:border-orange-500/10 focus:bg-card dark:focus:bg-black/20 transition-all font-medium"
                         />
-                    </div>
-                </div>
-            </div>
-
-            {/* QUICK BUY BAR (ACTIVE PET'S FAVORITES or TREND) */}
-            <div className="px-5 pt-4 pb-2">
-                <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-[13px] font-black text-foreground dark:text-white uppercase tracking-tighter">
-                        {isSmartShopEnabled 
-                            ? `${activePet ? getPossessive(activePet.name) : "Dostunuzun"} Favorileri 🦴` 
-                            : "Haftanın Trendleri 🔥"}
-                    </h2>
-                    <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Hızlı Al</span>
-                </div>
-                <div 
-                    ref={quickBuyScroll.ref}
-                    onMouseDown={quickBuyScroll.onMouseDown}
-                    onMouseLeave={quickBuyScroll.onMouseLeave}
-                    onMouseUp={quickBuyScroll.onMouseUp}
-                    onMouseMove={quickBuyScroll.onMouseMove}
-                    className="flex gap-3 overflow-x-auto no-scrollbar pb-2 cursor-grab active:cursor-grabbing select-none"
-                >
-                    {quickBuyProducts.map(product => (
-                        <motion.button
-                            key={`quick-${product.id}`}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => addToCart(product.id)}
-                            className="flex flex-col items-center shrink-0 w-24 bg-card dark:bg-white/5 rounded-3xl p-3 border border-card-border dark:border-card-border shadow-moffi-card active:bg-orange-50 transition-colors"
-                        >
-                            {isImageUrl(getFirstImgUrl(product.image)) ? (
-                                <>
-                                    <img 
-                                        src={getFirstImgUrl(product.image)} 
-                                        alt={product.name} 
-                                        className="w-10 h-10 object-cover rounded-xl mb-2 drop-shadow-md bg-black/5 dark:bg-white/5" 
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                            const fallback = e.currentTarget.nextSibling as HTMLElement;
-                                            if (fallback) fallback.style.display = 'inline-block';
-                                        }}
-                                    />
-                                    <span className="hidden text-3xl mb-2 drop-shadow-md">🦴</span>
-                                </>
-                            ) : (
-                                <span className="text-3xl mb-2 drop-shadow-md">{product.image || '🦴'}</span>
-                            )}
-                            <span className="text-[9px] font-black text-foreground dark:text-white/80 text-center line-clamp-1 italic uppercase tracking-tighter">{product.name}</span>
-                            <span className="text-[10px] font-black text-orange-500 mt-1">₺{(product.price || 0).toLocaleString('tr-TR')}</span>
-                        </motion.button>
-                    ))}
-                    <div className="flex flex-col items-center justify-center shrink-0 w-24 bg-gray-50 dark:bg-white/5 rounded-3xl p-3 border border-dashed border-card-border dark:border-card-border">
-                        <Plus className="w-5 h-5 text-gray-500 dark:text-gray-400 mb-1" />
-                        <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Daha Fazla</span>
                     </div>
                 </div>
             </div>
@@ -512,7 +324,7 @@ export default function PetShopPage() {
             <div className="px-5 py-2 flex items-center justify-between">
                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{sortedProducts.length} ürün</span>
                 <div className="flex gap-1.5">
-                    {(['popular', 'price_low', 'price_high'] as const).map(sKey => (
+                    {(['new', 'price_low', 'price_high'] as const).map(sKey => (
                         <button
                             key={sKey}
                             onClick={() => setSortBy(sKey)}
@@ -521,7 +333,7 @@ export default function PetShopPage() {
                                 sortBy === sKey ? "bg-gray-900 dark:bg-card text-white dark:text-black" : "bg-gray-100 dark:bg-white/5 text-gray-500"
                             )}
                         >
-                            {sKey === 'popular' ? 'Popüler' : sKey === 'price_low' ? 'En Ucuz' : 'En Pahalı'}
+                            {sKey === 'new' ? 'En Yeni' : sKey === 'price_low' ? 'En Ucuz' : 'En Pahalı'}
                         </button>
                     ))}
                 </div>
@@ -576,7 +388,7 @@ export default function PetShopPage() {
                                     {product.tag && (
                                         <span className={cn(
                                             "absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg text-[8px] font-black text-white uppercase tracking-widest shadow-xl border border-card-border",
-                                            product.tag === 'Çok Satan' ? 'bg-red-500/90' : 'bg-indigo-500/90'
+                                            product.tag === 'Çok Satan' ? 'bg-red-500/90' : 'bg-orange-500/90'
                                         )}>
                                             {product.tag}
                                         </span>
@@ -590,7 +402,7 @@ export default function PetShopPage() {
                                     </motion.button>
                                     
                                     {/* Vet Approved Badge - Conditional */}
-                                    {product.isVetApproved && isSmartShopEnabled && (
+                                    {product.isVetApproved && (
                                         <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 dark:bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-emerald-500/30 shadow-sm">
                                             <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
                                             <span className="text-[7px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">Vet Onaylı</span>
@@ -599,7 +411,6 @@ export default function PetShopPage() {
                                 </div>
  
                                 <div className="p-4 bg-card dark:bg-black/20">
-                                    <p className="text-[9px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider mb-1 leading-none">{product.brand?.name || "Moffi"}</p>
                                     <h3 
                                         onClick={() => setSelectedProduct(product)}
                                         className="text-xs font-black text-foreground dark:text-white leading-snug line-clamp-2 h-8 italic mb-2 cursor-pointer hover:text-orange-500 transition-colors"
@@ -607,20 +418,7 @@ export default function PetShopPage() {
                                         {product.name}
                                     </h3>
                                     
-                                    <div className="flex items-center gap-1.5 mb-3">
-                                        {product.category === 'snack' && isSmartShopEnabled && (
-                                            <div className="flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded-lg border border-blue-500/20">
-                                                <Sparkles className="w-2.5 h-2.5 text-blue-500" />
-                                                <span className="text-[7px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Walk Ödülü ⚡</span>
-                                            </div>
-                                        )}
-                                        {product.isRecentlyBought && isSmartShopEnabled && (
-                                            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 italic">
-                                                {activePet ? `${activePet.name} bunu seviyor` : "Dostunuz bunu seviyor"}
-                                            </span>
-                                        )}
-                                    </div>
-
+                                    <div className="mb-3" />
 
                                     <div className="flex items-center justify-between mt-auto">
                                         <div className="flex flex-col">
@@ -655,98 +453,19 @@ export default function PetShopPage() {
                 </div>
             )}
 
-            {/* DELIVERY INFO */}
-            <div className="px-5 mt-8 mb-4">
-                <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-[2.2rem] border border-white/40 dark:border-card-border p-5 flex items-center gap-5 group shadow-sm">
-                    <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
-                        <Truck className="w-7 h-7 text-emerald-600" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-black text-foreground dark:text-white uppercase tracking-tighter italic">Ücretsiz Kargo</h3>
-                        <p className="text-[11px] text-gray-500 font-bold mt-0.5">₺200 üzeri siparişlerde · Aynı gün kapında ⚡</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* AI ADVISOR PULSE BUTTON */}
+            {/* MOFFI AI: tek asistan paneli (CLAUDE.md 8.63c), mağaza sorusu hazır yazılı açılır */}
             <motion.button
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setShowAdvisor(true)}
-                className="fixed bottom-32 right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-card rounded-full flex items-center justify-center shadow-2xl group border-4 border-white dark:border-black transition-all"
+                aria-label="Moffi AI'a ürün sor"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-ai-assistant', {
+                    detail: { prefill: `${activePet ? activePet.name + ' için' : 'Dostum için'} hangi mama ve ürünleri önerirsin?` },
+                }))}
+                className="fixed bottom-32 right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-card rounded-full flex items-center justify-center shadow-2xl border-4 border-white dark:border-black"
             >
-                <div className="absolute inset-0 bg-gray-900 dark:bg-card rounded-full animate-ping opacity-20" />
-                <Sparkles className="w-6 h-6 text-white dark:text-foreground group-hover:rotate-12 transition-transform" />
+                <Sparkles className="w-6 h-6 text-white dark:text-foreground" />
             </motion.button>
-
-            {/* SMART INTEGRATION MODAL */}
-            <AnimatePresence>
-                {showSmartModal && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md"
-                        />
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="fixed inset-0 z-[101] flex items-center justify-center px-6 pointer-events-none"
-                        >
-                            <div className="w-full max-w-sm bg-card dark:bg-[#0F0F0F] rounded-[2.5rem] overflow-hidden shadow-moffi-card border border-card-border pointer-events-auto">
-                                <div className="relative h-48 bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center">
-                                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
-                                    <div className="relative">
-                                        <div className="w-24 h-24 bg-black/20 dark:bg-white/20 backdrop-blur-xl rounded-[2rem] flex items-center justify-center border border-black/30 dark:border-white/30 shadow-2xl">
-                                            <Sparkles className="w-12 h-12 text-white animate-pulse" />
-                                        </div>
-                                        <motion.div
-                                            animate={{ y: [0, -10, 0] }}
-                                            transition={{ repeat: Infinity, duration: 2 }}
-                                            className="absolute -top-4 -right-4 w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg"
-                                        >
-                                            <Bone className="w-6 h-6 text-orange-500" />
-                                        </motion.div>
-                                    </div>
-                                </div>
-                                <div className="p-8 text-center">
-                                    <h3 className="text-xl font-black text-foreground dark:text-white uppercase tracking-tighter italic leading-tight">
-                                        Akıllı Mağaza<br/>Deneyimine Hazır mısın?
-                                    </h3>
-                                    <p className="text-xs text-gray-500 font-medium mt-3 leading-relaxed px-2">
-                                        {activePet ? getPossessive(activePet.name) : "Dostunuzun"} yürüyüş mesafesi, sağlık verileri ve iştah durumunu analiz ederek ona en uygun mama ve ödülleri önermemize izin ver.
-                                    </p>
-                                    
-                                    <div className="mt-8 space-y-3">
-                                        <button
-                                            onClick={() => handleEnableSmart(true)}
-                                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-black text-sm rounded-2xl shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest italic"
-                                        >
-                                            Entegrasyonu Aç
-                                            <ArrowRight className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleEnableSmart(false)}
-                                            className="w-full h-12 text-[10px] font-black text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest"
-                                        >
-                                            Şimdilik Bağımsız Kalsın
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="mt-6 flex items-center justify-center gap-2 text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-t border-card-border dark:border-card-border pt-6">
-                                        <Info className="w-3 h-3" />
-                                        İstediğin zaman ayarlardan değiştirebilirsin
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
 
             {/* FLOATING CART BAR */}
             <AnimatePresence>
@@ -797,7 +516,7 @@ export default function PetShopPage() {
                             <div className="px-8 pt-4 pb-6 border-b border-card-border dark:border-card-border flex items-center justify-between bg-white/50 dark:bg-black/20 backdrop-blur-md">
                                 <div>
                                     <h2 className="text-2xl font-black text-foreground dark:text-white tracking-tighter italic uppercase">Sepetim</h2>
-                                    <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-1">ÖDEME ADIMINA HAZIR</p>
+                                    {cart.length > 0 && <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-1">ÖDEME ADIMINA HAZIR</p>}
                                 </div>
                                 <button onClick={() => setShowCart(false)} className="w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center">
                                     <X className="w-5 h-5 text-gray-500" />
@@ -871,10 +590,10 @@ export default function PetShopPage() {
                                     </div>
                                     <button
                                         onClick={handleCheckoutInit}
-                                        disabled={isLoading || isSubmitting}
+                                        disabled={isLoading}
                                         className="w-full h-16 bg-orange-500 text-white font-black text-base rounded-[1.8rem] shadow-xl uppercase italic disabled:opacity-50"
                                     >
-                                        {(isLoading || isSubmitting) ? 'Hazırlanıyor...' : 'Siparişi Tamamla'}
+                                        {isLoading ? 'Hazırlanıyor...' : 'Siparişi Tamamla'}
                                     </button>
                                 </div>
                             )}
@@ -909,7 +628,7 @@ export default function PetShopPage() {
                                     <div>
                                         <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">Güvenli Ödeme</h2>
                                         <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                                            'Moffi Secure Checkout'
+                                            Moffi Secure Checkout
                                         </p>
                                     </div>
                                     {!isProcessingCustomPayment && (
@@ -1017,30 +736,18 @@ export default function PetShopPage() {
                                                                 setCheckoutErrors([]);
                                                                 setIsProcessingCustomPayment(true);
                                                                 try {
-                                                                    const mappedItems = cart.map(item => {
-                                                                        const p = products.find(prod => prod.id === item.productId);
-                                                                        return {
-                                                                            productId: item.productId,
-                                                                            name: p ? p.name : "Ürün",
-                                                                            price: p ? p.price : 0,
-                                                                            quantity: item.quantity
-                                                                        };
-                                                                    });
-
+                                                                    // Sunucu yalnızca ürün ve adedi alır; fiyat, stok ve kimlik orada doğrulanır.
                                                                     const response = await fetch('/api/paytr/payment', {
                                                                         method: 'POST',
                                                                         headers: { 'Content-Type': 'application/json' },
                                                                         body: JSON.stringify({
-                                                                            amount: cartTotal,
-                                                                            email: user?.email || "test@moffipet.com",
                                                                             address: checkoutAddress,
-                                                                            items: mappedItems,
-                                                                            userId: user?.id
+                                                                            items: cart.map(item => ({ productId: item.productId, quantity: item.quantity })),
                                                                         })
                                                                     });
 
+                                                                    const data = await response.json().catch(() => ({}));
                                                                     if (response.ok) {
-                                                                        const data = await response.json();
                                                                         if (data.success && data.token) {
                                                                             setPaytrToken(data.token);
                                                                             setCheckoutMode('paytr');
@@ -1048,7 +755,8 @@ export default function PetShopPage() {
                                                                             return;
                                                                         }
                                                                     }
-                                                                    throw new Error("PayTR yanıt vermedi");
+                                                                    // Sunucunun açıklaması (stok, adres, oturum) olduğu gibi gösterilir.
+                                                                    setCheckoutErrors([typeof data.error === 'string' ? data.error : "Ödeme sistemi şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin."]);
                                                                 } catch (err) {
                                                                     console.error("PayTR init failed:", err);
                                                                     setCheckoutErrors(["Ödeme sistemi şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin."]);
@@ -1255,65 +963,15 @@ export default function PetShopPage() {
                                     <h3 className="text-base font-black text-foreground dark:text-white leading-tight italic uppercase tracking-tight mb-1 shrink-0">
                                         {selectedProduct.name}
                                     </h3>
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-4 shrink-0">
-                                        {selectedProduct.brand?.name || "Moffi Premium"}
-                                    </p>
+                                    <div className="mb-4" />
                                     
-                                    {/* Tab Switcher */}
-                                    <div className="flex border-b border-card-border dark:border-card-border/60 mb-5 shrink-0 px-1">
-                                        {(['overview', 'smart', 'reviews'] as const).map((tab) => {
-                                            if (tab === 'smart' && !isSmartShopEnabled) return null;
-                                            return (
-                                                <button
-                                                    key={tab}
-                                                    type="button"
-                                                    onClick={() => setDetailTab(tab)}
-                                                    className={cn(
-                                                        "flex-1 pb-2 text-[10px] font-black uppercase tracking-wider relative transition-colors",
-                                                        detailTab === tab 
-                                                            ? "text-orange-500" 
-                                                            : "text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                                                    )}
-                                                >
-                                                    {tab === 'overview' ? 'Genel' : tab === 'smart' ? '🐾 Öneri' : 'Yorumlar'}
-                                                    {detailTab === tab && (
-                                                        <motion.div
-                                                            layoutId="activeDetailTabLine"
-                                                            className="absolute bottom-0 inset-x-0 h-0.5 bg-orange-500"
-                                                        />
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
                                     {/* Tab Body */}
                                     <div className="flex-1 overflow-y-auto no-scrollbar min-h-[120px] pb-4">
-                                        {/* TAB 1: OVERVIEW */}
-                                        {detailTab === 'overview' && (
+                                        {(
                                             <div className="space-y-5">
                                                 <div className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed bg-gray-50 dark:bg-white/5 p-4 rounded-2xl border border-card-border">
-                                                    {selectedProduct.description || "Bu ürün patili dostunuzun sağlıklı gelişimi, neşeli vakit geçirmesi ve günlük enerji ihtiyacını en dengeli şekilde karşılaması için özel olarak üretilmiştir. Tamamen doğal bileşenlerden oluşur."}
+                                                    {selectedProduct.description || "Satıcı bu ürün için henüz açıklama eklememiş."}
                                                 </div>
-
-                                                {/* Vet specialist text - conditional */}
-                                                {selectedProduct.isVetApproved && (
-                                                    <div className="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl space-y-1.5">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                                                                <CheckCircle2 size={12} />
-                                                            </div>
-                                                            <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">Hekim Görüşü • Dr. Selim Yılmaz</span>
-                                                        </div>
-                                                        <p className="text-[10.5px] text-gray-500 dark:text-gray-400 leading-relaxed font-semibold">
-                                                            {selectedProduct.category === 'food' ? "Dostunuzun günlük metabolik ihtiyacını yormadan karşılayan, sindirimi yüksek bileşenler içerir. Sindirim hassasiyeti olan evcil hayvanlarda tüy kalitesini gözle görülür şekilde artırır." :
-                                                             selectedProduct.category === 'snack' ? "Egzersiz sonrası kas yenilenmesini hızlandıran amino asitlerce zengindir. Doğal içeriği sayesinde böbrek ve karaciğer fonksiyonlarını yormaz." :
-                                                             selectedProduct.category === 'toy' ? "Diş ve diş eti masajı yaparak tartar oluşumunu engeller. Çene kaslarını güçlendirirken zihinsel enerjisini sağlıklı bir şekilde atmasını sağlar." :
-                                                             selectedProduct.category === 'care' ? "Cildin koruyucu lipid tabakasını tahriş etmeden temizler, pH seviyesi köpek derisi ile mükemmel uyumludur." :
-                                                             "Ergonomik tasarımı sayesinde göğüs kafesine ve omurgaya eşit yük dağılımı sağlayarak eklem deformasyonlarını engeller."}
-                                                        </p>
-                                                    </div>
-                                                )}
 
                                                 {/* Frequently Bought Together */}
                                                 {(() => {
@@ -1321,7 +979,7 @@ export default function PetShopPage() {
                                                     if (!compProd) return null;
                                                     return (
                                                         <div className="space-y-2.5">
-                                                            <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Birlikte Sıkça Alınanlar</span>
+                                                            <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Bunlar da ilgini çekebilir</span>
                                                             <div className="bg-gray-50 dark:bg-white/5 border border-card-border p-3 rounded-2xl flex items-center justify-between gap-4">
                                                                 <div className="flex items-center gap-3 min-w-0">
                                                                     <div className="w-12 h-12 bg-black/5 dark:bg-white/5 rounded-xl flex items-center justify-center text-2xl overflow-hidden shrink-0 border border-card-border">
@@ -1361,131 +1019,6 @@ export default function PetShopPage() {
 
 
 
-                                        {/* TAB 3: SMART RECOMMENDATION */}
-                                        {detailTab === 'smart' && (
-                                            <div className="space-y-4">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 text-orange-500 shrink-0">
-                                                        <Sparkles size={16} />
-                                                    </div>
-                                                    <h4 className="text-[10px] font-black text-foreground dark:text-white uppercase tracking-widest">Moffi AI Analiz Raporu</h4>
-                                                </div>
-                                                <div className="bg-gradient-to-br from-orange-500/5 to-rose-500/5 border border-orange-500/20 p-4 rounded-[1.5rem] relative overflow-hidden">
-                                                    <div className="absolute right-[-10px] top-[-10px] w-16 h-16 bg-orange-500/10 rounded-full blur-xl pointer-events-none" />
-                                                    <p className="text-xs text-foreground dark:text-white/90 leading-relaxed font-semibold">
-                                                        {getSmartRecommendation(selectedProduct.name, selectedProduct.category, activePet)}
-                                                    </p>
-                                                </div>
-                                                {activePet && (
-                                                    <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl border border-card-border flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-xl overflow-hidden bg-black/10 dark:bg-white/10 shrink-0 border border-card-border">
-                                                            <img src={activePet.image || activePet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100"} alt={activePet.name} className="w-full h-full object-cover" />
-                                                        </div>
-                                                        <div>
-                                                            <h5 className="text-[10px] font-black text-foreground dark:text-white uppercase tracking-wider">{activePet.name}</h5>
-                                                            <p className="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">{activePet.breed} • {activePet.weight} kg</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* TAB 4: REVIEWS */}
-                                        {detailTab === 'reviews' && (
-                                            <div className="space-y-4">
-                                                {/* Review List */}
-                                                <div className="space-y-3.5 max-h-56 overflow-y-auto no-scrollbar">
-                                                    {((reviews[selectedProduct.id]) || []).map((rev) => (
-                                                        <div key={rev.id} className="bg-gray-50 dark:bg-white/5 border border-card-border p-3 rounded-2xl space-y-2">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-7 h-7 rounded-full overflow-hidden bg-black/10 dark:bg-white/10 border border-card-border shrink-0">
-                                                                        <img src={rev.avatar} alt={rev.username} className="w-full h-full object-cover" />
-                                                                    </div>
-                                                                    <div>
-                                                                        <h5 className="text-[10px] font-black text-foreground dark:text-white leading-none">{rev.username}</h5>
-                                                                        <span className="text-[8px] text-gray-500 dark:text-gray-400 font-semibold">{rev.date}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex gap-0.5 text-orange-500">
-                                                                    {Array.from({ length: 5 }).map((_, starIdx) => (
-                                                                        <Star key={starIdx} size={10} className={cn("fill-current", starIdx < rev.rating ? "text-orange-500" : "text-gray-300 dark:text-gray-600")} />
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed font-semibold">{rev.comment}</p>
-                                                            {rev.petTag && (
-                                                                <span className="inline-block text-[8px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider">{rev.petTag}</span>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {(!reviews[selectedProduct.id] || reviews[selectedProduct.id].length === 0) && (
-                                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center font-bold uppercase tracking-wider py-4">Henüz yorum yapılmamış.</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Add Review Form */}
-                                                <div className="border-t border-card-border dark:border-card-border/60 pt-4 space-y-3 shrink-0">
-                                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Yorum Yap</span>
-                                                    
-                                                    {/* Star Input */}
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-[10px] text-gray-500 font-bold mr-1">Değerlendirme:</span>
-                                                        {Array.from({ length: 5 }).map((_, starIdx) => (
-                                                            <button
-                                                                key={starIdx}
-                                                                type="button"
-                                                                onClick={() => setNewReviewStar(starIdx + 1)}
-                                                                className="text-orange-500 hover:scale-125 transition-transform pointer-events-auto"
-                                                            >
-                                                                <Star size={16} className={cn(starIdx < newReviewStar ? "fill-orange-500 text-orange-500" : "text-gray-300 dark:text-gray-600")} />
-                                                            </button>
-                                                        ))}
-                                                    </div>
-
-                                                    {/* Text input */}
-                                                    <div className="flex gap-2">
-                                                        <input
-                                                            value={newReviewText}
-                                                            onChange={e => setNewReviewText(e.target.value)}
-                                                            placeholder="Yorumunuzu buraya yazın..."
-                                                            className="flex-1 h-10 px-3 bg-gray-50 dark:bg-white/5 border border-card-border rounded-xl text-xs outline-none focus:border-orange-500/30 text-foreground dark:text-white pointer-events-auto font-semibold"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (!newReviewText.trim()) return;
-                                                                const newRev = {
-                                                                    id: `rev-user-${Date.now()}`,
-                                                                    username: activePet?.owner?.name || "Moffi Sever",
-                                                                    avatar: activePet?.image || activePet?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100",
-                                                                    rating: newReviewStar,
-                                                                    comment: newReviewText,
-                                                                    date: new Date().toLocaleDateString('tr-TR'),
-                                                                    petTag: activePet ? `${activePet.name} Sahibi 🐾` : "Evcil Hayvan Sahibi"
-                                                                };
-                                                                setReviews(prev => ({
-                                                                    ...prev,
-                                                                    [selectedProduct.id]: [...(prev[selectedProduct.id] || []), newRev]
-                                                                }));
-                                                                setNewReviewText("");
-                                                                setNewReviewStar(5);
-                                                                
-                                                                confetti({
-                                                                    particleCount: 40,
-                                                                    spread: 30,
-                                                                    origin: { y: 0.8 },
-                                                                    colors: ['#22C55E', '#FFFFFF']
-                                                                });
-                                                            }}
-                                                            className="h-10 px-4 bg-orange-500 hover:bg-orange-600 text-white font-black text-[10px] uppercase rounded-xl tracking-wider pointer-events-auto"
-                                                        >
-                                                            Gönder
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
 
                                     {/* Footer / Controls */}
@@ -1518,9 +1051,6 @@ export default function PetShopPage() {
                                                     <span className="text-base font-black text-foreground dark:text-white">
                                                         ₺{(selectedProduct.price * modalQty).toLocaleString('tr-TR')}
                                                     </span>
-                                                    <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-0.5">
-                                                        ✨ +{Math.round((selectedProduct.price * modalQty) / 10)} PatiPuan
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1530,7 +1060,7 @@ export default function PetShopPage() {
                                                 type="button"
                                                 onClick={() => {
                                                     const currentQty = getCartQty(selectedProduct.id);
-                                                    updateCartItem(selectedProduct.id, currentQty + modalQty);
+                                                    addToCart(selectedProduct.id, currentQty + modalQty);
                                                     setSelectedProduct(null);
                                                     
                                                     // Trigger confetti animation for delightful experience
@@ -1651,7 +1181,7 @@ export default function PetShopPage() {
                                         Seçilen Ürünleri Karşılaştır
                                     </h3>
                                     <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-1.5">
-                                        Karar vermenizi kolaylaştıracak detaylı analiz
+                                        Fiyat ve özellikleri yan yana gör
                                     </p>
                                 </div>
                                 <button
@@ -1671,11 +1201,6 @@ export default function PetShopPage() {
                                         const imgList = product.image ? product.image.split(',') : [];
                                         const img = imgList[0] || product.image || "";
                                         
-                                        const productReviews = reviews[product.id] || [];
-                                        const avgRating = productReviews.length > 0 
-                                            ? Math.round(productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length) 
-                                            : 5;
-                                            
                                         const finalPrice = product.price;
 
                                         return (
@@ -1717,9 +1242,6 @@ export default function PetShopPage() {
                                                     <h4 className="text-xs font-black text-foreground dark:text-white leading-tight uppercase tracking-tight line-clamp-1 italic">
                                                         {product.name}
                                                     </h4>
-                                                    <p className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">
-                                                        {product.brand?.name || "Moffi Premium"}
-                                                    </p>
                                                 </div>
 
                                                 {/* Price & Rating */}
@@ -1732,36 +1254,7 @@ export default function PetShopPage() {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Moffi Puan</span>
-                                                        <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-0.5">
-                                                            ✨ +{Math.round(finalPrice / 10)} Puan
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Değerlendirme</span>
-                                                        <div className="flex items-center gap-1">
-                                                            <div className="flex text-orange-500">
-                                                                {Array.from({ length: 5 }).map((_, idx) => (
-                                                                    <Star key={idx} size={10} className={idx < avgRating ? "fill-orange-500 text-orange-500" : "text-gray-300 dark:text-zinc-600"} />
-                                                                ))}
-                                                            </div>
-                                                            <span className="text-[9px] font-black text-gray-500 dark:text-zinc-400">({productReviews.length})</span>
-                                                        </div>
-                                                    </div>
                                                 </div>
-
-
-
-                                                {/* Smart Recommendation */}
-                                                {isSmartShopEnabled && (
-                                                    <div className="py-4 border-b border-card-border/60">
-                                                        <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest block mb-2">🐾 Moffi Önerisi</span>
-                                                        <p className="text-[10px] text-gray-500 dark:text-zinc-400 leading-relaxed font-semibold">
-                                                            {getSmartRecommendation(product.name, product.category, activePet)}
-                                                        </p>
-                                                    </div>
-                                                )}
 
                                                 {/* Actions */}
                                                 <div className="pt-4 mt-auto">
@@ -1769,7 +1262,7 @@ export default function PetShopPage() {
                                                         type="button"
                                                         onClick={() => {
                                                             const currentQty = getCartQty(product.id);
-                                                            updateCartItem(product.id, currentQty + 1);
+                                                            addToCart(product.id, currentQty + 1);
                                                             confetti({
                                                                 particleCount: 50,
                                                                 spread: 40,
@@ -1822,60 +1315,17 @@ export default function PetShopPage() {
                                                 <h4 className="text-xs font-black text-foreground dark:text-white leading-tight uppercase tracking-tight line-clamp-1 italic">
                                                     {product.name}
                                                 </h4>
-                                                <p className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">
-                                                    {product.brand?.name || "Moffi Premium"}
-                                                </p>
                                             </div>
                                         );
                                     })}
 
                                     {/* Row 2: Price */}
-                                    <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">Fiyat & Puan</div>
+                                    <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">Fiyat</div>
                                     {comparisonList.map((product) => {
                                         const finalPrice = product.price;
                                         return (
                                             <div key={`price-${product.id}`} className="flex flex-col items-center justify-center border-b border-card-border/40 py-4 px-4 text-center">
                                                 <span className="text-sm font-black text-foreground dark:text-white">₺{finalPrice.toLocaleString('tr-TR')}</span>
-                                                <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-0.5 mt-1">
-                                                    ✨ +{Math.round(finalPrice / 10)} Puan
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* Row 3: Rating */}
-                                    <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">Değerlendirme</div>
-                                    {comparisonList.map((product) => {
-                                        const productReviews = reviews[product.id] || [];
-                                        const avgRating = productReviews.length > 0 
-                                            ? Math.round(productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length) 
-                                            : 5;
-                                        return (
-                                            <div key={`rating-${product.id}`} className="flex flex-col items-center justify-center border-b border-card-border/40 py-4 px-4 text-center">
-                                                <div className="flex text-orange-500 gap-0.5">
-                                                    {Array.from({ length: 5 }).map((_, idx) => (
-                                                        <Star key={idx} size={10} className={idx < avgRating ? "fill-orange-500 text-orange-500" : "text-gray-300 dark:text-zinc-600"} />
-                                                    ))}
-                                                </div>
-                                                <span className="text-[8px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">({productReviews.length} yorum)</span>
-                                            </div>
-                                        );
-                                    })}
-
-
-
-                                    {/* Row 5: AI recommendation */}
-                                    <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">🐾 Moffi Önerisi</div>
-                                    {comparisonList.map((product) => {
-                                        return (
-                                            <div key={`recommend-${product.id}`} className="flex items-center border-b border-card-border/40 py-4 px-6">
-                                                {isSmartShopEnabled ? (
-                                                    <p className="text-[10px] text-gray-500 dark:text-zinc-400 leading-relaxed font-semibold">
-                                                        {getSmartRecommendation(product.name, product.category, activePet)}
-                                                    </p>
-                                                ) : (
-                                                    <span className="text-[9px] text-gray-500 dark:text-gray-400 italic">Akıllı alışveriş entegrasyonu kapalı.</span>
-                                                )}
                                             </div>
                                         );
                                     })}
@@ -1889,7 +1339,7 @@ export default function PetShopPage() {
                                                     type="button"
                                                     onClick={() => {
                                                         const currentQty = getCartQty(product.id);
-                                                        updateCartItem(product.id, currentQty + 1);
+                                                        addToCart(product.id, currentQty + 1);
                                                         confetti({
                                                             particleCount: 50,
                                                             spread: 40,
@@ -1912,8 +1362,6 @@ export default function PetShopPage() {
                 )}
             </AnimatePresence>
 
-            {/* ADVISOR CHAT */}
-            <AdvisorChat isOpen={showAdvisor} onClose={() => setShowAdvisor(false)} isSmartEnabled={isSmartShopEnabled} />
         </div>
     );
 }

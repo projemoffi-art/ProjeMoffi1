@@ -69,7 +69,7 @@ export function HomeRecommendations({ products, onAddToCart }: {
                         </div>
                         <div className="p-3">
                             <h3 className="text-[13.5px] font-bold text-foreground truncate">{p.name}</h3>
-                            <p className="text-[11.5px] font-semibold text-secondary truncate mt-0.5">{p.brand_name || CATEGORY_LABEL[p.category] || ' '}</p>
+                            <p className="text-[11.5px] font-semibold text-secondary truncate mt-0.5">{CATEGORY_LABEL[p.category] || ' '}</p>
                             <div className="mt-2 flex items-center justify-between">
                                 <div className="flex items-baseline gap-1.5 min-w-0">
                                     <span className="text-[15px] font-extrabold text-foreground">₺{p.price.toLocaleString('tr-TR')}</span>

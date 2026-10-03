@@ -184,49 +184,8 @@ export interface NutritionPlan {
     isActive: boolean;
 }
 
-// --- PETSHOP ---
-export type ShopCategory = 'food' | 'snack' | 'toy' | 'care' | 'accessory';
-
-export interface ShopProduct {
-    id: string;
-    name: string;
-    brand: string;
-    price: number;
-    oldPrice?: number;
-    rating: number;
-    reviews: number;
-    image: string;
-    category: ShopCategory;
-    tag?: string;
-    inStock: boolean;
-    stockCount?: number;
-    isRecentlyBought?: boolean;
-    isVetApproved?: boolean;
-    description?: string;
-    specs?: Record<string, string>;
-}
-
-export interface ShopCartItem {
-    productId: string;
-    quantity: number;
-    addedAt: string; // ISO timestamp
-}
-
-export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
-
-export interface ShopOrder {
-    id: string;
-    userId: string;
-    items: Array<{ product: ShopProduct; quantity: number }>;
-    totalPrice: number;
-    discountCode?: string;
-    discountAmount?: number;
-    shippingAddress: string;
-    status: OrderStatus;
-    createdAt: string;
-    updatedAt: string;
-    trackingNumber?: string;
-}
+// --- PETSHOP --- (tek tanım services/types'ta)
+export type { ShopCategory, ShopProduct, ShopCartItem, ShopOrder, OrderStatus } from '@/services/types';
 
 // --- WALK ---
 export interface WalkCheckpoint {

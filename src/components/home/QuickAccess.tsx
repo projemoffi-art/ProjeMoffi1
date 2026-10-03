@@ -40,7 +40,7 @@ const ALL: { title: string; items: { label: string; sub: string; Icon: typeof Ho
             { label: 'Veteriner bul', sub: 'Klinikler ve randevu', Icon: Stethoscope, path: '/vet' },
             { label: 'Randevularım', sub: 'Yaklaşan ve geçmiş randevular', Icon: CalendarCheck, path: '/vet?view=appointments' },
             { label: 'Market', sub: 'Mama, aksesuar, bakım', Icon: ShoppingBag, path: '/petshop' },
-            { label: 'Sepetim', sub: 'Siparişe hazır ürünler', Icon: ShoppingCart, path: '/cart' },
+            { label: 'Sepetim', sub: 'Siparişe hazır ürünler', Icon: ShoppingCart, path: '/petshop?view=cart' },
         ],
     },
     {

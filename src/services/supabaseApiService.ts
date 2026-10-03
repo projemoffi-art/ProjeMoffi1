@@ -608,9 +608,8 @@ export class SupabaseApiService implements IApiService {
             
             inStock: p.stock > 0,
             stockCount: p.stock,
-            rating: Number(p.rating) || 4.5,
-            reviews: Number(p.review_count) || 0,
             isVetApproved: p.is_vet_approved || false,
+            isPrimeOnly: !!p.is_prime_only,
             tag: p.tag || undefined,
             ownerId: p.owner_id || undefined
         }));
@@ -724,9 +723,7 @@ export class SupabaseApiService implements IApiService {
                     image: item.product.image_url,
                     category: item.product.category,
                     
-                    inStock: true,
-                    rating: Number(item.product.rating) || 4.5,
-                    reviews: Number(item.product.review_count) || 0
+                    inStock: true
                 }
             }))
         }));

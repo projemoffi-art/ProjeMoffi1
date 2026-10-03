@@ -42,7 +42,7 @@ export const EDGE_SHORTCUTS: EdgeShortcut[] = [
     { id: 'appointments', label: 'Randevular', desc: 'Randevularım', Icon: CalendarCheck, color: '#2B8577', path: '/vet?view=appointments', keywords: 'randevu takvim', group: 'Sağlık' },
 
     { id: 'market', label: 'Market', desc: 'Mama ve aksesuar', Icon: ShoppingBag, color: '#E07A2E', path: '/petshop', keywords: 'mama oyuncak aksesuar mağaza alışveriş petshop', group: 'Alışveriş' },
-    { id: 'cart', label: 'Sepet', desc: 'Sepetim', Icon: ShoppingCart, color: '#C9663A', path: '/cart', keywords: 'sepet sipariş ödeme', group: 'Alışveriş' },
+    { id: 'cart', label: 'Sepet', desc: 'Sepetim', Icon: ShoppingCart, color: '#C9663A', path: '/petshop?view=cart', keywords: 'sepet sipariş ödeme', group: 'Alışveriş' },
 
     { id: 'feed', label: 'Keşfet', desc: 'Topluluk akışı', Icon: Compass, color: '#D9567A', path: '/community', keywords: 'keşfet akış topluluk', group: 'Topluluk' },
     { id: 'messages', label: 'Mesajlar', desc: 'Sohbetlerin', Icon: MessageCircle, color: '#C2557F', keywords: 'mesaj sohbet dm', group: 'Topluluk' },

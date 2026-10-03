@@ -3,7 +3,6 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { SocialProvider } from "@/context/SocialContext";
 import { AuthProvider } from "@/context/AuthContext";
-import { ShopProvider } from "@/context/ShopContext";
 import { PetProvider } from "@/context/PetContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AIWidgetLoader } from "@/components/ai/AIWidgetLoader";
@@ -40,15 +39,16 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Moffi Demo",
-  description: "Advanced Customization Engine",
+  title: "Moffi",
+  description: "Evcil hayvanın için sağlık takibi, yürüyüş, kayıp ve sahiplendirme, veteriner ve topluluk tek uygulamada.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Moffi Demo",
+    title: "Moffi",
   },
-  google: 'notranslate',
+  // Tarayıcının otomatik çevirisi arayüz metinlerini bozmasın.
+  other: { google: "notranslate" },
 };
 
 import { ChatProvider } from "@/context/ChatContext";
@@ -81,7 +81,6 @@ export default function RootLayout({
                         <WellbeingProvider>
                           <ThemeProvider>
                             <SocialProvider>
-                                <ShopProvider>
                                   <ReportProvider>
                                     <ClientAuthWrapper>
                                       <GlobalIdentitySync />
@@ -109,7 +108,6 @@ export default function RootLayout({
                                     </ClientAuthWrapper>
                                     <ShareSheetHost />
                                   </ReportProvider>
-                                </ShopProvider>
                             </SocialProvider>
                           </ThemeProvider>
                         </WellbeingProvider>

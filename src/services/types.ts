@@ -161,64 +161,26 @@ export interface LostPet {
     longitude?: number;
 }
 
-// --- SHOP & STUDIO TYPES ---
-export interface ProductColor {
+// --- MAĞAZA (tek tanım; types/domain buradan alır) ---
+// Gerçek kaynak products tablosu. Puan/yorum/marka sütunu YOK: arayüz bunları uydurmaz.
+export type ShopCategory = 'food' | 'snack' | 'toy' | 'care' | 'accessory';
+
+export interface ShopProduct {
     id: string;
     name: string;
-    hex: string;
-}
-
-export interface ProductSize {
-    id: string;
-    label: string;
-    priceModifier: number;
-}
-
-export interface ProductBrand {
-    name: string;
-    isMoffi: boolean;
-    logo?: string;
-    location?: string;
-}
-
-export type ProductType = 'apparel' | 'accessory' | 'home' | 'pet-apparel';
-
-export interface Product {
-    id: string;
-    name: string;
-    description: string;
-    basePrice: number;
-    type: ProductType;
-    brand: ProductBrand;
-    colors: ProductColor[];
-    sizes: ProductSize[];
-    images: {
-        front: string;
-        back?: string;
-        model?: string;
-    };
-    rating: number;
-    reviewCount: number;
-}
-
-export type ShopCategory = 'food' | 'snack' | 'toy' | 'care' | 'accessory' | 'apparel' | 'home' | 'pet-apparel';
-
-export interface ShopProduct extends Partial<Product> {
-    id: string;
-    name: string;
-    brand_name?: string; // from SQL
+    description?: string;
     price: number;
     oldPrice?: number;
-    rating: number;
-    reviews: number;
+    /** Tek adres ya da virgülle ayrılmış adresler (ilki kapak). */
     image: string;
     category: ShopCategory;
     tag?: string;
     inStock: boolean;
     stockCount?: number;
-    isRecentlyBought?: boolean;
     isVetApproved?: boolean;
-    description?: string;
+    /** Yalnızca Prime üyelere (products.is_prime_only). */
+    isPrimeOnly?: boolean;
+    /** Satıcı (products.owner_id). */
     ownerId?: string;
 }
 
@@ -228,7 +190,8 @@ export interface ShopCartItem {
     addedAt: string; // ISO timestamp
 }
 
-export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
+// orders.status (sipariş) ve order_items.status (satıcı kalemi: awaiting_payment…returned) değerlerinin birleşimi.
+export type OrderStatus = 'pending' | 'paid' | 'confirmed' | 'awaiting_payment' | 'preparing' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
 
 export interface ShopOrder {
     id: string;

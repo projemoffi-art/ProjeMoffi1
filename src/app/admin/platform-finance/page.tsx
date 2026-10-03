@@ -46,12 +46,12 @@ export default function PlatformFinancePage() {
         const gmv = paid.reduce((t, o) => t + (Number(o.total_amount) || 0), 0);
         const commission = paid.reduce((t, o) => t + (Number(o.commission_amount) || 0), 0);
         const awaiting = list.filter(o => o.status === "pending" && (!o.expires_at || new Date(o.expires_at).getTime() > loadedAt));
-        const cancelledItems = items.filter(it => rateOf.has(it.order_id) && (it.status === "cancelled" || it.status === "refunded"));
+        const cancelledItems = items.filter(it => rateOf.has(it.order_id) && (it.status === "cancelled" || it.status === "returned"));
         const refunds = cancelledItems.reduce((t, it) => t + (Number(it.price_at_purchase) || 0) * (it.quantity || 0), 0);
 
         const per = new Map<string, { orders: Set<string>; gmv: number; commission: number }>();
         for (const it of items) {
-            if (!it.business_id || !rateOf.has(it.order_id) || it.status === "cancelled" || it.status === "refunded") continue;
+            if (!it.business_id || !rateOf.has(it.order_id) || it.status === "cancelled" || it.status === "returned") continue;
             const line = (Number(it.price_at_purchase) || 0) * (it.quantity || 0);
             const row = per.get(it.business_id) || { orders: new Set<string>(), gmv: 0, commission: 0 };
             row.orders.add(it.order_id);

@@ -3,305 +3,143 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
-import { ProductMockService } from "@/services/mock/ProductMockService";
+
+// Mağaza ödemesi başlatma (CLAUDE.md 8.41). Tutar ASLA istemciden alınmaz: fiyat ve stok veritabanından, kimlik oturumdan.
+// Akış: bekleyen sipariş + kalemler (15 dk ayrılır) → PayTR jetonu → istemci PayTR güvenli çerçevesini açar →
+// /api/paytr/webhook ödemeyi doğrular ve finalize_paid_order ile kesinleştirir.
+// (2026-10-03: eski "mock" dalı kaldırıldı — UUID olmayan kullanıcı kimliğiyle kimlik doğrulamasını atlayıp sahte jeton dönüyordu.)
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabaseAdmin = (supabaseUrl && supabaseKey)
-    ? createClient(supabaseUrl, supabaseKey)
-    : null;
+interface Address { name: string; surname: string; phone: string; detail: string }
+interface RequestBody { address?: Partial<Address>; items?: { productId?: unknown; quantity?: unknown }[] }
+interface ProductRow { id: string; price: number | string; name: string; stock: number; owner_id: string | null }
+interface PendingRow { product_id: string; quantity: number }
+
+const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
+
+function cleanAddress(a: Partial<Address> | undefined): Address | null {
+    const name = String(a?.name ?? "").trim();
+    const surname = String(a?.surname ?? "").trim();
+    const phone = String(a?.phone ?? "").replace(/[^\d+]/g, "");
+    const detail = String(a?.detail ?? "").trim();
+    if (!name || !surname || detail.length < 10 || phone.replace(/\D/g, "").length < 10) return null;
+    return { name: name.slice(0, 60), surname: surname.slice(0, 60), phone: phone.slice(0, 16), detail: detail.slice(0, 400) };
+}
 
 export async function POST(req: Request) {
+    if (!supabaseUrl || !supabaseAnonKey || !serviceKey) return fail("Veritabanı bağlantısı kurulamadı.", 500);
+    const merchantId = process.env.PAYTR_MERCHANT_ID || process.env.NEXT_PUBLIC_PAYTR_MERCHANT_ID || "";
+    const merchantKey = process.env.PAYTR_MERCHANT_KEY;
+    const merchantSalt = process.env.PAYTR_MERCHANT_SALT;
+    if (!merchantId || !merchantKey || !merchantSalt) return fail("Ödeme sistemi yapılandırılmamış.", 500);
+
     try {
-        const body = await req.json();
-        const { amount: clientAmount, email, address, items, userId } = body;
+        const body = (await req.json()) as RequestBody;
 
-        const isMock = (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId));
+        // Kimlik yalnızca oturumdan.
+        const cookieStore = await cookies();
+        const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+            cookies: { get: (name: string) => cookieStore.get(name)?.value, set() {}, remove() {} },
+        });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return fail("Oturum bulunamadı. Lütfen giriş yapın.", 401);
 
-        if (!isMock && (!supabaseAdmin || !supabaseAnonKey)) {
-            return NextResponse.json(
-                { error: "Veritabanı bağlantısı kurulamadı." },
-                { status: 500 }
-            );
+        const address = cleanAddress(body.address);
+        if (!address) return fail("Teslimat bilgilerini eksiksiz doldur (ad, soyad, telefon, açık adres).", 400);
+
+        // Aynı ürün birden çok satırda gelirse birleştirilir (stok denetimi toplam adetle).
+        const wanted = new Map<string, number>();
+        for (const it of body.items || []) {
+            const id = typeof it.productId === "string" ? it.productId : "";
+            const qty = Number(it.quantity);
+            if (!id || !Number.isInteger(qty) || qty <= 0 || qty > 99) return fail("Siparişte geçersiz ürün miktarı var.", 400);
+            wanted.set(id, (wanted.get(id) || 0) + qty);
+        }
+        if (wanted.size === 0) return fail("Sepetin boş.", 400);
+        const productIds = [...wanted.keys()];
+
+        const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+        const { data: products, error: productErr } = await admin
+            .from("products").select("id, price, name, stock, owner_id").in("id", productIds);
+        if (productErr || !products) return fail("Ürün bilgileri doğrulanamadı.", 400);
+
+        // Ödemesi bekleyen (süresi dolmamış) siparişlerde ayrılmış adetler stoktan düşülür.
+        const { data: pending } = await admin
+            .from("order_items").select("product_id, quantity, orders!inner(status, expires_at)")
+            .in("product_id", productIds).eq("orders.status", "pending").gt("orders.expires_at", new Date().toISOString());
+        const reserved = new Map<string, number>();
+        for (const row of (pending || []) as PendingRow[]) reserved.set(row.product_id, (reserved.get(row.product_id) || 0) + row.quantity);
+
+        const lines: { productId: string; name: string; price: number; quantity: number; businessId: string | null }[] = [];
+        for (const [productId, quantity] of wanted) {
+            const p = (products as ProductRow[]).find(x => x.id === productId);
+            if (!p) return fail("Sepetindeki bir ürün artık satışta değil. Sepeti yenileyip tekrar dene.", 400);
+            const available = p.stock - (reserved.get(productId) || 0);
+            if (quantity > available) return fail(`Yetersiz stok: "${p.name}" için en fazla ${Math.max(0, available)} adet alınabilir.`, 400);
+            lines.push({ productId, name: p.name, price: Number(p.price), quantity, businessId: p.owner_id });
+        }
+        const amount = Math.round(lines.reduce((t, l) => t + l.price * l.quantity, 0) * 100) / 100;
+        if (amount <= 0) return fail("Sipariş tutarı geçersiz.", 400);
+
+        let commissionRate = 10;
+        const { data: settings } = await admin.from("platform_settings").select("value").eq("key", "general").single();
+        const configured = (settings?.value as { commissionRate?: unknown } | null)?.commissionRate;
+        if (typeof configured === "number") commissionRate = configured;
+
+        const { data: order, error: orderErr } = await admin.from("orders").insert({
+            user_id: user.id,
+            total_amount: amount,
+            shipping_address: `${address.name} ${address.surname}, Tel: ${address.phone}, Adres: ${address.detail}`,
+            status: "pending",
+            commission_rate: commissionRate,
+            commission_amount: Number(((amount * commissionRate) / 100).toFixed(2)),
+            expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        }).select("id").single();
+        if (orderErr || !order) return fail("Sipariş oluşturulamadı.", 400);
+
+        const { error: itemsErr } = await admin.from("order_items").insert(lines.map(l => ({
+            order_id: order.id, product_id: l.productId, quantity: l.quantity, price_at_purchase: l.price, business_id: l.businessId,
+        })));
+        if (itemsErr) {
+            await admin.from("orders").delete().eq("id", order.id);
+            return fail("Sipariş ürünleri kaydedilemedi.", 400);
         }
 
-        // KİMLİK DOĞRULAMA (Sadece gerçek kullanıcılar için)
-        if (!isMock && supabaseUrl && supabaseAnonKey) {
-            const cookieStore = await cookies();
-            const supabase = createServerClient(
-                supabaseUrl,
-                supabaseAnonKey,
-                {
-                    cookies: {
-                        get(name: string) {
-                            return cookieStore.get(name)?.value;
-                        },
-                        set() {},
-                        remove() {}
-                    },
-                }
-            );
-
-            const { data: { user }, error: authErr } = await supabase.auth.getUser();
-            
-            if (authErr || !user) {
-                console.error("[PayTR] Yetkisiz işlem denemesi. Oturum bulunamadı.", authErr);
-                return NextResponse.json({ error: "Oturum bulunamadı. Lütfen giriş yapın." }, { status: 401 });
-            }
-            
-            if (user.id !== userId) {
-                console.error(`[PayTR] Kimlik sahtekarlığı denemesi! Login olan: ${user.id}, Talep edilen: ${userId}`);
-                return NextResponse.json({ error: "Geçersiz kullanıcı kimliği." }, { status: 403 });
-            }
-        }
-
-        // SECURE CALCULATION: Never trust client amount
-        let calculatedAmount = 0;
-        const secureItems = [];
-        const productIds = items.map((i: any) => i.productId);
-
-        if (isMock) {
-            for (const item of items) {
-                if (!item.quantity || item.quantity <= 0) {
-                    return NextResponse.json({ error: "Siparişte geçersiz ürün miktarı tespit edildi." }, { status: 400 });
-                }
-                const product = await ProductMockService.getProductById(item.productId);
-                if (!product) continue;
-                
-                let itemPrice = product.basePrice;
-                if (item.sizeId) {
-                    const sizeObj = product.sizes.find(s => s.id === item.sizeId);
-                    if (sizeObj) itemPrice += sizeObj.priceModifier;
-                } else if (item.price && item.price !== product.basePrice) {
-                     const possibleModifier = product.sizes.find(s => (product.basePrice + s.priceModifier) === item.price);
-                     if (possibleModifier) itemPrice = item.price;
-                }
-                
-                calculatedAmount += itemPrice * item.quantity;
-                secureItems.push({
-                    ...item,
-                    price: itemPrice,
-                    name: product.name
-                });
-            }
-        } else {
-            // GERÇEK ÜRÜNLERİ SUPABASE'DEN ÇEK
-            const { data: realProducts, error: dbErr } = await supabaseAdmin
-                .from('products')
-                .select('id, price, name, stock, owner_id')
-                .in('id', productIds);
-                
-            if (dbErr || !realProducts) {
-                console.error("Ürün bilgileri doğrulanamadı:", dbErr);
-                return NextResponse.json({ error: "Sipariş güvenliği doğrulanamadı." }, { status: 400 });
-            }
-
-            // Aktif pending rezervasyonlarını getir
-            const { data: pendingItems, error: pendingErr } = await supabaseAdmin
-                .from('order_items')
-                .select('product_id, quantity, orders!inner(status, expires_at)')
-                .in('product_id', productIds)
-                .eq('orders.status', 'pending')
-                .gt('orders.expires_at', new Date().toISOString());
-
-            const pendingQuantities: Record<string, number> = {};
-            if (pendingItems) {
-                pendingItems.forEach((pi: any) => {
-                    pendingQuantities[pi.product_id] = (pendingQuantities[pi.product_id] || 0) + pi.quantity;
-                });
-            }
-            
-            for (const item of items) {
-                if (!item.quantity || item.quantity <= 0) {
-                    console.warn(`[PayTR] Geçersiz miktar tespiti: ${item.quantity}`);
-                    return NextResponse.json({ error: "Siparişte geçersiz ürün miktarı tespit edildi." }, { status: 400 });
-                }
-                
-                const realProduct = realProducts.find(p => p.id === item.productId);
-                if (!realProduct) continue;
-
-                // Dinamik stok kontrolü
-                const availableStock = realProduct.stock - (pendingQuantities[item.productId] || 0);
-                if (item.quantity > availableStock) {
-                    console.warn(`[PayTR] Yetersiz stok tespiti: ${realProduct.name}. İstenen: ${item.quantity}, Mevcut: ${availableStock}`);
-                    return NextResponse.json({ error: `Yetersiz stok: "${realProduct.name}" için mevcut stok aşıldı.` }, { status: 400 });
-                }
-                
-                const itemPrice = Number(realProduct.price);
-                calculatedAmount += itemPrice * item.quantity;
-                secureItems.push({
-                    ...item,
-                    price: itemPrice,
-                    name: realProduct.name,
-                    business_id: realProduct.owner_id || null
-                });
-            }
-        }
-
-        // HİÇBİR ZAMAN CLİENT TUTARINA GÜVENME - HATA VARSA REDDET
-        if (calculatedAmount <= 0) {
-            return NextResponse.json({ error: "Sipariş tutarı geçersiz veya ürün bulunamadı." }, { status: 400 });
-        }
-        
-        const amount = calculatedAmount;
-
-        let orderId = "mock-order-" + Math.floor(Math.random() * 1000000);
-
-        if (!isMock && supabaseAdmin) {
-            // Fetch platform settings for commission
-            let commissionRate = 10;
-            const { data: settingsData } = await supabaseAdmin
-                .from('platform_settings')
-                .select('value')
-                .eq('key', 'general')
-                .single();
-            if (settingsData && settingsData.value && typeof settingsData.value.commissionRate === 'number') {
-                commissionRate = settingsData.value.commissionRate;
-            }
-            const commissionAmount = Number(((amount * commissionRate) / 100).toFixed(2));
-            const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-
-            // 1. Create a pending order in the Supabase database
-            const fullAddress = `${address.name} ${address.surname}, Tel: ${address.phone}, Adres: ${address.detail}`;
-            const { data: order, error: orderErr } = await supabaseAdmin
-                .from("orders")
-                .insert({
-                    user_id: userId,
-                    total_amount: amount,
-                    shipping_address: fullAddress,
-                    status: "pending",
-                    commission_rate: commissionRate,
-                    commission_amount: commissionAmount,
-                    expires_at: expiresAt
-                })
-                .select()
-                .single();
-
-            if (orderErr) {
-                console.error("Order creation in DB failed:", orderErr);
-                return NextResponse.json({ error: "Sipariş oluşturulamadı." }, { status: 400 });
-            }
-
-            // 2. Insert order items
-            const orderItems = secureItems.map((item: any) => ({
-                order_id: order.id,
-                product_id: item.productId,
-                quantity: item.quantity,
-                price_at_purchase: item.price,
-                business_id: item.business_id || null
-            }));
-
-            const { error: itemsErr } = await supabaseAdmin
-                .from("order_items")
-                .insert(orderItems);
-
-            if (itemsErr) {
-                console.error("Order items creation failed:", itemsErr);
-                // Cleanup order
-                await supabaseAdmin.from("orders").delete().eq("id", order.id);
-                return NextResponse.json({ error: "Sipariş ürünleri kaydedilemedi." }, { status: 400 });
-            }
-
-            orderId = order.id;
-        }
-
-        if (isMock) {
-            return NextResponse.json({
-                success: true,
-                token: "mock-paytr-token-" + Date.now(),
-                orderId: orderId
-            });
-        }
-
-        // 3. Prepare parameters for PayTR API
-        const merchant_id = process.env.PAYTR_MERCHANT_ID || process.env.NEXT_PUBLIC_PAYTR_MERCHANT_ID || "";
-        const merchant_key = process.env.PAYTR_MERCHANT_KEY;
-        const merchant_salt = process.env.PAYTR_MERCHANT_SALT;
-
-        if (!merchant_id || !merchant_key || !merchant_salt) {
-            return NextResponse.json({ error: "PayTR API keys are missing in environment variables." }, { status: 500 });
-        }
-
-        const rawIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "127.0.0.1";
-        const user_ip = rawIp.split(',')[0].trim(); // Get first IP if multiple
-        
-        const merchant_oid = orderId; // Using order ID as our PayTR order id
-        const user_email = email || "test@moffipet.com";
-        const payment_amount = Math.round(amount * 100); // PayTR expects cents/kuruş (e.g. 10.00 TL -> 1000)
-        
-        // user_basket: base64 encoded JSON array of [ [name, price, quantity], ... ]
-        const basketArray = secureItems.map((item: any) => [item.name, String(item.price), item.quantity]);
-        const user_basket = Buffer.from(JSON.stringify(basketArray)).toString("base64");
-
-        const no_shipping = "0"; // We show shipping/address fields
+        // PayTR jetonu (imza: merchant_id + ip + oid + e-posta + tutar(kuruş) + sepet + no_shipping + ok/fail + para birimi + test + salt)
+        const userIp = (req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "127.0.0.1").split(",")[0].trim();
+        const email = user.email || "";
+        const paymentAmount = Math.round(amount * 100);
+        const basket = Buffer.from(JSON.stringify(lines.map(l => [l.name, l.price.toFixed(2), l.quantity]))).toString("base64");
+        const noShipping = "0";
         const currency = "TL";
-        const test_mode = process.env.PAYTR_TEST_MODE || process.env.NEXT_PUBLIC_PAYTR_TEST_MODE || "1";
-
-        const origin = req.headers.get("origin") || "http://localhost:3000";
-        const merchant_ok_url = `${origin}/petshop?status=success&orderId=${orderId}`;
-        const merchant_fail_url = `${origin}/petshop?status=fail`;
-
-        // 4. Generate the HMAC-SHA256 Token Signature
-        const hashString = merchant_id + user_ip + merchant_oid + user_email + payment_amount + user_basket + no_shipping + merchant_ok_url + merchant_fail_url + currency + test_mode + merchant_salt;
-        const paytr_token = crypto
-            .createHmac("sha256", merchant_key)
-            .update(hashString)
+        const testMode = process.env.PAYTR_TEST_MODE || process.env.NEXT_PUBLIC_PAYTR_TEST_MODE || "1";
+        const origin = req.headers.get("origin") || new URL(req.url).origin;
+        const okUrl = `${origin}/petshop?status=success&orderId=${order.id}`;
+        const failUrl = `${origin}/petshop?status=fail`;
+        const token = crypto.createHmac("sha256", merchantKey)
+            .update(merchantId + userIp + order.id + email + paymentAmount + basket + noShipping + okUrl + failUrl + currency + testMode + merchantSalt)
             .digest("base64");
 
-        // 5. Send POST request to PayTR API
-        const paytrParams = new URLSearchParams();
-        paytrParams.append("merchant_id", merchant_id);
-        paytrParams.append("user_ip", user_ip);
-        paytrParams.append("merchant_oid", merchant_oid);
-        paytrParams.append("email", user_email);
-        paytrParams.append("payment_amount", String(payment_amount));
-        paytrParams.append("paytr_token", paytr_token);
-        paytrParams.append("user_basket", user_basket);
-        paytrParams.append("debug_on", "1");
-        paytrParams.append("no_shipping", no_shipping);
-        paytrParams.append("client_lang", "tr");
-        paytrParams.append("currency", currency);
-        paytrParams.append("test_mode", test_mode);
-        paytrParams.append("user_name", `${address.name} ${address.surname}`);
-        paytrParams.append("user_address", address.detail);
-        paytrParams.append("user_phone", address.phone);
-        paytrParams.append("merchant_ok_url", merchant_ok_url);
-        paytrParams.append("merchant_fail_url", merchant_fail_url);
-        paytrParams.append("timeout_limit", "30");
-
-        const paytrResponse = await fetch("https://www.paytr.com/odeme/api/get-token", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: paytrParams.toString()
+        const params = new URLSearchParams({
+            merchant_id: merchantId, user_ip: userIp, merchant_oid: order.id, email, payment_amount: String(paymentAmount),
+            paytr_token: token, user_basket: basket, debug_on: testMode === "1" ? "1" : "0", no_shipping: noShipping,
+            client_lang: "tr", currency, test_mode: testMode, user_name: `${address.name} ${address.surname}`,
+            user_address: address.detail, user_phone: address.phone, merchant_ok_url: okUrl, merchant_fail_url: failUrl, timeout_limit: "30",
         });
+        const paytrRes = await fetch("https://www.paytr.com/odeme/api/get-token", {
+            method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString(),
+        });
+        const paytr = (await paytrRes.json()) as { status?: string; token?: string; reason?: string; err_msg?: string };
+        if (paytr.status === "success" && paytr.token) return NextResponse.json({ success: true, token: paytr.token, orderId: order.id });
 
-        const paytrData = await paytrResponse.json();
-
-        if (paytrData.status === "success") {
-            return NextResponse.json({
-                success: true,
-                token: paytrData.token,
-                orderId: orderId
-            });
-        } else {
-            console.error("PayTR Token Request Failed:", paytrData.err_msg);
-            // Cleanup order
-            if (!isMock && supabaseAdmin) {
-                await supabaseAdmin.from("orders").delete().eq("id", orderId);
-            }
-            return NextResponse.json(
-                { error: `PayTR Hatası: ${paytrData.err_msg}` },
-                { status: 400 }
-            );
-        }
-
-    } catch (error: any) {
-        console.error("PayTR Payment API Error:", error);
-        return NextResponse.json(
-            { error: "Ödeme başlatma hatası." },
-            { status: 500 }
-        );
+        console.error("[PayTR] Jeton alınamadı:", paytr.reason || paytr.err_msg);
+        await admin.from("orders").delete().eq("id", order.id);
+        return fail("Ödeme başlatılamadı, biraz sonra tekrar dene.", 400);
+    } catch (err) {
+        console.error("[PayTR] Ödeme başlatma hatası:", err instanceof Error ? err.message : err);
+        return fail("Ödeme başlatma hatası.", 500);
     }
 }

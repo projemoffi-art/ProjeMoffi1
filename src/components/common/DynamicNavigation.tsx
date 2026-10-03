@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { FloatingControls } from "@/components/common/FloatingControls";
 import { EdgePanel } from "@/components/edge/EdgePanel";
 import { useAuth } from "@/context/AuthContext";
-import { usePet } from "@/context/PetContext";
+import { usePet, type Pet } from "@/context/PetContext";
 import { MoffiBottomNav } from "@/components/common/MoffiBottomNav";
 import { useTheme } from "@/context/ThemeContext";
 import { ActiveWalkMiniWidget } from "@/components/walk/ActiveWalkMiniWidget";
@@ -26,7 +26,7 @@ const EcosystemPortal = dynamic(() => import("@/components/community/EcosystemPo
 const SubscriptionManagementModal = dynamic(() => import("@/components/community/modals/SubscriptionManagementModal").then(mod => mod.SubscriptionManagementModal), { ssr: false });
 const PremiumUpgradeModal = dynamic(() => import("@/components/community/modals/PremiumUpgradeModal").then(mod => mod.PremiumUpgradeModal), { ssr: false });
 
-const HIDDEN_ROUTES = ['/', '/onboarding', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth', '/walk/tracking', '/walk/summary',
+const HIDDEN_ROUTES = ['/', '/onboarding', '/login', '/register', '/auth', '/walk/tracking', '/walk/summary',
     // Paylaşılan pasaport, künye ve doğrulama sayfaları uygulama dışındaki kişilere açılır.
     '/p/', '/id/', '/verify/'];
 // Alt menü, ekranın altına sabit yorum/paylaşım kutusu olan sayfalarda ve işletme/yönetim panellerinde (kendi menüleri var)
@@ -51,9 +51,12 @@ export function DynamicNavigation() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
-    const [isNavVisible, setIsNavVisible] = useState(true);
+    // Alt menü görünürlüğü türetilir: yerel pencere açık değil + dış pencere izin veriyor + kaydırmayla gizlenmemiş.
     const [isNavAllowedByExternalOverlays, setIsNavAllowedByExternalOverlays] = useState(true);
-    const [sosActivePet, setSosActivePet] = useState<any>(null);
+    const [scrollHidden, setScrollHidden] = useState(false);
+    // SOS merkezi açılırken belirli bir hayvan verilirse o, yoksa seçili hayvan (ayrı kopya tutulmaz).
+    const [sosPetOverride, setSosPetOverride] = useState<Pet | null>(null);
+    const sosActivePet = sosPetOverride ?? activePet ?? pets[0] ?? null;
 
     const isAnyLocalOverlayOpen = 
         isActionHubOpen || 
@@ -65,6 +68,22 @@ export function DynamicNavigation() {
         isAuthOpen || 
         isNotificationOpen ||
         isEcosystemPortalOpen;
+    const isNavVisible = !isAnyLocalOverlayOpen && isNavAllowedByExternalOverlays && !scrollHidden;
+
+    // Sayfa değişince menü geri gelir ve yürüyüş paneli kapanır; yerel pencere kapanınca kaydırma gizlemesi sıfırlanır.
+    // (Çizim sırasında önceki değerle karşılaştırma: efektte senkron setState yerine React'in önerdiği yol.)
+    const [seen, setSeen] = useState({ pathname, overlay: isAnyLocalOverlayOpen });
+    if (seen.pathname !== pathname || seen.overlay !== isAnyLocalOverlayOpen) {
+        setSeen({ pathname, overlay: isAnyLocalOverlayOpen });
+        if (seen.pathname !== pathname) {
+            setIsNavAllowedByExternalOverlays(true);
+            setScrollHidden(false);
+            // "Yürüyüşe Başla" paneli ancak yeni sayfa boyandığında kapanır (eski sayfa bir an görünmesin).
+            if (isWalkOpen) setIsWalkOpen(false);
+        } else if (!isAnyLocalOverlayOpen) {
+            setScrollHidden(false);
+        }
+    }
 
     // KÖK NEDEN DÜZELTMESİ (yürüyüş modülü "geri giderken beni en başa atıyor"
     // hatası): her overlay açılışında `window.history.pushState({modal:'x'},"")`
@@ -86,17 +105,14 @@ export function DynamicNavigation() {
         }
     };
 
+    // Kaydırma dinleyicisi güncel durumu ref'ten okur (dinleyici her durumda yeniden kurulmasın diye).
     const overlayOpenRef = useRef(false);
-    overlayOpenRef.current = isAnyLocalOverlayOpen;
-    
     const allowedByExternalRef = useRef(true);
-    allowedByExternalRef.current = isNavAllowedByExternalOverlays;
-
     useEffect(() => {
-        // Always restore nav visibility when navigating to a new page
-        setIsNavAllowedByExternalOverlays(true);
-        setIsNavVisible(true);
-    }, [pathname]);
+        overlayOpenRef.current = isAnyLocalOverlayOpen;
+        allowedByExternalRef.current = isNavAllowedByExternalOverlays;
+    }, [isAnyLocalOverlayOpen, isNavAllowedByExternalOverlays]);
+
 
     // KÖK NEDEN DÜZELTMESİ (Baran'ın bulduğu gerçek hata: "Yürüyüşe Başla"ya
     // basınca panel kapanıp bir an için altındaki sayfa (ana sayfa/işletme
@@ -111,29 +127,8 @@ export function DynamicNavigation() {
     // GÖRSEL olarak ancak pathname GERÇEKTEN değiştiğinde (yani yeni sayfa
     // zaten boyanmış olduğunda) kapanıyor, böylece kapanış animasyonu eski
     // değil YENİ sayfayı açığa çıkarıyor.
-    const prevPathnameForWalkRef = useRef(pathname);
-    useEffect(() => {
-        if (pathname !== prevPathnameForWalkRef.current) {
-            prevPathnameForWalkRef.current = pathname;
-            if (isWalkOpen) setIsWalkOpen(false);
-        }
-    }, [pathname, isWalkOpen]);
+    // (Uygulaması yukarıda, sayfa değişimi karşılaştırmasında.)
 
-    useEffect(() => {
-        if (isAnyLocalOverlayOpen) {
-            setIsNavVisible(false);
-        } else if (isNavAllowedByExternalOverlays) {
-            setIsNavVisible(true);
-        }
-    }, [isAnyLocalOverlayOpen, isNavAllowedByExternalOverlays]);
-
-    useEffect(() => {
-        if (activePet) {
-            setSosActivePet(activePet);
-        } else if (pets.length > 0 && !sosActivePet) {
-            setSosActivePet(pets[0]);
-        }
-    }, [activePet, pets]);
 
     useEffect(() => {
         const handleOpenActionHub = () => {
@@ -179,13 +174,9 @@ export function DynamicNavigation() {
             setIsMapsOpen(true);
         };
 
-        const handleOpenSOS = (e: any) => {
+        const handleOpenSOS = (e: Event) => {
             window.history.pushState({ modal: 'sos' }, "");
-            if (e?.detail) {
-                setSosActivePet(e.detail);
-            } else if (activePet) {
-                setSosActivePet(activePet);
-            }
+            setSosPetOverride((e as CustomEvent<Pet | undefined>).detail ?? null);
             setIsSOSOpen(true);
         };
 
@@ -230,8 +221,8 @@ export function DynamicNavigation() {
         };
 
         // Global navigation handler — now routes pages directly
-        const handleGlobalNavigate = (e: any) => {
-            const id = e.detail;
+        const handleGlobalNavigate = (e: Event) => {
+            const id = (e as CustomEvent<string>).detail;
             if (!id) return;
 
 
@@ -269,8 +260,6 @@ export function DynamicNavigation() {
                 handleOpenMaps();
             } else if (id === 'market') {
                 router.push('/petshop');           // ← Sayfa
-            } else if (id === 'studio') {
-                router.push('/studio');            // ← Sayfa
             } else if (id === 'vet') {
                 router.push('/vet');               // ← Sayfa
             } else if (id === 'game') {
@@ -282,9 +271,9 @@ export function DynamicNavigation() {
             }
         };
 
-        // Scroll hide/show nav
-        // Scroll hide/show nav (Capturing globally)
+        // Kaydırınca alt menüyü gizle/göster (tüm kaydırılan alanlar, yakalama aşamasında). Her alanın son konumu ayrı tutulur.
         let ticking = false;
+        const lastScroll = new WeakMap<object, number>();
         const handleGlobalScroll = (e: Event) => {
             // If any overlay is open, bypass scroll hide/show to keep nav hidden
             if (overlayOpenRef.current || !allowedByExternalRef.current) return;
@@ -293,23 +282,22 @@ export function DynamicNavigation() {
             if (!target) return;
 
             // Get current scroll position of the specific target
-            const isWindowScroll = target === document || (target as any) === window || target === document.body || target === document.documentElement;
-            const current = isWindowScroll ? window.scrollY : target.scrollTop;
+            const isWindowScroll = (target as unknown) === document || (target as unknown) === window || target === document.body || target === document.documentElement;
 
             if (!ticking) {
                 window.requestAnimationFrame(() => {
                     const latestCurrent = isWindowScroll ? window.scrollY : target.scrollTop;
-                    const last = (target as any)._moffiLastScrollY !== undefined ? (target as any)._moffiLastScrollY : latestCurrent;
+                    const last = lastScroll.get(target) ?? latestCurrent;
                     const diff = latestCurrent - last;
 
                     if (latestCurrent > 60) {
-                        if (diff > 5) setIsNavVisible(false);
-                        else if (diff < -10) setIsNavVisible(true);
+                        if (diff > 5) setScrollHidden(true);
+                        else if (diff < -10) setScrollHidden(false);
                     } else {
-                        setIsNavVisible(true);
+                        setScrollHidden(false);
                     }
 
-                    (target as any)._moffiLastScrollY = latestCurrent;
+                    lastScroll.set(target, latestCurrent);
                     ticking = false;
                 });
                 ticking = true;
@@ -318,10 +306,10 @@ export function DynamicNavigation() {
 
         const handleOpenPostGlobal = () => router.push('/community/yeni');
 
-        const handleToggleNav = (e: any) => {
-            const allowed = e.detail;
+        const handleToggleNav = (e: Event) => {
+            const allowed = (e as CustomEvent<boolean>).detail;
             setIsNavAllowedByExternalOverlays(allowed);
-            setIsNavVisible(allowed);
+            if (allowed) setScrollHidden(false);
         };
 
         window.addEventListener('popstate', handlePopState);
@@ -403,7 +391,7 @@ export function DynamicNavigation() {
                 onClose={() => { clearModalHistoryState(); setIsSOSOpen(false); }}
                 pet={sosActivePet}
                 allPets={pets}
-                onPetChange={(p) => setSosActivePet(p)}
+                onPetChange={(p) => setSosPetOverride(p)}
             />
 
             <SpotlightSearch
