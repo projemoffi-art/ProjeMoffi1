@@ -59,6 +59,8 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
         { name: "Moffi AI asistanı", free: "Günde 5 mesaj", prime: "Günde 60 mesaj" },
         { name: "Her ay PawCoin hediyesi", free: false, prime: "500 PawCoin" },
         { name: "Seri kalkanı", free: "Haftada 1", prime: "Haftada 2" },
+        // Sınır sunucuda: pet_limit_for() (20261004103300).
+        { name: "Hayvan sayısı", free: "5 dost", prime: "15 dost" },
         // Sınırlar sunucuda: album_limits() (CLAUDE.md 8.65).
         { name: "Albüm (hayvan başına)", free: "50 fotoğraf, 10 anı", prime: "1.000 dosya, sınırsız anı" },
         { name: "Anılara video (30 sn)", free: false, prime: true },

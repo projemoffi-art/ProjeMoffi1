@@ -283,8 +283,9 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.3 Seri.** `streak_shield_uses` + `use_streak_shield` (haftada 1, Prime 2). Günler YEREL tarihle karşılaştırılır (UTC `startsWith`
   hatası vardı). `bestStreak` 365 günün tamamını tarar. Haftalık pul günde en fazla 1.
 - **8.4/8.5/8.14 Hub ve bağlam.** "Bugün" değerleri tek kaynaktan: `DailyProgressContext` (`todayDistanceKm/todaySteps/dailyGoal`, PawCoin
-  bakiyesi, seri, çerçeve hakları; eski `QuestEngineContext` 8.68'de kaldırıldı). Günlük yürüyüş hedefi SUNUCUDA: `pet_walk_goal` /
-  `set_pet_walk_goal` (`pets.walk_goal_km` elle hedef; otomatik hedef bugünden önceki yürüyüşlerden, gün içinde değişmez). "Tüm Zamanlar"
+  bakiyesi, seri, çerçeve hakları; eski `QuestEngineContext` 8.68'de kaldırıldı). Günlük yürüyüş hedefi SUNUCUDA ve ADIM (2026-10-04, 8.69):
+  `pet_walk_goal` / `set_pet_walk_goal_steps` (`pets.walk_goal_steps` elle hedef, 500'lük, 1.000–30.000; otomatik hedef bugünden önceki
+  yürüyüşlerden, gün içinde değişmez; `walk_goal_km` yalnız eski istemci için eşlenir). "Tüm Zamanlar"
   ile "Son 7 Gün" aynı kartta etiketsiz karıştırılmaz.
 - **8.6a Yürüyüş kaydı (2026-10-03, A+B).** 🔴 `walk_sessions`'a istemci yazamaz (sadece SELECT): `start_walk_session(pet, started_at)`
   (çevrimdışı başlangıç sonradan gerçek saatle açılır), `append_walk_points` (ActivityContext tamponu, 10 sn'de bir toplu; çevrimdışı kuyruk
@@ -322,7 +323,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   şüphede temiz `git clone` + `npm install` + build. GPS drift kalkanı sabit 15 m değil `max(accuracy, 8)` m.
   🔴 **8.19–8.20 Pedometre:** adım GPS'ten bağımsız, `devicemotion`; algoritma = SABİT eşik (1.15) + histerezis + 300–2000 ms aralık +
   4'lü ritim onayı. Adaptif/varyans tabanlı eşik kısır döngüye girer, kullanma. GPS/sensör kodu statik mock'la değil HAREKETLİ simülasyonla test
-  edilir. Ekran kapalıyken adım web'de sayılmaz (native'de de sensör). Mesafe PP'yi belirler, adım belirlemez.
+  edilir. Ekran kapalıyken adım web'de sayılmaz (native'de de sensör). Hedef/görev için sayılan adım = ölçülen adım ile mesafenin adım
+  karşılığının BÜYÜĞÜ (`walk_credited_steps`, 1 km = 1.300); algılayıcı adımı sunucuda dakikada en çok 180 (`finish_walk`).
 
 ### Sosyal meydan okuma ve işletme türü (8.25 – 8.35)
 
@@ -472,8 +474,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.63i Yürüyüş:** ana sayfa kartı = halka (yüzde) + hafta şeridi (Pzt–Paz yürünen günler) + seri + hava/sıcak zemin uyarısı + cam
   ölçü şeridi. Hazırlık paneli: kim yürüyor (isimli seçim), hedef her zaman açık, hava/pati güvenliği, günlük hazırlık listesi
   (tasma/poşet/su/ödül, cihazda o gün), son yürüyüş + son 7 gün, sabit "Yürüyüşe Başla". Kenar tutamağı açık pencerelerde gizlenir.
-- **8.63j Adım öncelikli** (ana sayfa kartı, takip, sonuç): büyük rakam adım, km ikincil. Sensör yoksa ya da mesafe varken adım 0 ise
-  büyük rakam km'ye döner. Hedef/halka/puan mesafeden (8.20). Adım yalnızca uygulamada başlatılan yürüyüşlerde sayılır; gün boyu adım
+- **8.63j Adım öncelikli** (ana sayfa kartı, takip, sonuç): büyük rakam adım, km ikincil. Hedef/halka/görev ADIM (8.69); adım sayacı
+  olmayan telefonda sayılan adım mesafeden gelir (`lib/walkMetrics` `creditedSteps`, sunucuyla aynı kural; ekran kendi formülünü yazmaz). Adım yalnızca uygulamada başlatılan yürüyüşlerde sayılır; gün boyu adım
   Apple Sağlık / Health Connect ister (native aşaması).
 - **8.63k Hava detayı** `components/walk/WeatherDetailSheet.tsx` (kök düzende), `open-weather-detail` olayıyla her yerden açılır; saatlik +
   7 gün + yürüyüş için en iyi saatler + pati güvenliği; `fetchForecast` WeatherContext'te. Open-Meteo atfı (CC BY 4.0) zorunlu, altta.
@@ -615,7 +617,7 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - 🔴 **Ekonomi denetimi (2026-10-04, 20261004103000):** **PawCoin HESAP başına, XP/rozet HAYVAN başına.** Ödül anahtarından hayvan kimliği
   çıkarılınca (`qc_coin_ref`) aynı olan ödül hesaba bir kez PawCoin verir (`quest_rewards.coin_ref`, tekil); ikinci hayvan aynı görevden yalnızca
   XP alır, ekran `coin_shared`/`pawcoin: 0` ile söyler (`qc_coin_open`). Önceden 10 hayvan = 10 kat PawCoin, hayvan silip açınca rozet PawCoin'i
-  yeniden geliyordu. Hesap başına en çok 10 hayvan (`pets_limit_guard`). Yeni hayvana bağlı ödül anahtarı eklerken önekini `qc_coin_ref`'e ekle.
+  yeniden geliyordu. Hayvan sınırı ücretsiz 5, Prime 15 (`pet_limit_for`, `pets_limit_guard`; Baran 2026-10-04). Yeni hayvana bağlı ödül anahtarı eklerken önekini `qc_coin_ref`'e ekle.
   Ölçümler tekrarla şişirilemez: sayılan yürüyüş ≥300 m ya da ≥10 dk; kilo, veteriner kaydı, gönderi GİRİLDİĞİ GÜN olarak sayılır (geçmiş tarihle
   toplu giriş rozet doldurmaz); pasaport/acil bilgi görevi aynı hayvanda 30 günde bir. **Düello** eskiden hiç yürümeden iki tarafa 150, kazanana
   300 veriyordu (günlük tavan dışı): artık en az 1 km yürüyen tarafa 30, kazanana +30, `quest_grant`'tan; en çok 3 eşzamanlı düello; "takım"
@@ -623,6 +625,31 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   günü hesap başına. Birlikte ödülleri (ortak hedef + düello) haftada en çok 120 PawCoin (`qc_social_coin_left`). Görev satırı kısa durumu
   sunucudan (`qc_quest_hint`: aşıda kalan/geciken gün, pasaportta eksik alan). Haftanın teması ödülü (`trigger_weekly_theme_participation`)
   tema başına bir kez, tutarı yönetici belirler; günlük tavana girmez.
+
+### Baran'ın 2026-10-04 listesi (8.69) — onaylı rapor sonrası
+
+- 🔴 **Upsert = güncelleme izni de ister.** `.upsert()` sunucuda `INSERT … ON CONFLICT DO UPDATE`; tabloda UPDATE izni yoksa "permission
+  denied" verir (klinik beğenisi `favorite_clinics` bu yüzden hiç çalışmıyordu). Yalnızca ekleme izni olan tabloda
+  `upsert(row, { onConflict, ignoreDuplicates: true })` (= `DO NOTHING`) ya da `insert` kullan.
+- **Katmanlar:** her yerden açılan ortak pencereler (paylaşım) `Sheet layer="top"` (z 10000; açık çekmece/tam ekran panellerin üstü),
+  kısa bildirim `GlobalToast` z 10050. Paylaşım eskiden klinik panelinin (z 6200) ARKASINDA açılıyordu.
+- 🔴 **iPhone üst bölge:** uygulama çentiğin altına uzanır (`viewportFit: cover`, `black-translucent`). `StatusBarScrim` (kökte) çentik
+  yüksekliğinde şerit: en üstte şeffaf, kaydırınca sayfa renginde dolar. Yapışkan/sabit başlık ve tam ekran panelin üst düğmeleri
+  `env(safe-area-inset-top)` payı ALIR (WalkHeader, vet başlığı, klinik paneli, harita, sonuç/işleme vb. düzeltildi). Sayfa esnemesi kapalı
+  (`overscroll-behavior-y: none`). Yeni tam ekran ekranda üst payı unutma.
+- **Simge:** geçici mercan pati (`public/icons/*`, `src/app/icon.svg`, manifest); Vercel/Next varsayılan dosyaları silindi. Gerçek simge
+  gelince yalnızca dosyalar değişir (12.1).
+- **Kaydırma performansı:** kaydırılan ızgarada TEKRAR EDEN küçük rozetlerde buzlu cam (`backdrop-filter`) kullanma: `.photo-chip`
+  (bulanıklıksız, aynı görünüm). Liste görselleri `loading="lazy" decoding="async"`. Buzlu cam yalnız sabit ögelerde ve az sayıda kartta.
+- **Hata mesajı:** `errorMessage(e, yedek)` (`lib/utils`) — Supabase hataları `Error` değil düz nesnedir; `instanceof Error` mesajı kaybeder.
+- **Yürüyüş:** hazırlık panelinin başında İstatistik/Geçmiş/Sıralama kısayolları; son yürüyüşte (birden fazla hayvan varsa) hayvan;
+  ana sayfa kartında güne dokununca o günün özeti. Sıralamalar referans Ekran 12'ye göre (`LeaderboardSection`): ilk 10'da olmayan
+  kullanıcı gerçek sırasını (ilk 100) ya da "100+" ile gerçek km'sini görür; avatar dış servise gitmez (baş harf).
+- **Adım hedefi** (8.4, 8.20, 8.63j): sunucu `walk_steps_per_km`, `walk_credited_steps`, `pet_walk_goal_auto_steps`; günlük "Yürüyüş"
+  görevi `walk_steps_today` (adım). İstemci tek yer `lib/walkMetrics` (`STEPS_PER_KM`, `STEP_GOAL`, `creditedSteps`).
+- **İşletme aranabilirliği:** `businesses.accepts_calls` (varsayılan açık, profil ekranında). Kapalıysa `business_cards.phone` müşteriye
+  null döner (ekip/yönetici görür); klinik panelinde "Arama kapalı", yanında "Mesaj gönder".
+- **Düello/ortak hedef bildirimleri:** davet, kabul, ret, sonuç → `/quests/birlikte`. Telefon bildirimi Firebase/APNs gelince (12.1).
 
 ### İçerik Stüdyosu ve hikâyeler (8.64, 2026-10-04 — Baran onaylı 5 kanal)
 
@@ -650,6 +677,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 Migration'ı bu kelimeleri içermeyen parçalar (Claude uygular) + içeren parça (Baran SQL Editor'dan) diye böl; kelimeyi gizleme.
 2026-10-03: `apply_migration` ile fonksiyon gövdesinde `delete from`, `on delete cascade` ve `for delete` politikası içeren migration onaysız
 uygulandı (20261004101100/101200). Önce dene; reddedilirse yine `*_MANUAL_sql_editor.sql`. `drop table` gibi doğrudan silme hâlâ Baran'da.
+2026-10-04: birden fazla veri `update` komutu içeren migration "declined" oldu; aynı komutlar TEK TEK (ayrı `apply_migration`, tablo takma
+adıyla) geçti. Fonksiyon/şema parçasını ve veri güncellemelerini ayrı gönder; veri parçası reddedilirse komut komut dene.
 
 ## 9. Bilinen, bilinçli ya da düşük öncelikli sorunlar (2026-10-02)
 
@@ -795,13 +824,13 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
       köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
 - [ ] 🔴 **Kod borcu (2026-10-04 ölçümü, yalnızca azalır):** tip kontrolü (src) **0** hata (68'den; artık her değişiklikte 0 kalmalı).
-      Lint **331** hata (1.150'den): `no-explicit-any` 240, `no-unescaped-entities` 44, `set-state-in-effect` 34, `purity` 8, diğer 5.
+      Lint **293** hata (1.150'den; 2026-10-04): `no-explicit-any` 208, `no-unescaped-entities` 42, `set-state-in-effect` 32, `purity` 7, diğer 4.
       Sıra: React kuralları önce (gerçek davranış hatası saklayabilir), sonra `any`/kaçış karakterleri dosya dosya. Ölü dosya: 0
       (`scratchpad/orphans.cjs`), kullanılmayan servis metodu: 0 (`scratchpad/used.cjs`).
 - [ ] İşletme kurulum sihirbazı (`OnboardingWizard`) ve işletme panelinin bazı ekranları indigo/mavi tonlarda (Bölüm 5'e aykırı).
 - [ ] Yürüyüş denetimi: C aşamasının görev/rozet/XP kısmı 8.68 ile bitti. Kalan: meydan okuma/sıralama/ödül ekranlarının referansa
-      çekilmesi; D = anahtarlı harita sağlayıcısı (OSM karo kullanım politikası). Yürüyüş istatistik ve sıralama sayfası (`/walk`) alt menüden
-      doğrudan açılmıyor (yalnızca Hızlı Erişim'den); Baran'la konuşulacak.
+      çekilmesi (Sıralamalar 8.69'da yapıldı); D = anahtarlı harita sağlayıcısı (OSM karo kullanım politikası). İstatistik/Geçmiş/Sıralama
+      artık yürüyüş hazırlık panelinin başındaki kısayollardan açılıyor (8.69).
 - [ ] Görev Merkezi: 2027-01 ve sonrası aylık macera satırları (`supabase/migrations/*quest_content_adventures*` deseniyle); bilgi kartı
       havuzunu 60'a çıkar; yönetici içerik ekranı (şimdilik içerik migration ile).
 - [ ] "Moffi Puanı / PP" yazan arayüz metinleri yeni para birimi adına çevrilecek (isim belli olunca topluca).
