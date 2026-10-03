@@ -438,6 +438,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   Yönetici bir hesabı aynı 30 günlük sürece alır/geri alır: `admin_schedule_account_deletion` / `admin_cancel_account_deletion` (aal2;
   yönetici hesabı ve ekibi olan işletme sahibi hariç). Profil satırı istemciden ASLA doğrudan silinmez (eski "Sil" bunu yapıyordu).
   Yönetici yazma işlemleri (`admin_*`) aal2'yi kendileri denetler; yönetici 2FA migration'ını beklemez.
+  Tek sahipli işletme, sahibinin hesabı kalıcı silinince kapanır (`prepare_account_purge` onayı kaldırır → harita/arama/akışta yok;
+  Baran onayı 2026-10-03); silme penceresi sahibi olunan işletmeleri adıyla uyarır. Ekibi olan işletmenin sahibi silme talep edemez.
 - **8.58 Native ara katman.** 🔴 Telefon özelliklerine (konum, sensör, paylaşım, pano, titreşim, ekran açık tutma, dış bağlantı, ön plan/ağ,
   push, satın alma) SADECE `@/native` üzerinden erişilir. Modüller: `geolocation`, `sensors` (iOS izni dokunuşla aynı çağrı yığınında),
   `share`, `device`, `push`, `purchases`, `haptics`, `isNative()/platform()`. Adlar `location`/`motion` değil (tarayıcı/framer çakışması).
@@ -644,8 +646,6 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       (`getClinicProducts`, `updateOrderTracking`, `getClinicQuests` — çalışıyor ama tipsiz), `PetContext.Pet` ↔ `services/types.Pet`, `AuthContext`
       `UserProfile`; (2) React kuralları (`set-state-in-effect`, `purity`, `refs`); (3) `any` ve kaçış karakterleri en sonda, dosya dosya.
       Ölü dosya avı (E aşaması) 2026-10-03'te yapıldı: 48 kullanılmayan dosya silindi (`scratchpad/orphans.cjs` mantığı: hiçbir yerden import edilmeyen modül).
-- [ ] Sahibi silinen (hesabı kalıcı silinen) tek kişilik işletme sahipsiz kalıyor: `request_account_deletion` yalnız ekibi olanı engelliyor; `prepare_account_purge`
-      işletmeyi kapatmalı (onayı kaldır + gizle) ya da kişiye "önce işletmeni kapat" demeli. Karar gerekiyor.
 - [ ] İşletme kurulum sihirbazı (`OnboardingWizard`) ve işletme panelinin bazı ekranları indigo/mavi tonlarda (Bölüm 5'e aykırı).
 - [ ] Yürüyüş denetimi C/D aşamaları (2026-10-03 raporu): C = görev/rozet/XP sunucuya, görev tiplerinin düzeltilmesi (günlük
       toplam, imkânsız "Çift Yürüyüş"), otomatik günlük hedefin gün içinde sabit kalması (ilk yürüyüşten sonra 1,7→2,3 sıçrıyor),

@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trash2, ArrowRight, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { useMyBusinesses } from "@/hooks/useMyBusinesses";
 
 const CHANGED_EVENT = "moffi-account-deletion-changed";
 
@@ -14,21 +15,23 @@ function formatDate(iso: string) {
 
 function useDeletionDate() {
     const { user } = useAuth();
-    const [date, setDate] = useState<string | null>(null);
-
-    const load = useCallback(async () => {
-        if (!user?.id) { setDate(null); return; }
-        const { data } = await supabase.from("profiles").select("deletion_scheduled_for").eq("id", user.id).maybeSingle();
-        setDate(data?.deletion_scheduled_for ?? null);
-    }, [user?.id]);
+    const userId = user?.id;
+    // Kimin için okunduğu da tutulur: oturum değişince eski kullanıcının tarihi gösterilmez.
+    const [state, setState] = useState<{ userId: string; date: string | null } | null>(null);
 
     useEffect(() => {
+        if (!userId) return;
+        let alive = true;
+        const load = () => {
+            supabase.from("profiles").select("deletion_scheduled_for").eq("id", userId).maybeSingle()
+                .then(({ data }) => { if (alive) setState({ userId, date: data?.deletion_scheduled_for ?? null }); });
+        };
         load();
         window.addEventListener(CHANGED_EVENT, load);
-        return () => window.removeEventListener(CHANGED_EVENT, load);
-    }, [load]);
+        return () => { alive = false; window.removeEventListener(CHANGED_EVENT, load); };
+    }, [userId]);
 
-    return date;
+    return state && state.userId === userId ? state.date : null;
 }
 
 // Silme bekleyen hesapta her sayfanın üstünde: tarih + geri alma
@@ -62,6 +65,8 @@ export function AccountDeletionBanner() {
 export function DeleteAccountButton() {
     const { logout } = useAuth();
     const date = useDeletionDate();
+    // Tek sahibi olduğu işletmeler hesap silinince kapanır (prepare_account_purge onayı kaldırır; haritada/aramada görünmez).
+    const ownedBusinesses = useMyBusinesses().filter(b => b.role === "owner");
     const [open, setOpen] = useState(false);
     const [confirmText, setConfirmText] = useState("");
     const [busy, setBusy] = useState(false);
@@ -106,6 +111,12 @@ export function DeleteAccountButton() {
                             <li>Hesabın 30 gün sonra kalıcı olarak silinir. Bu süre içinde giriş yapıp geri alabilirsin.</li>
                             <li>Silinince profilin, evcil hayvanların, sağlık kayıtların, gönderilerin, mesajların ve fotoğrafların geri getirilemez.</li>
                             <li>Siparişlerin ve işletmelerdeki randevu kayıtların, yasal saklama gereği isimsiz olarak işletmede kalır.</li>
+                            {ownedBusinesses.length > 0 && (
+                                <li className="text-red-600 dark:text-red-400 font-medium">
+                                    Sahibi olduğun {ownedBusinesses.map(b => b.name).join(", ")} da kapanır: haritada, aramada ve Moffi akışlarında artık görünmez.
+                                    Ekibinde başka kişiler varsa önce onları ekipten çıkarman gerekir.
+                                </li>
+                            )}
                         </ul>
                         <label className="block text-sm text-zinc-700 dark:text-zinc-300">
                             Onaylamak için <b>SİL</b> yaz
