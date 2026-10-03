@@ -20,6 +20,7 @@ import { baloo } from './homeUI';
 
 const LAPSED_DAYS = 3;
 const DAY_LETTERS = ['P', 'S', 'Ç', 'P', 'C', 'C', 'P'];
+const DAY_NAMES = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const WEATHER_ICON: Record<string, typeof Sun> = { Sun, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning };
 
 type CardState = 'active' | 'done' | 'lapsed' | 'first' | 'normal';
@@ -90,13 +91,17 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(t); }, []);
 
+    // Gün başına özet (hafta şeridinde güne dokununca gösterilir): yürüyüş sayısı, km, aktif dakika, adım.
     const { daysSinceLastWalk, week } = useMemo(() => {
-        const walked = new Set<string>();
+        const byDay = new Map<string, { count: number; km: number; min: number; steps: number }>();
         let last = 0;
         for (const w of history) {
             const t = new Date(w.ended_at || w.started_at || 0).getTime();
             if (!Number.isFinite(t) || t <= 0) continue;
-            walked.add(dayKey(new Date(t)));
+            const k = dayKey(new Date(t));
+            const agg = byDay.get(k) || { count: 0, km: 0, min: 0, steps: 0 };
+            agg.count += 1; agg.km += w.distanceKm; agg.min += w.activeSeconds / 60; agg.steps += w.steps || 0;
+            byDay.set(k, agg);
             if (t > last) last = t;
         }
         const today = new Date(now);
@@ -104,10 +109,13 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
         const days = DAY_LETTERS.map((letter, i) => {
             const d = new Date(today);
             d.setDate(today.getDate() - mondayOffset + i);
-            return { letter, done: walked.has(dayKey(d)), isToday: i === mondayOffset, future: i > mondayOffset };
+            const agg = byDay.get(dayKey(d)) || null;
+            return { letter, name: DAY_NAMES[i], done: !!agg, agg, isToday: i === mondayOffset, future: i > mondayOffset };
         });
         return { daysSinceLastWalk: last ? (now - last) / 86_400_000 : null, week: days };
     }, [history, now]);
+    const [pickedDay, setPickedDay] = useState<number | null>(null);
+    const picked = pickedDay === null ? null : week[pickedDay];
 
     const state: CardState = activeSession ? 'active'
         : todayDistanceKm >= goalKm ? 'done'
@@ -225,18 +233,44 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
                     <ProgressRing percent={percent} live={state === 'active'} />
                 </div>
 
-                {/* Hafta şeridi */}
+                {/* Hafta şeridi: güne dokununca o günün özeti (kartın geri kalanı yürüyüş panelini açar) */}
                 <div className="mt-3.5 grid grid-cols-7 gap-1.5" aria-label="Bu haftanın yürüyüşleri">
                     {week.map((d, i) => (
-                        <div key={i} className="flex flex-col items-center gap-1">
+                        <button
+                            key={i}
+                            type="button"
+                            disabled={d.future}
+                            aria-label={`${d.name}: ${d.agg ? `${d.agg.count} yürüyüş, ${formatKm(d.agg.km, 1)} km` : 'yürüyüş yok'}`}
+                            aria-pressed={pickedDay === i}
+                            onClick={e => { e.stopPropagation(); haptics.tap(); setPickedDay(p => (p === i ? null : i)); }}
+                            className="flex flex-col items-center gap-1 py-1 -my-1 disabled:cursor-default"
+                        >
                             <span
-                                className={`w-full h-[7px] rounded-full ${d.done ? '' : d.future ? 'bg-white/12' : 'bg-white/25'} ${d.isToday && !d.done ? 'ring-1 ring-white/80' : ''}`}
+                                className={`w-full h-[7px] rounded-full ${d.done ? '' : d.future ? 'bg-white/12' : 'bg-white/25'} ${(d.isToday && !d.done) || pickedDay === i ? 'ring-1 ring-white/80' : ''}`}
                                 style={d.done ? { background: 'linear-gradient(90deg, #C6F27E, #7FC243)', boxShadow: '0 0 8px rgba(160,230,90,0.6)' } : undefined}
                             />
-                            <span className={`text-[10.5px] font-extrabold ${d.isToday ? 'text-white' : 'text-white/60'}`}>{d.letter}</span>
-                        </div>
+                            <span className={`text-[10.5px] font-extrabold ${d.isToday || pickedDay === i ? 'text-white' : 'text-white/60'}`}>{d.letter}</span>
+                        </button>
                     ))}
                 </div>
+                <AnimatePresence initial={false}>
+                    {picked && (
+                        <motion.div
+                            key="day"
+                            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="mt-2 rounded-[16px] bg-black/35 px-3 py-2 text-white text-[12.5px] font-bold flex items-center justify-between gap-2">
+                                <span className="shrink-0">{picked.isToday ? 'Bugün' : picked.name}</span>
+                                <span className="text-white/85 truncate text-right">
+                                    {picked.agg
+                                        ? [`${picked.agg.count} yürüyüş`, `${formatKm(picked.agg.km, 1)} km`, picked.agg.steps > 0 ? `${picked.agg.steps.toLocaleString('tr-TR')} adım` : null, formatMinutes(picked.agg.min)].filter(Boolean).join(' · ')
+                                        : 'Bu gün yürüyüş yok'}
+                                </span>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Cam alt şerit: ölçüler + düğme */}
                 <div className="glass-photo mt-3 rounded-[20px] p-1.5 flex items-stretch">

@@ -4,7 +4,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X, Target, Clock, Play, MapPin, Check, Cloud, CloudLightning, CloudRain, CloudSun, Snowflake, Sun,
-    ThermometerSun, History, Flame,
+    ThermometerSun, History, Flame, BarChart3, Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -97,6 +97,9 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
     }, [walkHistory, plannedKm]);
 
     const lastWalk = walkHistory[0];
+    // Birden fazla hayvan varsa son yürüyüşün kimle yapıldığı gösterilir (referans Ekran 1: "Son Yürüyüş" satırında hayvan)
+    const lastWalkPet = lastWalk && pets.length > 1 ? pets.find(p => String(p.id) === String(lastWalk.petId)) ?? null : null;
+    const go = (href: string) => { haptics.tap(); onNavigateAway?.(); router.push(href); };
 
     const adjustGoal = (delta: number) => {
         haptics.tap();
@@ -173,6 +176,18 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
                     ) : (
                         <>
                             <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
+                                <nav aria-label="Yürüyüş kısayolları" className="mx-4 mb-3 grid grid-cols-3 gap-2">
+                                    {[
+                                        { href: '/walk', label: 'İstatistik', Icon: BarChart3 },
+                                        { href: '/walk/history', label: 'Geçmiş', Icon: History },
+                                        { href: '/walk/leaderboard', label: 'Sıralama', Icon: Trophy },
+                                    ].map(({ href, label, Icon }) => (
+                                        <button key={href} type="button" onClick={() => go(href)}
+                                            className="card-premium h-11 rounded-2xl flex items-center justify-center gap-1.5 px-1 text-[13px] font-bold whitespace-nowrap active:scale-[0.98] transition-transform">
+                                            <Icon className="w-4 h-4 text-accent" /> {label}
+                                        </button>
+                                    ))}
+                                </nav>
                                 {/* Kapak */}
                                 <div className="relative h-40 mx-4 rounded-[28px] overflow-hidden bg-accent/10">
                                     <img src={petImage || '/images/walk-normal.jpg'} alt={activePet?.name || ''} className="w-full h-full object-cover" />
@@ -283,15 +298,23 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
                                 {/* Son yürüyüş + bu hafta */}
                                 <button
                                     type="button"
-                                    onClick={() => { haptics.tap(); onNavigateAway?.(); router.push(lastWalk ? '/walk/history' : '/walk'); }}
+                                    onClick={() => go(lastWalk ? '/walk/history' : '/walk')}
                                     className="mx-4 mt-3 w-[calc(100%-2rem)] card-premium rounded-[24px] p-4 grid grid-cols-2 divide-x divide-card-border text-left"
                                 >
                                     <span className="pr-3">
                                         <span className="flex items-center gap-1.5 text-[12px] font-bold text-secondary"><History className="w-4 h-4" /> Son yürüyüş</span>
+                                        {lastWalkPet && (
+                                            <span className="flex items-center gap-1.5 mt-1">
+                                                {lastWalkPet.image || lastWalkPet.avatar
+                                                    ? <img src={lastWalkPet.image || lastWalkPet.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+                                                    : <span className="w-5 h-5 rounded-full bg-accent/15 text-accent text-[10px] font-black flex items-center justify-center">{lastWalkPet.name.charAt(0)}</span>}
+                                                <span className="text-[12.5px] font-bold truncate">{lastWalkPet.name} ile</span>
+                                            </span>
+                                        )}
                                         <span className="block text-[15px] font-extrabold mt-0.5">{lastWalk ? `${formatKm(lastWalk.distanceKm, 1)} km` : '—'}</span>
                                         <span className="block text-[12px] font-semibold text-secondary">{lastWalk ? `${relativeDay(lastWalk.ended_at || lastWalk.started_at)} · ${formatMinutes(lastWalk.activeSeconds / 60)}` : 'Henüz yok'}</span>
                                     </span>
-                                    <LastSevenDays walks={walkHistory} />
+                                    <LastSevenDays walks={walkHistory} allPets={pets.length > 1} />
                                 </button>
 
                                 {geoPermission === 'denied' && (
@@ -322,7 +345,7 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
 }
 
 /** Son 7 gün özeti. Panel açıldığında takılır; "şimdi" o an bir kez alınır (render saf kalır). */
-function LastSevenDays({ walks }: { walks: { ended_at?: string | null; started_at?: string | null; distanceKm: number }[] }) {
+function LastSevenDays({ walks, allPets }: { walks: { ended_at?: string | null; started_at?: string | null; distanceKm: number }[]; allPets: boolean }) {
     const [now] = React.useState(() => Date.now());
     const week = React.useMemo(() => {
         const since = now - 7 * 86_400_000;
@@ -331,7 +354,7 @@ function LastSevenDays({ walks }: { walks: { ended_at?: string | null; started_a
     }, [walks, now]);
     return (
         <span className="pl-3">
-            <span className="block text-[12px] font-bold text-secondary">Son 7 gün</span>
+            <span className="block text-[12px] font-bold text-secondary">Son 7 gün{allPets ? ' · tüm dostların' : ''}</span>
             <span className="block text-[15px] font-extrabold mt-0.5">{formatKm(week.km, 1)} km</span>
             <span className="block text-[12px] font-semibold text-secondary">{week.count} yürüyüş</span>
         </span>

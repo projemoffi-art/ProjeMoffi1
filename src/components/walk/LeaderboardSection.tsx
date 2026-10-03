@@ -1,19 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Search, Trophy } from "lucide-react";
-import { motion } from "framer-motion";
+// Ekran 12 · Sıralamalar (design-reference/walk-final/, v2): zaman sekmesi (Bu Hafta/Bu Ay/Tüm Zamanlar), kapsam sekmesi
+// (Arkadaşlarım/Aynı Şehir/Herkes), "Aktif Patiler (Toplam Mesafe)", taçlı podyum, 4–10 listesi ve altta sabit "Sen" satırı.
+// Veri: get_distance_leaderboard (yalnızca toplam km, hiçbir rota sızmaz; CLAUDE.md 8.8). PP'li lig sistemi bilerek yok.
+// Kullanıcı ilk 10'da değilse kendi gerçek sırası (ilk 100'deyse) ya da "100+" ve gerçek mesafesi gösterilir.
+
+import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
-import { haptics } from "@/native/haptics";
+import { Avatar } from "@/components/social/SocialUI";
+import { SegmentTabs, WalkCard } from "@/components/walk/WalkUI";
 
-// Faz 13 (referans UI'ye göre yeniden inşa edildi, bkz. design-reference/walk-final/):
-// önceki sürüm PP-tabanlı, terfi/düşmeli bir "lig" sistemiydi - Baran'ın gönderdiği
-// gerçek referans görsel ("4. Sıralama Sayfası") bundan tamamen farklı: kilometre
-// bazlı düz bir sıralama + zaman aralığı filtresi (Bu Hafta/Bu Ay/Tüm Zamanlar) +
-// sosyal kapsam filtresi (Herkes/Arkadaşlarım/Aynı Şehir). Lig backend'i (pg_cron,
-// league_tier vb.) hiç gerçek veri birikmeden geri alındı, bkz. CLAUDE.md 8.8.
 type Period = 'week' | 'month' | 'all';
 type Scope = 'everyone' | 'friends' | 'city';
 
@@ -22,294 +21,177 @@ const PERIOD_TABS: { id: Period; label: string }[] = [
     { id: 'month', label: 'Bu Ay' },
     { id: 'all', label: 'Tüm Zamanlar' },
 ];
-
-// Ekran 12 (Sıralamalar) — design-reference/walk-final/'e göre sekme sırası
-// Arkadaşlarım/Aynı Şehir/Herkes (önceden Herkes/Arkadaşlarım/Aynı Şehir'di).
+// Referans sırası. Varsayılan "Herkes": yeni kullanıcının arkadaş listesi boşken boş bir sıralama görmesin.
 const SCOPE_TABS: { id: Scope; label: string }[] = [
     { id: 'friends', label: 'Arkadaşlarım' },
     { id: 'city', label: 'Aynı Şehir' },
     { id: 'everyone', label: 'Herkes' },
 ];
 
-interface Row {
-    id: string;
-    name: string;
-    avatar?: string;
-    pet: string;
-    km: number;
+interface Row { id: string; name: string; avatar?: string; pet: string; km: number }
+interface Board { key: string; rows: Row[]; me: { rank: number | null; km: number } | null; cityUnavailable: boolean }
+
+const km = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+async function loadBoard(period: Period, scope: Scope, userId: string | null): Promise<Omit<Board, 'key'>> {
+    let scopeUserIds: string[] | null = null;
+    if (scope === 'friends' && userId) {
+        const following = await apiService.getFollowing(userId);
+        scopeUserIds = Array.from(new Set([userId, ...following.map(f => f.id)]));
+    } else if (scope === 'city' && userId) {
+        const cityIds = await apiService.getSameCityUserIds(userId);
+        if (cityIds.length === 0) return { rows: [], me: null, cityUnavailable: true };
+        scopeUserIds = cityIds;
+    }
+    const distanceRows = await apiService.getDistanceLeaderboard(period, scopeUserIds, 100);
+    const profiles = await apiService.getProfilesByIds(distanceRows.map(r => r.userId));
+    const byId = new Map(profiles.map(p => [p.id, p]));
+    const rows: Row[] = distanceRows.map(r => {
+        const p = byId.get(r.userId);
+        return { id: r.userId, name: p?.name || 'Gizli Kullanıcı', avatar: p?.avatar, pet: p?.pet || 'Moffi', km: r.totalMeters / 1000 };
+    });
+    let me: Board['me'] = null;
+    if (userId) {
+        const idx = rows.findIndex(r => r.id === userId);
+        if (idx >= 0) me = { rank: idx + 1, km: rows[idx].km };
+        else {
+            // İlk 100'de değil: gerçek mesafesi ayrıca okunur, sırası uydurulmaz ("100+")
+            const mine = await apiService.getDistanceLeaderboard(period, [userId], 1);
+            me = { rank: null, km: (mine[0]?.totalMeters || 0) / 1000 };
+        }
+    }
+    return { rows, me, cityUnavailable: false };
 }
 
 export function LeaderboardSection() {
-    const { user: currentUser } = useAuth();
-
+    const { user } = useAuth();
+    const userId = user?.id ?? null;
     const [period, setPeriod] = useState<Period>('week');
     const [scope, setScope] = useState<Scope>('everyone');
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [rows, setRows] = useState<Row[]>([]);
-    const [myRankFallback, setMyRankFallback] = useState<{ rank: number; km: number } | null>(null);
-    const [cityUnavailable, setCityUnavailable] = useState(false);
+    const [board, setBoard] = useState<Board | null>(null);
+    const key = `${period}:${scope}:${userId}`;
 
     useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setLoading(true);
-            setCityUnavailable(false);
-            try {
-                let scopeUserIds: string[] | null = null;
-                if (scope === 'friends' && currentUser) {
-                    const following = await apiService.getFollowing(currentUser.id);
-                    scopeUserIds = Array.from(new Set([currentUser.id, ...following.map(f => f.id)]));
-                } else if (scope === 'city' && currentUser) {
-                    const cityIds = await apiService.getSameCityUserIds(currentUser.id);
-                    if (cityIds.length === 0) {
-                        if (!cancelled) { setCityUnavailable(true); setRows([]); setMyRankFallback(null); setLoading(false); }
-                        return;
-                    }
-                    scopeUserIds = cityIds;
-                }
+        let alive = true;
+        loadBoard(period, scope, userId)
+            .then(b => alive && setBoard({ key, ...b }))
+            .catch(err => { console.error('Sıralama yüklenemedi:', err); if (alive) setBoard({ key, rows: [], me: null, cityUnavailable: false }); });
+        return () => { alive = false; };
+    }, [period, scope, userId, key]);
 
-                const distanceRows = await apiService.getDistanceLeaderboard(period, scopeUserIds, 100);
-                if (cancelled) return;
-
-                const profiles = await apiService.getProfilesByIds(distanceRows.map(r => r.userId));
-                if (cancelled) return;
-                const profileMap = new Map(profiles.map(p => [p.id, p]));
-
-                const merged: Row[] = distanceRows.map(r => {
-                    const p = profileMap.get(r.userId);
-                    return {
-                        id: r.userId,
-                        name: p?.name || 'Gizli Kullanıcı',
-                        avatar: p?.avatar,
-                        pet: p?.pet || 'Moffi',
-                        km: r.totalMeters / 1000,
-                    };
-                });
-                setRows(merged);
-
-                // Baran'ın bulduğu gerçek hata: kullanıcı ilk 100'de değilse, burada
-                // HER ZAMAN "0 km" gösteriliyordu — gerçekten o hafta 5km yürümüş olsa
-                // bile! Kullanıcının kendi mesafesini SAHTE bir sıfırla değil, aynı
-                // güvenli RPC'yi (sadece kendi ID'siyle) tekrar çağırıp GERÇEK toplamını
-                // çekerek gösteriyoruz. Rank için de uydurma bir sayı ("ilk 100 + 1")
-                // yerine dürüstçe "100+." deniyor — tam sırasını bilmiyoruz, olduğu gibi.
-                if (currentUser && !merged.some(r => r.id === currentUser.id)) {
-                    const myRow = await apiService.getDistanceLeaderboard(period, [currentUser.id], 1);
-                    if (!cancelled) {
-                        setMyRankFallback({ rank: merged.length, km: (myRow[0]?.totalMeters || 0) / 1000 });
-                    }
-                } else {
-                    setMyRankFallback(null);
-                }
-            } catch (err) {
-                console.error("Leaderboard fetch error:", err);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        })();
-        return () => { cancelled = true; };
-    }, [period, scope, currentUser]);
-
-    const filteredRows = useMemo(() => {
-        if (!search.trim()) return rows;
+    const current = board?.key === key ? board : null;
+    const rows = useMemo(() => current?.rows ?? [], [current]);
+    const filtered = useMemo(() => {
         const q = search.trim().toLocaleLowerCase('tr-TR');
-        return rows.filter(r => r.name.toLocaleLowerCase('tr-TR').includes(q));
+        return q ? rows.filter(r => r.name.toLocaleLowerCase('tr-TR').includes(q)) : rows;
     }, [rows, search]);
-
-    const top3 = filteredRows.slice(0, 3);
-    const rest = filteredRows.slice(3, 10);
-    const isSearching = search.trim().length > 0;
+    const searching = search.trim().length > 0;
+    const me = current?.me ?? null;
+    const meInTop10 = !!me?.rank && me.rank <= 10;
+    const ahead = me?.rank && me.rank > 1 ? rows[me.rank - 2] : null;
+    const lastListed = rows.length ? rows[rows.length - 1] : null;
 
     return (
-        <div className="bg-transparent font-sans py-6 relative">
-
-            <div className="flex justify-between items-center px-2 mb-4">
-                <h3 className="text-sm font-black text-foreground dark:text-white uppercase tracking-widest flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-orange-500" /> Sıralamalar
-                </h3>
-                <button
-                    onClick={() => setShowSearch(s => !s)}
-                    className="w-8 h-8 rounded-full bg-card dark:bg-white/5 border border-card-border/50 flex items-center justify-center cursor-pointer"
-                >
-                    <Search className="w-3.5 h-3.5 text-slate-500" />
+        <div className="space-y-3">
+            <SegmentTabs tabs={PERIOD_TABS} value={period} onChange={setPeriod} />
+            <div className="flex items-center gap-2">
+                {SCOPE_TABS.map(t => (
+                    <button key={t.id} type="button" onClick={() => setScope(t.id)}
+                        className={cn('h-8 px-3.5 rounded-full text-[12.5px] font-bold border', scope === t.id ? 'bg-accent text-white border-accent' : 'bg-card text-secondary border-card-border')}>
+                        {t.label}
+                    </button>
+                ))}
+                <button type="button" onClick={() => setShowSearch(s => !s)} aria-label="Kişi ara" aria-pressed={showSearch}
+                    className={cn('ml-auto w-8 h-8 rounded-full border flex items-center justify-center shrink-0', showSearch ? 'bg-foreground text-background border-foreground' : 'bg-card border-card-border text-secondary')}>
+                    <Search className="w-4 h-4" />
                 </button>
             </div>
-
             {showSearch && (
-                <input
-                    autoFocus
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="İsim ara..."
-                    className="w-full mb-4 px-4 py-2.5 rounded-2xl bg-card dark:bg-white/5 border border-card-border/50 text-[12px] font-bold text-foreground placeholder:text-slate-400 outline-none"
-                />
+                <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="İsim ara"
+                    className="w-full h-11 px-4 rounded-2xl bg-card border border-card-border text-[14px] font-semibold text-foreground outline-none focus:border-accent" />
             )}
 
-            {/* Zaman aralığı filtresi */}
-            <div className="flex gap-1.5 mb-2.5">
-                {PERIOD_TABS.map(t => (
-                    <button
-                        key={t.id}
-                        onClick={() => { haptics.tap(); setPeriod(t.id); }}
-                        className={cn(
-                            "px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border-0 cursor-pointer active:scale-95",
-                            period === t.id ? "bg-orange-500 text-white" : "bg-card dark:bg-white/5 text-slate-500 border border-card-border/50"
-                        )}
-                    >
-                        {t.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Sosyal kapsam filtresi */}
-            <div className="flex gap-1.5 mb-6">
-                {SCOPE_TABS.map(t => (
-                    <button
-                        key={t.id}
-                        onClick={() => { haptics.tap(); setScope(t.id); }}
-                        className={cn(
-                            "px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border-0 cursor-pointer active:scale-95",
-                            scope === t.id ? "bg-slate-900 text-white" : "bg-card dark:bg-white/5 text-slate-500 border border-card-border/50"
-                        )}
-                    >
-                        {t.label}
-                    </button>
-                ))}
-            </div>
-
-            {loading ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-2 opacity-60">
-                    <span className="text-xl animate-bounce">🐾</span>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Sıralama hazırlanıyor...</span>
-                </div>
-            ) : cityUnavailable ? (
-                <div className="text-center py-10 text-gray-500 text-[11px] font-bold px-6 leading-relaxed">
-                    Aynı şehirdeki dostları görebilmek için profiline bir konum eklemen yeterli 📍
-                </div>
-            ) : filteredRows.length === 0 ? (
-                <div className="text-center py-10 text-gray-500 text-xs font-bold uppercase tracking-widest px-6 leading-relaxed">
-                    {isSearching ? 'Eşleşen kullanıcı bulamadık.' : 'Bu aralıkta henüz kimse yürümemiş — ilk sen ol! 🏃'}
-                </div>
+            {!current ? (
+                <div className="space-y-2 pt-2" aria-busy>{[0, 1, 2, 3].map(i => <div key={i} className="h-16 rounded-2xl bg-card-border/50 animate-pulse" />)}</div>
+            ) : current.cityUnavailable ? (
+                <WalkCard className="p-5 text-center text-[13.5px] font-semibold text-secondary">Aynı şehirdeki dostları görmek için profiline şehrini ekle 📍</WalkCard>
+            ) : filtered.length === 0 ? (
+                <WalkCard className="p-5 text-center text-[13.5px] font-semibold text-secondary">
+                    {searching ? 'Eşleşen kullanıcı yok.' : scope === 'friends' ? 'Arkadaşların bu aralıkta henüz yürümemiş. İlk sen ol! 🐾' : 'Bu aralıkta henüz kimse yürümemiş. İlk sen ol! 🐾'}
+                </WalkCard>
             ) : (
                 <>
-                    {/* --- PODIUM (TOP 3) --- */}
-                    {!isSearching && (
-                        <>
-                        {/* Ekran 12: skor biriminin ne olduğunu açıklayan etiket
-                            (design-reference/walk-final/'de podyumun üstünde var,
-                            bizde yoktu — "km" rakamının ne temsil ettiği belirsizdi) */}
-                        <div className="text-center mb-3">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Aktif Patiler (Toplam Mesafe)</span>
-                        </div>
-                        <div className="mb-8 flex items-end justify-center gap-3">
-                            {top3[1] && (
-                                <div className="flex flex-col items-center">
-                                    <div className={cn("w-14 h-14 rounded-full border-4 border-slate-300 relative mb-2 shadow-lg", currentUser?.id === top3[1].id ? "border-orange-500" : "")}>
-                                        <img loading="lazy" decoding="async" src={top3[1].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[1].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
-                                        <div className="absolute -bottom-2 inset-x-0 mx-auto w-5 h-5 bg-slate-300 text-white font-bold rounded-full flex items-center justify-center text-[10px] shadow">2</div>
-                                    </div>
-                                    <div className="text-[10px] font-bold text-foreground dark:text-gray-200 text-center line-clamp-1 w-16">{currentUser?.id === top3[1].id ? 'Sen' : top3[1].name}</div>
-                                    <div className="text-[9px] font-black text-orange-600 mt-0.5">{top3[1].km.toFixed(1).replace('.', ',')} km</div>
-                                </div>
-                            )}
-
-                            {top3[0] && (
-                                <div className="flex flex-col items-center -mt-6">
-                                    <span className="text-xl mb-1">👑</span>
-                                    <div className={cn("w-20 h-20 rounded-full border-4 border-amber-400 relative mb-2 shadow-xl shadow-amber-500/20", currentUser?.id === top3[0].id ? "ring-4 ring-orange-500/30" : "")}>
-                                        <img loading="lazy" decoding="async" src={top3[0].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[0].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
-                                        <div className="absolute -bottom-2.5 inset-x-0 mx-auto w-6 h-6 bg-amber-400 text-white font-bold rounded-full flex items-center justify-center text-[11px] shadow">1</div>
-                                    </div>
-                                    <div className="text-xs font-black text-foreground dark:text-white text-center line-clamp-1 w-20">{currentUser?.id === top3[0].id ? 'Sen' : top3[0].name}</div>
-                                    <div className="text-[10px] font-black text-orange-600 mt-0.5">{top3[0].km.toFixed(1).replace('.', ',')} km</div>
-                                </div>
-                            )}
-
-                            {top3[2] && (
-                                <div className="flex flex-col items-center">
-                                    <div className={cn("w-14 h-14 rounded-full border-4 border-orange-300 relative mb-2 shadow-lg", currentUser?.id === top3[2].id ? "border-orange-500" : "")}>
-                                        <img loading="lazy" decoding="async" src={top3[2].avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3[2].id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
-                                        <div className="absolute -bottom-2 inset-x-0 mx-auto w-5 h-5 bg-orange-400 text-white font-bold rounded-full flex items-center justify-center text-[10px] shadow">3</div>
-                                    </div>
-                                    <div className="text-[10px] font-bold text-foreground dark:text-gray-200 text-center line-clamp-1 w-16">{currentUser?.id === top3[2].id ? 'Sen' : top3[2].name}</div>
-                                    <div className="text-[9px] font-black text-orange-600 mt-0.5">{top3[2].km.toFixed(1).replace('.', ',')} km</div>
-                                </div>
-                            )}
-                        </div>
-                        </>
+                    {!searching && (
+                        <WalkCard className="pt-4 pb-5 px-3">
+                            <p className="text-center text-[12px] font-bold text-secondary mb-3">Aktif Patiler (Toplam Mesafe)</p>
+                            <div className="flex items-end justify-center gap-3">
+                                {[filtered[1], filtered[0], filtered[2]].map((r, i) => r && (
+                                    <Podium key={r.id} row={r} place={i === 1 ? 1 : i === 0 ? 2 : 3} isMe={r.id === userId} />
+                                ))}
+                            </div>
+                        </WalkCard>
                     )}
 
-                    {/* --- LIST --- */}
-                    <div className="space-y-2.5">
-                        {(isSearching ? filteredRows : rest).map((item, i) => {
-                            const isMe = currentUser?.id === item.id;
-                            const rank = isSearching ? rows.findIndex(r => r.id === item.id) + 1 : i + 4;
-                            return (
-                                <motion.div
-                                    key={item.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true }}
-                                    className={cn("bg-card dark:bg-[#1A1A1A] p-3.5 rounded-[1.25rem] flex items-center shadow-sm border transform transition-all",
-                                        isMe ? "border-orange-500/50 bg-orange-500/5" : "border-card-border/50 dark:border-white/5"
-                                    )}
-                                >
-                                    <div className="font-bold text-gray-500 dark:text-gray-400 w-6 text-center text-xs">{rank}</div>
-                                    <div className="w-10 h-10 rounded-full mx-3">
-                                        <img loading="lazy" decoding="async" src={item.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${item.id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="font-black text-[11px] text-foreground dark:text-white flex items-center gap-1.5 uppercase tracking-wide">
-                                            {isMe ? 'Sen' : item.name}
-                                            {isMe && <span className="bg-orange-500 text-white text-[7px] px-1.5 py-0.5 rounded">SEN</span>}
-                                        </div>
-                                        {/* Baran'ın "sıralama tatlı bir yarış gibi hissettirmeli" isteği —
-                                            "Sen" satırında pet adı yerine, hemen üstteki GERÇEK kişiyle
-                                            aradaki gerçek mesafe farkı gösteriliyor (uydurma bir hedef değil). */}
-                                        {isMe && !isSearching && rank > 1 && rows[rank - 2] ? (
-                                            <div className="text-[9px] font-bold text-orange-500/80 mt-0.5">
-                                                {(rows[rank - 2].km - item.km).toFixed(1).replace('.', ',')} km kaldı — {rows[rank - 2].name}&apos;i geçebilirsin! 🔥
-                                            </div>
-                                        ) : (
-                                            <div className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5">{item.pet}</div>
-                                        )}
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="font-black text-xs text-orange-600">{item.km.toFixed(1).replace('.', ',')} km</div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
+                    {(searching ? filtered : filtered.slice(3, 10)).length > 0 && (
+                        <WalkCard className="divide-y divide-card-border overflow-hidden">
+                            {(searching ? filtered : filtered.slice(3, 10)).map(r => (
+                                <ListRow key={r.id} row={r} rank={rows.findIndex(x => x.id === r.id) + 1} isMe={r.id === userId} />
+                            ))}
+                        </WalkCard>
+                    )}
 
-                    {/* Kullanıcı ilk 100'de değilse (bu aralıkta hiç yürümemiş olabilir) ayrı, sabit satır.
-                        Baran'ın bulduğu gerçek hata: rank uydurmaydı ("ilk 100 + 1"), km her zaman 0
-                        gösteriliyordu. Artık gerçek mesafe (yukarıdaki ikinci RPC çağrısından) ve dürüst
-                        bir "100+" etiketi — tam sırasını iddia etmiyoruz, olmayan bir kesinlik vermiyoruz. */}
-                    {!isSearching && myRankFallback && currentUser && (
-                        <div className="mt-4">
-                            <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-3.5 flex items-center">
-                                <div className="font-black w-9 text-center text-orange-600 text-xs">{myRankFallback.rank}+</div>
-                                <div className="w-10 h-10 rounded-full mx-3 overflow-hidden">
-                                    <img loading="lazy" decoding="async" src={currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.id}`} className="w-full h-full object-cover" />
-                                </div>
-                                <div className="flex-1 font-black text-[11px] text-foreground dark:text-white uppercase tracking-wide">Sen</div>
-                                <div className="font-black text-xs text-orange-600">{myRankFallback.km.toFixed(1).replace('.', ',')} km</div>
+                    {!searching && me && !meInTop10 && user && (
+                        <div className="sticky bottom-[calc(108px+env(safe-area-inset-bottom,0px))]">
+                            <div className="rounded-2xl bg-accent/10 border border-accent/30 px-3 py-3 flex items-center gap-3">
+                                <span className="w-9 text-center text-[14px] font-black text-accent">{me.rank ?? '100+'}</span>
+                                <Avatar src={user.avatar} name={user.name || 'Sen'} className="w-10 h-10 text-sm" />
+                                <span className="flex-1 min-w-0">
+                                    <span className="block text-[14px] font-extrabold">Sen</span>
+                                    {ahead ? (
+                                        <span className="block text-[11.5px] font-semibold text-accent truncate">{km(ahead.km - me.km)} km kaldı, {ahead.name} hemen önünde</span>
+                                    ) : !me.rank && lastListed && lastListed.km > me.km ? (
+                                        <span className="block text-[11.5px] font-semibold text-accent truncate">Listeye girmene {km(lastListed.km - me.km)} km kaldı</span>
+                                    ) : null}
+                                </span>
+                                <span className="text-[14px] font-black text-accent">{km(me.km)} km</span>
                             </div>
-                            {/* Teşvik edici, gerçek veriye dayalı bir mesaj — Baran'ın "sıralama tatlı
-                                bir yarış gibi hissettirmeli" isteği. Uydurma bir hedef değil: listede
-                                görünen son kişinin GERÇEK mesafesiyle karşılaştırılıyor. */}
-                            {rows.length > 0 && rows[rows.length - 1].km > myRankFallback.km && (
-                                <p className="text-[10.5px] font-bold text-orange-600/80 text-center mt-2 px-4">
-                                    Sıralamaya girmene sadece {(rows[rows.length - 1].km - myRankFallback.km).toFixed(1).replace('.', ',')} km kaldı — hadi bir yürüyüşe çık! 🐾
-                                </p>
-                            )}
                         </div>
                     )}
                 </>
             )}
+        </div>
+    );
+}
+
+function Podium({ row, place, isMe }: { row: Row; place: 1 | 2 | 3; isMe: boolean }) {
+    const first = place === 1;
+    return (
+        <div className={cn('flex flex-col items-center w-24', first && '-mt-4')}>
+            {first && <span className="text-[22px] leading-none mb-1" aria-hidden>👑</span>}
+            <div className="relative">
+                <Avatar src={row.avatar} name={row.name}
+                    className={cn('border-4', first ? 'w-20 h-20 text-2xl border-amber-400' : 'w-16 h-16 text-xl', place === 2 && 'border-zinc-300', place === 3 && 'border-orange-300', isMe && 'ring-4 ring-accent/30')} />
+                <span className={cn('absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full text-white text-[11px] font-black flex items-center justify-center shadow',
+                    first ? 'bg-amber-400' : place === 2 ? 'bg-zinc-400' : 'bg-orange-400')}>{place}</span>
+            </div>
+            <span className={cn('mt-3 text-center font-extrabold truncate w-full', first ? 'text-[15px]' : 'text-[13px]')}>{isMe ? 'Sen' : row.name}</span>
+            <span className={cn('font-black text-accent', first ? 'text-[14px]' : 'text-[12.5px]')}>{km(row.km)} km</span>
+        </div>
+    );
+}
+
+function ListRow({ row, rank, isMe }: { row: Row; rank: number; isMe: boolean }) {
+    return (
+        <div className={cn('flex items-center gap-3 px-3 py-3', isMe && 'bg-accent/5')}>
+            <span className="w-7 text-center text-[13px] font-bold text-secondary">{rank}</span>
+            <Avatar src={row.avatar} name={row.name} className="w-10 h-10 text-sm" />
+            <span className="flex-1 min-w-0">
+                <span className="block text-[14px] font-extrabold truncate">{isMe ? 'Sen' : row.name}</span>
+                <span className="block text-[11.5px] font-semibold text-secondary truncate">{row.pet}</span>
+            </span>
+            <span className="text-[13.5px] font-black">{km(row.km)} km</span>
         </div>
     );
 }
