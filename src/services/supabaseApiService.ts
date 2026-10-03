@@ -2670,8 +2670,9 @@ export class SupabaseApiService implements IApiService {
                 created_at: o.created_at
             }));
         } catch (err) {
-            console.warn("Supabase system_announcements query failed, falling back to mockApi:", err);
-            return this.mockApi.getAnnouncements();
+            // Hata hâlinde örnek duyuru gösterilmez; ana sayfada duyuru kanalı görünmez.
+            console.warn("system_announcements okunamadı:", err);
+            return [];
         }
     }
 
@@ -2922,8 +2923,9 @@ export class SupabaseApiService implements IApiService {
 
             return results.sort((a, b) => a.rank - b.rank);
         } catch (err) {
-            console.warn("Supabase getDailyStars failed, falling back to mockApi:", err);
-            return this.mockApi.getDailyStars(dateString);
+            // Hata hâlinde örnek yıldız gösterilmez; ana sayfada Yıldız Patiler kanalı görünmez.
+            console.warn("daily_stars okunamadı:", err);
+            return [];
         }
     }
 

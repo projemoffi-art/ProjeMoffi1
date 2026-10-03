@@ -440,6 +440,22 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   `execute_sql` tek işlemdir; sonda bilerek `raise exception` atan deneme bloğuyla AYNI komuta kalıcı değişiklik koyma. Bilinçli kalanlar:
   `*_cards` görünümleri (tasarım gereği), `spatial_ref_sys`, `postgis`/`pg_net` public şemada, kapalı tablolar (RLS var politika yok).
 
+### Ana sayfa, alt menü, Moffi AI, kenar paneli (8.63, 2026-10-03 — KAPANDI)
+
+- **8.63a Ana sayfa** son hâl `design-reference/home-final/README.md` başında. `app/home/page.tsx` yalnızca sıra + veri; bölümler
+  `components/home/*`. Sağlık hatırlatmaları tüm hayvanlar için `hooks/useUpcomingCare.ts` (kenar paneli de kullanır).
+  Hikâye kanalı içeriksizse görünmez (`useStories`; yer tutucu hikâye üretme). Varsayılan tema AÇIK (`ThemeContext`); `<html lang="tr">`.
+- **8.63b Alt menü** (`MoffiBottomNav`): Ana Sayfa · Keşfet · Moffi AI (orta) · Pati Yardım · Profil; etiketli, aktif turuncu.
+- **8.63c Moffi AI** tek panel `components/ai/MoffiAssistant.tsx` (ekranda kendi düğmesi yok). Açmak için
+  `window.dispatchEvent(new CustomEvent('open-ai-assistant', { detail: { prompt? | prefill? } }))`. Seçili hayvanın kimlik, sağlık özeti
+  ve yürüyüşü gönderilir; sunucu (`api/ai/chat`) geçmişi (son 12) modele verir, ton/uzunluk `settings.ai.personality/detailLevel`
+  (Ayarlar → Moffi AI). Model hata verirse 503 + hak iadesi; hazır/uydurma cevap YOK. Sahte "Moffi Core" radar ekranı silindi.
+- **8.63d Kenar paneli** `components/edge/EdgePanel.tsx` + TEK katalog `edgeCatalog.ts` (panelin Düzenle'si ve Ayarlar → Kenar Paneli
+  aynı listeyi, aynı `settings.edge`'i kullanır; eski `settings.sidebar` hiç okunmuyordu). Widget'lar gerçek: yürüyüş, hava (Open-Meteo,
+  izin varsa kendiliğinden, yoksa dokununca), sıradaki sağlık işi, gerçek künye QR (`/id/<petId>`). Eski `MoffiSidebar` (sahte hava/adım/
+  su/ruh hali/QR/kapsül) ve `ActivityContext.activeMode/recTime/orderStep` silindi. `getWeather` hata hâlinde `null` döner.
+- **8.63e Bildirim izni** Ayarlar → Bildirimler'de gerçek aboneliğe bağlı (`PushSubscriptionRow`, `push_subscriptions`).
+
 ### Supabase bağlayıcısı (claude.ai) notu
 `DROP` ve `DELETE` geçen her komut için ayrı onay ister (VS Code panelinde gösterilemez → "declined"; "her zaman izin ver" aşmaz).
 Migration'ı bu kelimeleri içermeyen parçalar (Claude uygular) + içeren parça (Baran SQL Editor'dan) diye böl; kelimeyi gizleme.
@@ -505,7 +521,7 @@ ilgili maddeyi tek satırla hatırlat.
 **Hemen**
 - [ ] SQL Editor'da `supabase/migrations/20261003102000_walk_cleanup_MANUAL_sql_editor.sql` çalıştır (acil değil, tekrar eden
       politika/index temizliği; DROP içerdiği için bağlayıcıdan uygulanamıyor).
-- [ ] 🔴 **`GEMINI_API_KEY`** (Google AI Studio) → Vercel Production + yeniden yayın. Yok: yapay zekâ canlıda çalışmıyor ("API Key not configured").
+- [ ] 🔴 **`GEMINI_API_KEY`** (Google AI Studio) → Vercel Production + yeniden yayın. Yok: yapay zekâ canlıda çalışmıyor. Yereldeki `.env.local` anahtarı da Google tarafından reddediliyor (401, 2026-10-03): AI Studio’dan yeni anahtar her ikisine.
       Google tarafında da faturalandırma limiti/uyarısı önerilir (kod tarafında aylık 50 $ tavan var).
 - [ ] 🔴 **Yönetici iki adımlı doğrulama kurulumu:** `/admin` şu an KİLİTLİ (doğrulama olmadan açılmaz, işletme başvuru onayı dahil). Yönetici
       hesabının e-postası Baran'a ait olmadığı için ertelendi. Kurulunca Claude `20261002180000_admin_requires_mfa.sql`'i uygular
@@ -569,3 +585,6 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
 - [ ] Bakım modu normal kullanıcıda çalışmıyor (Bölüm 9). `LiveMap` Carto altlığı OSM'e (8.1). Beslenme: `/food` localStorage → Supabase,
       `NutritionModal` kararı (Bölüm 6, 5.4).
 - [ ] İlk gerçek hesap silme talebinde (en erken 2026-11-01) ilk gece çalışmasından sonra sonucu doğrula (8.57).
+- [ ] Sahte veriyle çalışan ekranlar (2026-10-03 ana sayfa turunda bulundu, ana sayfadan/kenar panelinden bağlantıları kaldırıldı):
+      `/wallet` (`data/mockWallet`), `MoffiMapsModal` (sahte işaretler), mağaza ürün yorumları (`petshop` "Ahmet S." vb.),
+      `ActionHubDrawer` ("Moffi Pay cüzdan", "Aile"). Ayarlar'daki "Anlık Bildirimler" anahtarı (`pushEnabled`, Bildirim Ayarları bölümü) hâlâ sadece işaret.

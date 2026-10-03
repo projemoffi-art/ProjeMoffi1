@@ -2,9 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '@/services/apiService';
 import { lostService } from '@/services/lostService';
 
+// Ana sayfa hikâye kanalları. Her kanal yalnızca GERÇEK içerikle gösterilir: içeriği olmayan kanal için
+// "yakında" / "kampanya yok" gibi yer tutucu hikâye üretilmez, kanal hiç görünmez.
+
 // Kayıp ilanı başlığı (LostUI'deki listingTitle ile aynı kural; hook bileşen modülü içe aktarmasın diye burada).
 const listingTitle = (l: { petName: string | null; kind: string }) =>
     l.petName?.trim() || (l.kind === 'found' ? 'Bulunan dost' : 'Kayıp dost');
+
 export interface Story {
     id: string;
     media_url: string;
@@ -12,68 +16,62 @@ export interface Story {
     title?: string;
     description?: string;
     badge?: string;
+    /** Düğme yalnızca gidilecek gerçek bir yer varsa (uygulama içi yol, dış bağlantı, kupon kodu) gösterilir. */
     ctaText?: string;
-    ctaType?: 'toast' | 'chat' | 'map' | 'coupon' | 'link';
+    ctaType?: 'link' | 'url' | 'coupon';
     ctaValue?: string;
     expires_at?: string;
 }
 
+export type StoryChannel = 'stars' | 'sos' | 'announcements' | 'vet' | 'deals';
+
 export interface UserStoryGroup {
     user_id: string;
+    channel: StoryChannel;
     author_name: string;
     author_avatar: string | null;
     stories: Story[];
-    hasUnseen: boolean;
+}
+
+// Sunucudan gelen satırların bu dosyada kullanılan alanları
+interface AnnouncementRow { id: string | number; title?: string; description?: string; media_url?: string | null; badge?: string | null; cta_text?: string | null; cta_type?: string | null; cta_value?: string | null; expires_at?: string | null; created_at?: string | null }
+interface StarRow { id?: string; rank?: number; title?: string; description?: string; badge?: string; media_url?: string | null; created_at?: string; pet?: { image?: string | null } | null }
+interface VetAdviceRow { id: string; content?: string; media_url?: string | null; badge?: string | null; clinic_id?: string | null; created_at?: string; profiles?: { business_name?: string; full_name?: string; avatar_url?: string | null } | null }
+interface DealRow { id: string; media_url?: string | null; created_at: string; expires_at?: string; title?: string; description?: string; value?: string | null; coupon_code?: string | null }
+
+function ctaOf(type: unknown, value: unknown, text: unknown): Pick<Story, 'ctaText' | 'ctaType' | 'ctaValue'> {
+    const v = String(value || '').trim();
+    if (!v) return {};
+    const label = String(text || '').trim();
+    if (type === 'coupon') return { ctaType: 'coupon', ctaValue: v, ctaText: label || 'Kodu kopyala' };
+    if (v.startsWith('/')) return { ctaType: 'link', ctaValue: v, ctaText: label || 'Aç' };
+    if (/^https?:\/\//.test(v)) return { ctaType: 'url', ctaValue: v, ctaText: label || 'Aç' };
+    return {};
 }
 
 export function useStories() {
     const [storyGroups, setStoryGroups] = useState<UserStoryGroup[]>([]);
+    const [activeLostCount, setActiveLostCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchStories = useCallback(async () => {
         setIsLoading(true);
         try {
-            const lostListings = await lostService.list().catch(() => []);
-            // Fetch live system announcements
-            const announcements = await apiService.getAnnouncements();
-            // Fetch today's daily star pets (up to 5)
             const todayStr = new Date().toISOString().slice(0, 10);
-            const dailyStars = await apiService.getDailyStars(todayStr) || [];
-            // Fetch live vet health advices
-            const vetAdvices = await apiService.getVetAdvices() || [];
+            const [lostListings, announcements, dailyStars, vetAdvices, liveDeals] = await Promise.all([
+                lostService.list().catch(() => []),
+                apiService.getAnnouncements().catch(() => []),
+                apiService.getDailyStars(todayStr).catch(() => []),
+                apiService.getVetAdvices().catch(() => []),
+                fetch('/api/deals').then(r => r.json()).then((d): DealRow[] => (d?.success ? d.deals || [] : [])).catch((): DealRow[] => []),
+            ]);
 
-            // Fetch live business deals
-            let liveDeals: any[] = [];
-            try {
-                const dealsRes = await fetch('/api/deals');
-                const dealsData = await dealsRes.json();
-                if (dealsData.success) {
-                    liveDeals = dealsData.deals;
-                }
-            } catch (e) {
-                console.error("Deals fetch error:", e);
-            }
-            
-            const liveAnnStories: Story[] = (announcements || [])
-                .filter((ann: any) => {
-                    if (!ann.expires_at) return true;
-                    return new Date(ann.expires_at).getTime() > Date.now();
-                })
-                .map((ann: any) => ({
-                    id: ann.id,
-                    media_url: ann.media_url || 'https://images.unsplash.com/photo-1589758438368-0ad531db3366?q=80&w=200',
-                    created_at: ann.created_at || new Date().toISOString(),
-                    title: ann.title,
-                    description: ann.description,
-                    badge: ann.badge || 'Duyuru',
-                    ctaText: ann.cta_text || 'İncele',
-                    ctaType: ann.cta_type || 'toast',
-                    ctaValue: ann.cta_value || ''
-                }));
-            
-            // Sadece yayındaki kayıp ilanları; dokununca ilanın kendisi açılır (Gördüm / Sahibine yaz oradan).
-            const liveSosStories: Story[] = lostListings
-                .filter(l => l.kind === 'lost' && l.status === 'active' && l.photos[0])
+            const activeLost = lostListings.filter(l => l.kind === 'lost' && l.status === 'active');
+            setActiveLostCount(activeLost.length);
+
+            // Yayındaki kayıp ilanları; dokununca ilanın kendisi açılır (Gördüm / Sahibine yaz oradan).
+            const sosStories: Story[] = activeLost
+                .filter(l => l.photos[0])
                 .slice(0, 10)
                 .map(l => ({
                     id: l.id,
@@ -87,156 +85,74 @@ export function useStories() {
                     ctaValue: `/kayip/${l.id}`,
                 }));
 
-            const featuredStories: Story[] = (dailyStars || []).map((star: any) => ({
-                id: star.id || `daily_star_${star.rank}`,
-                media_url: star.media_url || '/images/moffi_pet_trio.png',
-                created_at: star.created_at || new Date().toISOString(),
-                title: star.title,
-                description: star.description,
-                badge: star.badge || 'Günün Yıldızı 🌟',
-                ctaText: 'İncele',
-                ctaType: 'toast',
-                ctaValue: star.description
-            }));
+            const announcementStories: Story[] = ((announcements || []) as AnnouncementRow[])
+                .filter(a => !a.expires_at || new Date(a.expires_at).getTime() > Date.now())
+                .filter(a => a.media_url)
+                .map(a => ({
+                    id: String(a.id),
+                    media_url: a.media_url as string,
+                    created_at: a.created_at || new Date().toISOString(),
+                    title: a.title,
+                    description: a.description,
+                    badge: a.badge || 'Duyuru',
+                    expires_at: a.expires_at || undefined,
+                    ...ctaOf(a.cta_type, a.cta_value, a.cta_text),
+                }));
 
-            if (featuredStories.length === 0) {
-                featuredStories.push({
-                    id: 'feat_default_1',
-                    media_url: '/images/moffi_pet_trio.png',
-                    created_at: new Date().toISOString(),
-                    title: 'Günün Yıldız Patileri Seçiliyor 🌟',
-                    description: 'Moffi Evreninde günün en aktif patileri birazdan burada açıklanacak! Takipte kalın.',
-                    badge: 'Moffi Yıldızı',
-                    ctaText: 'Keşfet',
-                    ctaType: 'toast',
-                    ctaValue: 'Pati Keşfet alanına yönlendiriliyorsunuz...'
-                });
-            }
+            const starStories: Story[] = ((dailyStars || []) as StarRow[])
+                .filter(s => s.media_url || s.pet?.image)
+                .map(s => ({
+                    id: String(s.id || `daily_star_${s.rank}`),
+                    media_url: (s.media_url || s.pet?.image) as string,
+                    created_at: s.created_at || new Date().toISOString(),
+                    title: s.title,
+                    description: s.description,
+                    badge: s.badge || 'Günün Yıldızı',
+                }));
 
-            const liveVetStories: Story[] = (vetAdvices || []).map((advice: any) => {
-                if (advice.clinic_id && advice.clinic) {
+            const vetStories: Story[] = ((vetAdvices || []) as VetAdviceRow[])
+                .filter(a => a.content)
+                .map(a => {
+                    const clinicName = a.profiles?.business_name || a.profiles?.full_name;
                     return {
-                        id: advice.id,
-                        media_url: advice.media_url || '/images/moffi_pet_trio.png',
-                        created_at: advice.created_at || new Date().toISOString(),
-                        title: advice.clinic.name,
-                        description: advice.content,
-                        badge: advice.badge || 'Tavsiye 🩺',
-                        ctaText: 'Randevu Al 📅',
-                        ctaType: 'url' as any,
-                        ctaValue: `/vet?clinicId=${advice.clinic_id}`
+                        id: String(a.id),
+                        media_url: a.media_url || a.profiles?.avatar_url || '/images/moffi_pet_trio.png',
+                        created_at: a.created_at || new Date().toISOString(),
+                        title: clinicName ? `${clinicName} öneriyor` : 'Veteriner tavsiyesi',
+                        description: a.content,
+                        badge: a.badge || 'Tavsiye',
+                        ...(a.clinic_id && clinicName ? { ctaText: 'Kliniği gör', ctaType: 'link' as const, ctaValue: `/vet?clinicId=${a.clinic_id}` } : {}),
                     };
-                }
-                return {
-                    id: advice.id,
-                    media_url: advice.media_url || '/images/moffi_pet_trio.png',
-                    created_at: advice.created_at || new Date().toISOString(),
-                    title: '🩺 Moffi Sağlık Tavsiyesi',
-                    description: advice.content,
-                    badge: advice.badge || 'Sağlık Uyarısı 🩺',
-                    ctaText: 'Sağlık Rehberini Oku 📚',
-                    ctaType: 'toast',
-                    ctaValue: 'Sağlık ve Koruma rehberi açılıyor...'
-                };
-            });
+                });
 
-            if (liveVetStories.length === 0) {
-                liveVetStories.push(
-                    {
-                        id: 'vet-default-1',
-                        media_url: '/images/moffi_pet_trio.png',
-                        created_at: new Date().toISOString(),
-                        title: '🩺 Moffi Sağlık Tavsiyesi',
-                        description: 'Yaz aylarında asfalt sıcaklığı hava sıcaklığının iki katına çıkabilir. Patileri yakmamak için yürüyüşleri sabah veya akşam yapın.',
-                        badge: 'Yaz Bakımı ☀️',
-                        ctaText: 'Sağlık Rehberini Oku 📚',
-                        ctaType: 'toast',
-                        ctaValue: 'Pati Sağlığı ve Koruma rehberi açılıyor...'
-                    },
-                    {
-                        id: 'vet-default-2',
-                        media_url: '/images/moffi_pet_trio.png',
-                        created_at: new Date().toISOString(),
-                        title: '🩺 Moffi Sağlık Tavsiyesi',
-                        description: 'İlkbahar ve yaz aylarında dış parazit aşılarını aksatmayın. Çimlerde yürüyüş sonrası pati aralarını mutlaka kontrol edin.',
-                        badge: 'Sağlık Uyarısı 🩺',
-                        ctaText: 'Sağlık Rehberini Oku 📚',
-                        ctaType: 'toast',
-                        ctaValue: 'Pati Sağlığı ve Koruma rehberi açılıyor...'
-                    }
-                );
-            }
+            const dealStories: Story[] = (liveDeals || [])
+                .filter(d => d.media_url)
+                .map(d => ({
+                    id: String(d.id),
+                    media_url: d.media_url as string,
+                    created_at: d.created_at,
+                    expires_at: d.expires_at,
+                    title: d.title,
+                    description: d.description,
+                    badge: d.value ? `${d.value} fırsat` : 'Fırsat',
+                    ...ctaOf(d.coupon_code ? 'coupon' : null, d.coupon_code, d.coupon_code ? 'Kodu kopyala' : ''),
+                }));
 
-            const systemChannels: UserStoryGroup[] = [
-                {
-                    user_id: 'system_featured_pets',
-                    author_name: '👑 Yıldız Patiler',
-                    // Not: getDailyStarCandidates() fotoğrafsız hayvanlar için zaten '/images/moffi_pet_trio.png'e
-                    // düşüyor (bkz. supabaseApiService.ts) — o jenerik görseli burada da eleyip gerçek bir
-                    // temsil fotoğrafına (header-hero.jpg) çeviriyoruz.
-                    author_avatar: (() => {
-                        const img = dailyStars[0]?.pet?.image || dailyStars[0]?.pet?.avatar;
-                        return (img && img !== '/images/moffi_pet_trio.png') ? img : '/images/header-hero.jpg';
-                    })(),
-                    hasUnseen: true,
-                    stories: featuredStories
-                },
-                {
-                    user_id: 'system_sos',
-                    author_name: '🚨 ACİL SOS',
-                    author_avatar: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=200',
-                    hasUnseen: true,
-                    stories: liveSosStories
-                },
-                {
-                    user_id: 'system_announcements',
-                    author_name: '📢 Moffi Duyuru',
-                    author_avatar: 'https://images.unsplash.com/photo-1589758438368-0ad531db3366?q=80&w=200',
-                    hasUnseen: true,
-                    stories: liveAnnStories
-                },
-                {
-                    user_id: 'system_vet',
-                    author_name: '🩺 Vet Tavsiyesi',
-                    author_avatar: vetAdvices[0]?.clinic?.imageUrl || '/images/moffi_pet_trio.png',
-                    hasUnseen: true,
-                    stories: liveVetStories
-                },
-                {
-                    user_id: 'system_deals',
-                    author_name: '🎁 Günün Fırsatı',
-                    author_avatar: 'https://images.unsplash.com/photo-1585499193151-0f50d54c4e1c?q=80&w=200',
-                    hasUnseen: true,
-                    stories: liveDeals.length > 0 ? liveDeals.map(deal => ({
-                        id: deal.id,
-                        media_url: deal.media_url,
-                        created_at: deal.created_at,
-                        expires_at: deal.expires_at,
-                        title: deal.title,
-                        description: deal.description,
-                        badge: deal.value ? `${deal.value} Fırsat` : 'Fırsat',
-                        ctaText: deal.coupon_code ? 'Kuponu Al 🎟️' : 'Detayları Gör',
-                        ctaType: deal.coupon_code ? 'coupon' : 'toast',
-                        ctaValue: deal.coupon_code || 'Kampanya detayları yükleniyor...'
-                    })) : [
-                        {
-                            id: 'deal_default_1',
-                            media_url: 'https://images.unsplash.com/photo-1554818538-98e34543195f?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Bölgenizde Aktif Kampanya Yok',
-                            description: 'Şu an sizin veya dostunuz için aktif bir fırsat bulamadık. Lütfen daha sonra tekrar kontrol edin.',
-                            badge: 'Moffi Deals',
-                            ctaText: 'Geri Dön',
-                            ctaType: 'toast',
-                            ctaValue: 'Ana sayfaya dönülüyor...'
-                        }
-                    ]
-                }
+            const starAvatar = (() => {
+                const img = dailyStars?.[0]?.pet?.image;
+                return img && img !== '/images/moffi_pet_trio.png' ? img : '/images/header-hero.jpg';
+            })();
+
+            const groups: UserStoryGroup[] = [
+                { user_id: 'system_featured_pets', channel: 'stars', author_name: 'Yıldız Patiler', author_avatar: starAvatar, stories: starStories },
+                { user_id: 'system_sos', channel: 'sos', author_name: 'ACİL SOS', author_avatar: null, stories: sosStories },
+                { user_id: 'system_announcements', channel: 'announcements', author_name: 'Moffi Duyuru', author_avatar: null, stories: announcementStories },
+                { user_id: 'system_vet', channel: 'vet', author_name: 'Vet Tavsiyesi', author_avatar: null, stories: vetStories },
+                { user_id: 'system_deals', channel: 'deals', author_name: 'Günün Fırsatı', author_avatar: null, stories: dealStories },
             ];
-
-            setStoryGroups(systemChannels);
+            setStoryGroups(groups.filter(g => g.stories.length > 0));
         } catch (err) {
-            console.error('Error fetching stories:', err);
+            console.error('Hikâyeler yüklenemedi:', err);
         } finally {
             setIsLoading(false);
         }
@@ -244,35 +160,16 @@ export function useStories() {
 
     useEffect(() => {
         fetchStories();
-
-        const handleSync = () => {
-            fetchStories();
-        };
-        
+        const handleSync = () => fetchStories();
         window.addEventListener('moffi_announcements_changed', handleSync);
-        
-        // Tab-to-tab real-time sync channel
+        // Yönetici panelinde duyuru değişince açık sekmeler de yenilenir.
         const channel = new BroadcastChannel('moffi_announcements_channel');
-        channel.onmessage = (event) => {
-            if (event.data === 'REFRESH_STORIES') {
-                fetchStories();
-            }
-        };
-
+        channel.onmessage = (event) => { if (event.data === 'REFRESH_STORIES') fetchStories(); };
         return () => {
             window.removeEventListener('moffi_announcements_changed', handleSync);
             channel.close();
         };
     }, [fetchStories]);
 
-    const uploadStory = async (file: File) => {
-        return { success: false, error: 'Stories are admin-only' };
-    };
-
-    return {
-        storyGroups,
-        isLoading,
-        uploadStory,
-        refreshStories: fetchStories
-    };
+    return { storyGroups, activeLostCount, isLoading, refreshStories: fetchStories };
 }

@@ -1,656 +1,566 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    Sparkles, Send, X, Bot, Crown, Trash2, 
-    MessageSquarePlus, Settings, 
-    MessageCircle, Clock, ChevronLeft, Menu
+// Moffi AI paneli. Alt menünün ortasındaki düğme (ve kenar paneli) 'open-ai-assistant' olayıyla açar;
+// detail: { prompt?: string (hemen sorulur), prefill?: string (kutuya yazılır) }.
+// Asistan seçili hayvanın kimlik, sağlık ve yürüyüş özetini bilir (yalnızca sahibine, kendi asistanında).
+// Günlük hak sunucuda (ai_consume / ai_quota_status); bittiğinde PawCoin ile ek soru sorulabilir.
+// Sohbet geçmişi bu cihazda tutulur (90 gün).
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    AlertTriangle, ArrowUp, Brain, ChevronDown, Footprints, HeartPulse, History, MessageSquarePlus,
+    Sparkles, Stethoscope, Syringe, Trash2, Utensils, X,
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { usePet } from '@/context/PetContext';
-import { cn } from '@/lib/utils';
-import { healthService } from '@/services/healthService';
-import { daysLeftText, isMedicationActive, overallStatus, speciesOf, upcomingItems, weightSummary } from '@/lib/health/derive';
-import { todayKey } from '@/lib/appointmentTime';
 import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { usePet, type Pet } from '@/context/PetContext';
+import { useActivity } from '@/context/ActivityContext';
+import { useQuestEngine } from '@/context/QuestEngineContext';
+import { healthService } from '@/services/healthService';
+import { supabase } from '@/lib/supabase';
+import { ageText, daysLeftText, isMedicationActive, overallStatus, speciesOf, upcomingItems, weightSummary } from '@/lib/health/derive';
+import { todayKey } from '@/lib/appointmentTime';
+import { formatKm, petWeightKg } from '@/lib/walkMetrics';
+import { haptics } from '@/native';
+import { cn } from '@/lib/utils';
+import type { HealthBundle } from '@/types/health';
+
+type Action = { type: 'link'; label: string; url: string } | { type: 'pay'; label: string } | { type: 'retry'; label: string };
 
 interface Message {
     id: string;
-    role: "user" | "assistant";
+    role: 'user' | 'assistant';
     content: string;
-    action?: { type: 'sos' | 'vetline' | 'link' | 'pay'; label: string; url?: string };
-    isNew?: boolean;
+    /** Bilgi/uyarı mesajı (hak bitti, bağlantı hatası); modele geçmiş olarak gönderilmez. */
+    meta?: boolean;
+    actions?: Action[];
+    // Eski kayıtlar: tek eylem
+    action?: { type: string; label: string; url?: string };
 }
 
-interface ChatSession {
-    id: string;
-    title: string;
-    messages: Message[];
-    updatedAt: number;
+interface ChatSession { id: string; title: string; petId?: string | null; messages: Message[]; updatedAt: number }
+
+interface Quota { prime: boolean; capacity_reached: boolean; message_limit: number; message_used: number; price_message: number; balance: number }
+
+const STORAGE_KEY = 'moffi_ai_sessions';
+const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+const MAX_SESSIONS = 30;
+
+const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+
+function loadSessions(): ChatSession[] {
+    try {
+        const parsed: ChatSession[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const cutoff = Date.now() - RETENTION_MS;
+        return parsed.filter(s => s.updatedAt > cutoff && Array.isArray(s.messages)).sort((a, b) => b.updatedAt - a.updatedAt);
+    } catch { return []; }
+}
+function saveSessions(list: ChatSession[]) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_SESSIONS))); } catch { /* gizli sekme vb. */ }
 }
 
-const TypewriterText = ({ content, isNew }: { content: string, isNew?: boolean }) => {
-    const safeContent = content || "";
-    const [displayedText, setDisplayedText] = useState(isNew ? "" : safeContent);
+/** Sorunun konusuna göre yanıtın altına uygulama içi kısa yol. */
+function suggestLinks(question: string): Action[] {
+    const t = question.toLocaleLowerCase('tr-TR');
+    const out: Action[] = [];
+    if (/kayb|kaçtı|bulamıyorum|kayıp/.test(t)) out.push({ type: 'link', label: 'Kayıp ilanı ver', url: '/kayip/ilan-ver' });
+    if (/veteriner|hasta|kusma|kusuyor|ishal|acil|kanama|kanıyor|zehir|nöbet|topall|ateş|yemiyor|halsiz/.test(t)) out.push({ type: 'link', label: 'Veteriner bul', url: '/vet' });
+    if (/aşı/.test(t)) out.push({ type: 'link', label: 'Aşı takvimi', url: '/health/asilar' });
+    else if (/ilaç|parazit|pire|kene|kilo/.test(t)) out.push({ type: 'link', label: 'Sağlık Merkezi', url: '/health' });
+    if (/yürü|egzersiz/.test(t)) out.push({ type: 'link', label: 'Yürüyüş', url: '/walk' });
+    return out.slice(0, 2);
+}
 
-    useEffect(() => {
-        if (!isNew) {
-            setDisplayedText(safeContent);
-            return;
+function legacyActions(m: Message): Action[] {
+    if (m.actions) return m.actions;
+    if (!m.action) return [];
+    if (m.action.type === 'pay') return [{ type: 'pay', label: m.action.label }];
+    if (m.action.type === 'sos') return [{ type: 'link', label: 'Kayıp ilanları', url: '/kayip' }];
+    if (m.action.type === 'vetline') return [{ type: 'link', label: 'Veteriner bul', url: '/vet' }];
+    if (m.action.url) return [{ type: 'link', label: m.action.label, url: m.action.url }];
+    return [];
+}
+
+/** Kalın yazı ve madde işaretleri olan sade metin gösterimi (model markdown kullanabiliyor). */
+function RichText({ text }: { text: string }) {
+    const inline = (line: string, key: number) => (
+        <React.Fragment key={key}>
+            {line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+                part.startsWith('**') && part.endsWith('**') ? <strong key={i} className="font-extrabold">{part.slice(2, -2)}</strong> : part,
+            )}
+        </React.Fragment>
+    );
+    const blocks: React.ReactNode[] = [];
+    let list: string[] = [];
+    const flush = () => {
+        if (list.length) {
+            blocks.push(<ul key={`l${blocks.length}`} className="space-y-1 my-1.5">{list.map((li, i) => (
+                <li key={i} className="flex gap-2"><span className="mt-[9px] w-1.5 h-1.5 rounded-full bg-accent shrink-0" /><span>{inline(li, i)}</span></li>
+            ))}</ul>);
+            list = [];
         }
+    };
+    text.split('\n').forEach((raw, i) => {
+        const line = raw.trim();
+        const bullet = line.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
+        if (bullet) { list.push(bullet[1]); return; }
+        flush();
+        if (!line) return;
+        const heading = line.replace(/^#{1,6}\s+/, '');
+        blocks.push(<p key={`p${i}`} className={cn('my-1', heading !== line && 'font-extrabold')}>{inline(heading, i)}</p>);
+    });
+    flush();
+    return <>{blocks}</>;
+}
 
-        let i = 0;
-        const interval = setInterval(() => {
-            if (i < safeContent.length) {
-                setDisplayedText((prev) => prev + safeContent.charAt(i));
-                i++;
-            } else {
-                clearInterval(interval);
-            }
-        }, 15); // typing speed
-        return () => clearInterval(interval);
-    }, [safeContent, isNew]);
-
-    return <span>{displayedText}</span>;
-};
+function usePetContext(pet: Pet | null) {
+    const [bundle, setBundle] = useState<HealthBundle | null>(null);
+    useEffect(() => {
+        let alive = true;
+        if (!pet?.id) { setBundle(null); return; }
+        setBundle(healthService.peekBundle(pet.id));
+        healthService.loadBundle(pet.id, speciesOf(pet)).then(b => { if (alive) setBundle(b); }).catch(() => {});
+        return () => { alive = false; };
+    }, [pet?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    return bundle;
+}
 
 export function MoffiAssistant() {
-    const { user } = useAuth();
-    const { pets: userPets, activePet } = usePet();
     const router = useRouter();
     const pathname = usePathname();
+    const { user } = useAuth();
+    const { pets, activePet } = usePet();
+    const { walkHistory } = useActivity();
+    const { todayDistanceKm, dailyGoal } = useQuestEngine();
 
-    const [isMounted, setIsMounted] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
-    const [showClearConfirm, setShowClearConfirm] = useState(false);
-    const [isDragging, setIsDragging] = useState(false);
-    
-    // Sessions
-    const [sessions, setSessions] = useState<ChatSession[]>([]);
-    const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-    
-    // Current Chat
-    const [input, setInput] = useState("");
-    const [isTyping, setIsTyping] = useState(false);
-    
-    // Settings
-
+    // Bileşen yalnızca tarayıcıda yüklenir (AIWidgetLoader, ssr:false); geçmiş ilk durumda okunur.
+    const [sessions, setSessions] = useState<ChatSession[]>(() => loadSessions());
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [input, setInput] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [showPets, setShowPets] = useState(false);
+    const [confirmClear, setConfirmClear] = useState(false);
+    const [quota, setQuota] = useState<Quota | null>(null);
+    const [petId, setPetId] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const dragConstraintsRef = useRef(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+    const pendingPrompt = useRef<string | null>(null);
 
-    // M+ Status
-    const isPro = user?.role === 'admin' || user?.is_pro === true;
-    const aiSettings = user?.settings?.ai || { personality: 'casual', creativity: 0.7, detailLevel: 'medium' };
+    const pet = pets.find(p => p.id === petId) || activePet || pets[0] || null;
+    const bundle = usePetContext(isOpen ? pet : null);
+    const firstName = (user?.name || '').trim().split(/\s+/)[0] || '';
+    const prefs = useMemo(() => {
+        const ai = (user?.settings?.ai || {}) as { personality?: string; detailLevel?: string };
+        const personality = ai.personality === 'casual' ? 'friendly' : ai.personality === 'technical' ? 'professional' : ai.personality || 'friendly';
+        return { personality, detailLevel: ai.detailLevel || 'medium' };
+    }, [user?.settings?.ai]);
 
-    useEffect(() => {
-        setIsMounted(true);
-        loadSessions();
-        
-        const handleOpen = () => setIsOpen(true);
-        const handleClose = () => setIsOpen(false);
-        window.addEventListener('open-ai-assistant', handleOpen);
-        window.addEventListener('close-ai-assistant', handleClose);
-        return () => {
-            window.removeEventListener('open-ai-assistant', handleOpen);
-            window.removeEventListener('close-ai-assistant', handleClose);
-        };
+    const session = sessions.find(s => s.id === sessionId) || null;
+    const messages = session?.messages || [];
+
+    const refreshQuota = useCallback(async () => {
+        const { data, error } = await supabase.rpc('ai_quota_status');
+        if (!error && data) setQuota(data as Quota);
     }, []);
 
-    // Load sessions & cleanup old ones
-    const loadSessions = () => {
-        try {
-            const saved = localStorage.getItem('moffi_ai_sessions');
-            if (saved) {
-                let parsed: ChatSession[] = JSON.parse(saved);
-                
-                // Force 3 months retention (90 days)
-                const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000);
-                parsed = parsed.filter(s => s.updatedAt > cutoff);
-                
-                setSessions(parsed.sort((a,b) => b.updatedAt - a.updatedAt));
-                if (parsed.length > 0) setActiveSessionId(parsed[0].id);
-            }
-        } catch (e) {
-            console.error("Geçmiş yüklenemedi", e);
-        }
-    };
-
-    const saveSessions = (newSessions: ChatSession[]) => {
-        // Mark all existing messages as NOT new so they don't re-type on load
-        const sanitized = newSessions.map(s => ({
-            ...s,
-            messages: s.messages.map(m => ({ ...m, isNew: false }))
-        }));
-        setSessions(sanitized);
-        localStorage.setItem('moffi_ai_sessions', JSON.stringify(sanitized));
-    };
-
-    // Auto-scroll
+    // Açma/kapama olayları
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [sessions, activeSessionId, isTyping, input]);
-
-    const activeSession = sessions.find(s => s.id === activeSessionId) || { id: 'temp', title: 'Yeni Sohbet', messages: [], updatedAt: Date.now() };
-
-    const getGreeting = () => {
-        if (aiSettings.personality === 'technical') return `Sistem Hazır. Analiz için komut bekliyorum. ⚡`;
-        if (aiSettings.personality === 'professional') return `Size nasıl yardımcı olabilirim?`;
-        return isPro ? `Selam dostum! Hadi harika bir şeyler yapalım! ✨` : `Selam! Moffi Asistanın burada. 🦴`;
-    };
-
-    const startNewChat = () => {
-        setActiveSessionId(null);
-        setIsSidebarOpen(false);
-        setShowSettings(false);
-    };
-
-    const handleSend = async (e?: React.FormEvent, predefinedText?: string) => {
-        if (e) e.preventDefault();
-        const textToSend = predefinedText || input;
-        if (!textToSend.trim() || isTyping) return;
-
-        let currentSessionId = activeSessionId;
-        const currentSessions = [...sessions];
-
-        if (!currentSessionId) {
-            // Create new session
-            currentSessionId = Date.now().toString();
-            const newSession: ChatSession = {
-                id: currentSessionId,
-                title: textToSend.substring(0, 30) + (textToSend.length > 30 ? '...' : ''),
-                messages: [{ id: 'welcome', role: 'assistant', content: getGreeting() }],
-                updatedAt: Date.now()
-            };
-            currentSessions.unshift(newSession);
-            setActiveSessionId(currentSessionId);
-        }
-
-        const sessionIndex = currentSessions.findIndex(s => s.id === currentSessionId);
-        if (sessionIndex === -1) return;
-
-        const userMessage: Message = { id: Date.now().toString(), role: 'user', content: textToSend };
-        currentSessions[sessionIndex] = {
-            ...currentSessions[sessionIndex],
-            messages: [...currentSessions[sessionIndex].messages, userMessage],
-            updatedAt: Date.now()
+        const open = (e: Event) => {
+            const detail = (e as CustomEvent).detail || {};
+            setIsOpen(true);
+            setShowHistory(false);
+            if (detail.prefill) { setSessionId(null); setInput(detail.prefill); }
+            if (detail.prompt) { setSessionId(null); pendingPrompt.current = detail.prompt; }
         };
-        
-        saveSessions(currentSessions);
-        if (!predefinedText) setInput("");
-        setIsTyping(true);
+        const close = () => setIsOpen(false);
+        window.addEventListener('open-ai-assistant', open);
+        window.addEventListener('close-ai-assistant', close);
+        return () => { window.removeEventListener('open-ai-assistant', open); window.removeEventListener('close-ai-assistant', close); };
+    }, []);
 
-        const lowerInput = textToSend.toLowerCase();
-        let quickResponse: Message | null = null;
+    // Açıkken: geri tuşu paneli kapatır, alt menü gizlenir, sayfa kaymaz.
+    useEffect(() => {
+        if (!isOpen) return;
+        window.history.pushState({ modal: 'ai' }, '');
+        window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: false }));
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        refreshQuota();
+        return () => {
+            document.body.style.overflow = prevOverflow;
+            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: true }));
+        };
+    }, [isOpen, refreshQuota]);
 
-        if (lowerInput.includes('kayıp') || lowerInput.includes('kayboldu')) {
-            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Çok geçmiş olsun! Radar & Acil Durum Merkezini açarak çevredeki kullanıcılara bildirim gönderebiliriz.', action: { type: 'sos', label: '🚨 Radarı Aç' }, isNew: true };
-        } else if (lowerInput.includes('vetline') || lowerInput.includes('veteriner') || lowerInput.includes('hasta')) {
-            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Yakınındaki veteriner kliniklerini bulup randevu alabilirsin. Acil bir durum varsa açık acil klinikleri de oradan görebilirsin.', action: { type: 'vetline', label: '🩺 Veteriner bul' }, isNew: true };
-        } else if (lowerInput.includes('mama') || lowerInput.includes('yemek')) {
-            quickResponse = { id: Date.now().toString(), role: 'assistant', content: 'Dostunun yaşına ve kilosuna özel mama seçeneklerini Petshopumuzda bulabilirsin!', action: { type: 'link', label: '🍎 Mamaları Gör', url: '/petshop?category=food' }, isNew: true };
-        }
-
-        if (quickResponse) {
-            setTimeout(() => {
-                appendToSession(currentSessionId!, quickResponse!, currentSessions);
-                setIsTyping(false);
-            }, 800);
-            return;
-        }
-
-        await askAi(currentSessionId, currentSessions, currentSessions[sessionIndex].messages, false);
+    const close = () => {
+        if (window.history.state?.modal === 'ai') window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        setIsOpen(false);
     };
 
-    const appendToSession = (sessionId: string, msg: Message, base: ChatSession[]) => {
-        const updated = [...base];
-        const idx = updated.findIndex(s => s.id === sessionId);
-        if (idx === -1) return;
-        updated[idx] = { ...updated[idx], messages: [...updated[idx].messages, msg], updatedAt: Date.now() };
-        saveSessions(updated);
-    };
+    useEffect(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, [messages.length, busy]);
 
-    const buildPetPayload = async (): Promise<Record<string, unknown> | null> => {
-        const activePetObj = activePet || userPets?.[0] || null;
-        let petDataPayload: Record<string, unknown> | null = null;
-        if (activePetObj) {
-            petDataPayload = { name: activePetObj.name, breed: activePetObj.breed || activePetObj.species || 'Bilinmeyen Cins' };
-            // Sağlık Kaydı'nın özeti (sadece sahibin kendi asistanına gider): uydurma cevap yerine gerçek veri.
-            try {
-                const bundle = await healthService.loadBundle(activePetObj.id, speciesOf(activePetObj));
-                const t = todayKey();
-                petDataPayload.health = {
-                    status: overallStatus(bundle, t).title,
-                    upcoming: upcomingItems(bundle, [], t).slice(0, 6).map(i => ({ title: i.title, date: i.date, when: daysLeftText(i.daysLeft) })),
-                    activeMedications: bundle.medications.filter(m => isMedicationActive(m, t)).map(m => [m.name, m.dosage, m.frequency].filter(Boolean).join(' · ')),
-                    allergies: bundle.profile?.allergies || [],
-                    chronicConditions: bundle.profile?.chronicConditions || [],
-                    notes: bundle.profile?.notes || null,
-                    latestWeightKg: weightSummary(bundle.weights, t).latest?.weightKg ?? null,
-                };
-            } catch { /* sağlık özeti yüklenemezse asistan sadece ad/ırkla çalışır */ }
+    const persist = (updater: (list: ChatSession[]) => ChatSession[]) => {
+        setSessions(prev => updater(prev));
+    };
+    useEffect(() => { saveSessions(sessions); }, [sessions]);
+
+    const buildPetData = () => {
+        if (!pet) return null;
+        const today = todayKey();
+        const weekAgo = Date.now() - 7 * 86_400_000;
+        const week = walkHistory.filter(w => (!w.petId || String(w.petId) === String(pet.id)) && new Date(w.ended_at || w.started_at || 0).getTime() >= weekAgo);
+        const data: Record<string, unknown> = {
+            name: pet.name,
+            species: speciesOf(pet) === 'cat' ? 'kedi' : speciesOf(pet) === 'dog' ? 'köpek' : pet.type || undefined,
+            breed: pet.breed || undefined,
+            age: ageText(pet.birthday, pet.age, today) || undefined,
+            sex: pet.gender || undefined,
+            neutered: typeof pet.neutered === 'boolean' ? pet.neutered : undefined,
+            weightKg: bundle ? weightSummary(bundle.weights, today).latest?.weightKg ?? petWeightKg(pet) : petWeightKg(pet),
+            walks: { todayKm: todayDistanceKm, goalKm: dailyGoal.distance, weekCount: week.length, weekKm: week.reduce((s, w) => s + (w.distanceKm || 0), 0) },
+        };
+        if (bundle) {
+            data.health = {
+                status: overallStatus(bundle, today).title,
+                upcoming: upcomingItems(bundle, [], today).slice(0, 6).map(i => ({ title: i.title, when: daysLeftText(i.daysLeft) })),
+                activeMedications: bundle.medications.filter(m => isMedicationActive(m, today)).map(m => [m.name, m.dosage, m.frequency].filter(Boolean).join(' · ')),
+                allergies: bundle.profile?.allergies || [],
+                chronicConditions: bundle.profile?.chronicConditions || [],
+                notes: bundle.profile?.notes || null,
+            };
         }
-        return petDataPayload;
+        return data;
     };
 
-    // Asıl yapay zekâ çağrısı. Günlük hak bittiyse sunucu 402 döner; kullanıcı PawCoin ile devam edebilir.
-    const askAi = async (sessionId: string, base: ChatSession[], history: Message[], pay: boolean) => {
-        setIsTyping(true);
-        const petDataPayload = await buildPetPayload();
+    const ask = async (sid: string, history: Message[], pay: boolean) => {
+        setBusy(true);
+        const question = [...history].reverse().find(m => m.role === 'user')?.content || '';
+        let reply: Message;
         try {
-            const response = await fetch('/api/ai/chat', {
+            const res = await fetch('/api/ai/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: history.filter(m => m.action?.type !== 'pay').map(m => ({ role: m.role, content: m.content })),
-                    context: `AI Settings: personality=${aiSettings.personality}, detail=${aiSettings.detailLevel}`,
-                    petData: petDataPayload,
+                    messages: history.filter(m => !m.meta).map(m => ({ role: m.role, content: m.content })),
+                    petData: buildPetData(),
+                    prefs,
+                    page: pathname,
                     pay,
-                })
+                }),
             });
-            const data = await response.json();
-
-            if (response.status === 402) {
-                const canPay = data.reason === 'quota' || data.reason === 'balance';
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.success) {
+                reply = { id: uid(), role: 'assistant', content: data.message, actions: suggestLinks(question) };
+                haptics.tap();
+            } else if (res.status === 402) {
+                const canPay = data.reason === 'quota' && data.price != null;
                 const extra = data.reason === 'quota'
-                    ? ` İstersen bu soruyu ${data.price} PawCoin ile yanıtlayabilirim (bakiyen: ${data.balance}).${data.prime ? '' : ' Prime üyelerin günde 60 hakkı var.'}`
+                    ? ` Bu soruyu ${data.price} PawCoin ile yanıtlayabilirim (bakiyen: ${data.balance}).${data.prime ? '' : ' Prime üyelerin günlük hakkı daha fazla.'}`
                     : data.reason === 'balance' ? ` Gereken: ${data.price}, bakiyen: ${data.balance}. Yürüyüş ve görevlerle PawCoin kazanabilirsin.` : '';
-                appendToSession(sessionId, {
-                    id: Date.now().toString(), role: 'assistant', content: `${data.message}${extra}`, isNew: true,
-                    ...(canPay && data.reason === 'quota' ? { action: { type: 'pay' as const, label: `🐾 ${data.price} PawCoin ile yanıtla` } } : {}),
-                }, base);
-                return;
-            }
-            if (data.success && data.message) {
-                appendToSession(sessionId, { id: Date.now().toString(), role: 'assistant', content: data.message, isNew: true }, base);
+                reply = { id: uid(), role: 'assistant', meta: true, content: `${data.message}${extra}`, actions: canPay ? [{ type: 'pay', label: `${data.price} PawCoin ile yanıtla` }] : [] };
             } else {
-                throw new Error(data.message || data.error || "Yanıt alınamadı");
+                reply = { id: uid(), role: 'assistant', meta: true, content: data.message || 'Şu an yanıt veremedim. Birazdan tekrar dener misin?', actions: [{ type: 'retry', label: 'Tekrar dene' }] };
             }
-        } catch (apiError) {
-            console.warn("Moffi AI API Failed:", apiError);
-            appendToSession(sessionId, {
-                id: Date.now().toString(), role: 'assistant',
-                content: `Üzgünüm, şu an sunucuya bağlanamıyorum. ${petDataPayload?.name || 'Dostun'} için kısa süre sonra tekrar dener misin? 🐾`,
-                isNew: true
-            }, base);
-        } finally {
-            setIsTyping(false);
+        } catch {
+            reply = { id: uid(), role: 'assistant', meta: true, content: 'Bağlantı kurulamadı. İnternetini kontrol edip tekrar dener misin?', actions: [{ type: 'retry', label: 'Tekrar dene' }] };
         }
+        persist(list => list.map(s => (s.id === sid ? { ...s, messages: [...history, reply], updatedAt: Date.now() } : s)));
+        setBusy(false);
+        refreshQuota();
     };
 
-    // "PawCoin ile yanıtla": aynı soruyu ödemeli olarak tekrar sor
-    const payAndRetry = (sessionId: string) => {
-        const session = sessions.find(s => s.id === sessionId);
-        if (!session || isTyping) return;
-        const history = session.messages.filter(m => m.action?.type !== 'pay');
-        askAi(sessionId, sessions.map(s => s.id === sessionId ? { ...s, messages: history } : s), history, true);
-    };
-
-    const deleteSession = (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
-        const filtered = sessions.filter(s => s.id !== id);
-        saveSessions(filtered);
-        if (activeSessionId === id) setActiveSessionId(filtered.length > 0 ? filtered[0].id : null);
-    };
-
-    const clearAllChats = () => {
-        saveSessions([]);
-        setActiveSessionId(null);
-        setShowSettings(false);
-        setShowClearConfirm(false);
-    };
-
-    if (!isMounted) return null;
-
-    const messagesToRender = activeSession.messages.length > 0 
-        ? activeSession.messages 
-        : [{ id: 'welcome', role: 'assistant', content: getGreeting(), isNew: true }] as Message[];
-
-    // Context-Aware Suggestions based on the current page route
-    const getContextSuggestions = () => {
-        const path = pathname || "";
-        if (path.includes('/petshop')) {
-            return [
-                { icon: "🍎", text: "Özel Mama Bul", query: "Sepetime ve dostumun özelliklerine uygun en iyi mama hangisi?" },
-                { icon: "🦴", text: "Ödül & Oyuncak", query: "Eğitim için en iyi ödül mamaları nelerdir?" },
-                { icon: "🩺", text: "VetLine'a Danış", query: "Mama seçimi konusunda bir veterinere danışmak istiyorum." }
-            ];
+    const send = async (text: string) => {
+        const content = text.trim();
+        if (!content || busy) return;
+        haptics.tap();
+        const userMsg: Message = { id: uid(), role: 'user', content };
+        let sid = sessionId;
+        let history: Message[];
+        if (!session) {
+            sid = uid();
+            history = [userMsg];
+            const created: ChatSession = { id: sid, title: content.slice(0, 48), petId: pet?.id || null, messages: history, updatedAt: Date.now() };
+            persist(list => [created, ...list]);
+            setSessionId(sid);
+        } else {
+            history = [...session.messages, userMsg];
+            persist(list => list.map(s => (s.id === sid ? { ...s, messages: history, updatedAt: Date.now() } : s)));
         }
-        if (path.includes('/vet')) {
-            return [
-                { icon: "🩺", text: "Canlı VetLine", query: "Hemen canlı VetLine'a bağlanmak istiyorum." },
-                { icon: "💉", text: "Aşı Takvimi", query: "Dostumun yaklaşan aşılarını kontrol edebilir misin?" },
-                { icon: "🌡️", text: "Sağlık Analizi", query: "Dostum bugün biraz halsiz, ne yapmalıyım?" }
-            ];
-        }
-        if (path.includes('/community') || path.includes('/radar')) {
-            return [
-                { icon: "🚨", text: "Kayıp Bildirimi", query: "Dostum kayboldu, acil radar bildirimi oluştur." },
-                { icon: "👋", text: "Yeni Dostlar", query: "Yakın çevremdeki diğer patili dostları nasıl bulabilirim?" },
-                { icon: "📸", text: "Aura Yükle", query: "Dostumun fotoğrafını Aura'da nasıl paylaşırım?" }
-            ];
-        }
-        // Default (Home, Profile, etc.)
-        return [
-            { icon: "🩺", text: "VetLine Bağlan", query: "Canlı VetLine'a bağlanmak istiyorum." },
-            { icon: "🍎", text: "Mama Önerisi", query: "Moffi için mama önerebilir misin?" },
-            { icon: "🚨", text: "Kayıp Bildirimi", query: "Dostum kayboldu, ne yapmalıyım?" },
-            { icon: "🏆", text: "Görevlerim", query: "Bugün yapabileceğim görevler neler?" }
-        ];
+        setInput('');
+        await ask(sid!, history, false);
     };
+
+    // Kenar panelinden ya da başka ekrandan hazır soruyla açıldıysa
+    useEffect(() => {
+        if (isOpen && pendingPrompt.current && !busy) {
+            const p = pendingPrompt.current;
+            pendingPrompt.current = null;
+            send(p);
+        }
+    });
+
+    const runAction = (a: Action, msg: Message) => {
+        if (!session) return;
+        if (a.type === 'link') { haptics.tap(); close(); router.push(a.url); return; }
+        const history = session.messages.filter(m => m.id !== msg.id);
+        ask(session.id, history, a.type === 'pay');
+    };
+
+    const newChat = () => { haptics.tap(); setSessionId(null); setShowHistory(false); setInput(''); };
+
+    const remaining = quota ? Math.max(0, quota.message_limit - quota.message_used) : null;
+    const quotaText = !quota ? null
+        : quota.capacity_reached ? 'Moffi AI bu ay kapasitesine ulaştı'
+        : remaining! > 0 ? `Bugün ${remaining}/${quota.message_limit} soru hakkın var${quota.prime ? ' · Prime' : ''}`
+        : `Günlük hakkın bitti · ek soru ${quota.price_message} PawCoin`;
+
+    const petName = pet?.name || 'dostun';
+    const prompts = [
+        { Icon: HeartPulse, title: 'Sağlık özeti', hint: 'Durum ve sıradaki işler', send: `${petName} için sağlık durumunu kısaca özetler misin? Yaklaşan ya da geciken bir şey var mı?` },
+        { Icon: Stethoscope, title: 'Belirti sor', hint: 'Ne zaman veterinere?', prefill: `${petName}'da şu belirti var: ` },
+        { Icon: Utensils, title: 'Beslenme', hint: 'Günlük miktar ve öğün', send: `${petName} için günlük mama miktarı ve öğün sayısı ne olmalı? Kilosuna ve yaşına göre yaklaşık hesapla.` },
+        { Icon: Footprints, title: 'Egzersiz', hint: 'Bu hafta yeterli mi?', send: `${petName}'ın bu haftaki yürüyüşleri yeterli mi? Irkı ve yaşı için ideal günlük egzersiz ne kadar?` },
+        { Icon: Syringe, title: 'Aşı ve parazit', hint: 'Takvimi açıkla', send: `${petName}'ın aşı ve parazit takvimini açıklar mısın? Sıradaki uygulama ne zaman ve neden önemli?` },
+        { Icon: Brain, title: 'Davranış', hint: 'Eğitim önerisi al', prefill: `${petName}'ın şu davranışıyla ilgili yardım istiyorum: ` },
+    ];
+
+    const health = bundle ? overallStatus(bundle, todayKey()) : null;
+    const nextCare = bundle ? upcomingItems(bundle, [], todayKey())[0] : null;
 
     return (
-        <div className="fixed inset-0 pointer-events-none z-[99999]" ref={dragConstraintsRef}>
-            {/* The Floating Action Button */}
-            <motion.button
-                drag
-                dragConstraints={{ left: -100, right: 0, top: -100, bottom: 0 }}
-                dragElastic={0.1}
-                dragMomentum={false}
-                onDragStart={() => setIsDragging(true)}
-                onDragEnd={() => {
-                    setTimeout(() => setIsDragging(false), 150);
-                }}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: isOpen ? 0 : 1, opacity: isOpen ? 0 : 1 }}
-                onClick={(e) => {
-                    e.preventDefault();
-                    if (!isDragging && !isOpen) setIsOpen(true);
-                }}
-                className={cn(
-                    "fixed bottom-24 right-5 w-[50px] h-[50px] bg-gradient-to-tr from-zinc-900 to-black border border-black/10 dark:border-white/10 rounded-full shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-colors group",
-                    isOpen ? "pointer-events-none" : "pointer-events-auto"
-                )}
-                style={{ touchAction: "none", zIndex: 999999 }}
-            >
-                <Sparkles className="w-6 h-6 text-white group-hover:animate-pulse" />
-            </motion.button>
-
-            {/* FULL PANEL ASSISTANT - Draggable on Desktop */}
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        drag
-                        dragConstraints={dragConstraintsRef}
-                        dragElastic={0.1}
-                        dragMomentum={false}
-                        initial={{ opacity: 0, scale: 0.9, y: 50 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 50 }}
-                        transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                        className={cn(
-                            "fixed pointer-events-auto overflow-hidden flex",
-                            "inset-0 md:inset-auto md:bottom-24 md:right-5 md:w-[420px] md:h-[600px] md:max-h-[85vh]",
-                            "bg-background/95 md:bg-white dark:md:bg-[#1a1b1e] backdrop-blur-3xl md:rounded-[2rem] md:border md:border-gray-200 dark:md:border-white/10 md:shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-                        )}
-                        style={{ touchAction: "none" }}
-                    >
-                        
-                        {/* SIDEBAR */}
-                        <AnimatePresence>
-                            {isSidebarOpen && (
-                                <motion.div
-                                    initial={{ width: 0, opacity: 0 }}
-                                    animate={{ width: 240, opacity: 1 }}
-                                    exit={{ width: 0, opacity: 0 }}
-                                    className="h-full bg-gray-50 dark:bg-black/40 border-r border-gray-200 dark:border-white/5 flex flex-col overflow-hidden shrink-0"
-                                >
-                                    <div className="p-4 border-b border-gray-200 dark:border-white/5 flex items-center justify-between">
-                                        <span className="font-bold text-sm text-foreground">Sohbetler</span>
-                                        <button onClick={() => setIsSidebarOpen(false)} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-md">
-                                            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-                                        </button>
-                                    </div>
-                                    <div className="p-2 flex-1 overflow-y-auto space-y-1">
-                                        <button 
-                                            onClick={startNewChat}
-                                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold text-sm hover:bg-indigo-500/20 transition-colors mb-4"
-                                        >
-                                            <MessageSquarePlus className="w-4 h-4" />
-                                            Yeni Sohbet
-                                        </button>
-                                        
-                                        <div className="text-[10px] font-bold uppercase text-muted-foreground px-3 py-1 tracking-wider">Geçmiş</div>
-                                        {sessions.length === 0 && <div className="text-xs text-muted-foreground px-3 italic">Geçmiş bulunmuyor.</div>}
-                                        {sessions.map(s => (
-                                            <div 
-                                                key={s.id} 
-                                                onClick={() => { setActiveSessionId(s.id); setIsSidebarOpen(false); setShowSettings(false); }}
-                                                className={cn(
-                                                    "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm",
-                                                    activeSessionId === s.id ? "bg-black/5 dark:bg-white/10 font-medium" : "hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground"
-                                                )}
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    key="moffi-ai"
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 32, stiffness: 300 }}
+                    className="theme-vet fixed inset-0 z-[7000] bg-background text-foreground flex flex-col md:inset-auto md:bottom-6 md:right-6 md:w-[420px] md:h-[720px] md:max-h-[90vh] md:rounded-[28px] md:border md:border-card-border md:shadow-2xl overflow-hidden"
+                    role="dialog"
+                    aria-label="Moffi AI"
+                >
+                    {/* Başlık */}
+                    <header className="shrink-0 border-b border-card-border bg-background/95 backdrop-blur pt-[env(safe-area-inset-top)]">
+                        <div className="h-14 px-2 flex items-center gap-1">
+                            <button type="button" onClick={close} aria-label="Kapat" className="w-11 h-11 rounded-full flex items-center justify-center active:bg-foreground/5">
+                                <X className="w-6 h-6" />
+                            </button>
+                            <button type="button" onClick={() => pets.length > 1 && setShowPets(v => !v)} className="flex-1 min-w-0 flex flex-col items-center">
+                                <span className="text-[16px] font-extrabold flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-accent" /> Moffi AI</span>
+                                <span className="text-[12px] font-semibold text-secondary flex items-center gap-0.5 truncate max-w-full">
+                                    {pet ? `${pet.name} hakkında` : 'Evcil hayvan bakımı'}
+                                    {pets.length > 1 && <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showPets && 'rotate-180')} />}
+                                </span>
+                            </button>
+                            <button type="button" onClick={() => setShowHistory(v => !v)} aria-label="Sohbet geçmişi" className={cn('w-11 h-11 rounded-full flex items-center justify-center active:bg-foreground/5', showHistory && 'text-accent')}>
+                                <History className="w-[21px] h-[21px]" />
+                            </button>
+                            <button type="button" onClick={newChat} aria-label="Yeni sohbet" className="w-11 h-11 rounded-full flex items-center justify-center active:bg-foreground/5">
+                                <MessageSquarePlus className="w-[21px] h-[21px]" />
+                            </button>
+                        </div>
+                        <AnimatePresence initial={false}>
+                            {showPets && (
+                                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                                    <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 pb-3">
+                                        {pets.map(p => (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => { haptics.tap(); setPetId(p.id); setShowPets(false); if (session && session.petId !== p.id) setSessionId(null); }}
+                                                className={cn('flex items-center gap-2 rounded-full pl-1 pr-3 py-1 border text-[13px] font-bold shrink-0', p.id === pet?.id ? 'border-accent bg-accent/10 text-accent' : 'border-card-border bg-card')}
                                             >
-                                                <div className="flex items-center gap-2 truncate">
-                                                    <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-                                                    <span className="truncate">{s.title}</span>
-                                                </div>
-                                                <button 
-                                                    onClick={(e) => deleteSession(e, s.id)} 
-                                                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-opacity"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
+                                                {p.image ? <img src={p.image} alt="" className="w-7 h-7 rounded-full object-cover" /> : <span className="w-7 h-7 rounded-full bg-accent/15 text-accent flex items-center justify-center">{p.name.charAt(0)}</span>}
+                                                {p.name}
+                                            </button>
                                         ))}
                                     </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
+                    </header>
 
-                        {/* MAIN CHAT AREA */}
-                        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-                            {/* Drag Handle */}
-                            <div className="hidden md:flex w-full h-6 items-center justify-center cursor-grab active:cursor-grabbing hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-                            </div>
-
-                            {/* HEADER */}
-                            <div className="px-4 py-3 bg-transparent border-b border-gray-100 dark:border-white/5 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-3">
-                                    <button 
-                                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                                        className="p-1.5 -ml-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-muted-foreground transition-colors"
-                                    >
-                                        <Menu className="w-5 h-5" />
-                                    </button>
-                                    <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shadow-sm", isPro ? "bg-gradient-to-br from-violet-500 to-fuchsia-600" : "bg-black dark:bg-white")}>
-                                        {isPro ? <Crown className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-white dark:text-black" />}
+                    <div className="relative flex-1 min-h-0">
+                        {/* Mesajlar ya da karşılama */}
+                        <div ref={scrollRef} className="absolute inset-0 overflow-y-auto px-4 pt-4 pb-6">
+                            {messages.length === 0 ? (
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-12 h-12 rounded-2xl bg-accent/12 flex items-center justify-center"><Sparkles className="w-6 h-6 text-accent" /></span>
+                                        <div>
+                                            <h2 className="text-[20px] font-extrabold leading-tight">Merhaba{firstName ? ` ${firstName}` : ''}!</h2>
+                                            <p className="text-[13.5px] font-semibold text-secondary">{pet ? `${pet.name} için ne öğrenmek istersin?` : 'Evcil hayvan bakımıyla ilgili her şeyi sorabilirsin.'}</p>
+                                        </div>
                                     </div>
-                                    <div className="text-left">
-                                        <h3 className="text-[14px] font-black text-foreground uppercase tracking-tight leading-none">{isPro ? "M+ Concierge" : "Moffi AI"}</h3>
-                                        <p className="text-[10px] text-indigo-500 font-bold uppercase mt-0.5 tracking-widest">{isTyping ? "Düşünüyor..." : "Çevrimiçi"}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <button 
-                                        onClick={() => setShowSettings(!showSettings)} 
-                                        className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                                    >
-                                        <Settings className="w-4 h-4" />
-                                    </button>
-                                    <button 
-                                        onClick={() => setIsOpen(false)} 
-                                        className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
 
-                            {/* BODY */}
-                            <div className="flex-1 overflow-hidden relative">
-                                
-                                {/* SETTINGS OVERLAY */}
-                                <AnimatePresence>
-                                    {showSettings && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: 20 }}
-                                            className="absolute inset-0 z-50 bg-white dark:bg-[#1a1b1e] p-6 flex flex-col"
-                                        >
-                                            <h3 className="text-lg font-black mb-6 flex items-center gap-2">
-                                                <Settings className="w-5 h-5" />
-                                                Asistan Ayarları
-                                            </h3>
-                                            
-                                            <div className="space-y-6">
-                                                <div>
-                                                    <label className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                                                        <Clock className="w-4 h-4 text-indigo-500" />
-                                                        Geçmişi Saklama Politikası
-                                                    </label>
-                                                    <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 flex flex-col gap-2">
-                                                        <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400">
-                                                            Sistem Kontrolünde (3 Ay)
-                                                        </span>
-                                                        <p className="text-[11px] text-indigo-600/80 dark:text-indigo-300 leading-relaxed">
-                                                            Performans ve veri güvenliği standartlarımız gereği, asistan ile yaptığınız tüm görüşmeler sistem tarafından otomatik olarak <strong>maksimum 3 ay (90 gün)</strong> boyunca saklanır. Bu süreyi dolduran eski sohbetler cihazınızdan güvenle silinir.
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-4 border-t border-gray-100 dark:border-white/5">
-                                                    {!showClearConfirm ? (
-                                                        <button 
-                                                            onClick={() => setShowClearConfirm(true)}
-                                                            className="w-full py-3 rounded-xl bg-red-500/10 text-red-500 font-bold text-sm hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                            Tüm Geçmişi Temizle
-                                                        </button>
-                                                    ) : (
-                                                        <div className="flex flex-col gap-2 p-3 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl">
-                                                            <span className="text-xs font-bold text-red-600 dark:text-red-400 text-center mb-1">
-                                                                Tüm sohbetler kalıcı olarak silinecek. Emin misiniz?
-                                                            </span>
-                                                            <div className="flex items-center gap-2">
-                                                                <button 
-                                                                    onClick={() => setShowClearConfirm(false)}
-                                                                    className="flex-1 py-2.5 rounded-lg bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-300 dark:hover:bg-white/20 transition-colors"
-                                                                >
-                                                                    İptal
-                                                                </button>
-                                                                <button 
-                                                                    onClick={clearAllChats}
-                                                                    className="flex-1 py-2.5 rounded-lg bg-red-500 text-white font-bold text-xs hover:bg-red-600 transition-colors"
-                                                                >
-                                                                    Evet, Sil
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                    {pet && (
+                                        <div className="mt-4 rounded-[20px] bg-card border border-card-border p-3.5 grid grid-cols-3 divide-x divide-card-border text-center">
+                                            <div className="px-1">
+                                                <p className="text-[11px] font-bold text-secondary">Sağlık</p>
+                                                <p className={cn('text-[13.5px] font-extrabold mt-0.5 truncate', health?.tone === 'overdue' ? 'text-emergency' : health?.tone === 'attention' ? 'text-[#C98A1B]' : 'text-[#4E8A23]')}>
+                                                    {health ? (health.tone === 'good' ? 'Güncel' : health.tone === 'attention' ? 'Yaklaşan var' : 'Gecikmiş') : '—'}
+                                                </p>
                                             </div>
-
-                                            <button 
-                                                onClick={() => { setShowSettings(false); setShowClearConfirm(false); }}
-                                                className="mt-auto w-full py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-black text-sm hover:scale-[0.98] transition-transform"
-                                            >
-                                                Geri Dön
-                                            </button>
-                                        </motion.div>
+                                            <div className="px-1">
+                                                <p className="text-[11px] font-bold text-secondary">Sıradaki</p>
+                                                <p className="text-[13.5px] font-extrabold mt-0.5 truncate">{nextCare ? daysLeftText(nextCare.daysLeft) : 'Yok'}</p>
+                                            </div>
+                                            <div className="px-1">
+                                                <p className="text-[11px] font-bold text-secondary">Bugün</p>
+                                                <p className="text-[13.5px] font-extrabold mt-0.5 truncate">{formatKm(todayDistanceKm, 1)} km</p>
+                                            </div>
+                                        </div>
                                     )}
-                                </AnimatePresence>
 
-                                {/* CHAT MESSAGES */}
-                                <div ref={scrollRef} className="h-full p-4 overflow-y-auto flex flex-col gap-4 pb-36">
-                                    {messagesToRender.map((msg, i) => (
-                                        <motion.div
-                                            key={msg.id || i}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className={cn("flex w-full", msg.role === 'user' ? "justify-end" : "justify-start")}
-                                        >
-                                            <div className={cn(
-                                                "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed relative",
-                                                msg.role === 'user'
-                                                    ? "bg-black dark:bg-white text-white dark:text-black rounded-tr-sm shadow-md"
-                                                    : "bg-gray-100 dark:bg-white/5 text-foreground rounded-tl-sm shadow-sm"
-                                            )}>
-                                                {msg.role === 'assistant' 
-                                                    ? <TypewriterText content={msg.content} isNew={msg.isNew} /> 
-                                                    : msg.content}
-                                                
-                                                {msg.action && (
-                                                    <motion.button 
-                                                        initial={{ opacity: 0, scale: 0.9 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        transition={{ delay: 0.5 }}
-                                                        onClick={() => {
-                                                            if (msg.action?.type === 'pay') { if (activeSessionId) payAndRetry(activeSessionId); return; }
-                                                            if (msg.action?.type === 'link') router.push(msg.action.url!);
-                                                            else if (msg.action?.type === 'sos') router.push('/kayip');
-                                                            else if (msg.action?.type === 'vetline') router.push('/vet');
-                                                            setIsOpen(false);
-                                                        }}
-                                                        className="mt-3 w-full px-4 py-2.5 bg-white dark:bg-[#25262b] shadow-sm rounded-xl text-[12px] font-black text-indigo-500 border border-gray-200 dark:border-white/10 hover:border-indigo-500 transition-colors flex items-center justify-center gap-2"
-                                                    >
-                                                        {msg.action.label}
-                                                    </motion.button>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                    {isTyping && (
-                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                                            <div className="bg-gray-100 dark:bg-white/5 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5 shadow-sm">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" />
-                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce delay-75" />
-                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce delay-150" />
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* FOOTER INPUT */}
-                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white/90 via-white/90 to-transparent dark:from-[#1a1b1e]/90 dark:via-[#1a1b1e]/90 backdrop-blur-sm">
-                                
-                                {/* Context-Aware Quick Suggestions */}
-                                {messagesToRender.length <= 2 && (
-                                    <div className="flex items-center gap-2 overflow-x-auto pb-3 scrollbar-hide snap-x">
-                                        {getContextSuggestions().map((s, idx) => (
+                                    <div className="mt-4 grid grid-cols-2 gap-2.5">
+                                        {prompts.map(p => (
                                             <button
-                                                key={idx}
-                                                onClick={() => handleSend(undefined, s.query)}
-                                                className="snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full text-[11px] font-bold text-foreground shadow-sm hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                                                key={p.title}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (p.send) send(p.send);
+                                                    else { setInput(p.prefill || ''); setTimeout(() => inputRef.current?.focus(), 50); }
+                                                }}
+                                                className="text-left rounded-[18px] bg-card border border-card-border p-3 active:scale-[0.98] transition-transform"
                                             >
-                                                <span>{s.icon}</span>
-                                                {s.text}
+                                                <span className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center"><p.Icon className="w-[18px] h-[18px] text-accent" /></span>
+                                                <span className="block mt-2 text-[14px] font-extrabold">{p.title}</span>
+                                                <span className="block text-[12px] font-semibold text-secondary">{p.hint}</span>
                                             </button>
                                         ))}
                                     </div>
-                                )}
 
-                                <form onSubmit={(e) => handleSend(e)} className="relative flex items-center gap-2">
-                                    <div className="relative flex-1">
-                                        <input
-                                            type="text"
-                                            value={input}
-                                            onChange={(e) => setInput(e.target.value)}
-                                            placeholder="Moffi'ye bir şeyler sor..."
-                                            className="w-full pl-5 pr-5 py-3.5 bg-gray-50/80 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-2xl text-[14px] text-foreground focus:outline-none focus:border-indigo-500/50 shadow-inner backdrop-blur-md transition-colors"
-                                        />
-                                    </div>
-                                    <button 
-                                        type="submit"
-                                        disabled={!input.trim() || isTyping}
-                                        className="w-12 h-12 shrink-0 rounded-2xl bg-indigo-500 text-white flex items-center justify-center disabled:opacity-50 disabled:bg-gray-300 transition-all hover:scale-105 active:scale-95 shadow-md"
+                                    <button
+                                        type="button"
+                                        onClick={() => { close(); router.push('/vet'); }}
+                                        className="mt-4 w-full flex items-start gap-3 rounded-[18px] bg-emergency/[0.08] border border-emergency/20 p-3.5 text-left"
                                     >
-                                        <Send className="w-5 h-5 ml-0.5" />
+                                        <AlertTriangle className="w-5 h-5 text-emergency shrink-0 mt-0.5" />
+                                        <span className="text-[12.5px] font-semibold leading-snug">
+                                            <span className="font-extrabold text-emergency">Acil durumda beklemeyin.</span> Nefes darlığı, zehirlenme şüphesi, nöbet ya da durmayan kanamada hemen bir veterinere gidin. <span className="font-extrabold underline">Klinik bul</span>
+                                        </span>
                                     </button>
-                                </form>
-                            </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {messages.map(m => {
+                                        const actions = legacyActions(m);
+                                        return (
+                                            <motion.div key={m.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
+                                                <div className={cn(
+                                                    'max-w-[86%] rounded-[20px] px-4 py-2.5 text-[15px] leading-relaxed',
+                                                    m.role === 'user' ? 'bg-accent text-white rounded-br-md whitespace-pre-wrap'
+                                                        : m.meta ? 'bg-[#F0C94E]/15 border border-[#E8A33D]/30 rounded-bl-md'
+                                                        : 'bg-card border border-card-border rounded-bl-md',
+                                                )}>
+                                                    {m.role === 'user' ? m.content : <RichText text={m.content} />}
+                                                    {actions.length > 0 && (
+                                                        <div className="mt-2.5 flex flex-wrap gap-2">
+                                                            {actions.map(a => (
+                                                                <button
+                                                                    key={a.label}
+                                                                    type="button"
+                                                                    disabled={busy && a.type !== 'link'}
+                                                                    onClick={() => runAction(a, m)}
+                                                                    className={cn('h-9 px-3.5 rounded-full text-[13px] font-extrabold disabled:opacity-50', a.type === 'link' ? 'bg-accent/10 text-accent' : 'bg-accent text-white')}
+                                                                >
+                                                                    {a.label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                    {busy && (
+                                        <div className="flex justify-start">
+                                            <div className="rounded-[20px] rounded-bl-md bg-card border border-card-border px-4 py-3.5 flex gap-1.5">
+                                                {[0, 1, 2].map(i => <span key={i} className="w-2 h-2 rounded-full bg-accent/70 animate-bounce" style={{ animationDelay: `${i * 120}ms` }} />)}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+
+                        {/* Geçmiş */}
+                        <AnimatePresence>
+                            {showHistory && (
+                                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="absolute inset-0 z-10 bg-background overflow-y-auto px-4 py-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-[17px] font-extrabold">Sohbet geçmişi</h3>
+                                        <span className="text-[12px] font-semibold text-secondary">Bu cihazda 90 gün saklanır</span>
+                                    </div>
+                                    {sessions.length === 0 ? (
+                                        <p className="text-[14px] font-semibold text-secondary py-8 text-center">Henüz sohbet yok.</p>
+                                    ) : (
+                                        <div className="rounded-[20px] bg-card border border-card-border divide-y divide-card-border overflow-hidden">
+                                            {sessions.map(s => (
+                                                <div key={s.id} className="flex items-center">
+                                                    <button type="button" onClick={() => { setSessionId(s.id); setShowHistory(false); }} className="flex-1 min-w-0 text-left px-4 py-3">
+                                                        <span className={cn('block text-[14.5px] font-bold truncate', s.id === sessionId && 'text-accent')}>{s.title}</span>
+                                                        <span className="block text-[12px] font-semibold text-secondary">{new Date(s.updatedAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</span>
+                                                    </button>
+                                                    <button type="button" aria-label="Sohbeti sil" onClick={() => { persist(list => list.filter(x => x.id !== s.id)); if (s.id === sessionId) setSessionId(null); }} className="w-12 h-12 flex items-center justify-center text-secondary active:text-emergency">
+                                                        <Trash2 className="w-[18px] h-[18px]" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {sessions.length > 0 && (
+                                        confirmClear ? (
+                                            <div className="mt-4 rounded-[18px] border border-emergency/30 bg-emergency/[0.06] p-3.5">
+                                                <p className="text-[13.5px] font-bold">Tüm sohbetler bu cihazdan silinsin mi?</p>
+                                                <div className="mt-3 flex gap-2">
+                                                    <button type="button" onClick={() => setConfirmClear(false)} className="flex-1 h-11 rounded-xl bg-card border border-card-border text-[14px] font-bold">Vazgeç</button>
+                                                    <button type="button" onClick={() => { persist(() => []); setSessionId(null); setConfirmClear(false); }} className="flex-1 h-11 rounded-xl bg-emergency text-white text-[14px] font-extrabold">Sil</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button type="button" onClick={() => setConfirmClear(true)} className="mt-4 w-full h-11 rounded-xl text-[14px] font-bold text-emergency">Tümünü sil</button>
+                                        )
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Yazma alanı */}
+                    <footer className="shrink-0 border-t border-card-border bg-background px-3 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+10px)]">
+                        {quotaText && <p className="text-[11.5px] font-semibold text-secondary text-center mb-2">{quotaText}</p>}
+                        <form onSubmit={e => { e.preventDefault(); send(input); }} className="flex items-end gap-2">
+                            <textarea
+                                ref={inputRef}
+                                value={input}
+                                onChange={e => setInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); send(input); } }}
+                                rows={1}
+                                maxLength={2000}
+                                placeholder={pet ? `${pet.name} hakkında sor…` : 'Bir şey sor…'}
+                                className="flex-1 resize-none max-h-32 min-h-[48px] rounded-[22px] bg-card border border-card-border px-4 py-3 text-[15px] font-medium focus:outline-none focus:border-accent/60 placeholder:text-secondary/70"
+                                style={{ height: Math.min(128, 48 + Math.max(0, input.split('\n').length - 1) * 22) }}
+                            />
+                            <button
+                                type="submit"
+                                aria-label="Gönder"
+                                disabled={!input.trim() || busy}
+                                className="w-12 h-12 shrink-0 rounded-full bg-accent text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
+                            >
+                                <ArrowUp className="w-6 h-6" strokeWidth={2.6} />
+                            </button>
+                        </form>
+                        <p className="text-[11px] font-medium text-secondary/80 text-center mt-2">Moffi AI yanılabilir; veteriner muayenesinin yerini tutmaz.</p>
+                    </footer>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }

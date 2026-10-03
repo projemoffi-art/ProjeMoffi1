@@ -27,6 +27,8 @@ import { adoptionService } from '@/services/adoptionService';
 import { socialService, type PersonCard } from '@/services/socialService';
 import { isFrameUnlocked, formatRemaining, type FrameStyle } from '@/lib/vipFrames';
 import { DeleteAccountButton } from '@/components/account/AccountDeletion';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { EDGE_SHORTCUTS, MAX_EDGE_SHORTCUTS, MIN_EDGE_SHORTCUTS, readEdgeSettings, type EdgeShortcutId } from '@/components/edge/edgeCatalog';
 
 interface SettingsDrawerProps {
     isOpen: boolean;
@@ -420,12 +422,12 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
         </Section>
 
         <Section title="Erişilebilirlik ve Görünüm">
-            <ActionRow icon={Layers} label="Kenar Paneli Ayarları" desc="Paneldeki hızlı erişim butonlarını seç." onClick={() => setView('sidebar_config')} />
+            <ActionRow icon={Layers} label="Kenar Paneli" desc="Kenar panelindeki kısayolları seç." onClick={() => setView('sidebar_config')} />
             <ActionRow icon={Type} label="Metin ve Renk Ayarları" desc="Yazı boyutu ve görme desteği." onClick={() => setView('accessibility')} />
         </Section>
         
         <Section title="Moffi AI & Akıllı Asistan">
-            <ActionRow icon={BrainCircuit} label="AI Asistan Yapılandırması" desc="Asistanın karakterini ve zekasını yönet." onClick={() => setView('ai_assistant')} />
+            <ActionRow icon={BrainCircuit} label="Moffi AI tercihleri" desc="Konuşma tonu ve yanıt uzunluğu." onClick={() => setView('ai_assistant')} />
         </Section>
 
         <Section title="Akış & İçerik Tercihleri">
@@ -619,6 +621,36 @@ const PrivacyView = ({ user, setView, updateSettings }: ViewProps) => (
     </motion.div>
 );
 
+// Bu cihazın gerçek bildirim aboneliği (push_subscriptions). Eskiden yalnızca bir ayar işaretini değiştiriyordu;
+// ana sayfadaki "Moffi Hesabım" penceresindeki izin yönetimi de buraya taşındı.
+function PushSubscriptionRow({ userId }: { userId?: string }) {
+    const { permission, isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications(userId);
+    const status = permission === 'denied'
+        ? 'Tarayıcı ayarlarından engellenmiş; oradan izin vermen gerekiyor.'
+        : isSubscribed ? 'Bu cihazda açık.' : 'Aşı, randevu ve kayıp uyarılarını kaçırmamak için aç.';
+    return (
+        <div className="bg-foreground/[0.03] rounded-[2rem] p-5 border border-card-border flex items-center justify-between gap-4">
+            <div className="min-w-0">
+                <p className="text-[14px] font-black text-foreground">Anlık bildirimler</p>
+                <p className="text-[12px] text-secondary font-semibold mt-1 leading-snug">{status}</p>
+            </div>
+            {permission !== 'denied' && (
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isSubscribed}
+                    aria-label="Anlık bildirimler"
+                    disabled={loading || !userId}
+                    onClick={() => (isSubscribed ? unsubscribe() : subscribe())}
+                    className={cn("w-12 h-7 shrink-0 rounded-full transition-all relative border border-card-border disabled:opacity-50", isSubscribed ? "bg-emerald-500 border-transparent" : "bg-foreground/10")}
+                >
+                    <span className={cn("absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all shadow", isSubscribed ? "left-[22px]" : "left-0.5")} />
+                </button>
+            )}
+        </div>
+    );
+}
+
 const NotificationsView = ({ user, setView, updateSettings }: ViewProps) => (
     <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
         <div className="space-y-8 pb-10 px-2">
@@ -627,15 +659,7 @@ const NotificationsView = ({ user, setView, updateSettings }: ViewProps) => (
                     <div className="w-8 h-8 rounded-2xl bg-rose-500/10 flex items-center justify-center"><BellRing className="w-4 h-4 text-rose-400" /></div>
                     <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Bildirim Merkezi</h3>
                 </div>
-                <div className="bg-foreground/[0.03] rounded-[2.5rem] p-6 border border-card-border flex items-center justify-between">
-                    <div>
-                        <p className="text-[13px] font-black text-foreground uppercase">Anlık Bildirimler</p>
-                        <p className="text-[9.5px] text-secondary font-black uppercase mt-1.5 tracking-tighter">Push bildirimlerini yönetir.</p>
-                    </div>
-                    <button onClick={() => updateSettings('notifications', { pushEnabled: !user?.settings?.notifications?.pushEnabled })} className={cn("w-12 h-6 rounded-full transition-all relative border border-card-border", user?.settings?.notifications?.pushEnabled ? "bg-emerald-500 border-transparent shadow-lg shadow-emerald-500/20" : "bg-foreground/5")}>
-                        <div className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-card transition-all shadow-lg", user?.settings?.notifications?.pushEnabled ? "left-6.5" : "left-0.5")} />
-                    </button>
-                </div>
+                <PushSubscriptionRow userId={user?.id} />
             </div>
 
             <div className="space-y-3">
@@ -1245,69 +1269,44 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
     );
 }
 
+// Kenar paneli kısayolları: panelin kendi "Düzenle" ekranıyla aynı katalog ve aynı ayar (settings.edge).
 const SidebarConfigView = ({ user, setView, updateSettings }: ViewProps) => {
-    const activeActions = user?.settings?.sidebar?.activeActions || ['ai', 'post', 'qr', 'mood'];
-    
-    const actions = [
-        { id: 'ai', label: 'AI Asistan', icon: Sparkles, desc: 'Yapay zeka asistanına hızlı erişim.' },
-        { id: 'post', label: 'Hızlı Paylaş', icon: Plus, desc: 'Anında fotoğraf veya video yükle.' },
-        { id: 'qr', label: 'QR Pasaport', icon: QrCode, desc: 'Dijital pasaportuna anında ulaş.' },
-        { id: 'mood', label: 'Ruh Halim', icon: Zap, desc: 'Profil durumunu tek tıkla güncelle.' },
-        { id: 'sos', label: 'SOS Alert', icon: ShieldAlert, desc: 'Acil durum merkezine hızlı giriş.' },
-        { id: 'studio', label: 'Aura Studio', icon: Palette, desc: 'Profil aura ayarlarına git.' }
-    ];
-
-    const toggleAction = (id: string) => {
-        let newActions = [...activeActions];
-        if (newActions.includes(id)) {
-            if (newActions.length <= 1) return;
-            newActions = newActions.filter(a => a !== id);
-        } else {
-            if (newActions.length >= 6) return;
-            newActions.push(id);
-        }
-        updateSettings('sidebar', { activeActions: newActions });
+    const edge = readEdgeSettings(user?.settings?.edge);
+    const toggle = (id: EdgeShortcutId) => {
+        const on = edge.shortcuts.includes(id);
+        if (on && edge.shortcuts.length <= MIN_EDGE_SHORTCUTS) return;
+        if (!on && edge.shortcuts.length >= MAX_EDGE_SHORTCUTS) return;
+        updateSettings('edge', { activeActions: on ? edge.shortcuts.filter(x => x !== id) : [...edge.shortcuts, id] });
     };
 
     return (
         <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-            <div className="space-y-8 pb-10 px-2">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3 px-1">
-                        <div className="w-8 h-8 rounded-2xl bg-cyan-500/10 flex items-center justify-center"><Layers className="w-4 h-4 text-cyan-400" /></div>
-                        <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Kenar Paneli Özelleştirme</h3>
+            <div className="space-y-5 pb-10 px-2">
+                <div className="flex items-center gap-3 px-1">
+                    <div className="w-8 h-8 rounded-2xl bg-accent/10 flex items-center justify-center"><Layers className="w-4 h-4 text-accent" /></div>
+                    <div>
+                        <h3 className="text-[14px] font-black text-foreground">Kenar paneli</h3>
+                        <p className="text-[12px] font-semibold text-secondary">{edge.shortcuts.length}/{MAX_EDGE_SHORTCUTS} kısayol · ekran kenarındaki ince çubuktan açılır</p>
                     </div>
-                    <p className="text-[10px] text-secondary font-bold uppercase tracking-widest px-1 leading-relaxed opacity-60">
-                        Ekranın sağ kenarındaki ince çubuğu çekince görünecek olan özellikleri buradan seçebilirsin. (En fazla 6 özellik)
-                    </p>
-                    <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                        {actions.map(action => (
-                            <button 
-                                key={action.id}
-                                onClick={() => toggleAction(action.id)}
-                                className="w-full flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 text-left"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={cn(
-                                        "w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-all",
-                                        activeActions.includes(action.id) ? "bg-cyan-500 text-black shadow-cyan-500/20" : "bg-foreground/5 text-foreground/40"
-                                    )}>
-                                        <action.icon className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[12px] font-black text-foreground uppercase tracking-tight">{action.label}</p>
-                                        <p className="text-[9px] text-secondary mt-1 font-bold uppercase tracking-tighter">{action.desc}</p>
-                                    </div>
-                                </div>
-                                <div className={cn(
-                                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
-                                    activeActions.includes(action.id) ? "bg-cyan-500 border-cyan-400" : "border-card-border"
-                                )}>
-                                    {activeActions.includes(action.id) && <Check className="w-3 h-3 text-black" strokeWidth={4} />}
-                                </div>
+                </div>
+                <div className="rounded-[1.5rem] bg-foreground/[0.02] border border-card-border divide-y divide-card-border overflow-hidden">
+                    {EDGE_SHORTCUTS.filter(s => s.id !== 'business').map(s => {
+                        const on = edge.shortcuts.includes(s.id);
+                        return (
+                            <button key={s.id} type="button" onClick={() => toggle(s.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
+                                <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: s.color }}>
+                                    <s.Icon className="w-[18px] h-[18px] text-white" />
+                                </span>
+                                <span className="flex-1 min-w-0">
+                                    <span className="block text-[14px] font-black text-foreground">{s.label}</span>
+                                    <span className="block text-[12px] font-semibold text-secondary truncate">{s.desc}</span>
+                                </span>
+                                <span className={cn("w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0", on ? "bg-accent border-accent" : "border-card-border")}>
+                                    {on && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3.2} />}
+                                </span>
                             </button>
-                        ))}
-                    </div>
+                        );
+                    })}
                 </div>
             </div>
             <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
@@ -1315,118 +1314,58 @@ const SidebarConfigView = ({ user, setView, updateSettings }: ViewProps) => {
     );
 };
 
-// --- AI Assistant View ---
+// --- Moffi AI tercihleri ---
+// Yalnızca sunucunun gerçekten uyguladığı iki tercih (api/ai/chat): konuşma tonu ve yanıt uzunluğu.
 const AIAssistantView = ({ user, setView, updateSettings }: ViewProps) => {
-    const ai = user?.settings?.ai || { 
-        name: 'Moffi AI', 
-        personality: 'friendly', 
-        autoHealthTips: true, 
-        smartModeration: true,
-        voiceFeedback: false
-    };
+    const ai = (user?.settings?.ai || {}) as { personality?: string; detailLevel?: string };
+    const personality = ai.personality === 'casual' ? 'friendly' : ai.personality === 'technical' ? 'professional' : ai.personality || 'friendly';
+    const detailLevel = ai.detailLevel || 'medium';
+    const Option = ({ active, label, desc, onClick }: { active: boolean; label: string; desc: string; onClick: () => void }) => (
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn("w-full p-4 rounded-[1.5rem] border text-left transition-all flex items-center justify-between gap-3", active ? "bg-accent/10 border-accent/40" : "bg-foreground/[0.03] border-card-border")}
+        >
+            <span>
+                <span className="block text-[14px] font-black text-foreground">{label}</span>
+                <span className="block text-[12px] font-semibold text-secondary mt-0.5">{desc}</span>
+            </span>
+            {active && <Check className="w-5 h-5 text-accent shrink-0" />}
+        </button>
+    );
 
     return (
         <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-            <div className="space-y-8 pb-10 px-2">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3 px-1">
-                        <div className="w-8 h-8 rounded-2xl bg-cyan-500/10 flex items-center justify-center"><BrainCircuit className="w-4 h-4 text-cyan-400" /></div>
-                        <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Asistan Kimliği</h3>
-                    </div>
-                    
-                    <div className="bg-foreground/[0.03] rounded-[2.5rem] p-6 border border-card-border">
-                        <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-3 px-1">Asistan Adı</p>
-                        <input 
-                            type="text" 
-                            value={ai.name}
-                            onChange={(e) => updateSettings('ai', { name: e.target.value })}
-                            placeholder="Örn: Moffi AI"
-                            className="w-full bg-background border border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-foreground focus:outline-none focus:border-cyan-500 transition-all placeholder:text-secondary/30"
-                        />
-                        <p className="text-[9px] text-secondary mt-3 px-1 uppercase font-bold tracking-tighter italic">Bu isim, asistan seninle konuştuğunda görünecek.</p>
-                    </div>
-
-                    <div className="bg-foreground/[0.03] rounded-[2.5rem] p-4 border border-card-border flex items-center justify-between">
-                        <div>
-                            <p className="text-[13px] font-black text-foreground uppercase tracking-tight">Ekranda Göster</p>
-                            <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Yüzen asistan butonu sayfalarda görünsün mü?</p>
-                        </div>
-                        <button 
-                            onClick={() => updateSettings('ai', { widgetEnabled: ai.widgetEnabled !== false ? false : true })}
-                            className={cn("w-10 h-5.5 rounded-full transition-all relative shrink-0 border border-card-border", ai.widgetEnabled !== false ? "bg-emerald-500 border-transparent shadow-lg shadow-emerald-500/20" : "bg-foreground/5")}
-                        >
-                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-card transition-all shadow-moffi-card", ai.widgetEnabled !== false ? "left-5" : "left-0.5")} />
-                        </button>
+            <div className="space-y-7 pb-10 px-2">
+                <div className="flex items-center gap-3 px-1">
+                    <div className="w-8 h-8 rounded-2xl bg-accent/10 flex items-center justify-center"><BrainCircuit className="w-4 h-4 text-accent" /></div>
+                    <div>
+                        <h3 className="text-[14px] font-black text-foreground">Moffi AI</h3>
+                        <p className="text-[12px] font-semibold text-secondary">Alt menünün ortasındaki düğmeden açılır.</p>
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Karakter ve Tonlama</p>
-                    <div className="grid grid-cols-1 gap-2">
-                        {[
-                            { id: 'friendly', label: 'Dost Canlısı', desc: 'Sıcak, enerjik ve samimi bir dil kullanır.', icon: Heart },
-                            { id: 'professional', label: 'Bilgiç / Teknik', desc: 'Daha ciddi, veriye dayalı ve net bilgiler sunar.', icon: Cpu },
-                            { id: 'protective', label: 'Koruyucu / Ebeveyn', desc: 'Sağlık ve güvenlik konularında daha uyarıcıdır.', icon: ShieldCheck }
-                        ].map((p) => (
-                            <button 
-                                key={p.id} 
-                                onClick={() => updateSettings('ai', { personality: p.id })}
-                                className={cn(
-                                    "w-full p-5 rounded-[2.5rem] border text-left transition-all relative group",
-                                    ai.personality === p.id ? "bg-foreground text-background border-transparent shadow-xl" : "bg-foreground/[0.03] border-card-border hover:bg-foreground/10"
-                                )}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", ai.personality === p.id ? "bg-background/10" : "bg-foreground/5")}>
-                                            <p.icon className={cn("w-5 h-5", ai.personality === p.id ? "text-background" : "text-foreground/40")} />
-                                        </div>
-                                        <div>
-                                            <span className={cn("text-[13px] font-black uppercase tracking-widest", ai.personality === p.id ? "text-background" : "text-foreground")}>{p.label}</span>
-                                            <p className={cn("text-[10px] mt-1 font-bold uppercase tracking-tighter opacity-60", ai.personality === p.id ? "text-background" : "text-secondary")}>{p.desc}</p>
-                                        </div>
-                                    </div>
-                                    {ai.personality === p.id && <Check className="w-5 h-5 text-background" />}
-                                </div>
-                            </button>
-                        ))}
-                    </div>
+                <div className="space-y-2">
+                    <p className="text-[12px] font-black text-secondary px-1">Konuşma tonu</p>
+                    {[
+                        { id: 'friendly', label: 'Samimi', desc: 'Sıcak ve cesaret verici bir dil.' },
+                        { id: 'professional', label: 'Net', desc: 'Sakin, kısa ve bilgiye dayalı.' },
+                        { id: 'protective', label: 'Koruyucu', desc: 'Sağlık risklerini daha açık belirtir.' },
+                    ].map(p => <Option key={p.id} active={personality === p.id} label={p.label} desc={p.desc} onClick={() => updateSettings('ai', { personality: p.id })} />)}
                 </div>
 
-                <div className="space-y-3">
-                    <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Proaktif Zeka Özellikleri</p>
-                    <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                         <div className="w-full flex items-center justify-between py-2.5 px-2 hover:bg-foreground/[0.03] transition-all group border-b border-card-border last:border-0 rounded-2xl transform-gpu will-change-transform text-left" onClick={() => updateSettings('ai', { autoHealthTips: !ai.autoHealthTips })}>
-                             <div className="flex items-center gap-3">
-                                 <div className="flex items-center justify-center transition-transform group-hover:scale-110 text-foreground/40">
-                                     <Activity className="w-4 h-4" />
-                                 </div>
-                                 <div>
-                                     <p className="text-[12px] font-black text-foreground uppercase tracking-tight leading-none">Otomatik Sağlık Önerileri</p>
-                                     <p className="text-[9px] text-secondary mt-1 leading-none font-bold max-w-[200px] uppercase tracking-tighter">Asistanın evcil hayvanın için ipuçları versin.</p>
-                                 </div>
-                             </div>
-                             <div className={cn("w-8 h-4.5 rounded-full transition-all relative border border-card-border shrink-0", ai.autoHealthTips ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5")}>
-                                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-card transition-all shadow-moffi-card", ai.autoHealthTips ? "left-4" : "left-0.5")} />
-                             </div>
-                         </div>
-
-                         <div className="w-full flex items-center justify-between py-2.5 px-2 hover:bg-foreground/[0.03] transition-all group border-b border-card-border last:border-0 rounded-2xl transform-gpu will-change-transform text-left" onClick={() => updateSettings('ai', { smartModeration: !ai.smartModeration })}>
-                             <div className="flex items-center gap-3">
-                                 <div className="flex items-center justify-center transition-transform group-hover:scale-110 text-foreground/40">
-                                     <Shield className="w-4 h-4" />
-                                 </div>
-                                 <div>
-                                     <p className="text-[12px] font-black text-foreground uppercase tracking-tight leading-none">Akıllı İçerik Filtresi</p>
-                                     <p className="text-[9px] text-secondary mt-1 leading-none font-bold max-w-[200px] uppercase tracking-tighter">Spam ve kötü niyetli yorumları önler.</p>
-                                 </div>
-                             </div>
-                             <div className={cn("w-8 h-4.5 rounded-full transition-all relative border border-card-border shrink-0", ai.smartModeration ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5")}>
-                                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-card transition-all shadow-moffi-card", ai.smartModeration ? "left-4" : "left-0.5")} />
-                             </div>
-                         </div>
-                    </div>
+                <div className="space-y-2">
+                    <p className="text-[12px] font-black text-secondary px-1">Yanıt uzunluğu</p>
+                    {[
+                        { id: 'short', label: 'Kısa', desc: 'Birkaç cümle ya da madde.' },
+                        { id: 'medium', label: 'Dengeli', desc: 'Gerektiği kadar açıklama.' },
+                        { id: 'long', label: 'Ayrıntılı', desc: 'Adım adım ve kapsamlı.' },
+                    ].map(d => <Option key={d.id} active={detailLevel === d.id} label={d.label} desc={d.desc} onClick={() => updateSettings('ai', { detailLevel: d.id })} />)}
                 </div>
+
+                <p className="text-[12px] font-semibold text-secondary leading-relaxed px-1">
+                    Moffi AI seçtiğin hayvanın kimlik bilgilerini, sağlık kaydının özetini ve yürüyüşlerini kullanır. Sohbet geçmişi yalnızca bu cihazda tutulur.
+                </p>
             </div>
             <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
         </motion.div>

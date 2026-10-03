@@ -33,7 +33,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const { user, updateSettings } = useAuth();
-    const [theme, setThemeState] = useState<Theme>('dark');
+    const [theme, setThemeState] = useState<Theme>('light');
     const [fontSize, setFontSizeState] = useState<FontSize>('medium');
     const [colorBlindMode, setColorBlindModeState] = useState<ColorBlindMode>('none');
     
@@ -50,7 +50,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (savedTheme === 'light' || savedTheme === 'dark') {
             setThemeState(savedTheme);
         } else {
-            setThemeState('dark');
+            setThemeState('light');
         }
     }, []);
 
@@ -168,7 +168,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         // 1. Initial LocalStorage load (Client-side only)
         const savedTheme = localStorage.getItem('moffi-theme') as Theme;
-        const validTheme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark';
+        const validTheme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'light';
         if (validTheme !== theme) {
             setThemeState(validTheme);
         }

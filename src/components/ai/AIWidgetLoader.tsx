@@ -1,32 +1,19 @@
 "use client";
 
 import dynamic from "next/dynamic";
-
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-const GlobalAIWidget = dynamic(
-    () => import("@/components/ai/GlobalAIWidget").then(mod => mod.GlobalAIWidget),
-    { ssr: false }
-);
+// Moffi AI paneli. Ekranda kendi düğmesi yok; alt menünün ortasındaki düğme, kenar paneli ve diğer ekranlar
+// 'open-ai-assistant' olayıyla açar. Giriş/kurulum ekranlarında ve giriş yapılmamışken yüklenmez.
+const MoffiAssistant = dynamic(() => import("@/components/ai/MoffiAssistant").then(mod => mod.MoffiAssistant), { ssr: false });
+
+const HIDDEN = ['/', '/onboarding', '/login', '/register', '/reset-password', '/business-register'];
+const PUBLIC_PREFIXES = ['/p/', '/id/', '/verify/', '/invitation/'];
 
 export function AIWidgetLoader() {
-    const pathname = usePathname();
+    const pathname = usePathname() || '';
     const { user } = useAuth();
-    
-    // Hide AI Assistant on login/landing flows, games, and full-screen walk takeovers
-    // (referans mockup'ta bu ekranlarda hiç yok; ayrıca daha önce start/bitir
-    // butonlarının üzerine binerek gerçek tıklama sorunlarına yol açtığı görüldü)
-    const hidePaths = ['/', '/onboarding', '/login', '/register', '/reset-password', '/walk/tracking', '/walk/summary'];
-    if (hidePaths.includes(pathname) || pathname.startsWith('/game')) return null;
-    // Sağlık ve pasaport ekranları: yüzen düğme listelerin sağ tarafını ve alt sayfalardaki
-    // kaydet düğmelerini kapatıyordu. Paylaşım/künye sayfaları giriş yapmamış kişiye açılır.
-    // Kayıp & Bulunan ve Sahiplendirme: sihirbazdaki "Devam et" ve alttaki sabit ilan düğmelerinin üstüne biniyordu.
-    if (['/health', '/pasaport', '/p/', '/id/', '/verify/', '/kayip', '/sahiplendirme', '/community', '/profile'].some(p => pathname.startsWith(p))) return null;
-
-    // Check user preference
-    const widgetEnabled = user?.settings?.ai?.widgetEnabled ?? true;
-    if (!widgetEnabled) return null;
-
-    return <GlobalAIWidget />;
+    if (!user?.id || HIDDEN.includes(pathname) || PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) return null;
+    return <MoffiAssistant />;
 }

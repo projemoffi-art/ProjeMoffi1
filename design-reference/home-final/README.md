@@ -1,5 +1,21 @@
 # Moffi Ana Sayfa — KİLİTLİ Tasarım Referansı
 
+## ✅ KAPANDI — Son hâl (2026-10-03, Baran onaylı)
+
+Ana sayfa bu referansa göre tek seferde yeniden yazıldı; aşağıdaki "açık iş" ve "Baran karar verecek" notları
+bununla kapandı. Kod: `src/app/home/page.tsx` (yalnızca sıra + veri) ve `src/components/home/*` (her bölüm ayrı).
+
+- **Sıra:** üst alan (logo, zil, profil, selamlama + günün sözü; 2+ hayvanda seçici; kayıp modunda kırmızı şerit) →
+  hikâyeler → (doğum günü) → Bugünkü Yürüyüş → Hızlı Erişim → Hatırlatmalar → Oyun + Görev → Öneriler → İlham.
+  Hatırlatmalar bilinçli olarak Öneriler'den önce (sağlık alışverişten önce).
+- **Çıkanlar:** Luna kartı (3D/gardırop/halkalar), Aktivite Raporu, "Bugün senin için", "Moffi ile her an yanında"
+  afişi, "Moffi Hesabım" paneli (profil fotoğrafı profil sayfasına gider). Bilgileri kendi ekranlarında var.
+- **Yürüyüş kartı durumları:** canlı yürüyüş > bugün hedef tamam > 3+ gündür yürünmedi > ilk yürüyüş > normal.
+- **Hatırlatmalar** tüm hayvanlar için (`useUpcomingCare`), boşsa "Her şey yolunda".
+- **Hikâyeler:** içeriği olmayan kanal gösterilmez; nokta yalnızca görülmemiş hikâyede.
+- **Tema:** varsayılan açık; koyu tema `.theme-vet`'in sıcak koyu karşılığıyla.
+- **Alt menü:** etiketli, aktif turuncu; orta düğme Moffi AI.
+
 Bu klasör, Baran'ın üzerinde karar kıldığı **son, onaylı ana sayfa (`/home`) tasarımını**
 içerir. Herhangi bir ajan (Claude Code, Antigravity) `/home` sayfasında UI değişikliği
 yapmadan önce bu klasördeki referansı okumalı — tasarım kararları burada, tekrar

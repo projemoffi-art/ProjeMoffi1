@@ -18,7 +18,8 @@ export function birthdaysToday(pets: Pet[], now = new Date()) {
         if (!p.birthday) return [];
         const [y, m, d] = p.birthday.split('-').map(Number);
         if (!y || !m || !d) return [];
-        let bm = m, bd = d;
+        const bm = m;
+        let bd = d;
         if (m === 2 && d === 29 && !leap(now.getFullYear())) bd = 28;
         if (now.getMonth() + 1 !== bm || now.getDate() !== bd) return [];
         const age = now.getFullYear() - y;
@@ -47,7 +48,7 @@ export function BirthdayCard({ pets }: { pets: Pet[] }) {
             {visible.map(({ pet, age }) => (
                 <motion.div key={pet.id} initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-                    className="relative mb-4 overflow-hidden rounded-[1.75rem] border border-[#F4C9B8] bg-gradient-to-br from-[#FFF1E8] to-[#FCE3D6] dark:from-[#2B1D16] dark:to-[#2A1712] dark:border-[#4A2C20] p-4">
+                    className="relative overflow-hidden rounded-[1.75rem] border border-[#F4C9B8] bg-gradient-to-br from-[#FFF1E8] to-[#FCE3D6] dark:from-[#2B1D16] dark:to-[#2A1712] dark:border-[#4A2C20] p-4">
                     <button onClick={() => dismiss(pet.id)} aria-label="Kartı kapat"
                         className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/70 dark:bg-black/30 flex items-center justify-center text-[#6F675B] dark:text-white/70">
                         <X className="w-4 h-4" />

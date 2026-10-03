@@ -64,7 +64,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" translate="no" className="notranslate">
+    <html lang="tr" translate="no" className="notranslate">
       <body
         className={`${jakarta.variable} ${jakarta.className} font-sans antialiased bg-background text-foreground`}
       >

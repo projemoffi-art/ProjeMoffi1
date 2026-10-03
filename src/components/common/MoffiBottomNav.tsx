@@ -1,11 +1,15 @@
 'use client';
 
+// Alt menü (design-reference/home-final + community-final): Ana Sayfa · Keşfet · Moffi AI (orta) · Pati Yardım · Profil.
+// Etiketli, aktif sekme turuncu; zemin uygulamanın kart rengi (koyu temada sıcak koyu karşılığı).
+
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Home, Compass, Sparkles, HeartHandshake, User } from 'lucide-react';
+import { Compass, HeartHandshake, Home, Sparkles, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { haptics } from '@/native';
 
 interface MoffiBottomNavProps {
     activeTab?: string;
@@ -18,101 +22,73 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
     const pathname = usePathname();
     const { user } = useAuth();
     const isHelpActive = !!pathname && (pathname.startsWith('/kayip') || pathname.startsWith('/sahiplendirme'));
+    const activeTab = isHelpActive ? 'help' : propActiveTab || (pathname === '/home' ? 'home' : pathname?.startsWith('/profile') ? 'profile' : pathname?.startsWith('/community') ? 'feed' : '');
 
-    const activeTab = propActiveTab || (pathname === '/home' ? 'home' : pathname?.startsWith('/profile') ? 'profile' : 'feed');
-
-    const handleTabClick = (tab: string) => {
-        if (onTabChange) {
-            onTabChange(tab);
-        } else {
-            if (tab === 'home') {
-                router.push('/home');
-            } else if (tab === 'feed') {
-                router.push('/community?tab=feed');
-            }
-        }
+    const go = (tab: string) => {
+        haptics.tap();
+        if (tab === 'help') { router.push('/kayip'); return; }
+        if (tab === 'profile' && !onTabChange) { if (user?.id) router.push(`/profile/${user.id}`); return; }
+        if (onTabChange) onTabChange(tab);
+        else if (tab === 'home') router.push('/home');
+        else if (tab === 'feed') router.push('/community');
     };
 
-    const handleProfileClick = () => {
-        if (user?.id) {
-            router.push(`/profile/${user.id}`);
-        }
-    };
+    const tabs = [
+        { id: 'home', label: 'Ana Sayfa', Icon: Home },
+        { id: 'feed', label: 'Keşfet', Icon: Compass },
+        { id: 'ai', label: '', Icon: Sparkles },
+        { id: 'help', label: 'Pati Yardım', Icon: HeartHandshake },
+        { id: 'profile', label: 'Profil', Icon: User },
+    ];
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-[6000] pointer-events-none flex justify-center">
-            <motion.nav 
+            <motion.nav
+                aria-label="Ana menü"
                 initial={false}
-                animate={{ y: isVisible ? 0 : 150, opacity: isVisible ? 1 : 0 }}
-                transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-                className="pointer-events-auto w-full max-w-md bg-black/10 dark:bg-white/10 dark:bg-black/20 backdrop-blur-md backdrop-saturate-[1.5] border-t border-x border-black/30 dark:border-white/30 dark:border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_0_-5px_20px_rgba(0,0,0,0.3)] rounded-t-2xl overflow-visible pb-0.5"
+                animate={{ y: isVisible ? 0 : 140 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                className="theme-vet pointer-events-auto w-full max-w-md bg-card/95 backdrop-blur-xl border-t border-card-border shadow-[0_-8px_28px_-12px_rgba(32,27,22,0.22)] rounded-t-[24px] pb-[env(safe-area-inset-bottom)]"
             >
-                <div className="px-6 relative h-11 flex items-center justify-between">
-                    
-                    {/* 1. ANA SAYFA */}
-                    <button
-                        onClick={() => handleTabClick('home')}
-                        className={cn(
-                            "flex-1 flex flex-col items-center justify-center transition-all active:scale-90 h-full",
-                            activeTab === 'home' ? "text-cyan-600 dark:text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "text-foreground/80 hover:text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
-                        )}
-                    >
-                        <Home className={cn("w-5 h-5", activeTab === 'home' && "text-cyan-600 dark:text-cyan-400")} />
-                    </button>
-
-                    {/* 2. TOPLULUK — /community?tab=feed'e gider, 'feed' iç kimliği bu yüzden korundu */}
-                    <button
-                        onClick={() => handleTabClick('feed')}
-                        className={cn(
-                            "flex-1 flex flex-col items-center justify-center transition-all active:scale-90 h-full",
-                            activeTab === 'feed' ? "text-cyan-600 dark:text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "text-foreground/80 hover:text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
-                        )}
-                    >
-                        <Compass className={cn("w-5 h-5", activeTab === 'feed' && "text-cyan-600 dark:text-cyan-400")} />
-                    </button>
-
-                    {/* 3. CENTER: MOFFI AI HUB BUTTON */}
-                    <div className="flex-1 flex justify-center relative">
-                        <button
-                            onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-ai-hub'))}
-                            className={cn(
-                                "w-11 h-11 rounded-full flex items-center justify-center border-[2.5px] border-[var(--background)] dark:border-[#1c1c21] active:scale-95 transition-all group absolute -top-4",
-                                "bg-gradient-to-tr from-orange-400 via-[#EE5B3D] to-red-600 text-[#ffffff] shadow-[0_8px_20px_rgba(238,91,61,0.4)]"
-                            )}
-                        >
-                            <Sparkles className="w-5 h-5 transition-transform duration-500 group-hover:scale-110" />
-                        </button>
-                        <div className="h-full" />
-                    </div>
-
-                    {/* 4. KAYIP & SAHİPLENDİRME (Pati Yardım). Mesajlar Keşfet üst çubuğunda — design-reference/community-final. */}
-                    <button
-                        onClick={() => router.push('/kayip')}
-                        aria-label="Kayıp ve sahiplendirme"
-                        className={cn(
-                            "flex-1 flex flex-col items-center justify-center transition-all active:scale-90 h-full",
-                            isHelpActive ? "text-cyan-600 dark:text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "text-foreground/80 hover:text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
-                        )}
-                    >
-                        <HeartHandshake className={cn("w-5 h-5", isHelpActive && "text-cyan-600 dark:text-cyan-400")} />
-                    </button>
-
-                    {/* 5. PROFİL */}
-                    <button
-                        onClick={handleProfileClick}
-                        className={cn(
-                            "flex-1 flex flex-col items-center justify-center transition-all active:scale-90 h-full",
-                            activeTab === 'profile' ? "text-cyan-600 dark:text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "text-foreground/80 hover:text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
-                        )}
-                    >
-                        {user?.avatar ? (
-                            <div className={cn("w-5 h-5 rounded-full border overflow-hidden transition-colors", activeTab === 'profile' ? "border-cyan-600 dark:border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "border-foreground/10")}>
-                                <img src={user.avatar} className="w-full h-full object-cover" alt="" />
-                            </div>
-                        ) : (
-                            <User className="w-5 h-5" />
-                        )}
-                    </button>
+                <div className="relative h-[62px] grid grid-cols-5 items-center px-2">
+                    {tabs.map(({ id, label, Icon }) => {
+                        if (id === 'ai') {
+                            return (
+                                <div key={id} className="flex justify-center">
+                                    <button
+                                        type="button"
+                                        aria-label="Moffi AI"
+                                        onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent('open-ai-assistant')); }}
+                                        className="-mt-7 w-[60px] h-[60px] rounded-full bg-accent text-white flex flex-col items-center justify-center border-[4px] border-card shadow-[0_10px_24px_-8px_rgba(238,91,61,0.75)] active:scale-95 transition-transform"
+                                    >
+                                        <Sparkles className="w-6 h-6" strokeWidth={2.2} />
+                                    </button>
+                                </div>
+                            );
+                        }
+                        const active = activeTab === id;
+                        return (
+                            <button
+                                key={id}
+                                type="button"
+                                aria-current={active ? 'page' : undefined}
+                                onClick={() => go(id)}
+                                className={cn(
+                                    'flex flex-col items-center justify-center gap-1 h-full active:scale-95 transition-all',
+                                    active ? 'text-accent' : 'text-secondary',
+                                )}
+                            >
+                                {id === 'profile' && user?.avatar ? (
+                                    <span className={cn('w-6 h-6 rounded-full overflow-hidden border-2', active ? 'border-accent' : 'border-transparent')}>
+                                        <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                                    </span>
+                                ) : (
+                                    <Icon className="w-6 h-6" strokeWidth={active ? 2.4 : 2} fill={active && id === 'home' ? 'currentColor' : 'none'} fillOpacity={0.15} />
+                                )}
+                                <span className={cn('text-[11px] leading-none', active ? 'font-extrabold' : 'font-semibold')}>{label}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </motion.nav>
         </div>

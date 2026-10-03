@@ -9,7 +9,6 @@ import type { WalkPoint } from '@/services/types';
 import { WalkStats } from '@/types/domain';
 import { normalizePathToTuples, showToast } from '@/lib/utils';
 
-type ActivityMode = 'none' | 'walk' | 'voice' | 'sos' | 'ai' | 'order';
 
 type WalkPhase = 'idle' | 'ready' | 'active' | 'paused' | 'completing' | 'completed';
 
@@ -86,8 +85,6 @@ export type WalkFinishResult = { sessionId?: string; status: 'completed' | 'disc
 export type WalkFinishStage = 'points' | 'saved' | 'refreshed';
 
 interface ActivityContextType {
-    activeMode: ActivityMode;
-    setActiveMode: (mode: ActivityMode) => void;
     walkData: WalkData;
     walkHistory: WalkRecord[];
     walkStats: WalkStats | null;
@@ -97,10 +94,6 @@ interface ActivityContextType {
     // Başarısız olursa hata fırlatır ve yürüyüşü SİLMEZ (tekrar denenebilir).
     stopWalk: (onStage?: (stage: WalkFinishStage) => void) => Promise<WalkFinishResult>;
     discardWalkRecord: (sessionId: string) => Promise<void>;
-    recTime: number;
-    setRecTime: React.Dispatch<React.SetStateAction<number>>;
-    orderStep: number;
-    setOrderStep: React.Dispatch<React.SetStateAction<number>>;
     isLoading: boolean;
     refreshWalkData: () => Promise<void>;
     walkPhase: WalkPhase;
@@ -160,15 +153,12 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const { activePet } = usePet();
 
-    const [activeMode, setActiveMode] = useState<ActivityMode>('none');
     const [walkData, setWalkData] = useState<WalkData>(EMPTY_WALK);
     const [walkHistory, setWalkHistory] = useState<WalkRecord[]>([]);
     const [walkStats, setWalkStats] = useState<WalkStats | null>({
         totalWalks: 0, totalDistanceKm: 0, totalDurationMinutes: 0, averageDistanceKm: 0,
         longestWalkKm: 0, currentStreak: 0, bestStreak: 0,
     });
-    const [recTime, setRecTime] = useState(0);
-    const [orderStep, setOrderStep] = useState(2);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [walkPhase, setWalkPhase] = useState<WalkPhase>('idle');
@@ -193,7 +183,6 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     const lastMovementAtRef = useRef<number>(Date.now());
     const stationarySinceRef = useRef<number | null>(null);
     const gpsErrorShownRef = useRef(false);
-    const recInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Süre: biten aktif dilimlerin toplamı + (çalışıyorsa) şu anki dilimin başlangıcı.
     const activeAccumMsRef = useRef(0);
@@ -278,29 +267,10 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         }
     }, [user?.id]);
 
-    // SOS / AI / sipariş olayları
-    useEffect(() => {
-        const handleSOS = () => setActiveMode('sos');
-        const handleAI = () => setActiveMode('ai');
-        const handleOrder = (e: any) => {
-            if (e.detail?.step) setOrderStep(e.detail.step);
-            setActiveMode('order');
-        };
-        window.addEventListener('moffi-sos-activated', handleSOS);
-        window.addEventListener('moffi-ai-listening', handleAI);
-        window.addEventListener('moffi-order-update', handleOrder);
-        return () => {
-            window.removeEventListener('moffi-sos-activated', handleSOS);
-            window.removeEventListener('moffi-ai-listening', handleAI);
-            window.removeEventListener('moffi-order-update', handleOrder);
-        };
-    }, []);
-
     // Açılışta yarım kalmış yürüyüş varsa sessizce devam ettirme; kullanıcıya sorulacak.
     useEffect(() => {
         localStorage.removeItem('moffi_walk_history'); // eski sürümlerin cihaz kopyası (başka hesaba sızıyordu)
-        const savedMode = localStorage.getItem('moffi_active_mode') as ActivityMode;
-        if (savedMode && savedMode !== 'walk') setActiveMode(savedMode);
+        localStorage.removeItem('moffi_active_mode'); // eski kenar çubuğunun kapsül durumu, artık kullanılmıyor
         const savedWalk = localStorage.getItem(ACTIVE_WALK_KEY);
         if (savedWalk) {
             try {
@@ -336,11 +306,6 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         if (isLoaded && user?.id) refreshWalkData();
     }, [isLoaded, user?.id, refreshWalkData]);
 
-    useEffect(() => {
-        if (!isLoaded) return;
-        localStorage.setItem('moffi_active_mode', activeMode);
-    }, [activeMode, isLoaded]);
-
     // Yürüyüş anlık görüntüsü: her saniye değil, rota/durum değişince ya da 15 sn'de bir yazılır.
     // Kurtarma teklifi cevaplanmadan yazılmaz (gerçek görüntünün üstüne boş veri yazılmasın).
     const snapshotTick = Math.floor(walkData.time / 15);
@@ -358,7 +323,6 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         lastPosTimestampRef.current = 0;
         gpsErrorShownRef.current = false;
         walkDataRef.current = data;
-        setActiveMode('walk');
         setWalkData(data);
         setWalkPhase('active');
         setWalkIssue('none');
@@ -497,7 +461,6 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             resetPointBuffer();
             activeAccumMsRef.current = 0;
             segmentStartRef.current = null;
-            setActiveMode('none');
             walkDataRef.current = EMPTY_WALK;
             setWalkData(EMPTY_WALK);
             setWalkIssue('none');
@@ -753,24 +716,9 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         });
     }, [walkData.isActive, walkData.isPaused]);
 
-    // Sesli not kayıt süresi
-    useEffect(() => {
-        if (!isLoaded) return;
-        if (activeMode === 'voice') {
-            recInterval.current = setInterval(() => setRecTime(prev => prev + 1), 1000);
-        } else {
-            if (recInterval.current) clearInterval(recInterval.current);
-            setRecTime(0);
-        }
-        return () => { if (recInterval.current) clearInterval(recInterval.current); };
-    }, [activeMode, isLoaded]);
-
     return (
         <ActivityContext.Provider value={{
-            activeMode, setActiveMode,
             walkData, walkHistory, walkStats, startWalk, pauseWalk, resumeWalk, stopWalk, discardWalkRecord,
-            recTime, setRecTime,
-            orderStep, setOrderStep,
             isLoading,
             refreshWalkData,
             walkPhase, walkIssue, recoverableWalk,

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
 import { FloatingControls } from "@/components/common/FloatingControls";
-import { MoffiSidebar } from "@/components/community/MoffiSidebar";
+import { EdgePanel } from "@/components/edge/EdgePanel";
 import { useAuth } from "@/context/AuthContext";
 import { usePet } from "@/context/PetContext";
 import { MoffiBottomNav } from "@/components/common/MoffiBottomNav";
@@ -23,7 +23,6 @@ const SpotlightSearch = dynamic(() => import("@/components/community/SpotlightSe
 const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod => mod.default), { ssr: false });
 const NotificationDrawer = dynamic(() => import("@/components/notifications/NotificationDrawer").then(mod => mod.NotificationDrawer), { ssr: false });
 const EcosystemPortal = dynamic(() => import("@/components/community/EcosystemPortal").then(mod => mod.EcosystemPortal), { ssr: false });
-const MoffiUltimateHub = dynamic(() => import("@/components/community/MoffiUltimateHub").then(mod => mod.MoffiUltimateHub), { ssr: false });
 const SubscriptionManagementModal = dynamic(() => import("@/components/community/modals/SubscriptionManagementModal").then(mod => mod.SubscriptionManagementModal), { ssr: false });
 const PremiumUpgradeModal = dynamic(() => import("@/components/community/modals/PremiumUpgradeModal").then(mod => mod.PremiumUpgradeModal), { ssr: false });
 
@@ -51,7 +50,6 @@ export function DynamicNavigation() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
-    const [isAIHubOpen, setIsAIHubOpen] = useState(false);
     const [isNavVisible, setIsNavVisible] = useState(true);
     const [isNavAllowedByExternalOverlays, setIsNavAllowedByExternalOverlays] = useState(true);
     const [sosActivePet, setSosActivePet] = useState<any>(null);
@@ -65,8 +63,7 @@ export function DynamicNavigation() {
         isSpotlightOpen || 
         isAuthOpen || 
         isNotificationOpen ||
-        isEcosystemPortalOpen ||
-        isAIHubOpen;
+        isEcosystemPortalOpen;
 
     // KÖK NEDEN DÜZELTMESİ (yürüyüş modülü "geri giderken beni en başa atıyor"
     // hatası): her overlay açılışında `window.history.pushState({modal:'x'},"")`
@@ -191,11 +188,6 @@ export function DynamicNavigation() {
             setIsSOSOpen(true);
         };
 
-        const handleOpenAIHub = () => {
-            window.history.pushState({ modal: 'ai-hub' }, "");
-            setIsAIHubOpen(true);
-        };
-
         const handleOpenSpotlight = () => {
             window.history.pushState({ modal: 'spotlight' }, "");
             setIsSpotlightOpen(true);
@@ -228,7 +220,6 @@ export function DynamicNavigation() {
             setIsAuthOpen(modal === 'auth');
             setIsNotificationOpen(modal === 'notifications');
             setIsEcosystemPortalOpen(modal === 'ecosystem');
-            setIsAIHubOpen(modal === 'ai-hub');
 
             if (modal !== 'ai') {
                 window.dispatchEvent(new CustomEvent('close-ai-assistant'));
@@ -342,7 +333,6 @@ export function DynamicNavigation() {
         window.addEventListener('open-auth-modal', handleOpenAuth);
         window.addEventListener('open-notification-drawer', handleOpenNotifications);
         window.addEventListener('open-ecosystem-portal', handleOpenEcosystem);
-        window.addEventListener('open-moffi-ai-hub', handleOpenAIHub);
         window.addEventListener('moffi-navigate', handleGlobalNavigate);
         window.addEventListener('scroll', handleGlobalScroll, { capture: true, passive: true });
         window.addEventListener('moffi-toggle-nav', handleToggleNav);
@@ -358,7 +348,6 @@ export function DynamicNavigation() {
             window.removeEventListener('open-auth-modal', handleOpenAuth);
             window.removeEventListener('open-notification-drawer', handleOpenNotifications);
             window.removeEventListener('open-ecosystem-portal', handleOpenEcosystem);
-            window.removeEventListener('open-moffi-ai-hub', handleOpenAIHub);
             window.removeEventListener('moffi-navigate', handleGlobalNavigate);
             window.removeEventListener('moffi-toggle-nav', handleToggleNav);
             window.removeEventListener('popstate', handlePopState);
@@ -376,7 +365,7 @@ export function DynamicNavigation() {
     return (
         <>
             <FloatingControls />
-            <MoffiSidebar />
+            <EdgePanel />
             <ActiveWalkMiniWidget />
 
             <ActionHubDrawer
@@ -447,11 +436,6 @@ export function DynamicNavigation() {
             <EcosystemPortal
                 isOpen={isEcosystemPortalOpen}
                 onClose={() => { clearModalHistoryState(); setIsEcosystemPortalOpen(false); }}
-            />
-
-            <MoffiUltimateHub
-                isOpen={isAIHubOpen}
-                onClose={() => { clearModalHistoryState(); setIsAIHubOpen(false); }}
             />
 
             <SubscriptionManagementModal />

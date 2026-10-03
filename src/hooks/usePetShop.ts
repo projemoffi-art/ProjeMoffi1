@@ -49,14 +49,16 @@ export function usePetShop() {
         }
     }, []);
 
-    const addToCart = useCallback(async (productId: string, quantity = 1) => {
+    const addToCart = useCallback(async (productId: string, quantity = 1): Promise<boolean> => {
         setError(null);
         try {
             await apiService.addToCart(productId, quantity);
             await fetchCart();
+            return true;
         } catch (err: any) {
             console.error("addToCart error details:", err);
             setError(err?.message || 'Sepete eklenemedi');
+            return false;
         }
     }, [fetchCart]);
 
