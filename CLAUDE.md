@@ -612,6 +612,17 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   Kutu"), `/walk/badges`, `/walk/challenges`, işletme panelindeki kırık "Görevler" sayfası (var olmayan tabloyu okuyordu), `claimReward`.
 - Ekonomi (rapordaki hesap): düzenli kullanıcı ayda ~750, çok aktif ~1.900 PawCoin; Prime aylık 500. Değiştirirken `quest_defs`, `qc_week_state`,
   `adventures`, `programs` birlikte düşünülür.
+- 🔴 **Ekonomi denetimi (2026-10-04, 20261004103000):** **PawCoin HESAP başına, XP/rozet HAYVAN başına.** Ödül anahtarından hayvan kimliği
+  çıkarılınca (`qc_coin_ref`) aynı olan ödül hesaba bir kez PawCoin verir (`quest_rewards.coin_ref`, tekil); ikinci hayvan aynı görevden yalnızca
+  XP alır, ekran `coin_shared`/`pawcoin: 0` ile söyler (`qc_coin_open`). Önceden 10 hayvan = 10 kat PawCoin, hayvan silip açınca rozet PawCoin'i
+  yeniden geliyordu. Hesap başına en çok 10 hayvan (`pets_limit_guard`). Yeni hayvana bağlı ödül anahtarı eklerken önekini `qc_coin_ref`'e ekle.
+  Ölçümler tekrarla şişirilemez: sayılan yürüyüş ≥300 m ya da ≥10 dk; kilo, veteriner kaydı, gönderi GİRİLDİĞİ GÜN olarak sayılır (geçmiş tarihle
+  toplu giriş rozet doldurmaz); pasaport/acil bilgi görevi aynı hayvanda 30 günde bir. **Düello** eskiden hiç yürümeden iki tarafa 150, kazanana
+  300 veriyordu (günlük tavan dışı): artık en az 1 km yürüyen tarafa 30, kazanana +30, `quest_grant`'tan; en çok 3 eşzamanlı düello; "takım"
+  modu kapalı. **Ortak hedef**: en az 2 kabul eden üye, en düşük hedef (5 km / 3 gün / 3 bilgi), sayım üyenin katıldığı andan sonra, bakım
+  günü hesap başına. Birlikte ödülleri (ortak hedef + düello) haftada en çok 120 PawCoin (`qc_social_coin_left`). Görev satırı kısa durumu
+  sunucudan (`qc_quest_hint`: aşıda kalan/geciken gün, pasaportta eksik alan). Haftanın teması ödülü (`trigger_weekly_theme_participation`)
+  tema başına bir kez, tutarı yönetici belirler; günlük tavana girmez.
 
 ### İçerik Stüdyosu ve hikâyeler (8.64, 2026-10-04 — Baran onaylı 5 kanal)
 
@@ -700,6 +711,10 @@ ilgili maddeyi tek satırla hatırlat.
 ### 12.1 Baran'ın yapacakları ve kararları
 
 **Hemen**
+- [ ] 🔴 **SONRAKİ İŞ (Baran, 2026-10-04): Görev Merkezi içeriği veteriner okuması** (8.68). Bilgi kartları, programlar ve maceralar herkese
+      açılmadan önce bir veterinerin okuması gerekiyor; şu an ekranlarda "genel bilgilendirme, veterinerine danış" notu var. Kapsam: 32 bilgi kartı,
+      5 program, 3 aylık macera (`lessons`/`programs`/`adventures`, `vet_reviewed=false`). Okunan içerik `vet_reviewed=true` yapılır, düzeltmeler
+      migration ile. Program/bilgi görselleri ve 3B rozet çizimleri gelirse emoji yerine konur.
 - [ ] 🔴 **Supabase Pro'ya geçiş (25 $/ay) — para olunca, albüm canlıda yoğun kullanılmadan önce.** Ücretsiz plan: 1 GB depolama (2026-10-03 ~260 MB
       dolu), ayda 5 GB trafik, bir hafta işlemsiz proje duraklatılır, yedek yok. Pro: 100 GB / 250 GB, günlük yedek, sızmış şifre koruması (8.56).
       Kodda yapılacak her şey yapıldı (sıkıştırma, önizleme, kota). Baran kararı 2026-10-03: "Pro'ya geçeriz ama param yok şu an".
@@ -742,9 +757,6 @@ ilgili maddeyi tek satırla hatırlat.
       `https://app.moffi.net/api/revenuecat/webhook`), `NEXT_PUBLIC_REVENUECAT_IOS_KEY`, `NEXT_PUBLIC_REVENUECAT_ANDROID_KEY`.
 - [ ] PawCoin paketi satın alma ekranı nerede olsun (Ödül Marketi'nin üstü / ayrı "Cüzdan")? Katalog ve sunucu hazır. Profilde artık gerçek bir
       PawCoin cüzdanı (bakiye + hareketler) var; paket satışı oraya eklenebilir (8.67).
-- [ ] 🔴 **Görev Merkezi içeriği veteriner okuması** (8.68): 32 bilgi kartı, 5 program, 3 aylık macera `vet_reviewed=false`; herkese açık
-      yayından önce bir veterinerin okuması gerekir (Baran onayı: "yayına almadan önce şart"). Program/bilgi görselleri ve 3B rozet çizimleri
-      gelirse emoji yerine konur.
 - [ ] Bilgi: `wallet_balance` sütununa hiçbir şey yazmıyor; silinebilir (SQL Editor, DROP).
 - [ ] Profildeki "Aile / ortak bakım" sahteydi, kaldırıldı. Gerçek bir aile paylaşımı (birden fazla kişinin aynı hayvanı yönetmesi) istenirse ayrı iş.
 - [ ] SQL Editor: `supabase/migrations/20261004102101_drop_old_submit_business_application_MANUAL_sql_editor.sql` (eski başvuru fonksiyonu + bir test

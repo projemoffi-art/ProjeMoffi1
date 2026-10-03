@@ -1,7 +1,8 @@
 'use client';
 
 // E6 · Birlikte (design-reference/quests-final/): arkadaşlarla ortak hedefler (2–5 kişi) ve düellolar.
-// İlerleme herkesin gerçek kayıtlarından sunucuda hesaplanır (team_goals_view); hedef tutunca her üyeye +50 PawCoin.
+// İlerleme herkesin gerçek kayıtlarından sunucuda hesaplanır (team_goals_view); hedef en az 2 kişiyle tutunca her üyeye +50 PawCoin.
+// Birlikte ödülleri (ortak hedef + düello) haftada en çok 120 PawCoin (20261004103000).
 // A4 · Arkadaş görevi oluştur. Davet yalnızca karşılıklı takipleşilen kişilere.
 
 import { useEffect, useState } from 'react';
@@ -81,7 +82,7 @@ export default function TogetherPage() {
                     <>
                         <div className="relative rounded-[28px] overflow-hidden">
                             <PetPhoto url={activePet?.image} species={activePet?.type} className="w-full h-48" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/10" />
                             <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                                 <p className="text-[18px] font-extrabold text-center">Arkadaşlarınla birlikte daha eğlenceli! 🐾</p>
                                 <div className="grid grid-cols-3 mt-3 text-center">
@@ -162,7 +163,7 @@ function GoalCard({ g, busy, onLeave }: { g: TeamGoal; busy: boolean; onLeave: (
                         <p className="text-[15.5px] font-extrabold truncate">{g.title}</p>
                         {g.status !== 'active' && (
                             <span className={cn('text-[11px] font-black px-2 py-0.5 rounded-full', g.status === 'completed' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-black/[0.05] text-secondary')}>
-                                {g.status === 'completed' ? `Tamamlandı · +${g.reward.pawcoin}` : 'Süre doldu'}
+                                {g.status === 'completed' ? (g.reward.pawcoin > 0 ? `Tamamlandı · +${g.reward.pawcoin}` : 'Tamamlandı') : 'Süre doldu'}
                             </span>
                         )}
                     </div>
@@ -183,6 +184,9 @@ function GoalCard({ g, busy, onLeave }: { g: TeamGoal; busy: boolean; onLeave: (
                             </p>
                         ))}
                     </div>
+                    {g.status === 'active' && g.accepted < 2 && (
+                        <p className="mt-2 text-[11.5px] font-bold text-amber-700 dark:text-amber-300">Hedef, en az bir arkadaşın katılınca tamamlanabilir.</p>
+                    )}
                     {g.status === 'active' && (
                         <button type="button" disabled={busy} onClick={onLeave} className="mt-2 text-[12px] font-bold text-secondary underline-offset-2 hover:underline">Hedeften ayrıl</button>
                     )}
@@ -203,6 +207,14 @@ function DuelCard({ d }: { d: Duel }) {
                     <p className="text-[12px] font-semibold text-secondary">{d.opponent?.name ?? 'Rakip'} · {d.duration_days} gün</p>
                 </div>
             </div>
+            {d.status === 'completed' && (
+                <p className="text-center text-[13px] font-extrabold mt-3">
+                    {d.winner_id === null ? 'Kazanan yok' : d.winner_id === d.opponent?.id ? `${d.opponent?.name ?? 'Rakibin'} kazandı` : 'Sen kazandın 🏆'}
+                    <span className="block text-[12px] font-semibold text-secondary">
+                        {d.my_reward ? `+${d.my_reward} PawCoin hesabına yazıldı` : 'Ödül için en az 1 km yürümek gerekiyordu'}
+                    </span>
+                </p>
+            )}
             {d.status !== 'pending' && (
                 <div className="flex items-center justify-center gap-3 mt-3">
                     <span className={cn('h-9 px-3 rounded-full text-[15px] font-black inline-flex items-center', leading === 'me' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-black/[0.04]')}>Sen {fmt(d.my_km)} km</span>
@@ -215,6 +227,8 @@ function DuelCard({ d }: { d: Duel }) {
 }
 
 const KIND_ORDER: TeamKind[] = ['walk_km', 'care_days', 'lessons', 'walk_days'];
+/** Sunucudaki en düşük hedefle aynı (team_goal_create). */
+const MIN_TARGET: Record<TeamKind, number> = { walk_km: 5, care_days: 3, lessons: 3, walk_days: 3 };
 const DEFAULTS: Record<TeamKind, { title: string; target: number }> = {
     walk_km: { title: 'Haftalık 30 km Yürüyüş', target: 30 },
     care_days: { title: 'Sağlıklı Pati Ekibi', target: 20 },
@@ -240,12 +254,14 @@ function CreateGoalSheet({ open, onClose, onCreated, petPhoto, species }: { open
     }, [open]);
 
     const pickKind = (k: TeamKind) => { setKind(k); setTitle(DEFAULTS[k].title); setTarget(String(DEFAULTS[k].target)); };
+    const minTarget = MIN_TARGET[kind];
+    const targetNum = Number(target.replace(',', '.'));
     const toggle = (id: string) => setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : p.length >= 4 ? p : [...p, id]));
 
     const create = async () => {
         setBusy(true);
         try {
-            await questService.createTeamGoal({ title: title.trim(), kind, target: Number(target.replace(',', '.')), days: Number(days), members: picked });
+            await questService.createTeamGoal({ title: title.trim(), kind, target: targetNum, days: Number(days), members: picked });
             showToast('Hedef oluşturuldu, davetler gönderildi.', 'CheckCircle2', 'text-emerald-500 font-bold');
             setPicked([]);
             onCreated();
@@ -260,7 +276,7 @@ function CreateGoalSheet({ open, onClose, onCreated, petPhoto, species }: { open
     const visibleFriends = showAll ? list : list.slice(0, 5);
     return (
         <QuestSheet open={open} onClose={onClose} title="Arkadaş Görevi Oluştur"
-            footer={<CoralButton onClick={create} disabled={busy || picked.length === 0 || title.trim().length < 3 || !(Number(target.replace(',', '.')) > 0)}>Görevi Oluştur</CoralButton>}>
+            footer={<CoralButton onClick={create} disabled={busy || picked.length === 0 || title.trim().length < 3 || !(targetNum >= minTarget)}>Görevi Oluştur</CoralButton>}>
             <div className="space-y-4">
                 <PetPhoto url={petPhoto} species={species} className="w-full h-28 rounded-2xl" />
                 <div>
@@ -281,7 +297,7 @@ function CreateGoalSheet({ open, onClose, onCreated, petPhoto, species }: { open
                         <TextInput value={title} maxLength={60} onChange={e => setTitle(e.target.value)} />
                     </label>
                     <label className="block">
-                        <span className="text-[12.5px] font-bold text-secondary mb-1 block">Hedef ({TEAM_KINDS[kind].unit})</span>
+                        <span className="text-[12.5px] font-bold text-secondary mb-1 block">Hedef ({TEAM_KINDS[kind].unit}, en az {minTarget})</span>
                         <TextInput value={target} inputMode="decimal" onChange={e => setTarget(e.target.value.replace(/[^0-9.,]/g, ''))} />
                     </label>
                 </div>
@@ -311,7 +327,7 @@ function CreateGoalSheet({ open, onClose, onCreated, petPhoto, species }: { open
                         </div>
                     )}
                 </div>
-                <p className="text-[11.5px] font-semibold text-secondary">Hedef süresinde tamamlanırsa katılan herkes +50 PawCoin ve +100 XP kazanır.</p>
+                <p className="text-[11.5px] font-semibold text-secondary">Hedef en az bir arkadaşınla süresinde tamamlanırsa katılan herkes +50 PawCoin ve +100 XP kazanır. Herkesin katıldığı andan sonraki kayıtları sayılır. Birlikte ödülleri haftada en çok 120 PawCoin.</p>
             </div>
         </QuestSheet>
     );
@@ -349,6 +365,7 @@ function DuelSheet({ open, onClose, onCreated }: { open: boolean; onClose: () =>
         <QuestSheet open={open} onClose={onClose} title="Düello başlat"
             footer={<CoralButton onClick={create} disabled={busy || !picked}>Davet gönder</CoralButton>}>
             <p className="text-[13px] font-semibold text-secondary">Bir arkadaşını seç; belirlediğiniz sürede en çok kim yürüyecek? Mesafe gerçek yürüyüş kayıtlarından ölçülür.</p>
+            <p className="text-[12px] font-semibold text-secondary mt-2">Sonunda en az 1 km yürüyen +30 PawCoin, kazanan +30 daha alır. Aynı anda en çok 3 düello; Birlikte ödülleri haftada en çok 120 PawCoin.</p>
             <div className="flex flex-wrap gap-3 mt-3">
                 {(friends ?? []).map(f => (
                     <button key={f.id} type="button" onClick={() => setPicked(f.id)} className="flex flex-col items-center w-14">

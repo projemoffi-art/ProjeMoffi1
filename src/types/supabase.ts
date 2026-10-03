@@ -1,6 +1,3 @@
-// Supabase veritabanı şeması — OTOMATİK ÜRETİLİR (Supabase generate_typescript_types). Elle düzenleme;
-// şema değişince yeniden üret (scratchpad/gentypes.cjs). Kullanım: Tables<'pets'> satır tipi, Database['public']['Functions'].
-
 export type Json =
   | string
   | number
@@ -4434,6 +4431,7 @@ export type Database = {
       }
       quest_rewards: {
         Row: {
+          coin_ref: string | null
           created_at: string
           id: number
           label: string
@@ -4444,6 +4442,7 @@ export type Database = {
           xp: number
         }
         Insert: {
+          coin_ref?: string | null
           created_at?: string
           id?: never
           label: string
@@ -4454,6 +4453,7 @@ export type Database = {
           xp?: number
         }
         Update: {
+          coin_ref?: string | null
           created_at?: string
           id?: never
           label?: string
@@ -6618,6 +6618,7 @@ export type Database = {
         Returns: number
       }
       expire_old_unclaimed_patients: { Args: never; Returns: number }
+      featured_badges: { Args: { p_owner: string }; Returns: Json }
       finalize_paid_order: {
         Args: { p_amount_kurus: number; p_order_id: string }
         Returns: string
@@ -7304,6 +7305,11 @@ export type Database = {
       purge_expired_unclaimed_patients: { Args: never; Returns: number }
       qc_adventure: { Args: { p_grant: boolean; p_pet: string }; Returns: Json }
       qc_badge_sync: { Args: { p_pet: string }; Returns: Json }
+      qc_coin_open: {
+        Args: { p_ref: string; p_user: string }
+        Returns: boolean
+      }
+      qc_coin_ref: { Args: { p_ref: string }; Returns: string }
       qc_day: { Args: never; Returns: string }
       qc_ensure_day: {
         Args: { p_day: string; p_pet: string }
@@ -7315,6 +7321,10 @@ export type Database = {
           key: string
           priority: number
         }[]
+      }
+      qc_quest_history: {
+        Args: { p_day: string; p_key: string; p_pet: string }
+        Returns: Json
       }
       qc_quest_progress: {
         Args: {
@@ -7330,6 +7340,7 @@ export type Database = {
         Args: { p_key: string; p_pet: string }
         Returns: number
       }
+      qc_social_coin_left: { Args: { p_user: string }; Returns: number }
       qc_ts: { Args: { p_day: string }; Returns: string }
       qc_week_start: { Args: { p_day: string }; Returns: string }
       qc_week_state: { Args: { p_pet: string; p_week: string }; Returns: Json }

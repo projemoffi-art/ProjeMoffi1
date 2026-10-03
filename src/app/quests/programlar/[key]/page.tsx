@@ -117,7 +117,7 @@ export default function ProgramDetailPage() {
                                     {p.status === 'left' ? 'Kaldığın yerden devam et' : 'Programa başla'}
                                 </CoralButton>
                                 <p className="text-[12px] font-semibold text-secondary text-center">
-                                    Bitirince +{p.pawcoin} PawCoin, +{p.xp} XP{p.badge ? ` ve "${p.badge.title}" rozeti` : ''}. Her adım +20 XP.
+                                    Bitirince {p.pawcoin > 0 ? `+${p.pawcoin} PawCoin, ` : ''}+{p.xp} XP{p.badge ? ` ve "${p.badge.title}" rozeti` : ''}. Her adım +20 XP.{p.pawcoin === 0 ? " Bu programın PawCoin'u başka bir dostunla alındı." : ''}
                                 </p>
                             </div>
                         ) : (

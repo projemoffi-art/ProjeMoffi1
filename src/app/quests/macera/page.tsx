@@ -125,7 +125,7 @@ export default function AdventurePage() {
                                                 <h3 className="text-[15px] font-extrabold">{s.index + 1}. {s.title}</h3>
                                                 <span className={cn('text-[11.5px] font-black px-2 py-0.5 rounded-full whitespace-nowrap',
                                                     s.claimed ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-accent/10 text-accent')}>
-                                                    {s.claimed ? '✓ Alındı' : `+${s.pawcoin} PawCoin`}
+                                                    {s.claimed ? '✓ Alındı' : s.pawcoin > 0 ? `+${s.pawcoin} PawCoin` : `+${s.xp} XP`}
                                                 </span>
                                             </div>
                                             <p className="text-[12.5px] font-semibold text-secondary mt-0.5">{s.unlocked ? s.story : 'Önceki bölümü bitirince açılır.'}</p>
@@ -145,7 +145,8 @@ export default function AdventurePage() {
                                 </QuestCard>
                             ))}
                             <p className="text-[12px] font-semibold text-secondary">
-                                Ayın tüm bölümlerini bitirirsen +{adv.final_pawcoin} PawCoin ve yalnızca bu aya özel &quot;{adv.badge.title}&quot; rozeti.
+                                Ayın tüm bölümlerini bitirirsen {adv.final_pawcoin > 0 ? `+${adv.final_pawcoin} PawCoin ve ` : ''}yalnızca bu aya özel &quot;{adv.badge.title}&quot; rozeti.
+                                {adv.stages.some(s => s.pawcoin === 0 && !s.claimed) && " Maceranın PawCoin'u hesap başına ayda bir kez; bu bölümler bu dostuna XP kazandırır."}
                             </p>
                         </div>
 

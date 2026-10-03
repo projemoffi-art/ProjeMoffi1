@@ -1,6 +1,7 @@
 // Görev Merkezi v2 (design-reference/quests-final/, migration 20261004102300–102700).
 // Görevin tamamlandığına ve ödüle SUNUCU karar verir; bu servis yalnızca okur ve kullanıcı eylemlerini iletir.
 // Ödül veren tek yol sunucudaki quest_grant (istemciye kapalı). Eski istemci ödül anahtarları (claim_reward) kapalı.
+// PawCoin HESAP başına (aynı ödül başka hayvanla alındıysa bu hayvanda pawcoin 0, yalnızca XP); XP ve rozet hayvan başına (20261004103000).
 
 import { supabase } from '@/lib/supabase';
 
@@ -10,6 +11,10 @@ export interface PetLevel { level: number; xp: number; level_start: number; leve
 export interface DailyQuest {
     key: string; title: string; description: string; why: string; how: string; icon: string; category: string; unit: string;
     target: number; progress: number; completed: boolean; pawcoin: number; xp: number;
+    /** Bu görevin bugünkü PawCoin'u başka bir hayvanla alındı (bu hayvan yalnızca XP kazanır). */
+    coin_shared: boolean;
+    /** Kısa durum (sunucu): aşıda "12 gün kaldı" / "3 gün gecikti", pasaportta "2 bilgi eksik", acil kişide "Henüz eklenmedi". */
+    hint: string | null;
     /** '/yol' ya da özel eylem: 'walk' (yürüyüş paneli), 'care:meal' | 'care:water' | 'care:play' (bakım kaydı). */
     route: string; self_report: boolean; scope: 'core' | 'pool'; can_reroll: boolean;
     /** Son 7 gün: o gün bu görev verildi mi, tamamlandı mı (eskiden yeniye). */
@@ -19,7 +24,9 @@ export interface DailyQuest {
 export interface WeekGoal { key: string; label: string; target: number; progress: number }
 export interface WeekChest {
     week_start: string; goals: WeekGoal[]; ready: boolean; opened: boolean; days_left: number;
-    reward: { pawcoin: number; xp: number; perk_key: string; perk_name: string };
+    /** Bu haftanın sandık PawCoin'u ve çerçevesi başka bir hayvanın sandığıyla alındı. */
+    shared: boolean;
+    reward: { pawcoin: number; xp: number; perk_key: string | null; perk_name: string | null };
 }
 
 export interface Awarded { kind: 'quest' | 'day' | 'adventure' | 'program'; key?: string; label: string; pawcoin: number; xp: number }
@@ -74,14 +81,19 @@ export interface TeamMember { id: string; name: string | null; avatar_url: strin
 export interface TeamGoal {
     id: string; title: string; kind: TeamKind; target: number; total: number; status: 'active' | 'completed' | 'expired';
     starts_at: string; ends_at: string; days_left: number; members: TeamMember[]; is_creator: boolean; reward: { pawcoin: number; xp: number };
+    /** Kabul eden üye sayısı; hedef en az 2 kişiyle tamamlanır. */
+    accepted: number;
 }
 export interface TeamInvite { id: string; title: string; kind: TeamKind; target: number; ends_at: string; creator: string | null; members: TeamMember[] }
 export interface Duel {
     id: string; status: 'pending' | 'active' | 'completed' | 'declined' | 'cancelled'; starts_at: string | null; ends_at: string | null;
     duration_days: number; winner_id: string | null; i_am_creator: boolean;
     opponent: { id: string; name: string | null; avatar_url: string | null } | null; my_km: number; their_km: number;
+    /** Sonuçlanınca bana yazılan PawCoin (en az 1 km yürüdüysem); yoksa null. */
+    my_reward: number | null;
 }
-export interface TeamView { goals: TeamGoal[]; invites: TeamInvite[]; duels: Duel[] }
+/** social_coin_left: bu hafta Birlikte (ortak hedef + düello) ödüllerinden kalan PawCoin (haftada en çok 120). */
+export interface TeamView { goals: TeamGoal[]; invites: TeamInvite[]; duels: Duel[]; social_coin_left: number }
 export interface Friend { id: string; name: string | null; avatar_url: string | null }
 
 /** Ortak hedef türünün birimi ve adı (ekranlar tek yerden okur). */
@@ -111,7 +123,7 @@ export const questService = {
         return r;
     },
     async openChest(petId: string) {
-        const r = await rpc<{ pawcoin: number; xp: number; perk_name: string; perk_expires_at: string }>('quest_open_chest', { p_pet: petId }, 'Sandık açılamadı.');
+        const r = await rpc<{ pawcoin: number; xp: number; perk_name: string | null; perk_expires_at: string | null }>('quest_open_chest', { p_pet: petId }, 'Sandık açılamadı.');
         changed();
         return r;
     },

@@ -18,8 +18,10 @@ export function WeeklyChestSheet({ open, onClose, chest, petId, streakWeeks }: {
     open: boolean; onClose: () => void; chest: WeekChest; petId: string; streakWeeks: number;
 }) {
     const [busy, setBusy] = useState(false);
-    const [opened, setOpened] = useState<{ pawcoin: number; xp: number; perk_name: string } | null>(null);
+    const [opened, setOpened] = useState<{ pawcoin: number; xp: number; perk_name: string | null } | null>(null);
     const left = chest.goals.filter(g => g.progress < g.target).length;
+    // Gün sayılan hedefte bugün dahil kalan günden fazlası gerekiyorsa bu haftanın sandığına yetişilemez
+    const outOfTime = !chest.opened && chest.goals.some(g => g.key !== 'photo_count' && g.target - g.progress > chest.days_left + 1);
 
     const openChest = async () => {
         setBusy(true);
@@ -65,8 +67,8 @@ export function WeeklyChestSheet({ open, onClose, chest, petId, streakWeeks }: {
     return (
         <QuestSheet open={open} onClose={onClose} title="Haftalık Sandık" top={top}
             footer={done
-                ? <CoralButton onClick={onClose}>{opened ? `+${opened.pawcoin} PawCoin · ${opened.perk_name}` : 'Bu haftanın sandığı açıldı'}</CoralButton>
-                : <CoralButton onClick={openChest} disabled={!chest.ready || busy} sub={chest.ready ? undefined : `${left} hedef kaldı`}>Sandığı Aç</CoralButton>}>
+                ? <CoralButton onClick={onClose}>{opened ? [opened.pawcoin > 0 ? `+${opened.pawcoin} PawCoin` : null, `+${opened.xp} XP`, opened.perk_name].filter(Boolean).join(' · ') : 'Bu haftanın sandığı açıldı'}</CoralButton>
+                : <CoralButton onClick={openChest} disabled={!chest.ready || busy} sub={chest.ready ? undefined : outOfTime ? 'Yeni sandık Pazartesi' : `${left} hedef kaldı`}>Sandığı Aç</CoralButton>}>
             <div className="pt-4 space-y-2">
                 {chest.goals.map(g => {
                     const ok = g.progress >= g.target;
@@ -81,24 +83,38 @@ export function WeeklyChestSheet({ open, onClose, chest, petId, streakWeeks }: {
                     );
                 })}
             </div>
+            {outOfTime && (
+                <p className="text-[12.5px] font-semibold text-secondary bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl p-3 mt-3">
+                    Bu haftanın hedeflerine kalan günler yetmiyor. Pazartesi yeni sandık başlar; bugünkü bakımın yine de serine ve rozetlerine sayılır.
+                </p>
+            )}
             <h3 className="text-[14px] font-black mt-5 mb-2">Sandıkta ne var?</h3>
-            <div className="grid grid-cols-3 gap-2">
-                <div className="bg-card border border-card-border rounded-2xl p-3 text-center">
-                    <div className="text-2xl" aria-hidden>🪙</div>
-                    <div className="text-[15px] font-black">{chest.reward.pawcoin}</div>
-                    <div className="text-[11px] font-semibold text-secondary">PawCoin</div>
-                </div>
+            <div className={cn('grid gap-2', chest.shared ? 'grid-cols-1' : 'grid-cols-3')}>
+                {!chest.shared && (
+                    <div className="bg-card border border-card-border rounded-2xl p-3 text-center">
+                        <div className="text-2xl" aria-hidden>🪙</div>
+                        <div className="text-[15px] font-black">+{chest.reward.pawcoin}</div>
+                        <div className="text-[11px] font-semibold text-secondary">PawCoin</div>
+                    </div>
+                )}
                 <div className="bg-card border border-card-border rounded-2xl p-3 text-center">
                     <div className="text-2xl" aria-hidden>⭐</div>
                     <div className="text-[15px] font-black">+{chest.reward.xp}</div>
                     <div className="text-[11px] font-semibold text-secondary">XP</div>
                 </div>
-                <div className="bg-card border border-card-border rounded-2xl p-3 text-center">
-                    <div className="text-2xl" aria-hidden>🖼️</div>
-                    <div className="text-[13px] font-black leading-tight">Özel çerçeve</div>
-                    <div className="text-[11px] font-semibold text-secondary">3 gün</div>
-                </div>
+                {!chest.shared && (
+                    <div className="bg-card border border-card-border rounded-2xl p-3 text-center">
+                        <div className="text-2xl" aria-hidden>🖼️</div>
+                        <div className="text-[13px] font-black leading-tight">Özel çerçeve</div>
+                        <div className="text-[11px] font-semibold text-secondary">3 gün</div>
+                    </div>
+                )}
             </div>
+            {chest.shared && (
+                <p className="text-[12px] font-semibold text-secondary mt-2">
+                    Bu haftanın PawCoin&apos;u ve çerçevesi başka bir dostunun sandığıyla alındı (hesap başına haftada bir). Bu sandık XP verir.
+                </p>
+            )}
             <p className="text-[12px] font-semibold text-secondary mt-3">
                 Sandığın içeriği her hafta önceden bellidir. {streakWeeks > 0 ? `Üst üste ${streakWeeks} haftadır sandığını açıyorsun.` : 'Sandığı her hafta açarak haftalık serini başlat.'}
             </p>

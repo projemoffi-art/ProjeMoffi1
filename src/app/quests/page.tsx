@@ -5,7 +5,6 @@
 // günün bilgisi, rozet kasası ve birlikte kısayolları. Tüm değerler sunucudan (quest_center); uydurma sayı yok.
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { CalendarDays, Check, ChevronRight } from 'lucide-react';
 import { usePet } from '@/context/PetContext';
 import { useQuestCenter } from '@/hooks/useQuestCenter';
@@ -89,7 +88,7 @@ export default function QuestCenterPage() {
                             <span className="flex-1">
                                 <span className="block text-[16px] font-extrabold">Bugünün görevleri</span>
                                 <span className="block text-[13px] font-semibold text-secondary">
-                                    {data.done}/{data.total} tamamlandı{data.day_bonus.earned ? ' · bonus alındı 🎉' : ` · hepsine +${data.day_bonus.pawcoin} PawCoin`}
+                                    {data.done}/{data.total} tamamlandı{data.day_bonus.earned ? ' · bonus alındı 🎉' : data.day_bonus.pawcoin > 0 ? ` · hepsine +${data.day_bonus.pawcoin} PawCoin` : ` · hepsine +${data.day_bonus.xp} XP`}
                                 </span>
                             </span>
                             <ChevronRight className="w-5 h-5 text-secondary" />
@@ -159,8 +158,8 @@ function WeekStrip({ data, onOpen }: { data: QuestCenter; onOpen: () => void }) 
 function TaskRow({ q, onOpen }: { q: DailyQuest; onOpen: () => void }) {
     const status = q.completed
         ? <span className="text-[13px] font-bold text-emerald-600">Tamamlandı</span>
-        : q.key === 'vaccine_plan' || q.key === 'emergency' || q.key === 'passport'
-            ? <span className="text-[13px] font-bold text-red-600 dark:text-red-400">{q.description}</span>
+        : q.hint
+            ? <span className={cn('block text-[13px] font-bold truncate', q.key === 'vaccine_plan' ? 'text-red-600 dark:text-red-400' : 'text-accent')}>{q.hint}</span>
             : <ProgressLine value={q.progress} max={q.target} tone={q.category === 'bakim' ? 'amber' : 'green'} label={progressText(q)} className="mt-1 max-w-[180px]" />;
     return (
         <button type="button" onClick={onOpen} className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-black/[0.02]">

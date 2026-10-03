@@ -165,8 +165,13 @@ export function QuestTaskSheet({ quest, pet, onClose }: {
                             <div className="text-[11.5px] font-semibold text-secondary">{pet.name} için XP</div>
                         </div>
                     </div>
+                    {quest.coin_shared && (
+                        <p className="text-[12.5px] font-semibold text-secondary leading-relaxed bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl p-3">
+                            Bu görevin bugünkü PawCoin&apos;u başka bir dostunla alındı. PawCoin hesabına görev başına günde bir kez yazılır; {pet.name} XP kazanmaya devam eder.
+                        </p>
+                    )}
                     <p className="text-[12.5px] font-semibold text-secondary leading-relaxed">
-                        Günün tüm görevlerini bitirirsen ek olarak +10 PawCoin ve +30 XP. Görevlerden günde en çok 200 PawCoin kazanılır.
+                        Günün tüm görevlerini bitirirsen ek olarak +30 XP (PawCoin hesabına günde bir kez +10). Görevlerden günde en çok 200 PawCoin kazanılır.
                     </p>
                 </div>
             )}
