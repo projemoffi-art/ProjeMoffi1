@@ -20,8 +20,7 @@
 html, body {
   overflow-x: hidden;
   width: 100%;
-  /* Uygulama hissi: en üstte/altta sayfanın esneyip boşluk göstermesi kapalı (iç listeler kendi kaydırmasını korur). */
-  overscroll-behavior-y: none;
+  /* overscroll-behavior-y burada KULLANILMAZ: iPhone Safari'de overflow-x: hidden ile birlikte sayfa kaydırmasını kilitledi (2026-10-04). */
 }
 
 @theme {
