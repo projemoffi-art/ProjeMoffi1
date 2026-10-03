@@ -75,6 +75,52 @@ export interface WeatherData {
     lastUpdated: Date;
 }
 
+export interface HourForecast { time: Date; temp: number; code: number; precipProb: number; uv: number; isDay: boolean; iconKey: WeatherIconKey; walkScore: number }
+export interface DayForecast { date: Date; max: number; min: number; code: number; precipProb: number; uvMax: number; sunrise: Date; sunset: Date; iconKey: WeatherIconKey; condition: string }
+export interface Forecast { hours: HourForecast[]; days: DayForecast[] }
+
+/** Saatlik (48 saat) ve günlük (7 gün) tahmin; detay penceresi açılınca çekilir. Hata hâlinde null. */
+export async function fetchForecast(lat: number, lon: number): Promise<Forecast | null> {
+    try {
+        const res = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+            `&hourly=temperature_2m,weathercode,precipitation_probability,uv_index,is_day` +
+            `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset` +
+            `&forecast_days=7&timezone=auto`
+        );
+        if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
+        const d = await res.json();
+        const now = Date.now() - 60 * 60 * 1000;
+        const hours: HourForecast[] = (d.hourly.time as string[]).map((t, i) => {
+            const temp = Math.round(d.hourly.temperature_2m[i]);
+            const code = d.hourly.weathercode[i];
+            const info = getWeatherInfo(code, temp);
+            const precipProb = d.hourly.precipitation_probability?.[i] ?? 0;
+            const isDay = d.hourly.is_day?.[i] === 1;
+            // Yağış olasılığı ve karanlık yürüyüş puanını düşürür.
+            const walkScore = Math.max(0, info.walkScore - Math.round(precipProb * 0.6) - (isDay ? 0 : 15));
+            return { time: new Date(t), temp, code, precipProb, uv: d.hourly.uv_index?.[i] ?? 0, isDay, iconKey: info.iconKey, walkScore };
+        }).filter(h => h.time.getTime() >= now).slice(0, 48);
+        const days: DayForecast[] = (d.daily.time as string[]).map((t, i) => {
+            const max = Math.round(d.daily.temperature_2m_max[i]);
+            const info = getWeatherInfo(d.daily.weathercode[i], max);
+            return {
+                date: new Date(`${t}T12:00:00`),
+                max, min: Math.round(d.daily.temperature_2m_min[i]),
+                code: d.daily.weathercode[i],
+                precipProb: d.daily.precipitation_probability_max?.[i] ?? 0,
+                uvMax: d.daily.uv_index_max?.[i] ?? 0,
+                sunrise: new Date(d.daily.sunrise[i]), sunset: new Date(d.daily.sunset[i]),
+                iconKey: info.iconKey, condition: info.condition,
+            };
+        });
+        return { hours, days };
+    } catch (err) {
+        console.warn('Hava tahmini alınamadı:', err);
+        return null;
+    }
+}
+
 /** Sıcak zemin uyarısı: 25° ve üstü. */
 export function isHotForPaws(w: Pick<WeatherData, 'temp'> | null | undefined) {
     return !!w && w.temp >= 25;

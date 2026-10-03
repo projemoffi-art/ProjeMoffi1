@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Cloud, CloudLightning, CloudRain, CloudSun, Flame, Footprints, Navigation, Play, Snowflake, Sun, ThermometerSun } from 'lucide-react';
 import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useActivity } from '@/context/ActivityContext';
 import { useWalk } from '@/hooks/useWalk';
 import { useWeather, isHotForPaws } from '@/context/WeatherContext';
 import { haptics } from '@/native';
@@ -66,7 +67,8 @@ function ProgressRing({ percent, live }: { percent: number; live: boolean }) {
 
 export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet | null }) {
     const router = useRouter();
-    const { todayDistanceKm, todayDurationMin, dailyGoal } = useQuestEngine();
+    const { todayDistanceKm, todayDurationMin, todaySteps, dailyGoal } = useQuestEngine();
+    const { stepsSupported } = useActivity();
     const { activeSession, history, stats } = useWalk();
     const { weather } = useWeather();
 
@@ -77,6 +79,12 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
     const remainingKm = Math.max(0, goalKm - todayDistanceKm);
     const kcal = walkCalories(todayDistanceKm, petWeightKg(pet));
     const streak = stats?.currentStreak || 0;
+    // Adım öne çıkar (kullanıcıların en çok baktığı ölçü). Adım sensörü olmayan cihazda büyük rakam mesafe olur;
+    // hedef ve halka her durumda mesafe hedefine göredir (puan da mesafeden verilir, 8.20).
+    // Sensör "var" görünüp adım üretmiyorsa (izin reddi vb.) mesafe yürüdüğü hâlde 0 adım göstermeyiz.
+    const shownSteps = activeSession ? activeSession.realSteps || 0 : todaySteps;
+    const shownKm = activeSession ? activeSession.distanceKm : todayDistanceKm;
+    const stepsFirst = stepsSupported && !(shownKm > 0.05 && shownSteps === 0);
 
     // Sayfa açık kalırsa "kaç gündür" ve hafta şeridi dakikada bir tazelenir.
     const [now, setNow] = useState(() => Date.now());
@@ -193,18 +201,25 @@ export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet
                     <div className="min-w-0">
                         <div className="flex items-baseline gap-1.5 text-white">
                             <span className={`${baloo.className} text-[52px] leading-[0.95] font-bold tracking-tight`} style={{ textShadow: '0 4px 18px rgba(0,0,0,0.35)' }}>
-                                {formatKm(activeSession ? activeSession.distanceKm : todayDistanceKm, activeSession ? 2 : 1)}
+                                {stepsFirst ? shownSteps.toLocaleString('tr-TR') : formatKm(shownKm, activeSession ? 2 : 1)}
                             </span>
-                            <span className="text-[20px] font-extrabold">km</span>
+                            <span className="text-[20px] font-extrabold">{stepsFirst ? 'adım' : 'km'}</span>
                         </div>
                         <p className="text-white/75 text-[13px] font-bold mt-1">
-                            {activeSession ? `Bugün toplam ${formatKm(todayDistanceKm, 1)} km` : `Hedef ${formatKm(goalKm, 1)} km`}
+                            {stepsFirst
+                                ? `${formatKm(shownKm, activeSession ? 2 : 1)} km · hedef ${formatKm(goalKm, 1)} km`
+                                : activeSession ? `Bugün toplam ${formatKm(todayDistanceKm, 1)} km` : `Hedef ${formatKm(goalKm, 1)} km`}
                         </p>
                         {weather && WeatherIcon && (
-                            <span className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold text-white ${hot ? 'bg-[#E0623F]/85' : 'glass-photo'}`}>
+                            <button
+                                type="button"
+                                aria-label="Hava durumu detayı"
+                                onClick={e => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-weather-detail')); }}
+                                className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold text-white active:scale-95 transition-transform ${hot ? 'bg-[#E0623F]/85' : 'glass-photo'}`}
+                            >
                                 {hot ? <ThermometerSun className="w-4 h-4" /> : <WeatherIcon className="w-4 h-4" />}
                                 {weather.temp}° · {hot ? 'Asfalt sıcak olabilir' : weather.condition}
-                            </span>
+                            </button>
                         )}
                     </div>
                     <ProgressRing percent={percent} live={state === 'active'} />

@@ -57,6 +57,7 @@ function SummaryContent() {
     const distanceKm = Number(walk?.distance_meters || 0) / 1000;
     const activeSeconds = walk?.active_seconds ?? 0;
     const calories = walk?.calories_kcal ?? 0;
+    const hasSteps = (walk?.steps || 0) > 0;
     const goalPercent = Math.round(Math.min(100, (todayDistanceKm / Math.max(0.1, dailyGoal.distance)) * 100));
     const weeklyPercent = Math.round(Math.min(100, (weeklyStamps / Math.max(1, maxWeeklyStamps)) * 100));
     const streak = walkStats?.currentStreak || 0;
@@ -121,17 +122,18 @@ function SummaryContent() {
                         <>
                             <h1 className="text-[26px] font-extrabold text-center leading-tight">Harika bir yürüyüş!</h1>
                             <p className="text-[13px] text-secondary text-center mt-1">{petName} ile bugün harika bir iş çıkardınız.</p>
+                            {/* Bu yürüyüşte adım sayıldıysa büyük rakam adım; değilse mesafe. */}
                             <div className="text-center mt-4 mb-5">
-                                <span className="text-[44px] font-extrabold tracking-tight">{formatKm(distanceKm)}</span>
-                                <span className="text-[22px] font-extrabold ml-1.5">km</span>
+                                <span className="text-[44px] font-extrabold tracking-tight">{hasSteps ? (walk?.steps || 0).toLocaleString('tr-TR') : formatKm(distanceKm)}</span>
+                                <span className="text-[22px] font-extrabold ml-1.5">{hasSteps ? 'adım' : 'km'}</span>
                             </div>
                             {isLongest && (
                                 <div className="mb-5 rounded-2xl bg-accent/10 text-accent text-[13px] font-bold text-center py-2.5">Yeni rekor: en uzun yürüyüşün! 🎉</div>
                             )}
                             <StatRow items={[
+                                hasSteps ? { value: formatKm(distanceKm), unit: 'km', label: 'Mesafe' } : { value: formatSteps(walk?.steps), label: 'Adım' },
                                 { value: formatClock(activeSeconds), label: 'Süre' },
                                 { value: calories, unit: 'kcal', label: 'Kalori' },
-                                { value: formatSteps(walk?.steps), label: 'Adım' },
                             ]} />
                         </>
                     )}

@@ -7,6 +7,7 @@ import { ShopProvider } from "@/context/ShopContext";
 import { PetProvider } from "@/context/PetContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AIWidgetLoader } from "@/components/ai/AIWidgetLoader";
+import { WeatherDetailSheet } from "@/components/walk/WeatherDetailSheet";
 import { Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
@@ -102,6 +103,7 @@ export default function RootLayout({
                                       <QuestRewardEngineLoader />
                                       <Phase2Loader />
                                       <AIWidgetLoader />
+                                      <WeatherDetailSheet />
                                       <CookieBanner />
                                       <GlobalToast />
                                     </ClientAuthWrapper>

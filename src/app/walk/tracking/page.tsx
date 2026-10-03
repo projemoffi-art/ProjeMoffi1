@@ -12,7 +12,7 @@ import { useWeather } from "@/context/WeatherContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
 import { WALK_ISSUE_LABELS } from "@/lib/walkIssueLabels";
 import { haptics, share, device } from "@/native";
-import { audioCues } from "@/lib/audioCues";
+import { audioCues, TONE_THEMES } from "@/lib/audioCues";
 import { apiService } from "@/services/apiService";
 import { walkCalories, petWeightKg, formatKm, formatClock } from "@/lib/walkMetrics";
 import { WalkHeader, StatRow, PrimaryButton, SoftButton, ProgressBar } from "@/components/walk/WalkUI";
@@ -71,7 +71,9 @@ function TrackingContent() {
     const [showStopConfirm, setShowStopConfirm] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [screenAwake, setScreenAwake] = useState(false);
-    const [audioEnabled, setAudioEnabled] = useState(audioCues.enabled);
+    const [audioPrefs, setAudioPrefs] = useState(() => audioCues.getPrefs());
+    const updateAudio = (patch: Partial<ReturnType<typeof audioCues.getPrefs>>) => setAudioPrefs(audioCues.setPrefs(patch));
+    const goalCuedRef = useRef(false);
     const [walkPhotos, setWalkPhotos] = useState<string[]>([]);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +102,13 @@ function TrackingContent() {
     const fastestSplit = walkData.splits.length ? Math.min(...walkData.splits.map(s => s.splitSeconds)) : null;
     const pill = gpsPill(walkIssue);
     const pawWarning = pawSafetyWarning(weather?.temp);
+
+    // Günlük hedefe bu yürüyüşte ulaşıldığı an bir kez kutlama sesi.
+    useEffect(() => {
+        if (!walkData.isActive) return;
+        if (goalPercent < 100) { goalCuedRef.current = false; return; }
+        if (!goalCuedRef.current && walkData.distance > 0) { goalCuedRef.current = true; audioCues.goalReached(); haptics.celebrate(); }
+    }, [goalPercent, walkData.isActive, walkData.distance]);
 
     // Ekranı açık tut
     useEffect(() => {
@@ -243,9 +252,9 @@ function TrackingContent() {
                         <span className="w-2 h-2 rounded-full bg-current" /> {pill.label}
                     </span>
                     {weather && (
-                        <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5 glass text-foreground">
+                        <button type="button" aria-label="Hava durumu detayı" onClick={() => window.dispatchEvent(new CustomEvent('open-weather-detail'))} className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5 glass text-foreground active:scale-95 transition-transform">
                             {weather.emoji} {Math.round(weather.temp)}°C
-                        </span>
+                        </button>
                     )}
                     {beaconId && (
                         <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center bg-foreground text-background">Konum paylaşılıyor</span>
@@ -295,7 +304,7 @@ function TrackingContent() {
                             </div>
                             <h2 className="text-[19px] font-extrabold">{walkData.isAutoPaused ? 'Otomatik Duraklatıldı' : 'Yürüyüş Duraklatıldı'}</h2>
                             <p className="text-[14px] text-secondary font-semibold mt-1">
-                                {formatKm(distKm)} km · {formatClock(walkData.time)} · {calories} kcal
+                                {stepsSupported ? `${walkData.realSteps.toLocaleString('tr-TR')} adım · ` : ''}{formatKm(distKm)} km · {formatClock(walkData.time)}
                             </p>
                             {walkData.isAutoPaused && <p className="text-[12px] text-secondary mt-1">Yürümeye başlayınca kendiliğinden devam eder.</p>}
                         </div>
@@ -303,7 +312,12 @@ function TrackingContent() {
                         <>
                             <StatRow
                                 size="lg"
-                                items={[
+                                // Adım öne çıkar (kullanıcıların en çok baktığı ölçü); sensörü olmayan cihazda mesafe.
+                                items={stepsSupported && !(distKm > 0.1 && walkData.realSteps === 0) ? [
+                                    { value: walkData.realSteps.toLocaleString('tr-TR'), label: 'Adım' },
+                                    { value: formatKm(distKm), unit: 'km', label: 'Mesafe' },
+                                    { value: formatClock(walkData.time), label: 'Süre' },
+                                ] : [
                                     { value: formatKm(distKm), unit: 'km', label: 'Mesafe' },
                                     { value: formatClock(walkData.time), label: 'Süre' },
                                     { value: calories, unit: 'kcal', label: 'Kalori' },
@@ -315,7 +329,7 @@ function TrackingContent() {
                             </div>
                             <ProgressBar percent={goalPercent} />
                             <div className="mt-3 flex items-center gap-3 text-[11.5px] font-semibold text-secondary">
-                                <span>👣 {stepsSupported ? `${walkData.realSteps.toLocaleString('tr-TR')} adım` : 'Adım sayar yok'}</span>
+                                <span>{stepsSupported ? `🔥 ${calories} kcal` : '👣 Bu cihazda adım sayılmıyor'}</span>
                                 {fastestSplit !== null && <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-accent" /> En hızlı km {formatClock(fastestSplit)}</span>}
                                 {!!walkData.sniffStops && <span>👃 {walkData.sniffStops} mola</span>}
                             </div>
@@ -323,7 +337,7 @@ function TrackingContent() {
                     )}
 
                     <div className="space-y-2.5 mt-5">
-                        <PrimaryButton onClick={() => { haptics.tap(); if (isPaused) resumeWalk(); else pauseWalk(); }}>
+                        <PrimaryButton onClick={() => { haptics.tap(); if (isPaused) { resumeWalk(); audioCues.resumed(); } else { pauseWalk(); audioCues.paused(); } }}>
                             {isPaused ? <><Play className="w-4 h-4 fill-current" /> Devam Et</> : <><Pause className="w-4 h-4 fill-current" /> Duraklat</>}
                         </PrimaryButton>
                         <SoftButton onClick={() => { haptics.tap(); setShowStopConfirm(true); }}>Yürüyüşü Bitir</SoftButton>
@@ -386,7 +400,8 @@ function TrackingContent() {
                                 </div>
                                 {[
                                     { title: 'Ekranı açık tut', desc: 'Yürüyüş sırasında ekran kararmaz', on: screenAwake, toggle: () => setScreenAwake(v => !v) },
-                                    { title: 'Sesli geri bildirim', desc: 'Kilometre ve durum anonsları', on: audioEnabled, toggle: () => setAudioEnabled(v => { audioCues.setEnabled(!v); return !v; }) },
+                                    { title: 'Yürüyüş sesleri', desc: 'Başla, duraklat, her km ve hedefte kısa melodiler', on: audioPrefs.tones, toggle: () => updateAudio({ tones: !audioPrefs.tones }) },
+                                    { title: 'Sesli anons', desc: 'Kilometre ve tempo, cihazın sesiyle okunur', on: audioPrefs.voice, toggle: () => updateAudio({ voice: !audioPrefs.voice }) },
                                     { title: 'Otomatik duraklatma', desc: 'Durunca yürüyüş kendiliğinden duraklar', on: autoPauseEnabled, toggle: () => setAutoPauseEnabled(!autoPauseEnabled) },
                                     { title: 'Canlı konumu paylaş', desc: 'Bağlantıyı alan kişi konumunu görür (bu ekran açıkken)', on: !!beaconId, toggle: toggleBeacon },
                                 ].map(row => (
@@ -398,6 +413,25 @@ function TrackingContent() {
                                         <Toggle on={row.on} onChange={() => { haptics.tap(); row.toggle(); }} />
                                     </div>
                                 ))}
+                                {audioPrefs.tones && (
+                                    <div className="py-3.5">
+                                        <div className="text-[14px] font-bold">Ses teması</div>
+                                        <div className="text-[12px] text-secondary mt-0.5">Dokununca örneğini dinlersin</div>
+                                        <div className="mt-2.5 grid grid-cols-3 gap-2">
+                                            {TONE_THEMES.map(t => (
+                                                <button
+                                                    key={t.id}
+                                                    type="button"
+                                                    onClick={() => { haptics.tap(); updateAudio({ theme: t.id }); audioCues.preview(t.id); }}
+                                                    className={cn('rounded-2xl px-2 py-2.5 text-center border transition-colors', audioPrefs.theme === t.id ? 'border-accent bg-accent/10' : 'border-card-border bg-foreground/[0.03]')}
+                                                >
+                                                    <div className={cn('text-[13.5px] font-extrabold', audioPrefs.theme === t.id && 'text-accent')}>{t.label}</div>
+                                                    <div className="text-[11px] font-semibold text-secondary leading-tight mt-0.5">{t.desc}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 <button type="button" onClick={() => { haptics.tap(); device.openExternal('https://open.spotify.com'); }} className="w-full py-3.5 flex items-center justify-between text-left">
                                     <div>
                                         <div className="text-[14px] font-bold">Müzik</div>

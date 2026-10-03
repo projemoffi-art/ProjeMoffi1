@@ -468,6 +468,16 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.63i Yürüyüş:** ana sayfa kartı = halka (yüzde) + hafta şeridi (Pzt–Paz yürünen günler) + seri + hava/sıcak zemin uyarısı + cam
   ölçü şeridi. Hazırlık paneli: kim yürüyor (isimli seçim), hedef her zaman açık, hava/pati güvenliği, günlük hazırlık listesi
   (tasma/poşet/su/ödül, cihazda o gün), son yürüyüş + son 7 gün, sabit "Yürüyüşe Başla". Kenar tutamağı açık pencerelerde gizlenir.
+- **8.63j Adım öncelikli** (ana sayfa kartı, takip, sonuç): büyük rakam adım, km ikincil. Sensör yoksa ya da mesafe varken adım 0 ise
+  büyük rakam km'ye döner. Hedef/halka/puan mesafeden (8.20). Adım yalnızca uygulamada başlatılan yürüyüşlerde sayılır; gün boyu adım
+  Apple Sağlık / Health Connect ister (native aşaması).
+- **8.63k Hava detayı** `components/walk/WeatherDetailSheet.tsx` (kök düzende), `open-weather-detail` olayıyla her yerden açılır; saatlik +
+  7 gün + yürüyüş için en iyi saatler + pati güvenliği; `fetchForecast` WeatherContext'te. Open-Meteo atfı (CC BY 4.0) zorunlu, altta.
+- **8.63l Yürüyüş sesleri** tek modül `lib/audioCues.ts`: Web Audio ile kodda üretilen melodik sesler (dosya yok, telif yok), 3 tema
+  (Zil/Marimba/Pati), olaylar başla/duraklat/devam/km/hedef/bitiş; sesli anons (cihaz sesi) isteğe bağlı, varsayılan kapalı. Tercih cihazda
+  (`moffi_walk_audio`). Ses ancak dokunuşla açılır: başlat düğmesinde `audioCues.unlock()`.
+- **8.63m Üst alan:** hayvan seçimi sağ üstte, alttan açılan çekmecede (tek hayvanda da). Selamlama altında "günün notu"
+  (`components/home/dailyNote.ts`): geciken/yaklaşan sağlık işi > sıcak hava > hedef tamam > uzun süredir yürünmedi > iyi hava > günlük bakım bilgisi.
 
 ### Supabase bağlayıcısı (claude.ai) notu
 `DROP` ve `DELETE` geçen her komut için ayrı onay ister (VS Code panelinde gösterilemez → "declined"; "her zaman izin ver" aşmaz).

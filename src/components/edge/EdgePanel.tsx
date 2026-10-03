@@ -230,7 +230,12 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
 
                                         {/* Hava + sıradaki sağlık işi */}
                                         <div className="grid grid-cols-2 gap-2.5">
-                                            <Card onClick={(!weather || weather.source === 'ip') && !permissionDenied ? () => requestPrecise() : undefined} className="p-3">
+                                            <Card
+                                                onClick={weather
+                                                    ? () => { buzz(); setOpen(false); window.dispatchEvent(new CustomEvent('open-weather-detail')); }
+                                                    : !permissionDenied ? () => requestPrecise() : undefined}
+                                                className="p-3"
+                                            >
                                                 {weather ? (
                                                     <>
                                                         <div className="flex items-center justify-between">

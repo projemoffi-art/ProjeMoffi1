@@ -15,6 +15,7 @@ import { haptics, sensors, geolocation } from "@/native";
 import { formatKm, formatClock, formatMinutes } from "@/lib/walkMetrics";
 import { useWeather, isHotForPaws } from "@/context/WeatherContext";
 import { PrimaryButton, SoftButton } from "@/components/walk/WalkUI";
+import { audioCues } from "@/lib/audioCues";
 
 interface WalkQuickSheetProps {
     isOpen: boolean;
@@ -112,6 +113,8 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
         if (starting) return;
         setStarting(true);
         // iOS: hareket sensörü izni dokunuşla aynı çağrı zincirinde istenmeli.
+        // Ses ve hareket sensörü izni dokunuşla aynı çağrı zincirinde açılmalı (iOS/tarayıcı kuralı).
+        audioCues.unlock();
         await sensors.requestPermission();
         haptics.success();
         startWalk();
@@ -121,6 +124,7 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
 
     const handleContinueRecovered = async () => {
         haptics.tap();
+        audioCues.unlock();
         await sensors.requestPermission();
         continueRecoveredWalk();
         onNavigateAway?.();
@@ -237,7 +241,7 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
                                 {/* Hava ve pati güvenliği */}
                                 <button
                                     type="button"
-                                    onClick={() => { if ((!weather || weather.source === 'ip') && !permissionDenied) requestPrecise(); }}
+                                    onClick={() => { if (weather) window.dispatchEvent(new CustomEvent('open-weather-detail')); else if (!permissionDenied) requestPrecise(); }}
                                     className={cn('mx-4 mt-3 w-[calc(100%-2rem)] rounded-[24px] p-4 flex items-center gap-3 text-left', hot ? 'bg-[#E0623F]/12 border border-[#E0623F]/30' : 'card-premium')}
                                 >
                                     <span className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: hot ? 'linear-gradient(160deg,#F28A5B,#D9432F)' : 'linear-gradient(160deg,#F7C66B,#E8A33D)' }}>

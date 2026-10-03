@@ -15,6 +15,10 @@ import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 import { useStories } from '@/hooks/useStories';
 import { usePetShop } from '@/hooks/usePetShop';
 import { useUpcomingCare } from '@/hooks/useUpcomingCare';
+import { useWalk } from '@/hooks/useWalk';
+import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useWeather } from '@/context/WeatherContext';
+import { useDailyNote } from '@/components/home/dailyNote';
 import { BirthdayCard } from '@/components/home/BirthdayCard';
 import { HomeHeader } from '@/components/home/HomeHeader';
 import { HomeStories } from '@/components/home/HomeStories';
@@ -37,6 +41,9 @@ function HomeContent() {
     const { products, cartCount, addToCart } = usePetShop();
     const { items: careItems, loaded: careLoaded } = useUpcomingCare(pets, user?.id);
     const [addPetOpen, setAddPetOpen] = useState(false);
+    const { history } = useWalk();
+    const { todayDistanceKm, dailyGoal } = useQuestEngine();
+    const { weather } = useWeather();
 
     // Hiç hayvanı olmayan ve ilk kurulumu bitirmemiş kullanıcı kurulum akışına gider (design-reference/onboarding-final).
     // Kurulumu atlayan/bitiren kullanıcıya pencere zorla açılmaz; boş durum kartındaki düğmeyle eklenir.
@@ -61,6 +68,18 @@ function HomeContent() {
     const firstName = (user?.name || '').trim().split(/\s+/)[0] || 'Dostum';
     const suggested = useMemo(() => products.filter(p => p.inStock).slice(0, 6), [products]);
 
+    // Günün notu: önce kişiye özel durum (sağlık, hava, yürüyüş), yoksa günlük bakım bilgisi.
+    const lastWalkAt = useMemo(() => history.reduce((max, w) => Math.max(max, new Date(w.ended_at || w.started_at || 0).getTime() || 0), 0), [history]);
+    const [nowMs, setNowMs] = useState(0);
+    useEffect(() => { setNowMs(Date.now()); }, [history]);
+    const note = useDailyNote({
+        care: careItems,
+        weather,
+        petName: activePetObj?.name || null,
+        daysSinceLastWalk: lastWalkAt && nowMs ? (nowMs - lastWalkAt) / 86_400_000 : null,
+        goalDone: todayDistanceKm >= Math.max(0.1, dailyGoal.distance),
+    });
+
     return (
         <div className={`theme-vet ${nunito.className} min-h-[100dvh] bg-background text-foreground overflow-x-hidden`}>
             <main className="max-w-md mx-auto px-5 pb-[calc(env(safe-area-inset-bottom)+112px)]">
@@ -69,9 +88,11 @@ function HomeContent() {
                     userId={user?.id}
                     avatar={user?.avatar}
                     pets={pets}
-                    activePetId={activePetObj?.id}
+                    activePet={activePetObj}
                     onSwitchPet={switchPet}
+                    onAddPet={() => setAddPetOpen(true)}
                     unreadCount={unreadCount}
+                    note={note}
                 />
 
                 <div className="relative z-10 -mt-7 -mx-5 px-5 pt-5 rounded-t-[28px] bg-background">
