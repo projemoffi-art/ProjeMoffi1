@@ -7,7 +7,7 @@ import { ChevronRight, FileText } from "lucide-react";
 import { PetSwitcher } from "@/components/common/PetSwitcher";
 import { useActivity, type WalkRecord } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
-import { useQuestEngine } from "@/context/QuestEngineContext";
+import { useDailyProgress } from "@/context/DailyProgressContext";
 import { haptics } from "@/native/haptics";
 import { showToast, haversineKm } from "@/lib/utils";
 import { formatKm, formatMinutes } from "@/lib/walkMetrics";
@@ -58,7 +58,7 @@ export default function WalkStatsPage() {
     const router = useRouter();
     const { walkHistory, walkStats } = useActivity();
     const { activePet, pets } = usePet();
-    const { badges, earnedBadges, totalPatiPuan, challenges } = useQuestEngine();
+    const { totalPatiPuan } = useDailyProgress();
     const [period, setPeriod] = useState<Period>('1m');
     const [generating, setGenerating] = useState(false);
 
@@ -126,8 +126,8 @@ export default function WalkStatsPage() {
 
     const links = [
         { label: 'Yürüyüş Geçmişi', hint: `${petWalks.length} yürüyüş`, href: '/walk/history' },
-        { label: 'Rozetlerim', hint: `${earnedBadges.length}/${badges.length}`, href: '/walk/badges' },
-        { label: 'Meydan Okumalar', hint: `${challenges.filter(c => c.status === 'completed').length}/${challenges.length} tamam`, href: '/walk/challenges' },
+        { label: 'Rozet Kasası', hint: 'Kazandıkların ve sıradakiler', href: '/quests/rozetler' },
+        { label: 'Birlikte', hint: 'Ortak hedef ve düello', href: '/quests/birlikte' },
         { label: 'Sıralamalar', hint: 'Bu hafta', href: '/walk/leaderboard' },
         { label: 'Ödül Marketi', hint: `${totalPatiPuan.toLocaleString('tr-TR')} puan`, href: '/walk/rewards' },
         { label: 'Giydirme Stüdyosu', hint: 'Kombin', href: '/dress-up' },

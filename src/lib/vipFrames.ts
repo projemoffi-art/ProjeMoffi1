@@ -14,7 +14,7 @@ const PREMIUM_FRAME_PERK_KEY: Partial<Record<FrameStyle, string>> = {
     metal: 'frame_metal',
 };
 
-// `activePerks`: QuestEngineContext'ten gelen, perk_key -> ISO expiresAt haritası
+// `activePerks`: DailyProgressContext'ten gelen, perk_key -> ISO expiresAt haritası
 // (sadece SÜRESİ GEÇMEMİŞ satırlar içerir, bkz. getActivePerks).
 export function isFrameUnlocked(style: FrameStyle, opts: { isPrime: boolean; activePerks: Record<string, string> }): boolean {
     const requiredPerk = PREMIUM_FRAME_PERK_KEY[style];

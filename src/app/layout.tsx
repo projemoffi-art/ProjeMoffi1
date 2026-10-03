@@ -14,8 +14,8 @@ import { DynamicNavigation } from "@/components/common/DynamicNavigation";
 import { GlobalCareModals } from "@/components/common/GlobalCareModals";
 import { GlobalAuraBackground } from "@/components/common/GlobalAuraBackground";
 import { WeatherProvider } from "@/context/WeatherContext";
-import { QuestEngineProvider } from "@/context/QuestEngineContext";
-import { QuestRewardEngineLoader } from "@/components/quests/QuestRewardEngineLoader";
+import { DailyProgressProvider } from "@/context/DailyProgressContext";
+import { QuestCelebration } from "@/components/quests/QuestCelebration";
 import { GlobalToast } from "@/components/common/GlobalToast";
 import CookieBanner from "@/components/common/CookieBanner";
 import { ShareSheetHost } from "@/components/common/ShareSheet";
@@ -70,7 +70,7 @@ export default function RootLayout({
               <PetProvider>
                 <ActivityProvider>
                   <WeatherProvider>
-                    <QuestEngineProvider>
+                    <DailyProgressProvider>
                       <ChatProvider>
                           <ThemeProvider>
                                   <ReportProvider>
@@ -90,7 +90,7 @@ export default function RootLayout({
                                         <DynamicNavigation />
                                       </Suspense>
                                       <GlobalCareModals />
-                                      <QuestRewardEngineLoader />
+                                      <QuestCelebration />
                                       <AIWidgetLoader />
                                       <WeatherDetailSheet />
                                       <CookieBanner />
@@ -100,7 +100,7 @@ export default function RootLayout({
                                   </ReportProvider>
                           </ThemeProvider>
                       </ChatProvider>
-                    </QuestEngineProvider>
+                    </DailyProgressProvider>
                   </WeatherProvider>
                 </ActivityProvider>
               </PetProvider>

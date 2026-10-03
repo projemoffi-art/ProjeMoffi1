@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
-import { useQuestEngine } from "@/context/QuestEngineContext";
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { haptics, sensors, geolocation } from "@/native";
 import { formatKm, formatClock, formatMinutes } from "@/lib/walkMetrics";
 import { useWeather, isHotForPaws } from "@/context/WeatherContext";
@@ -48,13 +48,13 @@ function relativeDay(iso?: string): string {
     return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
 }
 
-// Ekran 2 (Yürüyüşe Hazırlık). Hedef satırı uygulamanın tek günlük hedefini (QuestEngine) değiştirir:
+// Ekran 2 (Yürüyüşe Hazırlık). Hedef satırı uygulamanın tek günlük hedefini (DailyProgressContext → sunucu, pets.walk_goal_km) değiştirir:
 // takip ekranı ve ana sayfa kartı aynı değeri gösterir.
 export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickSheetProps) {
     const router = useRouter();
     const { walkHistory, walkStats, startWalk, recoverableWalk, continueRecoveredWalk, discardRecoveredWalk, enterReadyPhase, exitToIdlePhase } = useActivity();
     const { activePet, pets, switchPet } = usePet();
-    const { dailyGoal, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm, todayDistanceKm } = useQuestEngine();
+    const { dailyGoal, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm, todayDistanceKm } = useDailyProgress();
     const [starting, setStarting] = React.useState(false);
     const [resolving, setResolving] = React.useState(false);
     const [geoPermission, setGeoPermission] = React.useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
@@ -97,11 +97,6 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
     }, [walkHistory, plannedKm]);
 
     const lastWalk = walkHistory[0];
-    const week = React.useMemo(() => {
-        const since = Date.now() - 7 * 86_400_000;
-        const list = walkHistory.filter(w => new Date(w.ended_at || w.started_at || 0).getTime() >= since);
-        return { count: list.length, km: list.reduce((s, w) => s + w.distanceKm, 0) };
-    }, [walkHistory]);
 
     const adjustGoal = (delta: number) => {
         haptics.tap();
@@ -296,11 +291,7 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
                                         <span className="block text-[15px] font-extrabold mt-0.5">{lastWalk ? `${formatKm(lastWalk.distanceKm, 1)} km` : '—'}</span>
                                         <span className="block text-[12px] font-semibold text-secondary">{lastWalk ? `${relativeDay(lastWalk.ended_at || lastWalk.started_at)} · ${formatMinutes(lastWalk.activeSeconds / 60)}` : 'Henüz yok'}</span>
                                     </span>
-                                    <span className="pl-3">
-                                        <span className="block text-[12px] font-bold text-secondary">Son 7 gün</span>
-                                        <span className="block text-[15px] font-extrabold mt-0.5">{formatKm(week.km, 1)} km</span>
-                                        <span className="block text-[12px] font-semibold text-secondary">{week.count} yürüyüş</span>
-                                    </span>
+                                    <LastSevenDays walks={walkHistory} />
                                 </button>
 
                                 {geoPermission === 'denied' && (
@@ -308,7 +299,7 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
                                         <MapPin className="w-5 h-5 text-emergency shrink-0 mt-0.5" />
                                         <div className="flex-1">
                                             <div className="text-[13.5px] font-extrabold text-emergency">Konum izni kapalı</div>
-                                            <div className="text-[12.5px] text-secondary mt-0.5">Mesafe ve rota için Moffi'ye konum izni vermen gerekiyor.</div>
+                                            <div className="text-[12.5px] text-secondary mt-0.5">Mesafe ve rota için Moffi&apos;ye konum izni vermen gerekiyor.</div>
                                             <button type="button" onClick={() => geolocation.openSettings()} className="mt-2 text-[12.5px] font-extrabold text-emergency underline">Ayarları aç</button>
                                         </div>
                                     </div>
@@ -327,5 +318,22 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
                 </motion.div>
             )}
         </AnimatePresence>
+    );
+}
+
+/** Son 7 gün özeti. Panel açıldığında takılır; "şimdi" o an bir kez alınır (render saf kalır). */
+function LastSevenDays({ walks }: { walks: { ended_at?: string | null; started_at?: string | null; distanceKm: number }[] }) {
+    const [now] = React.useState(() => Date.now());
+    const week = React.useMemo(() => {
+        const since = now - 7 * 86_400_000;
+        const list = walks.filter(w => new Date(w.ended_at || w.started_at || 0).getTime() >= since);
+        return { count: list.length, km: list.reduce((sum, w) => sum + w.distanceKm, 0) };
+    }, [walks, now]);
+    return (
+        <span className="pl-3">
+            <span className="block text-[12px] font-bold text-secondary">Son 7 gün</span>
+            <span className="block text-[15px] font-extrabold mt-0.5">{formatKm(week.km, 1)} km</span>
+            <span className="block text-[12px] font-semibold text-secondary">{week.count} yürüyüş</span>
+        </span>
     );
 }

@@ -30,7 +30,7 @@ import { RoutesTab } from "@/components/profile/RoutesTab";
 import { HealthProvider } from "@/components/health/HealthProvider";
 import { PassportHome } from "@/components/passport/PassportHome";
 import { Avatar, FollowButton, PostGrid } from "@/components/social/SocialUI";
-import { useQuestEngine } from "@/context/QuestEngineContext";
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { FRAME_CLASSES, resolveFrameStyle, type FrameStyle } from "@/lib/vipFrames";
 import { Sheet, LoadingBlocks } from "@/components/health/HealthUI";
 import { ReportModal } from "@/components/common/modals/ReportModal";
@@ -42,6 +42,7 @@ import { MoreHorizontal, Plus } from "lucide-react";
 
 import { Wallet, Package, Calendar, Map, Users as UsersIcon, Bookmark, FileText, Activity } from "lucide-react";
 import { openShare } from '@/components/common/ShareSheet';
+import { FeaturedBadges } from '@/components/quests/FeaturedBadges';
 
 // ─── Başharf Avatar Yardımcısı ─────────────────────────────
 const AVATAR_COLORS = [
@@ -99,7 +100,7 @@ export default function ProfilePage() {
         : ownerPets.map(p => ({ ...p, ageLabel: null }));
     // Ödül Merkezi / Prime çerçevesi: hakkı (Prime ya da süresi geçmemiş VIP) her çizimde yeniden doğrulanır.
     // Başkalarının profilinde henüz gösterilmiyor; seçim sadece sahibinin ayarlarında duruyor (YAPILACAKLAR).
-    const { activePerks } = useQuestEngine();
+    const { activePerks } = useDailyProgress();
     const frameStyle: FrameStyle = isOwnProfile
         ? resolveFrameStyle(currentUser?.settings?.appearance?.frameStyle, { isPrime: !!currentUser?.is_prime, activePerks })
         : 'minimal';
@@ -408,6 +409,7 @@ export default function ProfilePage() {
                     {displayUser?.bio && <p className="text-sm font-semibold whitespace-pre-wrap">{displayUser.bio}</p>}
                     {city && <p className="text-xs font-semibold text-secondary inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-accent" />{city}</p>}
                     {!isOwnProfile && summary?.followsMe && !summary.isFollowing && <p className="text-[11px] font-bold text-secondary">Seni takip ediyor</p>}
+                    {!blocked && <FeaturedBadges ownerId={id} own={isOwnProfile} />}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mt-4">

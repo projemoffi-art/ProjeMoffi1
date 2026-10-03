@@ -276,18 +276,16 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   Bilinçli yaklaşık çözümler: GPS kalite eşikleri deneysel; `network_unavailable` sadece tarayıcının online/offline'ına bakar;
   hazırlık kontrol listesi (poşet/su/tasma) state machine'e bağlı değil; "Bu Yürüyüşü Kaydet" gerçek bir onay kapısı değil (kayıt
   zaten yapılmış). Sahte POI'li eski `LiveMap` 2026-10-04'te silindi (8.67); yürüyüş haritası `WalkMap`.
-- **8.2 Puan sistemi (2026-10-03 kilitlendi).** 🔴 İstemci puan MİKTARI söyleyemez: `award_pati_puan` istemciye kapalı (sadece
-  sunucu fonksiyonları sahibi olarak çağırır), yeni ödül `claim_reward(key)` ile. Miktar/dönem (günlük-haftalık-aylık)/günlük 200 sınırı
-  `reward_rules` tablosunda; aynı ödül aynı dönemde bir kez (`point_transactions` source='quest', reference_id `kural@dönem`). Yeni ödül
-  eklerken önce `reward_rules`'a satır, istemcide `awardReward('<kural>', xp, ...)`. Puan harcama da sadece fiyatı sunucuda olan
-  fonksiyonlarla (`redeem_cosmetic_item`, `redeem_vip_perk`); istemcide "puan düş" fonksiyonu YOK. Tek para birimi PP = **PawCoin**
-  (8.52). Görev tamamlanma kararı hâlâ istemcide (C aşamasında sunucuya taşınacak); kötüye kullanım en fazla günlük sınır kadar.
-  Kupon (`reward_products`) satıştan kaldırıldı: kupon kaydı/ödemede uygulama altyapısı yoktu.
+- **8.2 Puan sistemi → 8.68 (2026-10-03).** 🔴 İstemci puan istemez: ödülü YALNIZCA sunucu verir (`quest_grant`, istemciye kapalı), görevin
+  tamamlandığına da sunucu gerçek kayıttan karar verir. Eski `claim_reward` + `reward_rules` istemciye KAPALI (görev yapmadan günde 200
+  alınabiliyordu; tablo geçmiş kayıt için durur). Puan harcama yalnız fiyatı sunucuda olan fonksiyonlarla (`redeem_cosmetic_item`,
+  `redeem_vip_perk`). Tek para birimi **PawCoin** (8.52). Kupon (`reward_products`) satıştan kaldırıldı.
 - **8.3 Seri.** `streak_shield_uses` + `use_streak_shield` (haftada 1, Prime 2). Günler YEREL tarihle karşılaştırılır (UTC `startsWith`
   hatası vardı). `bestStreak` 365 günün tamamını tarar. Haftalık pul günde en fazla 1.
-- **8.4/8.5/8.14 Hub ve bağlam.** "Bugün" değerleri tek kaynaktan: `QuestEngineContext.todayDistanceKm/todaySteps/walkPpEarned`
-  (iki paralel hesap yapma). Rozet takibi `QuestEngineContext`'te (panel unmount olunca yerel state kaybolur). "Tüm Zamanlar" ile
-  "Son 7 Gün" aynı kartta etiketsiz karıştırılmaz.
+- **8.4/8.5/8.14 Hub ve bağlam.** "Bugün" değerleri tek kaynaktan: `DailyProgressContext` (`todayDistanceKm/todaySteps/dailyGoal`, PawCoin
+  bakiyesi, seri, çerçeve hakları; eski `QuestEngineContext` 8.68'de kaldırıldı). Günlük yürüyüş hedefi SUNUCUDA: `pet_walk_goal` /
+  `set_pet_walk_goal` (`pets.walk_goal_km` elle hedef; otomatik hedef bugünden önceki yürüyüşlerden, gün içinde değişmez). "Tüm Zamanlar"
+  ile "Son 7 Gün" aynı kartta etiketsiz karıştırılmaz.
 - **8.6a Yürüyüş kaydı (2026-10-03, A+B).** 🔴 `walk_sessions`'a istemci yazamaz (sadece SELECT): `start_walk_session(pet, started_at)`
   (çevrimdışı başlangıç sonradan gerçek saatle açılır), `append_walk_points` (ActivityContext tamponu, 10 sn'de bir toplu; çevrimdışı kuyruk
   aynı tampon, anlık görüntüyle cihazda saklanır), `finish_walk` (aktif süre `active_seconds`, gerçek adım ya da boş, `calories_kcal`
@@ -300,8 +298,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.6 Geçmiş.** `walk_sessions` RLS sadece sahibi. `walk_sessions.pet_id` text, FK yok → PostgREST `pet:pets(...)` embed'i KULLANMA
   (yürüyüş geçmişi bu yüzden hiç çalışmamıştı). `path_coordinates` DB'de `{lat,lng,timestamp}[]`; ekranlar tuple bekler →
   `normalizePathToTuples()` (`lib/utils.ts`). Adım katsayısı 1.3.
-- **8.7 + ikinci 8.15 Rozetler.** 38 rozet, 6 "aile/kademe" (mesafe, seri, yürüyüş sayısı, paylaşım, beğeni, bölge); aile rozetleri TEK merkezi
-  `useEffect`'ten verilir; ömür boyu sayaçlar günlük sıfırlanmaz (`lifetimePostCountRef`, `lifetimeLikeCountRef`). `/walk/badges`.
+- **8.7 + ikinci 8.15 Rozetler → 8.68.** Rozetler artık sunucuda, hayvana bağlı (`badge_defs`, `pet_badges`), tek ekran Rozet Kasası
+  (`/quests/rozetler`; eski `/walk/badges` ve telefonda tutulan rozetler kaldırıldı).
 - **8.8 Sıralama.** `get_distance_leaderboard` (SECURITY DEFINER, sadece toplam km; hiçbir rota sızmaz), km tabanlı, zaman + sosyal filtre.
   🔴 Ders: UI'ya bağlı işe referans görsel olmadan başlama (PP'li lig sistemi yanlış yöne gitmişti, silindi).
 - **8.9 / 8.23 / 8.24 Ödül ve kozmetik.** `reward_products` (kupon), `cosmetic_items` + `redeem_cosmetic_item`, `vip_perks` +
@@ -311,8 +309,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.10 🔴 GRANT kuralı** (aşağıda Bölüm 6, 5.7 ile aynı): yeni tabloda RLS policy yetmez, `grant` da şart; doğrulama `execute_sql` ile değil
   gerçek istemciyle ya da `information_schema.role_table_grants` ile.
 - **8.11 Profil istatistikleri** (`RoutesTab.tsx`) gerçek `walkHistory`'den (limit 60).
-- **8.12 Görevler.** `MonthlyResearch` gerçek sinyallerle ilerler; `/walk/challenges` haversine kümelemeyle (300 m "farklı yer", 2 km "farklı
-  bölge"), tamamlanma state'i tutulmaz (her render'da türetilir). `showToast(message, icon, color)` imzası; ikon `IconMap`'te olmalı.
+- **8.12 Görevler → 8.68** (eski aylık araştırma, `/walk/challenges` ve istemci görev motoru kaldırıldı). `showToast(message, icon, color)`
+  imzası; ikon `IconMap`'te olmalı.
 - **8.13 Cila.** `src/app/walk/template.tsx` route geçişi, `canvas-confetti`, haptik. Renk taramasında ham hex (`#6366F1`) de aranır.
 - **8.15(ilk)–8.16 Aktif yürüyüş tek ekran.** Aktif yürüyüş SADECE `/walk/tracking`'de; `WalkQuickSheet` yalnızca hazırlık/kurtarma
   (eski aktif görünümü silindi). `DynamicNavigation.handleOpenWalk` yürüyüş aktifse doğrudan `/walk/tracking`'e gider. Sürüklenebilir panel:
@@ -528,7 +526,7 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   🔴 Hata: ayrıntı/kıyaslamadaki "Sepete Ekle" `updateCartItem` çağırıyordu → sepette olmayan ürün HİÇ eklenmiyordu; artık `addToCart` (upsert).
   Mağaza ekranının görsel yenilemesi referans bekliyor (eski gri/italik stil); `products`'ta deneme ürünü "WRHRH" duruyor.
 - 🔴 **Oyun puanı:** `add_game_reward` istemcinin söylediği miktarı (çağrı başına 500) sınırsız veriyordu, girişsiz de çağrılabiliyordu. Günlük
-  sınır sunucuda (`game_reward_days`: 100 oyun puanı + 500 XP, Türkiye günü). `coin_balance` oyun sıralaması içindir, satın alınan PawCoin değil.
+  sınır sunucuda (`game_reward_days`: 100 oyun puanı + 100 XP [8.68], Türkiye günü). `coin_balance` oyun sıralaması içindir, satın alınan PawCoin değil.
 - 🔴 **Profil koruma tetikleyicileri** (`protect_profile_fields`, `protect_profile_security_fields`) JWT'ye (`auth.role()`) bakıyordu: sunucu
   fonksiyonlarının yaptığı yetkili değişiklikleri de sessizce geri alıyordu (oyun puanı hiç yazılmamıştı). Diğer korumalarla aynı desene geçti:
   `current_user in ('authenticated','anon')` + SECURITY INVOKER. 🔴 Kural: koruma tetikleyicisinde JWT değil `current_user`; tetikleyici
@@ -584,6 +582,36 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   paylaşılan kilo "28 kg kg" yazılıyordu.
 - Görevler: "Lig" sekmesindeki uydurma "Gümüş Lig / İlk 3'e 500 PP" ve sahte podyum silindi, sekme gerçek km sıralamasına (`/walk/leaderboard`) gider.
 - Veri paketi (KVKK) sahte "şifreleniyor" beklemeleri ve sıfır bakiyeler olmadan, PawCoin hareketleriyle birlikte iner.
+
+### Görev Merkezi v2 (8.68, 2026-10-03 — Baran onaylı rapor + referans, design-reference/quests-final/)
+
+- 🔴 **Görev tamamlanmasına ve ödüle SUNUCU karar verir.** İstemci yalnızca okur. Ödül defteri `quest_rewards` (kullanıcı + ref başına bir kez,
+  PawCoin günlük tavan 200) ve tek ödül fonksiyonu `quest_grant` (istemciye kapalı; hayvana XP de buradan). Ölçüm tek yer: `pet_metric(pet,
+  metric, from, to)` (yürüyüş km/sayı/gün, bakım günleri, kilo, aşı/muayene, fotoğraf, etiketli gönderi, okunan bilgi, sandık, program, ortak
+  hedef, ~1 km'lik bölge hücreleri). Yeni görev/rozet/macera hedefi eklerken ÖNCE burada ölçülebilir olmalı; ölçülemiyorsa ödül verme.
+- **Günlük görevler** `quest_defs` (core: yürüyüş [köpek] ya da oyun [kedi/diğer], beslenme, su; pool: aşı planı, acil bilgi, pasaport, kilo,
+  günün bilgisi, anı fotoğrafı, yeni rota, paylaşım — koşullara göre). Gün başında sunucuda üretilir ve sabitlenir (`pet_daily_quests`,
+  Türkiye günü); 1 öncelikli + 1 dönüşümlü havuz görevi; günde 1 değiştirme (`quest_reroll`). "Kendi kaydı" görevleri (öğün/su/oyun) bakım
+  kaydına bağlı (`log_pet_care` artık 'play' de alır), az ödüllü. Hepsi bitince +10 PawCoin/+30 XP.
+- **Ana çağrı** `quest_center(pet)`: ilerlemeyi ölçer, tamamlananı ödüllendirir, rozetleri eşitler (`qc_badge_sync`), aylık macerayı
+  ilerletir; haftanın günleri, sandık, macera, program, sıradaki rozet, günün bilgisi ve yeni ödüller (`awarded`, `new_badges`) döner.
+  İstemci: `services/questService.ts`, `hooks/useQuestCenter.ts` (bakım kaydı ve `QUESTS_CHANGED` ile tazelenir), kutlama
+  `QuestCelebration` (yalnızca sunucunun verdiği ödül; rastgele kutu YOK).
+- **Haftalık sandık** (`qc_week_state`, `quest_open_chest`): 4 hedef (3 gün yürüyüş/oyun, 4 gün su, 4 gün eksiksiz öğün, 1 fotoğraf), içerik
+  önceden yazılı: 100 PawCoin + 100 XP + 3 günlük çerçeve hakkı (`user_active_perks`). Haftalık seri = sandığı açılan ardışık haftalar.
+- **Aylık macera** `adventures` (ay başına 4 bölüm, köpek dışında "alt" hedefler; bölüm 50 PawCoin, final 100 + o aya özel rozet). Ekim–Aralık
+  2026 yüklü; 🔴 her ay için yeni satır gerekir (yoksa ekran "hazırlanıyor" der) → 12.3.
+- **Programlar** `programs` + `pet_programs` (aynı anda 1 aktif, günde 1 adım, bitince PawCoin + rozet). **Günün bilgisi** `lessons` +
+  `lesson_reads` (türe göre dönüşümlü takvim). 🔴 İçerik `vet_reviewed=false`: herkese açık yayından önce veteriner okumalı (12.1).
+- **Birlikte** `team_goals` + `team_goal_members` (2–5 kişi, karşılıklı takip, hedef türü km/gün/bakım/bilgi, tamamlanınca üye başına 50
+  PawCoin); düellolar eski `social_challenges` (sonuçlandırma `finalize_social_challenge`). Davet bildirimleri `/quests/birlikte`'ye gider.
+- **Hayvan seviyesi** tek eğri `pet_level_for_xp` (L için 50·(L−1)·(L+2) XP; adlar `pet_level_info`). Oyun XP'si günde 100 (Baran kararı).
+  Oyun altını (`coin_balance`) oyunlara özel kalır, Görev Merkezi'nde görünmez (Baran kararı).
+- **Rozet vitrini:** Rozet Kasası'nda "Profilimde göster" (`quest_badge_feature`, hayvan başına en çok 3) → profilde `featured_badges(owner)`.
+- Kaldırılanlar: `QuestEngineContext` (görev/rozet/XP/pul telefonda, istemci ödül istiyordu), `QuestPanel`, `QuestRewardEngine` (sahte "Gizli
+  Kutu"), `/walk/badges`, `/walk/challenges`, işletme panelindeki kırık "Görevler" sayfası (var olmayan tabloyu okuyordu), `claimReward`.
+- Ekonomi (rapordaki hesap): düzenli kullanıcı ayda ~750, çok aktif ~1.900 PawCoin; Prime aylık 500. Değiştirirken `quest_defs`, `qc_week_state`,
+  `adventures`, `programs` birlikte düşünülür.
 
 ### İçerik Stüdyosu ve hikâyeler (8.64, 2026-10-04 — Baran onaylı 5 kanal)
 
@@ -662,6 +690,7 @@ Aynı anda üç ajan çalışabilir: bu sohbetteki Claude (Supabase/Vercel'e MCP
 | `community-final/` | `/kayip`, `/sahiplendirme`, `/community` (14 + 14 + 12 ekran) |
 | `passport-final/` | `/pasaport/*`, `/id`, `/p` (10 ekran) |
 | `onboarding-final/` | `/` giriş + `/onboarding` pet kurulumu (9 ekran) |
+| `quests-final/` | `/quests/*` Görev Merkezi (10 ekran + program detayı, kutlama) |
 
 ## 12. Açık işler (2026-10-02)
 
@@ -713,9 +742,10 @@ ilgili maddeyi tek satırla hatırlat.
       `https://app.moffi.net/api/revenuecat/webhook`), `NEXT_PUBLIC_REVENUECAT_IOS_KEY`, `NEXT_PUBLIC_REVENUECAT_ANDROID_KEY`.
 - [ ] PawCoin paketi satın alma ekranı nerede olsun (Ödül Marketi'nin üstü / ayrı "Cüzdan")? Katalog ve sunucu hazır. Profilde artık gerçek bir
       PawCoin cüzdanı (bakiye + hareketler) var; paket satışı oraya eklenebilir (8.67).
-- [ ] 🔴 **Oyun altını (`coin_balance`) ile PawCoin ayrı iki bakiye** (8.67): oyunlar PawCoin değil oyun altını verir (günde en çok 100), altın yalnızca
-      oyunlarda (süre uzatma/kurtarma) harcanır. Böyle kalsın mı, yoksa oyunlar da PawCoin mi versin (o zaman günlük sınır ve ekonomi yeniden)?
-      `wallet_balance` sütununa hiçbir şey yazmıyor: silinebilir.
+- [ ] 🔴 **Görev Merkezi içeriği veteriner okuması** (8.68): 32 bilgi kartı, 5 program, 3 aylık macera `vet_reviewed=false`; herkese açık
+      yayından önce bir veterinerin okuması gerekir (Baran onayı: "yayına almadan önce şart"). Program/bilgi görselleri ve 3B rozet çizimleri
+      gelirse emoji yerine konur.
+- [ ] Bilgi: `wallet_balance` sütununa hiçbir şey yazmıyor; silinebilir (SQL Editor, DROP).
 - [ ] Profildeki "Aile / ortak bakım" sahteydi, kaldırıldı. Gerçek bir aile paylaşımı (birden fazla kişinin aynı hayvanı yönetmesi) istenirse ayrı iş.
 - [ ] SQL Editor: `supabase/migrations/20261004102101_drop_old_submit_business_application_MANUAL_sql_editor.sql` (eski başvuru fonksiyonu + bir test
       işletmesi kaydı; acil değil, eski fonksiyon zaten kapalı).
@@ -753,14 +783,15 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
       köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
 - [ ] 🔴 **Kod borcu (2026-10-04 ölçümü, yalnızca azalır):** tip kontrolü (src) **0** hata (68'den; artık her değişiklikte 0 kalmalı).
-      Lint **390** hata (1.150'den): `no-explicit-any` 288, `no-unescaped-entities` 47, `set-state-in-effect` 35, `purity` 11, diğer 9.
+      Lint **331** hata (1.150'den): `no-explicit-any` 240, `no-unescaped-entities` 44, `set-state-in-effect` 34, `purity` 8, diğer 5.
       Sıra: React kuralları önce (gerçek davranış hatası saklayabilir), sonra `any`/kaçış karakterleri dosya dosya. Ölü dosya: 0
       (`scratchpad/orphans.cjs`), kullanılmayan servis metodu: 0 (`scratchpad/used.cjs`).
 - [ ] İşletme kurulum sihirbazı (`OnboardingWizard`) ve işletme panelinin bazı ekranları indigo/mavi tonlarda (Bölüm 5'e aykırı).
-- [ ] Yürüyüş denetimi C/D aşamaları (2026-10-03 raporu): C = görev/rozet/XP sunucuya, görev tiplerinin düzeltilmesi (günlük
-      toplam, imkânsız "Çift Yürüyüş"), otomatik günlük hedefin gün içinde sabit kalması (ilk yürüyüşten sonra 1,7→2,3 sıçrıyor),
-      meydan okuma/rozet/sıralama/ödül ekranlarının referans tasarıma çekilmesi. D = anahtarlı harita sağlayıcısı (OSM karo kullanım
-      politikası). (E = ölü dosyalar tamamlandı.)
+- [ ] Yürüyüş denetimi: C aşamasının görev/rozet/XP kısmı 8.68 ile bitti. Kalan: meydan okuma/sıralama/ödül ekranlarının referansa
+      çekilmesi; D = anahtarlı harita sağlayıcısı (OSM karo kullanım politikası). Yürüyüş istatistik ve sıralama sayfası (`/walk`) alt menüden
+      doğrudan açılmıyor (yalnızca Hızlı Erişim'den); Baran'la konuşulacak.
+- [ ] Görev Merkezi: 2027-01 ve sonrası aylık macera satırları (`supabase/migrations/*quest_content_adventures*` deseniyle); bilgi kartı
+      havuzunu 60'a çıkar; yönetici içerik ekranı (şimdilik içerik migration ile).
 - [ ] "Moffi Puanı / PP" yazan arayüz metinleri yeni para birimi adına çevrilecek (isim belli olunca topluca).
 - [ ] `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinecek (içerik 8.45'te taşındı; kolon silme Baran'ın SQL Editor'ından).
 - [ ] Silinen gönderi/hikâyelerin depoda kalan eski dosyaları (8.50).

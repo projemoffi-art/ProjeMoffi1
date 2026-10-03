@@ -1,7 +1,7 @@
 'use client';
 
 // Üst kart → Genel: günün notu, "Bugün" (su, mama, yürüyüş, sıradaki sağlık işi), bugünkü yürüyüş rotası,
-// son fotoğraflar ve anılar. Su/mama kaydı petCareService (sunucu), yürüyüş ActivityContext + QuestEngine,
+// son fotoğraflar ve anılar. Su/mama kaydı petCareService (sunucu), yürüyüş ActivityContext + DailyProgressContext,
 // sağlık useUpcomingCare (Sağlık Merkezi ile aynı hesap), albüm usePetAlbum.
 
 import Link from 'next/link';
@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Check, Droplet, Flame, Footprints, HeartPulse, Info, Lightbulb, Minus, PartyPopper, Plus, Timer, UtensilsCrossed } from 'lucide-react';
 import { useWalk } from '@/hooks/useWalk';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { usePetCare } from '@/hooks/usePetCare';
 import { usePetAlbum } from '@/hooks/usePetAlbum';
 import { petCareService } from '@/services/petCareService';
@@ -71,7 +71,7 @@ function Tile({ label, value, tint, Icon, done, progress, onClick, href, busy }:
 export function GeneralTab({ pet, userId, today, note, careItems }: { pet: Pet; userId?: string; today: string; note: DailyNote; careItems: CareItem[] }) {
     const router = useRouter();
     const { history, activeSession } = useWalk();
-    const { dailyGoal } = useQuestEngine();
+    const { dailyGoal } = useDailyProgress();
     const { care, error: careError } = usePetCare(pet.id);
     const album = usePetAlbum(albumPetOf(pet), userId);
     const [busy, setBusy] = useState<'meal' | 'water' | null>(null);

@@ -17,10 +17,7 @@ export function cn(...inputs: ClassValue[]) {
  */
 /**
  * İki koordinat arası gerçek büyük-daire (haversine) mesafesi, km cinsinden.
- * Faz 18'de (Meydan Okumalar) `QuestEngineContext.tsx` içinde yerel olarak
- * tanımlanmıştı; Ekran 9 (Yürüyüş Detayı) ortalama/maks hız hesaplaması da
- * aynı matematiğe ihtiyaç duyduğu için buraya, paylaşılan tek kaynağa taşındı
- * — iki ayrı dosyada aynı formülün kopyalanmasını önlemek için.
+ * Paylaşılan tek kaynak (yürüyüş detayı hız hesabı vb.); aynı formülü başka dosyada kopyalama.
  */
 export function haversineKm(a: [number, number], b: [number, number]): number {
     const R = 6371;

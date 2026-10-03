@@ -1,4 +1,4 @@
-// Günlük bakım (öğün + taze su), ana sayfa üst kartının Genel sekmesi. Migration 20261004101100_pet_care_and_album.
+// Günlük bakım (öğün + taze su + oyun), ana sayfa üst kartının Genel sekmesi ve Görev Merkezi. Migration 20261004101100_pet_care_and_album.
 // Kayıt yalnızca sunucu fonksiyonlarıyla; gün Türkiye takvim günü (sunucu belirler). Abonelik: aynı hayvanın kaydı bir
 // ekranda değişince diğer açık ekranlar da güncellenir.
 
@@ -9,12 +9,14 @@ export interface PetCareToday {
     mealsGiven: number;
     mealsTarget: number;
     waterRefreshedAt: string | null;
+    /** Kedi ve diğerlerinde günlük hareket görevi (20261004102300). */
+    playedAt: string | null;
 }
 
-interface CareRow { date: string; meals_given: number; meals_target: number; water_refreshed_at: string | null }
+interface CareRow { date: string; meals_given: number; meals_target: number; water_refreshed_at: string | null; played_at?: string | null }
 
 const map = (r: CareRow): PetCareToday => ({
-    date: r.date, mealsGiven: r.meals_given, mealsTarget: r.meals_target, waterRefreshedAt: r.water_refreshed_at,
+    date: r.date, mealsGiven: r.meals_given, mealsTarget: r.meals_target, waterRefreshedAt: r.water_refreshed_at, playedAt: r.played_at ?? null,
 });
 
 const cache = new Map<string, PetCareToday>();
@@ -47,7 +49,7 @@ export const petCareService = {
         return row;
     },
 
-    async log(petId: string, kind: 'meal' | 'water', undo = false) {
+    async log(petId: string, kind: 'meal' | 'water' | 'play', undo = false) {
         const row = map(await call('log_pet_care', { p_pet: petId, p_kind: kind, p_undo: undo }, 'Kaydedilemedi.'));
         publish(petId, row);
         return row;

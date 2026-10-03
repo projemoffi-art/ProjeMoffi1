@@ -57,7 +57,7 @@ const ALL: { title: string; items: { label: string; sub: string; Icon: typeof Ho
             { label: 'Yürüyüş', sub: 'İstatistikler ve hedef', Icon: Footprints, path: '/walk' },
             { label: 'Yürüyüş geçmişi', sub: 'Tüm yürüyüşlerin', Icon: History, path: '/walk/history' },
             { label: 'Görevler', sub: 'Günlük ve haftalık görevler', Icon: Target, path: '/quests' },
-            { label: 'Rozetler', sub: 'Kazandıkların ve sıradakiler', Icon: Award, path: '/walk/badges' },
+            { label: 'Rozetler', sub: 'Kazandıkların ve sıradakiler', Icon: Award, path: '/quests/rozetler' },
             { label: 'Oyunlar', sub: 'Mini oyunlar', Icon: Gamepad2, path: '/game' },
             { label: 'Kıyafet dolabı', sub: 'Maskot kombinleri', Icon: Shirt, path: '/dress-up' },
         ],

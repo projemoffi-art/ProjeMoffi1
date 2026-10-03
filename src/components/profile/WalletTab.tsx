@@ -4,17 +4,17 @@ import React from 'react';
 import Link from 'next/link';
 import { Coins, ArrowUpRight, ArrowDownLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { apiService } from '@/services/apiService';
 
 type Movement = Awaited<ReturnType<typeof apiService.getPawCoinHistory>>[number];
 
 /**
- * PawCoin cüzdanı: bakiye profiles.pati_puan_balance (QuestEngineContext), hareketler point_transactions.
+ * PawCoin cüzdanı: bakiye profiles.pati_puan_balance (DailyProgressContext), hareketler point_transactions.
  * Kazanma ve harcama yalnızca sunucu fonksiyonlarıyla olur (8.2); burada sadece gösterilir.
  */
 export function WalletTab() {
-    const { totalPatiPuan } = useQuestEngine();
+    const { totalPatiPuan } = useDailyProgress();
     const [items, setItems] = React.useState<Movement[] | null>(null);
 
     React.useEffect(() => {

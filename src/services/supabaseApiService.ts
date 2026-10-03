@@ -1,7 +1,7 @@
 import {
     Pet, UserProfile, ProfileUpdate,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, ClinicCampaign,
-    SocialChallenge, BusinessAppointmentInput, ClinicClient, BusinessProfileData, WalkPoint
+    BusinessAppointmentInput, ClinicClient, BusinessProfileData, WalkPoint
 } from './types';
 import { supabase as rawSupabase } from '@/lib/supabase';
 import type { SupabaseClient, User as AuthUser } from '@supabase/supabase-js';
@@ -673,20 +673,6 @@ export class SupabaseApiService {
         return ((data || []) as unknown as OrderWithItems[]).map(mapOrderRow);
     }
 
-
-
-
-
-
-
-    // Puan miktarını istemci söyleyemez: tutar, dönem (günlük/haftalık/aylık) ve günlük 200 sınırı
-    // sunucudaki reward_rules'tan gelir; aynı ödül aynı dönemde ikinci kez verilmez.
-    async claimReward(key: string): Promise<{ awarded: number; alreadyClaimed: boolean; capped: boolean; balance: number }> {
-        const { data, error } = await supabase.rpc('claim_reward', { p_key: key });
-        if (error) throw error;
-        const r = jsonObj(data);
-        return { awarded: Number(r.awarded) || 0, alreadyClaimed: !!r.already_claimed, capped: !!r.capped, balance: Number(r.balance) || 0 };
-    }
 
     async getPatiPuanBalance(): Promise<number> {
         const user = await this.getSessionUser();
@@ -1935,7 +1921,6 @@ export class SupabaseApiService {
     // --- FINANCE / TRANSACTIONS ---
 
 
-
     async getFollowers(userId: string): Promise<ProfileSummary[]> {
         const { data: followsData, error: followsError } = await supabase
             .from('follows')
@@ -2313,7 +2298,6 @@ export class SupabaseApiService {
     }
 
 
-
     private formatTimeAgo(dateString: string): string {
         const date = new Date(dateString);
         const now = new Date();
@@ -2323,8 +2307,6 @@ export class SupabaseApiService {
         if (diff < 86400) return `${Math.floor(diff / 3600)} saat`;
         return `${Math.floor(diff / 86400)} gün`;
     }
-
-
 
 
     // Daily Star Pet (Yıldız Patiler) Supabase Implementations
@@ -2500,7 +2482,6 @@ export class SupabaseApiService {
             return fallbackModules;
         }
     }
-
 
 
     // Faz 13 (referans UI'ye göre düzeltme, bkz. CLAUDE.md 8.8): gerçek mesafe (km)
@@ -2711,34 +2692,6 @@ export class SupabaseApiService {
         return data as string;
     }
 
-    // Faz 24: Sosyal Meydan Okumalar — sadece GERÇEK karşılıklı takip (iki
-    // yönlü follows satırı) listeleniyor, "insan seçici" rastgele/tek yönlü
-    // takip edilen birini önermiyor.
-    async getMutualFollows(userId: string): Promise<{ id: string; name: string; avatar?: string }[]> {
-        try {
-            const { data: following, error: e1 } = await supabase.from('follows').select('following_id').eq('follower_id', userId);
-            if (e1) throw e1;
-            const followingIds = (following || []).map(f => f.following_id);
-            if (followingIds.length === 0) return [];
-
-            const { data: mutualRows, error: e2 } = await supabase
-                .from('follows')
-                .select('follower_id')
-                .eq('following_id', userId)
-                .in('follower_id', followingIds);
-            if (e2) throw e2;
-            const mutualIds = (mutualRows || []).map(r => r.follower_id);
-            if (mutualIds.length === 0) return [];
-
-            const { data: profiles, error: e3 } = await supabase.from('profile_cards').select('id, full_name, username, avatar_url').in('id', mutualIds);
-            if (e3) throw e3;
-            return (profiles || []).flatMap(p => (p.id ? [{ id: p.id, name: p.full_name || p.username || 'Moffi Kullanıcısı', avatar: p.avatar_url || undefined }] : []));
-        } catch (err) {
-            console.error("Supabase getMutualFollows failed:", err);
-            return [];
-        }
-    }
-
     async createSocialChallenge(partnerId: string, mode: 'duel' | 'team', durationDays: number, targetKm?: number): Promise<string> {
         const { data, error } = await supabase.rpc('create_social_challenge', {
             p_partner_id: partnerId, p_mode: mode, p_duration_days: durationDays, p_target_km: targetKm ?? undefined,
@@ -2750,32 +2703,6 @@ export class SupabaseApiService {
     async respondSocialChallenge(challengeId: string, accept: boolean): Promise<void> {
         const { error } = await supabase.rpc('respond_social_challenge', { p_challenge_id: challengeId, p_accept: accept });
         if (error) throw error;
-    }
-
-    async getSocialChallenges(userId: string): Promise<SocialChallenge[]> {
-        try {
-            const { data, error } = await supabase
-                .from('social_challenges')
-                .select('*')
-                .or(`creator_id.eq.${userId},partner_id.eq.${userId}`)
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            return (data || []).map(c => ({
-                id: c.id, mode: c.mode as SocialChallenge['mode'], creatorId: c.creator_id, partnerId: c.partner_id, status: c.status as SocialChallenge['status'],
-                targetKm: c.target_km, durationDays: c.duration_days, startsAt: c.starts_at, endsAt: c.ends_at,
-                winnerId: c.winner_id, rewardPp: c.reward_pp, createdAt: c.created_at,
-            }));
-        } catch (err) {
-            console.error("Supabase getSocialChallenges failed:", err);
-            return [];
-        }
-    }
-
-    async getSocialChallengeProgress(challengeId: string): Promise<{ creatorKm: number; partnerKm: number }> {
-        const { data, error } = await supabase.rpc('get_social_challenge_progress', { p_challenge_id: challengeId });
-        if (error) throw error;
-        const row = Array.isArray(data) ? data[0] : data;
-        return { creatorKm: row?.creator_km ?? 0, partnerKm: row?.partner_km ?? 0 };
     }
 
     async finalizeSocialChallengeIfDue(challengeId: string): Promise<void> {
@@ -2935,10 +2862,6 @@ export class SupabaseApiService {
     // --- CLINIC MESSAGES (FAZ 8) ---
 
 
-
-
-
-
     // --- CAMPAIGNS (FAZ 8) ---
     async getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]> {
         const { data, error } = await supabase.from('clinic_campaigns').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false });
@@ -2965,15 +2888,4 @@ export class SupabaseApiService {
         return true;
     }
 
-
-    // --- QUESTS ---
-    async getClinicQuests(clinicId: string) {
-        const { data, error } = await supabase
-            .from('quests')
-            .select('*')
-            .eq('clinic_id', clinicId)
-            .order('created_at', { ascending: false });
-        if (error) { console.error("Error fetching quests:", error); return []; }
-        return data || [];
-    }
 }

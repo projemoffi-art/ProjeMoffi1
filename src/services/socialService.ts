@@ -78,7 +78,27 @@ export interface WeeklyTheme {
 }
 export type WeeklyThemeInput = Omit<WeeklyTheme, 'id' | 'participantCount' | 'joined'>;
 
-const mapTheme = (r: any): WeeklyTheme => ({
+// --- Sunucudan gelen satırların biçimleri ---
+interface ThemeRow { id: string; hashtag: string; title: string; description: string | null; starts_on: string; ends_on: string; reward_points: number | null; participant_count?: number | null; joined?: boolean | null }
+interface PostRow {
+    id: string; user_id: string; content: string | null; media_urls: string[] | null; is_video: boolean | null; media_filter: string | null;
+    tagged_pets: TaggedPet[] | null; location_text: string | null; topic: PostTopic | null; comment_privacy: CommentPrivacy | null;
+    likes_count: number | null; comments_count: number | null; created_at: string; edited_at: string | null;
+    author_name: string | null; author_username: string | null; author_avatar: string | null; author_is_business: boolean | null;
+    is_liked: boolean | null; is_saved: boolean | null; is_mine: boolean | null; follows_author: boolean | null;
+}
+interface GridRow { id: string; media_url: string | null; is_video: boolean | null; media_filter: string | null; media_count: number | null; likes_count: number | null; comments_count: number | null }
+interface PawRow { post_id: string; paws_count: number | null; is_pawed: boolean | null }
+interface CardRow { id: string; full_name: string | null; username: string | null; avatar_url: string | null; role: string | null; business_name: string | null }
+interface CommentRow { id: string; post_id: string; user_id: string; parent_id: string | null; content: string; status: string; likes_count: number | null; created_at: string; edited_at: string | null }
+interface StoryRow { id: string; user_id: string; image_url: string; caption: string | null; created_at: string; view_count: number | null }
+/** KVKK veri paketi için kendi gönderilerin. */
+export interface PostExportRow {
+    id: string; content: string | null; media_urls: string[] | null; tagged_pet_ids: string[] | null; location_text: string | null; topic: string | null;
+    comment_privacy: string | null; show_on_profile: boolean | null; likes_count: number | null; comments_count: number | null; created_at: string; edited_at: string | null;
+}
+
+const mapTheme = (r: ThemeRow): WeeklyTheme => ({
     id: r.id, hashtag: r.hashtag, title: r.title, description: r.description || null,
     startsOn: r.starts_on, endsOn: r.ends_on, rewardPoints: r.reward_points ?? 0,
     participantCount: r.participant_count ?? undefined, joined: r.joined ?? undefined,
@@ -90,17 +110,15 @@ export interface StoryGroup { userId: string; name: string; avatar: string | nul
 /** Gönderi ya da beğeni değişince (profil sayacı, akış yenileme) yayılır. */
 export const POSTS_CHANGED_EVENT = 'moffi-posts-changed';
 
-function fail(error: any, fallback: string): never {
+function fail(error: { message?: string } | null | undefined, fallback: string): never {
     throw new Error(error?.message || fallback);
 }
 
-const emit = (name: string, detail?: any) => {
+const emit = (name: string, detail?: unknown) => {
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(name, { detail }));
 };
-/** Görev ve rozet motoru (QuestEngineContext) gerçek sosyal işlemleri bu olaydan sayar. */
-const questTrigger = (type: 'post_added' | 'like_toggled' | 'comment_added') => emit('moffi-quest-trigger', { type });
 
-const mapPost = (r: any): SocialPost => ({
+const mapPost = (r: PostRow): SocialPost => ({
     id: r.id, userId: r.user_id, content: r.content || '', media: (r.media_urls || []).filter(Boolean), isVideo: !!r.is_video, mediaFilter: r.media_filter || null,
     pets: Array.isArray(r.tagged_pets) ? r.tagged_pets : [],
     locationText: r.location_text, topic: r.topic, commentPrivacy: r.comment_privacy || 'everyone',
@@ -109,7 +127,7 @@ const mapPost = (r: any): SocialPost => ({
     isLiked: !!r.is_liked, isPawed: false, isSaved: !!r.is_saved, isMine: !!r.is_mine, followsAuthor: !!r.follows_author,
 });
 
-const mapGrid = (r: any): GridPost => ({
+const mapGrid = (r: GridRow): GridPost => ({
     id: r.id, media: r.media_url, isVideo: !!r.is_video, mediaFilter: r.media_filter || null, mediaCount: r.media_count || 1, likes: r.likes_count || 0, comments: r.comments_count || 0,
 });
 
@@ -117,7 +135,7 @@ const mapGrid = (r: any): GridPost => ({
 async function withPaws(posts: SocialPost[]): Promise<SocialPost[]> {
     if (!posts.length) return posts;
     const { data } = await supabase.rpc('post_paw_state', { p_ids: posts.map(p => p.id) });
-    const byId = new Map<string, any>((data || []).map((r: any) => [r.post_id, r]));
+    const byId = new Map<string, PawRow>(((data || []) as PawRow[]).map(r => [r.post_id, r]));
     return posts.map(p => { const r = byId.get(p.id); return r ? { ...p, paws: r.paws_count || 0, isPawed: !!r.is_pawed } : p; });
 }
 
@@ -127,11 +145,11 @@ async function me() {
 }
 
 async function cards(ids: string[]) {
-    const byId: Record<string, any> = {};
+    const byId: Record<string, CardRow> = {};
     const unique = Array.from(new Set(ids.filter(Boolean)));
     if (!unique.length) return byId;
     const { data } = await supabase.from('profile_cards').select('id, full_name, username, avatar_url, role, business_name').in('id', unique);
-    (data || []).forEach((p: any) => { byId[p.id] = p; });
+    ((data || []) as CardRow[]).forEach(p => { byId[p.id] = p; });
     return byId;
 }
 
@@ -144,20 +162,21 @@ async function removeOwnFiles(bucket: 'posts' | 'stories', urls: string[], userI
     if (paths.length) await supabase.storage.from(bucket).remove(paths);
 }
 
-const personName = (p: any) => (p?.role === 'business' && p?.business_name) || p?.full_name || p?.username || 'Moffi üyesi';
+const personName = (p: Pick<CardRow, 'role' | 'business_name' | 'full_name' | 'username'> | null | undefined) => (p?.role === 'business' && p?.business_name) || p?.full_name || p?.username || 'Moffi üyesi';
 
 export const socialService = {
     // --- Akış ve gönderiler ---------------------------------------------------------------------------------
     async feed(mode: 'following' | 'for_you', before?: string | null, limit = 12): Promise<SocialPost[]> {
         const { data, error } = await supabase.rpc('get_social_feed', { p_mode: mode, p_before: before || null, p_limit: limit });
         if (error) fail(error, 'Gönderiler yüklenemedi.');
-        return withPaws((data || []).map(mapPost));
+        return withPaws(((data || []) as PostRow[]).map(mapPost));
     },
 
     async post(id: string): Promise<SocialPost | null> {
         const { data, error } = await supabase.rpc('social_post_rows', { p_ids: [id] });
         if (error) fail(error, 'Gönderi yüklenemedi.');
-        return data?.[0] ? (await withPaws([mapPost(data[0])]))[0] : null;
+        const row = (data as PostRow[] | null)?.[0];
+        return row ? (await withPaws([mapPost(row)]))[0] : null;
     },
 
     async uploadMedia(files: File[]): Promise<string[]> {
@@ -176,13 +195,12 @@ export const socialService = {
             topic: input.topic, show_on_profile: input.showOnProfile, comment_privacy: input.commentPrivacy,
         }).select('id').single();
         if (error || !data) fail(error, 'Gönderi paylaşılamadı.');
-        questTrigger('post_added');
         emit(POSTS_CHANGED_EVENT);
         return data.id;
     },
 
     async update(id: string, patch: Omit<PostInput, 'media' | 'isVideo'>) {
-        const row: Record<string, any> = {
+        const row: Record<string, unknown> = {
             content: patch.content.trim(), tagged_pet_ids: patch.taggedPetIds, location_text: patch.locationText,
             topic: patch.topic, show_on_profile: patch.showOnProfile, comment_privacy: patch.commentPrivacy,
         };
@@ -209,7 +227,6 @@ export const socialService = {
             ? await supabase.from('likes').insert({ post_id: id, user_id: user.id })
             : await supabase.from('likes').delete().eq('post_id', id).eq('user_id', user.id);
         if (error && error.code !== '23505') fail(error, 'Beğeni kaydedilemedi.');
-        if (on && !error) questTrigger('like_toggled');
     },
 
     /** Pati bırakır ya da geri alır; sunucunun güncel sayısını döner. */
@@ -225,14 +242,14 @@ export const socialService = {
         const { data, error } = await supabase.rpc('get_current_theme');
         if (error) return null;
         const row = Array.isArray(data) ? data[0] : data;
-        return row ? mapTheme(row) : null;
+        return row ? mapTheme(row as ThemeRow) : null;
     },
 
     /** Yönetici paneli: tüm temalar, en yeni önce. */
     async listThemes(): Promise<WeeklyTheme[]> {
         const { data, error } = await supabase.from('weekly_themes').select('*').order('starts_on', { ascending: false });
         if (error) fail(error, 'Temalar yüklenemedi.');
-        return (data || []).map(mapTheme);
+        return ((data || []) as ThemeRow[]).map(mapTheme);
     },
 
     async saveTheme(input: WeeklyThemeInput, id?: string) {
@@ -261,12 +278,12 @@ export const socialService = {
     async likers(id: string): Promise<(PersonCard & { isFollowing: boolean })[]> {
         const { data, error } = await supabase.from('likes').select('user_id, created_at').eq('post_id', id).order('created_at', { ascending: false }).limit(200);
         if (error) fail(error, 'Beğenenler yüklenemedi.');
-        const ids = (data || []).map((l: any) => l.user_id);
+        const ids = ((data || []) as { user_id: string }[]).map(l => l.user_id);
         const [byId, user] = await Promise.all([cards(ids), me()]);
         let following = new Set<string>();
         if (user && ids.length) {
             const { data: f } = await supabase.from('follows').select('following_id').eq('follower_id', user.id).in('following_id', ids);
-            following = new Set((f || []).map((x: any) => x.following_id));
+            following = new Set(((f || []) as { following_id: string }[]).map(x => x.following_id));
         }
         return ids.filter(i => byId[i]).map(i => ({
             id: i, name: personName(byId[i]), username: byId[i].username, avatar: byId[i].avatar_url,
@@ -279,14 +296,14 @@ export const socialService = {
         const { data, error } = await supabase.from('comments').select('id, post_id, user_id, parent_id, content, status, likes_count, created_at, edited_at')
             .eq('post_id', postId).order('created_at', { ascending: true }).limit(500);
         if (error) fail(error, 'Yorumlar yüklenemedi.');
-        const rows = data || [];
-        const [byId, user] = await Promise.all([cards(rows.map((c: any) => c.user_id)), me()]);
+        const rows = (data || []) as CommentRow[];
+        const [byId, user] = await Promise.all([cards(rows.map(c => c.user_id)), me()]);
         let liked = new Set<string>();
         if (user && rows.length) {
-            const { data: l } = await supabase.from('comment_likes').select('comment_id').eq('user_id', user.id).in('comment_id', rows.map((c: any) => c.id));
-            liked = new Set((l || []).map((x: any) => x.comment_id));
+            const { data: l } = await supabase.from('comment_likes').select('comment_id').eq('user_id', user.id).in('comment_id', rows.map(c => c.id));
+            liked = new Set(((l || []) as { comment_id: string }[]).map(x => x.comment_id));
         }
-        const all: SocialComment[] = rows.map((c: any) => ({
+        const all: SocialComment[] = rows.map(c => ({
             id: c.id, postId: c.post_id, userId: c.user_id, parentId: c.parent_id, content: c.content, status: c.status,
             likes: c.likes_count || 0, isLiked: liked.has(c.id), createdAt: c.created_at, editedAt: c.edited_at,
             author: { name: personName(byId[c.user_id]), username: byId[c.user_id]?.username || null, avatar: byId[c.user_id]?.avatar_url || null },
@@ -304,7 +321,6 @@ export const socialService = {
         const { data, error } = await supabase.from('comments').insert({ post_id: postId, user_id: user.id, content: content.trim(), parent_id: parentId || null })
             .select('status').single();
         if (error) fail(error, 'Yorum gönderilemedi.');
-        questTrigger('comment_added');
         return data?.status as string;
     },
 
@@ -333,7 +349,7 @@ export const socialService = {
             p_query: query || null, p_filter: filter, p_lat: area?.lat ?? null, p_lng: area?.lng ?? null, p_limit: limit, p_offset: offset,
         });
         if (error) fail(error, 'Arama yapılamadı.');
-        return (data || []).map(mapGrid);
+        return ((data || []) as GridRow[]).map(mapGrid);
     },
 
     async searchPeople(query: string): Promise<PersonCard[]> {
@@ -342,7 +358,7 @@ export const socialService = {
         const { data, error } = await supabase.from('profile_cards').select('id, full_name, username, avatar_url, role, business_name')
             .or(`full_name.ilike.%${q}%,username.ilike.%${q}%,business_name.ilike.%${q}%`).neq('account_status', 'deactivated').limit(10);
         if (error) return [];
-        return (data || []).map((p: any) => ({ id: p.id, name: personName(p), username: p.username, avatar: p.avatar_url, isBusiness: p.role === 'business' }));
+        return ((data || []) as CardRow[]).map(p => ({ id: p.id, name: personName(p), username: p.username, avatar: p.avatar_url, isBusiness: p.role === 'business' }));
     },
 
     // --- Profil ------------------------------------------------------------------------------------------------------
@@ -356,7 +372,7 @@ export const socialService = {
     async profilePosts(userId: string, saved = false): Promise<GridPost[]> {
         const { data, error } = await supabase.rpc('get_profile_posts', { p_user: userId, p_saved: saved });
         if (error) fail(error, 'Gönderiler yüklenemedi.');
-        return (data || []).map(mapGrid);
+        return ((data || []) as GridRow[]).map(mapGrid);
     },
 
     async setFollow(userId: string, on: boolean) {
@@ -386,7 +402,7 @@ export const socialService = {
         const user = await me();
         if (!user) return [];
         const { data } = await supabase.from('blocks').select('blocked_id').eq('blocker_id', user.id);
-        const ids = (data || []).map((b: any) => b.blocked_id);
+        const ids = ((data || []) as { blocked_id: string }[]).map(b => b.blocked_id);
         const byId = await cards(ids);
         return ids.map(i => ({ id: i, name: personName(byId[i]), username: byId[i]?.username || null, avatar: byId[i]?.avatar_url || null, isBusiness: byId[i]?.role === 'business' }));
     },
@@ -396,7 +412,7 @@ export const socialService = {
         const user = await me();
         if (!user) return [];
         const { data } = await supabase.from('follows').select('following_id, created_at').eq('follower_id', user.id).order('created_at', { ascending: false }).limit(60);
-        const ids = (data || []).map((f: any) => f.following_id);
+        const ids = ((data || []) as { following_id: string }[]).map(f => f.following_id);
         const byId = await cards(ids);
         return ids.filter(i => byId[i]).map(i => ({ id: i, name: personName(byId[i]), username: byId[i].username, avatar: byId[i].avatar_url, isBusiness: byId[i].role === 'business' }));
     },
@@ -411,12 +427,12 @@ export const socialService = {
     },
 
     /** Veri dışa aktarma (KVKK): kendi gönderilerinin tamamı. */
-    async myPostsForExport(): Promise<any[]> {
+    async myPostsForExport(): Promise<PostExportRow[]> {
         const user = await me();
         if (!user) return [];
         const { data } = await supabase.from('posts').select('id, content, media_urls, tagged_pet_ids, location_text, topic, comment_privacy, show_on_profile, likes_count, comments_count, created_at, edited_at')
             .eq('user_id', user.id).order('created_at', { ascending: false });
-        return data || [];
+        return (data || []) as PostExportRow[];
     },
 
     async countPosts(): Promise<number> {
@@ -429,15 +445,15 @@ export const socialService = {
         const { data, error } = await supabase.from('stories').select('id, user_id, image_url, caption, created_at, view_count, expires_at')
             .gt('expires_at', new Date().toISOString()).order('created_at', { ascending: true }).limit(200);
         if (error) fail(error, 'Hikâyeler yüklenemedi.');
-        const rows = data || [];
-        const [byId, user] = await Promise.all([cards(rows.map((s: any) => s.user_id)), me()]);
+        const rows = (data || []) as StoryRow[];
+        const [byId, user] = await Promise.all([cards(rows.map(s => s.user_id)), me()]);
         const views: Record<string, { liked: boolean }> = {};
         if (user && rows.length) {
-            const { data: v } = await supabase.from('story_views').select('story_id, is_liked').eq('viewer_id', user.id).in('story_id', rows.map((s: any) => s.id));
-            (v || []).forEach((x: any) => { views[x.story_id] = { liked: !!x.is_liked }; });
+            const { data: v } = await supabase.from('story_views').select('story_id, is_liked').eq('viewer_id', user.id).in('story_id', rows.map(s => s.id));
+            ((v || []) as { story_id: string; is_liked: boolean | null }[]).forEach(x => { views[x.story_id] = { liked: !!x.is_liked }; });
         }
         const groups = new Map<string, StoryGroup>();
-        rows.forEach((s: any) => {
+        rows.forEach(s => {
             if (!groups.has(s.user_id)) groups.set(s.user_id, { userId: s.user_id, name: personName(byId[s.user_id]), avatar: byId[s.user_id]?.avatar_url || null, stories: [], hasUnseen: false });
             const own = s.user_id === user?.id;
             groups.get(s.user_id)!.stories.push({
@@ -485,8 +501,9 @@ export const socialService = {
     async storyViewers(id: string): Promise<(PersonCard & { liked: boolean })[]> {
         const { data, error } = await supabase.from('story_views').select('viewer_id, is_liked, viewed_at').eq('story_id', id).order('viewed_at', { ascending: false });
         if (error) return [];
-        const byId = await cards((data || []).map((v: any) => v.viewer_id));
-        return (data || []).filter((v: any) => byId[v.viewer_id]).map((v: any) => ({
+        const views = (data || []) as { viewer_id: string; is_liked: boolean | null }[];
+        const byId = await cards(views.map(v => v.viewer_id));
+        return views.filter(v => byId[v.viewer_id]).map(v => ({
             id: v.viewer_id, name: personName(byId[v.viewer_id]), username: byId[v.viewer_id].username, avatar: byId[v.viewer_id].avatar_url,
             isBusiness: byId[v.viewer_id].role === 'business', liked: !!v.is_liked,
         }));

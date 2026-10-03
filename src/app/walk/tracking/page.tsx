@@ -9,7 +9,7 @@ import { cn, showToast } from "@/lib/utils";
 import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
 import { useWeather } from "@/context/WeatherContext";
-import { useQuestEngine } from "@/context/QuestEngineContext";
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { WALK_ISSUE_LABELS } from "@/lib/walkIssueLabels";
 import { haptics, share, device } from "@/native";
 import { audioCues, TONE_THEMES } from "@/lib/audioCues";
@@ -62,7 +62,7 @@ function TrackingContent() {
     const { walkData, pauseWalk, resumeWalk, walkIssue, walkPhase, autoPauseEnabled, setAutoPauseEnabled, stepsSupported } = useActivity();
     const { activePet, pets } = usePet();
     const { weather } = useWeather();
-    const { dailyGoal, todayDistanceKm, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm } = useQuestEngine();
+    const { dailyGoal, todayDistanceKm, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm } = useDailyProgress();
 
     const walkingPet = pets.find(p => String(p.id) === String(walkData.petId)) || activePet;
     const petName = walkData.petName || walkingPet?.name || 'Dostun';
@@ -435,7 +435,7 @@ function TrackingContent() {
                                 <button type="button" onClick={() => { haptics.tap(); device.openExternal('https://open.spotify.com'); }} className="w-full py-3.5 flex items-center justify-between text-left">
                                     <div>
                                         <div className="text-[14px] font-bold">Müzik</div>
-                                        <div className="text-[12px] text-secondary mt-0.5">Spotify'ı aç, yürürken dinle</div>
+                                        <div className="text-[12px] text-secondary mt-0.5">Spotify&apos;ı aç, yürürken dinle</div>
                                     </div>
                                     <span className="text-[12px] font-bold text-accent">Aç →</span>
                                 </button>

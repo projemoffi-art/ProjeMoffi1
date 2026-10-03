@@ -7,7 +7,7 @@ import { ArrowLeft, X, Check, ChevronRight, Shirt, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
-import { useQuestEngine } from "@/context/QuestEngineContext";
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { haptics } from "@/native/haptics";
 import { formatRemaining } from "@/lib/vipFrames";
 
@@ -55,7 +55,7 @@ interface ShopEntry {
 export default function RewardsPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const { activePerks, refreshActivePerks } = useQuestEngine();
+    const { activePerks, refreshActivePerks } = useDailyProgress();
     const [entries, setEntries] = useState<ShopEntry[]>([]);
     const [balance, setBalance] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -124,10 +124,10 @@ export default function RewardsPage() {
                 detail: { message: successMessage, icon: 'Gift', color: 'text-emerald-400' }
             }));
             setTimeout(() => { setConfirmEntry(null); setRedeemed(false); }, 1200);
-        } catch (err: any) {
+        } catch (err) {
             haptics.warn();
             window.dispatchEvent(new CustomEvent('moffi-toast', {
-                detail: { message: err?.message || 'Ödül alınamadı, lütfen tekrar dene.', icon: 'AlertTriangle', color: 'text-red-400' }
+                detail: { message: (err instanceof Error && err.message) || 'Ödül alınamadı, lütfen tekrar dene.', icon: 'AlertTriangle', color: 'text-red-400' }
             }));
         } finally {
             setRedeeming(false);

@@ -4,12 +4,12 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+    type LucideIcon,
     LayoutDashboard,
     Calendar,
     Wallet,
     Package,
     Store,
-    Megaphone,
     LogOut,
     X,
     PawPrint,
@@ -44,7 +44,7 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
     // kayıt defterinden (typeConfig.sidebar) geliyor — önceden her işletme
     // türü, türü ne olursa olsun, aynı 11 öğeyi (Doktorlar/Ürün Yönetimi dahil)
     // görüyordu.
-    const ALL_MENU_ITEMS: Record<SidebarItemKey, { name: string; path: string; icon: any }> = {
+    const ALL_MENU_ITEMS: Record<SidebarItemKey, { name: string; path: string; icon: LucideIcon }> = {
         dashboard: { name: t("business.sidebar.dashboard"), path: "/business/dashboard", icon: LayoutDashboard },
         calendar: { name: "Takvim", path: "/business/calendar", icon: Calendar },
         appointments: { name: t("business.sidebar.appointments"), path: "/business/appointments", icon: Clock },
@@ -56,7 +56,6 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
         doctors: { name: typeConfig.staffLabelPlural, path: "/business/doctors", icon: Stethoscope },
         products: { name: t("business.sidebar.products"), path: "/business/products", icon: Store },
         campaigns: { name: "Kampanyalar", path: "/business/campaigns", icon: Gift },
-        quests: { name: t("business.sidebar.quests"), path: "/business/quests", icon: Megaphone },
         profile: { name: "İşletme profili", path: "/business/profile", icon: MapPin },
     };
 

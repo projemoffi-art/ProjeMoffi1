@@ -51,7 +51,7 @@ export const EDGE_SHORTCUTS: EdgeShortcut[] = [
 
     { id: 'walks', label: 'Yürüyüşler', desc: 'Yürüyüş geçmişi', Icon: History, color: '#7A8F3A', path: '/walk/history', keywords: 'yürüyüş geçmiş rota adım', group: 'Aktivite' },
     { id: 'quests', label: 'Görevler', desc: 'Günlük görevler', Icon: Target, color: '#5E9E3A', path: '/quests', keywords: 'görev hedef puan', group: 'Aktivite' },
-    { id: 'badges', label: 'Rozetler', desc: 'Kazandıkların', Icon: Award, color: '#C9A227', path: '/walk/badges', keywords: 'rozet başarı ödül', group: 'Aktivite' },
+    { id: 'badges', label: 'Rozetler', desc: 'Kazandıkların', Icon: Award, color: '#C9A227', path: '/quests/rozetler', keywords: 'rozet başarı ödül', group: 'Aktivite' },
     { id: 'games', label: 'Oyunlar', desc: 'Mini oyunlar', Icon: Gamepad2, color: '#4F9D69', path: '/game', keywords: 'oyun eğlence', group: 'Aktivite' },
 
     { id: 'settings', label: 'Ayarlar', desc: 'Uygulama ayarları', Icon: Settings, color: '#6F675B', event: 'open-moffi-settings', keywords: 'ayar tema bildirim gizlilik', group: 'Uygulama' },

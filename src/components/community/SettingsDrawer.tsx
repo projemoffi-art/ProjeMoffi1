@@ -11,7 +11,7 @@ import {
 import { cn, showToast } from '@/lib/utils';
 import { useAuth, type User as AuthUser, type SettingsCategory } from '@/context/AuthContext';
 import { useTheme, type ColorBlindMode } from '@/context/ThemeContext';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { exportUserData } from '@/lib/utils/dataExport';
 import { apiService } from '@/services/apiService';
 import { useMyBusinesses, setLastPanel } from '@/hooks/useMyBusinesses';
@@ -97,7 +97,7 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
     // geçici bir VIP perk'iyle açılabiliyor (bkz. src/lib/vipFrames.ts) —
     // seçim ekranı bunu da hesaba katmalı, yoksa kullanıcı PP ile satın aldığı
     // çerçeveyi burada hâlâ "Prime" kilitli görüp seçemezdi.
-    const { activePerks } = useQuestEngine();
+    const { activePerks } = useDailyProgress();
     const router = useRouter();
     const currentFrame = user.settings?.appearance?.frameStyle || 'minimal';
 
@@ -236,7 +236,7 @@ const BusinessPortalSection = () => {
 
 const MainView = ({ user, setView, onClose }: ViewProps & { onClose: () => void }) => {
     const { logout } = useAuth();
-    const { totalPatiPuan } = useQuestEngine();
+    const { totalPatiPuan } = useDailyProgress();
     const [isExporting, setIsExporting] = useState(false);
     const [exportStatus, setExportStatus] = useState('');
 

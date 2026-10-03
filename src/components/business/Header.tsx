@@ -42,7 +42,6 @@ export function BusinessHeader({ onMenuClick }: HeaderProps) {
         '/business/doctors': typeConfig.staffLabelPlural,
         '/business/products': 'Ürünler',
         '/business/campaigns': 'Kampanyalar',
-        '/business/quests': 'Görevler',
     };
     const title = Object.entries(titles).find(([path]) => pathname?.startsWith(path))?.[1] || 'İşletme Paneli';
     const businessName = business?.name || 'İşletmem';

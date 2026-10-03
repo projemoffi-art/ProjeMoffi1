@@ -1,22 +1,27 @@
 'use client';
 
 // Oyun Merkezi + Görev Merkezi (home-final referansı: yan yana iki kart).
-// Seviye/puan/seri ve bugünkü görevler QuestEngineContext'ten; sabit sayı yok.
+// Hayvanın seviyesi ve bugünkü görevler Görev Merkezi'nden (sunucu, quest_center); PawCoin ve seri günlük ilerlemeden. Sabit sayı yok.
 
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Award, Crown, Gamepad2 } from 'lucide-react';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useDailyProgress } from '@/context/DailyProgressContext';
+import { usePet } from '@/context/PetContext';
+import { useQuestCenter } from '@/hooks/useQuestCenter';
 import { haptics } from '@/native';
 
 const GAME_COUNT = 4; // /game: Mama Yakala, Hafıza, Zıpla, Moffi Koş
 
 export function PlayCards() {
     const router = useRouter();
-    const { level, levelXpCurrent, levelXpRequired, totalPatiPuan, currentStreak, dailyQuests } = useQuestEngine();
-    const levelPercent = levelXpRequired > 0 ? Math.min(100, Math.round((levelXpCurrent / levelXpRequired) * 100)) : 0;
-    const visibleQuests = dailyQuests.filter(q => !q.isSecret).slice(0, 5);
-    const doneCount = visibleQuests.filter(q => q.completedAt).length;
-    const questPercent = visibleQuests.length ? Math.round((doneCount / visibleQuests.length) * 100) : 0;
+    const { totalPatiPuan, currentStreak } = useDailyProgress();
+    const { activePet } = usePet();
+    const { data } = useQuestCenter(activePet?.id ?? null);
+    const lv = data?.pet.level;
+    const levelPercent = lv ? Math.min(100, Math.round(((lv.xp - lv.level_start) / Math.max(1, lv.level_next - lv.level_start)) * 100)) : 0;
+    const doneCount = data?.done ?? 0;
+    const totalCount = data?.total ?? 0;
+    const questPercent = totalCount ? Math.round((doneCount / totalCount) * 100) : 0;
 
     const go = (path: string) => { haptics.tap(); router.push(path); };
 
@@ -37,7 +42,7 @@ export function PlayCards() {
                 </div>
                 <div className="relative glass-photo rounded-[16px] px-2.5 py-2">
                     <div className="flex items-center justify-between text-[12px] font-bold mb-1.5">
-                        <span className="text-white">Seviye {level}</span>
+                        <span className="text-white">{lv ? `${activePet?.name ?? ''} · Sv. ${lv.level}` : 'Oyna, kazan'}</span>
                         <span className="text-[#F0C94E] flex items-center gap-1"><Crown className="w-3.5 h-3.5" /> {totalPatiPuan.toLocaleString('tr-TR')}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -61,7 +66,7 @@ export function PlayCards() {
                         <Award className="w-[18px] h-[18px] text-accent" /> Görev Merkezi
                     </div>
                     <p className="text-secondary text-[12px] font-semibold mt-0.5 leading-snug">
-                        {visibleQuests.length > 0 ? `Bugün ${doneCount}/${visibleQuests.length} görev` : 'Görevlerin hazırlanıyor'}
+                        {totalCount > 0 ? `Bugün ${doneCount}/${totalCount} görev` : activePet ? 'Görevlerin hazırlanıyor' : 'Görevler dostuna göre çıkar'}
                     </p>
                 </div>
                 <div>

@@ -236,22 +236,6 @@ export interface ShopOrder {
     trackingNumber?: string | null;
 }
 
-// Faz 24: Sosyal Meydan Okumalar
-export interface SocialChallenge {
-    id: string;
-    mode: 'duel' | 'team';
-    creatorId: string;
-    partnerId: string;
-    status: 'pending' | 'active' | 'completed' | 'declined' | 'cancelled';
-    targetKm: number | null;
-    durationDays: number;
-    startsAt: string | null;
-    endsAt: string | null;
-    winnerId: string | null;
-    rewardPp: number;
-    createdAt: string;
-}
-
 export type BusinessRole = 'owner' | 'manager' | 'staff';
 
 /** Kişinin üyesi olduğu işletme (`my_businesses()`). */

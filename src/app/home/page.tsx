@@ -15,7 +15,7 @@ import { useStories } from '@/hooks/useStories';
 import { usePetShop } from '@/hooks/usePetShop';
 import { useUpcomingCare } from '@/hooks/useUpcomingCare';
 import { useWalk } from '@/hooks/useWalk';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { useWeather } from '@/context/WeatherContext';
 import { useDailyNote } from '@/components/home/dailyNote';
 import { BirthdayCard } from '@/components/home/BirthdayCard';
@@ -45,7 +45,7 @@ function HomeContent() {
     const { storyGroups, inspiration, activeLostCount } = useStories(careItems);
     const [addPetOpen, setAddPetOpen] = useState(false);
     const { history } = useWalk();
-    const { todayDistanceKm, dailyGoal } = useQuestEngine();
+    const { todayDistanceKm, dailyGoal } = useDailyProgress();
     const { weather } = useWeather();
 
     // Hiç hayvanı olmayan ve ilk kurulumu bitirmemiş kullanıcı kurulum akışına gider (design-reference/onboarding-final).

@@ -293,6 +293,59 @@ export type Database = {
           },
         ]
       }
+      adventures: {
+        Row: {
+          badge_key: string
+          emoji: string
+          final_pawcoin: number
+          final_xp: number
+          month: string
+          published: boolean
+          stages: Json
+          story: string
+          subtitle: string
+          tint: string
+          title: string
+          vet_reviewed: boolean
+        }
+        Insert: {
+          badge_key: string
+          emoji: string
+          final_pawcoin?: number
+          final_xp?: number
+          month: string
+          published?: boolean
+          stages: Json
+          story: string
+          subtitle: string
+          tint?: string
+          title: string
+          vet_reviewed?: boolean
+        }
+        Update: {
+          badge_key?: string
+          emoji?: string
+          final_pawcoin?: number
+          final_xp?: number
+          month?: string
+          published?: boolean
+          stages?: Json
+          story?: string
+          subtitle?: string
+          tint?: string
+          title?: string
+          vet_reviewed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adventures_badge_key_fkey"
+            columns: ["badge_key"]
+            isOneToOne: false
+            referencedRelation: "badge_defs"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       ai_usage: {
         Row: {
           cost_usd: number
@@ -549,6 +602,57 @@ export type Database = {
           target_id?: string | null
           target_table?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      badge_defs: {
+        Row: {
+          category: string
+          description: string
+          family: string
+          hidden: boolean
+          icon: string
+          key: string
+          metric: string
+          pawcoin: number
+          sort: number
+          threshold: number
+          tier: number
+          title: string
+          unit: string
+          xp: number
+        }
+        Insert: {
+          category: string
+          description: string
+          family: string
+          hidden?: boolean
+          icon: string
+          key: string
+          metric: string
+          pawcoin?: number
+          sort?: number
+          threshold: number
+          tier?: number
+          title: string
+          unit?: string
+          xp?: number
+        }
+        Update: {
+          category?: string
+          description?: string
+          family?: string
+          hidden?: boolean
+          icon?: string
+          key?: string
+          metric?: string
+          pawcoin?: number
+          sort?: number
+          threshold?: number
+          tier?: number
+          title?: string
+          unit?: string
+          xp?: number
         }
         Relationships: []
       }
@@ -1839,6 +1943,86 @@ export type Database = {
         }
         Relationships: []
       }
+      lesson_reads: {
+        Row: {
+          lesson_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          lesson_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          lesson_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_reads_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lessons: {
+        Row: {
+          body: Json
+          category: string
+          created_at: string
+          emoji: string
+          id: string
+          published: boolean
+          read_minutes: number
+          sort: number
+          source: string
+          species: string[] | null
+          summary: string
+          tint: string
+          tip: string | null
+          title: string
+          vet_reviewed: boolean
+        }
+        Insert: {
+          body: Json
+          category: string
+          created_at?: string
+          emoji: string
+          id: string
+          published?: boolean
+          read_minutes?: number
+          sort?: number
+          source: string
+          species?: string[] | null
+          summary: string
+          tint?: string
+          tip?: string | null
+          title: string
+          vet_reviewed?: boolean
+        }
+        Update: {
+          body?: Json
+          category?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          published?: boolean
+          read_minutes?: number
+          sort?: number
+          source?: string
+          species?: string[] | null
+          summary?: string
+          tint?: string
+          tip?: string | null
+          title?: string
+          vet_reviewed?: boolean
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string | null
@@ -2683,6 +2867,107 @@ export type Database = {
         }
         Relationships: []
       }
+      pet_badges: {
+        Row: {
+          badge_key: string
+          earned_at: string
+          featured: boolean
+          pet_id: string
+        }
+        Insert: {
+          badge_key: string
+          earned_at?: string
+          featured?: boolean
+          pet_id: string
+        }
+        Update: {
+          badge_key?: string
+          earned_at?: string
+          featured?: boolean
+          pet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_badges_badge_key_fkey"
+            columns: ["badge_key"]
+            isOneToOne: false
+            referencedRelation: "badge_defs"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "pet_badges_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pet_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_badges_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pet_daily_quests: {
+        Row: {
+          baseline: number
+          completed_at: string | null
+          created_at: string
+          day: string
+          pet_id: string
+          progress: number
+          quest_key: string
+          rerolled: boolean
+          target: number
+        }
+        Insert: {
+          baseline?: number
+          completed_at?: string | null
+          created_at?: string
+          day: string
+          pet_id: string
+          progress?: number
+          quest_key: string
+          rerolled?: boolean
+          target: number
+        }
+        Update: {
+          baseline?: number
+          completed_at?: string | null
+          created_at?: string
+          day?: string
+          pet_id?: string
+          progress?: number
+          quest_key?: string
+          rerolled?: boolean
+          target?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_daily_quests_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pet_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_daily_quests_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_daily_quests_quest_key_fkey"
+            columns: ["quest_key"]
+            isOneToOne: false
+            referencedRelation: "quest_defs"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       pet_daily_stats: {
         Row: {
           calories_intake: number | null
@@ -2692,6 +2977,7 @@ export type Database = {
           id: string
           meals_given: number
           pet_id: string | null
+          played_at: string | null
           updated_at: string | null
           water_intake: number | null
           water_refreshed_at: string | null
@@ -2705,6 +2991,7 @@ export type Database = {
           id?: string
           meals_given?: number
           pet_id?: string | null
+          played_at?: string | null
           updated_at?: string | null
           water_intake?: number | null
           water_refreshed_at?: string | null
@@ -2718,6 +3005,7 @@ export type Database = {
           id?: string
           meals_given?: number
           pet_id?: string | null
+          played_at?: string | null
           updated_at?: string | null
           water_intake?: number | null
           water_refreshed_at?: string | null
@@ -3086,6 +3374,58 @@ export type Database = {
           },
         ]
       }
+      pet_programs: {
+        Row: {
+          completed_at: string | null
+          last_step_on: string | null
+          pet_id: string
+          program_key: string
+          started_at: string
+          status: string
+          steps_done: number
+        }
+        Insert: {
+          completed_at?: string | null
+          last_step_on?: string | null
+          pet_id: string
+          program_key: string
+          started_at?: string
+          status?: string
+          steps_done?: number
+        }
+        Update: {
+          completed_at?: string | null
+          last_step_on?: string | null
+          pet_id?: string
+          program_key?: string
+          started_at?: string
+          status?: string
+          steps_done?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_programs_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pet_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_programs_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_programs_program_key_fkey"
+            columns: ["program_key"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       pet_share_links: {
         Row: {
           created_at: string
@@ -3239,6 +3579,39 @@ export type Database = {
           },
         ]
       }
+      pet_week_chests: {
+        Row: {
+          opened_at: string
+          pet_id: string
+          week_start: string
+        }
+        Insert: {
+          opened_at?: string
+          pet_id: string
+          week_start: string
+        }
+        Update: {
+          opened_at?: string
+          pet_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_week_chests_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pet_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_week_chests_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pet_weight_logs: {
         Row: {
           created_at: string
@@ -3323,6 +3696,7 @@ export type Database = {
           size: string | null
           sos_settings: Json | null
           type: string | null
+          walk_goal_km: number | null
           weight: number | null
           xp: number | null
         }
@@ -3357,6 +3731,7 @@ export type Database = {
           size?: string | null
           sos_settings?: Json | null
           type?: string | null
+          walk_goal_km?: number | null
           weight?: number | null
           xp?: number | null
         }
@@ -3391,6 +3766,7 @@ export type Database = {
           size?: string | null
           sos_settings?: Json | null
           type?: string | null
+          walk_goal_km?: number | null
           weight?: number | null
           xp?: number | null
         }
@@ -3901,6 +4277,68 @@ export type Database = {
           },
         ]
       }
+      programs: {
+        Row: {
+          badge_key: string | null
+          description: string
+          emoji: string
+          key: string
+          pawcoin: number
+          published: boolean
+          sort: number
+          species: string[] | null
+          steps: Json
+          subtitle: string
+          tags: string[]
+          tint: string
+          title: string
+          vet_reviewed: boolean
+          xp: number
+        }
+        Insert: {
+          badge_key?: string | null
+          description: string
+          emoji: string
+          key: string
+          pawcoin?: number
+          published?: boolean
+          sort?: number
+          species?: string[] | null
+          steps: Json
+          subtitle: string
+          tags?: string[]
+          tint?: string
+          title: string
+          vet_reviewed?: boolean
+          xp?: number
+        }
+        Update: {
+          badge_key?: string | null
+          description?: string
+          emoji?: string
+          key?: string
+          pawcoin?: number
+          published?: boolean
+          sort?: number
+          species?: string[] | null
+          steps?: Json
+          subtitle?: string
+          tags?: string[]
+          tint?: string
+          title?: string
+          vet_reviewed?: boolean
+          xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programs_badge_key_fkey"
+            columns: ["badge_key"]
+            isOneToOne: false
+            referencedRelation: "badge_defs"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth_key: string
@@ -3930,6 +4368,117 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      quest_defs: {
+        Row: {
+          active: boolean
+          category: string
+          description: string
+          how: string
+          icon: string
+          key: string
+          metric: string
+          pawcoin: number
+          priority: number
+          route: string
+          scope: string
+          self_report: boolean
+          sort: number
+          species: string[] | null
+          title: string
+          unit: string
+          why: string
+          xp: number
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          description: string
+          how: string
+          icon: string
+          key: string
+          metric: string
+          pawcoin: number
+          priority?: number
+          route: string
+          scope: string
+          self_report?: boolean
+          sort?: number
+          species?: string[] | null
+          title: string
+          unit?: string
+          why: string
+          xp: number
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          description?: string
+          how?: string
+          icon?: string
+          key?: string
+          metric?: string
+          pawcoin?: number
+          priority?: number
+          route?: string
+          scope?: string
+          self_report?: boolean
+          sort?: number
+          species?: string[] | null
+          title?: string
+          unit?: string
+          why?: string
+          xp?: number
+        }
+        Relationships: []
+      }
+      quest_rewards: {
+        Row: {
+          created_at: string
+          id: number
+          label: string
+          pawcoin: number
+          pet_id: string | null
+          ref: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          label: string
+          pawcoin?: number
+          pet_id?: string | null
+          ref: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          label?: string
+          pawcoin?: number
+          pet_id?: string | null
+          ref?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quest_rewards_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pet_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quest_rewards_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quests: {
         Row: {
@@ -4440,6 +4989,74 @@ export type Database = {
           plan_id?: string
           status?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      team_goal_members: {
+        Row: {
+          goal_id: string
+          joined_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          goal_id: string
+          joined_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          goal_id?: string
+          joined_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_goal_members_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "team_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_goals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          creator_id: string
+          ends_at: string
+          id: string
+          kind: string
+          starts_at: string
+          status: string
+          target: number
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          creator_id: string
+          ends_at: string
+          id?: string
+          kind: string
+          starts_at?: string
+          status?: string
+          target: number
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          creator_id?: string
+          ends_at?: string
+          id?: string
+          kind?: string
+          starts_at?: string
+          status?: string
+          target?: number
+          title?: string
         }
         Relationships: []
       }
@@ -6527,6 +7144,9 @@ export type Database = {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
       }
+      lesson_mark_read: { Args: { p_id: string; p_pet: string }; Returns: Json }
+      lesson_view: { Args: { p_id: string }; Returns: Json }
+      lessons_feed: { Args: { p_pet: string }; Returns: Json }
       log_pet_care: {
         Args: { p_kind: string; p_pet: string; p_undo?: boolean }
         Returns: Json
@@ -6604,7 +7224,18 @@ export type Database = {
       owns_pet: { Args: { p_pet_id: string }; Returns: boolean }
       owns_pet_folder: { Args: { p_object_name: string }; Returns: boolean }
       pet_care_today: { Args: { p_pet: string }; Returns: Json }
+      pet_emergency_set: { Args: { p_pet: string }; Returns: boolean }
+      pet_level_for_xp: { Args: { p_xp: number }; Returns: number }
+      pet_level_info: { Args: { p_xp: number }; Returns: Json }
       pet_meals_target: { Args: { p_pet: string }; Returns: number }
+      pet_metric: {
+        Args: { p_from: string; p_metric: string; p_pet: string; p_to: string }
+        Returns: number
+      }
+      pet_passport_missing: { Args: { p_pet: string }; Returns: number }
+      pet_species: { Args: { p_pet: string }; Returns: string }
+      pet_walk_goal: { Args: { p_pet: string }; Returns: Json }
+      pet_walk_goal_auto: { Args: { p_pet: string }; Returns: number }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -6654,9 +7285,77 @@ export type Database = {
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
       prepare_account_purge: { Args: { p_user: string }; Returns: boolean }
+      program_leave: {
+        Args: { p_key: string; p_pet: string }
+        Returns: undefined
+      }
+      program_start: {
+        Args: { p_key: string; p_pet: string }
+        Returns: undefined
+      }
+      program_step_done: {
+        Args: { p_key: string; p_pet: string }
+        Returns: Json
+      }
+      program_view: { Args: { p_key: string; p_pet: string }; Returns: Json }
+      programs_list: { Args: { p_pet: string }; Returns: Json }
       publish_adoption_listing: { Args: { p_id: string }; Returns: number }
       publish_lost_listing: { Args: { p_listing_id: string }; Returns: number }
       purge_expired_unclaimed_patients: { Args: never; Returns: number }
+      qc_adventure: { Args: { p_grant: boolean; p_pet: string }; Returns: Json }
+      qc_badge_sync: { Args: { p_pet: string }; Returns: Json }
+      qc_day: { Args: never; Returns: string }
+      qc_ensure_day: {
+        Args: { p_day: string; p_pet: string }
+        Returns: undefined
+      }
+      qc_pool_eligible: {
+        Args: { p_pet: string }
+        Returns: {
+          key: string
+          priority: number
+        }[]
+      }
+      qc_quest_progress: {
+        Args: {
+          p_baseline: number
+          p_created: string
+          p_day: string
+          p_key: string
+          p_pet: string
+        }
+        Returns: number
+      }
+      qc_quest_target: {
+        Args: { p_key: string; p_pet: string }
+        Returns: number
+      }
+      qc_ts: { Args: { p_day: string }; Returns: string }
+      qc_week_start: { Args: { p_day: string }; Returns: string }
+      qc_week_state: { Args: { p_pet: string; p_week: string }; Returns: Json }
+      quest_adventure: { Args: { p_pet: string }; Returns: Json }
+      quest_badge_feature: {
+        Args: { p_key: string; p_on: boolean; p_pet: string }
+        Returns: undefined
+      }
+      quest_badges: { Args: { p_pet: string }; Returns: Json }
+      quest_center: { Args: { p_pet: string }; Returns: Json }
+      quest_grant: {
+        Args: {
+          p_label: string
+          p_pawcoin: number
+          p_pet: string
+          p_ref: string
+          p_user: string
+          p_xp: number
+        }
+        Returns: Json
+      }
+      quest_open_chest: {
+        Args: { p_pet: string; p_week?: string }
+        Returns: Json
+      }
+      quest_reroll: { Args: { p_key: string; p_pet: string }; Returns: Json }
       recall_chat_message: { Args: { p_id: string }; Returns: undefined }
       record_adoption_event: {
         Args: { p_event: string; p_id: string }
@@ -6852,6 +7551,10 @@ export type Database = {
       set_pet_media_memory: {
         Args: { p_media: string; p_memory: string }
         Returns: undefined
+      }
+      set_pet_walk_goal: {
+        Args: { p_km: number; p_pet: string }
+        Returns: Json
       }
       social_post_rows: {
         Args: { p_ids: string[] }
@@ -7531,42 +8234,24 @@ export type Database = {
         }
         Returns: string
       }
-      submit_business_application:
-        | {
-            Args: {
-              p_address: string
-              p_business: string
-              p_district: string
-              p_iban: string
-              p_lat: number
-              p_lng: number
-              p_name: string
-              p_owner_name: string
-              p_phone: string
-              p_province: string
-              p_tax_id: string
-              p_type: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_address: string
-              p_business: string
-              p_district: string
-              p_iban: string
-              p_lat: number
-              p_lng: number
-              p_name: string
-              p_owner_name: string
-              p_phone: string
-              p_province: string
-              p_tax_document: string
-              p_tax_id: string
-              p_type: string
-            }
-            Returns: string
-          }
+      submit_business_application: {
+        Args: {
+          p_address: string
+          p_business: string
+          p_district: string
+          p_iban: string
+          p_lat: number
+          p_lng: number
+          p_name: string
+          p_owner_name: string
+          p_phone: string
+          p_province: string
+          p_tax_document: string
+          p_tax_id: string
+          p_type: string
+        }
+        Returns: string
+      }
       submit_sighting: {
         Args: {
           p_contact: string
@@ -7590,6 +8275,27 @@ export type Database = {
         Returns: undefined
       }
       tckn_is_valid: { Args: { p: string }; Returns: boolean }
+      team_friend_candidates: { Args: never; Returns: Json }
+      team_goal_create: {
+        Args: {
+          p_days: number
+          p_kind: string
+          p_members: string[]
+          p_target: number
+          p_title: string
+        }
+        Returns: string
+      }
+      team_goal_leave: { Args: { p_goal: string }; Returns: undefined }
+      team_goal_respond: {
+        Args: { p_accept: boolean; p_goal: string }
+        Returns: undefined
+      }
+      team_goals_view: { Args: never; Returns: Json }
+      team_member_amount: {
+        Args: { p_from: string; p_kind: string; p_to: string; p_user: string }
+        Returns: number
+      }
       toggle_comment_like: {
         Args: { p_comment_id: string }
         Returns: {

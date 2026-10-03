@@ -12,6 +12,8 @@ export interface Notification {
   /** Doluysa işletme bildirimi (8.54): işletme panelinin zilinde görünür, kişisel bildirimlerde değil. */
   business_id?: string | null;
   entity_id?: string | null;
+  /** Bildirimi doğuran kişi (beğenen, takip eden, davet eden). */
+  actor_id?: string | null;
   meta?: {
     sender_id?: string;
     sender_name?: string;

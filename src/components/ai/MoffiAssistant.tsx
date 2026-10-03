@@ -16,7 +16,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePet, type Pet } from '@/context/PetContext';
 import { useActivity } from '@/context/ActivityContext';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { healthService } from '@/services/healthService';
 import { supabase } from '@/lib/supabase';
 import { ageText, daysLeftText, isMedicationActive, overallStatus, speciesOf, upcomingItems, weightSummary } from '@/lib/health/derive';
@@ -49,6 +49,8 @@ const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 const MAX_SESSIONS = 30;
 
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+/** Olay işleyicilerinde saat (render dışında; modül düzeyinde ki derleyici render'da çağrıldığını sanmasın). */
+const nowMs = () => Date.now();
 
 function loadSessions(): ChatSession[] {
     try {
@@ -116,15 +118,18 @@ function RichText({ text }: { text: string }) {
 }
 
 function usePetContext(pet: Pet | null) {
-    const [bundle, setBundle] = useState<HealthBundle | null>(null);
+    // Yüklenen paket hangi hayvana aitse onunla birlikte tutulur; hayvan değişince önbellekteki hemen gösterilir.
+    const [loaded, setLoaded] = useState<{ petId: string; bundle: HealthBundle } | null>(null);
+    const petId = pet?.id ?? null;
+    const species = pet ? speciesOf(pet) : null;
     useEffect(() => {
+        if (!petId || !species) return;
         let alive = true;
-        if (!pet?.id) { setBundle(null); return; }
-        setBundle(healthService.peekBundle(pet.id));
-        healthService.loadBundle(pet.id, speciesOf(pet)).then(b => { if (alive) setBundle(b); }).catch(() => {});
+        healthService.loadBundle(petId, species).then(b => { if (alive) setLoaded({ petId, bundle: b }); }).catch(() => {});
         return () => { alive = false; };
-    }, [pet?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-    return bundle;
+    }, [petId, species]);
+    if (!petId) return null;
+    return loaded && loaded.petId === petId ? loaded.bundle : healthService.peekBundle(petId);
 }
 
 export function MoffiAssistant() {
@@ -133,7 +138,7 @@ export function MoffiAssistant() {
     const { user } = useAuth();
     const { pets, activePet } = usePet();
     const { walkHistory } = useActivity();
-    const { todayDistanceKm, dailyGoal } = useQuestEngine();
+    const { todayDistanceKm, dailyGoal } = useDailyProgress();
 
     const [isOpen, setIsOpen] = useState(false);
     // Bileşen yalnızca tarayıcıda yüklenir (AIWidgetLoader, ssr:false); geçmiş ilk durumda okunur.
@@ -189,12 +194,14 @@ export function MoffiAssistant() {
         window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: false }));
         const prevOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-        refreshQuota();
+        let alive = true;
+        supabase.rpc('ai_quota_status').then(({ data, error }) => { if (alive && !error && data) setQuota(data as Quota); });
         return () => {
+            alive = false;
             document.body.style.overflow = prevOverflow;
             window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: true }));
         };
-    }, [isOpen, refreshQuota]);
+    }, [isOpen]);
 
     const close = () => {
         if (window.history.state?.modal === 'ai') window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -213,7 +220,7 @@ export function MoffiAssistant() {
     const buildPetData = () => {
         if (!pet) return null;
         const today = todayKey();
-        const weekAgo = Date.now() - 7 * 86_400_000;
+        const weekAgo = nowMs() - 7 * 86_400_000;
         const week = walkHistory.filter(w => (!w.petId || String(w.petId) === String(pet.id)) && new Date(w.ended_at || w.started_at || 0).getTime() >= weekAgo);
         const data: Record<string, unknown> = {
             name: pet.name,
@@ -270,7 +277,7 @@ export function MoffiAssistant() {
         } catch {
             reply = { id: uid(), role: 'assistant', meta: true, content: 'Bağlantı kurulamadı. İnternetini kontrol edip tekrar dener misin?', actions: [{ type: 'retry', label: 'Tekrar dene' }] };
         }
-        persist(list => list.map(s => (s.id === sid ? { ...s, messages: [...history, reply], updatedAt: Date.now() } : s)));
+        persist(list => list.map(s => (s.id === sid ? { ...s, messages: [...history, reply], updatedAt: nowMs() } : s)));
         setBusy(false);
         refreshQuota();
     };
@@ -285,12 +292,12 @@ export function MoffiAssistant() {
         if (!session) {
             sid = uid();
             history = [userMsg];
-            const created: ChatSession = { id: sid, title: content.slice(0, 48), petId: pet?.id || null, messages: history, updatedAt: Date.now() };
+            const created: ChatSession = { id: sid, title: content.slice(0, 48), petId: pet?.id || null, messages: history, updatedAt: nowMs() };
             persist(list => [created, ...list]);
             setSessionId(sid);
         } else {
             history = [...session.messages, userMsg];
-            persist(list => list.map(s => (s.id === sid ? { ...s, messages: history, updatedAt: Date.now() } : s)));
+            persist(list => list.map(s => (s.id === sid ? { ...s, messages: history, updatedAt: nowMs() } : s)));
         }
         setInput('');
         await ask(sid!, history, false);

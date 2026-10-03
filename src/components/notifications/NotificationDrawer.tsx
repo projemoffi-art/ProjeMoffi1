@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/services/socialService";
 import { Avatar, FollowButton } from "@/components/social/SocialUI";
+import type { Notification } from "@/types/notifications";
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -42,7 +43,8 @@ const targetOf = (n: { type: string; entity_id?: string | null; actor_id?: strin
     : n.type === 'adoption_update' || n.type === 'pet_transfer' ? '/sahiplendirme/basvurularim'
     : n.type === 'appointment' ? '/vet?view=appointments'
     : n.type === 'staff_invitation' && n.entity_id ? `/invitation/${n.entity_id}`
-    : n.type === 'admin_business' ? '/admin/businesses' : null;
+    : n.type === 'admin_business' ? '/admin/businesses'
+    : ['team_invite', 'challenge_invite', 'challenge_finished'].includes(n.type) ? '/quests/birlikte' : null;
 
 function TypeBadge({ type }: { type: string }) {
   const icon = type === 'like' ? <Heart className="w-3 h-3 fill-current" />
@@ -67,35 +69,38 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
-  const shown = useMemo(() => (tab === 'all' ? notifications : notifications.filter((n: any) => GROUP[n.type] === tab)), [notifications, tab]);
+  const shown = useMemo(() => (tab === 'all' ? notifications : notifications.filter(n => GROUP[n.type] === tab)), [notifications, tab]);
 
   // Görünen bildirimlerin kişi fotoğrafları, küçük resimleri ve takip durumu (tek seferde)
   useEffect(() => {
     if (!isOpen || notifications.length === 0) return;
-    const list = notifications.slice(0, 60) as any[];
-    const actorIds = Array.from(new Set(list.map(n => n.actor_id).filter(Boolean)));
-    const postIds = list.filter(n => ['like', 'comment', 'mention', 'paw', 'theme'].includes(n.type) && n.entity_id).map(n => n.entity_id);
-    const lostIds = list.filter(n => (n.type === 'lost' || n.type === 'lost_sighting') && n.entity_id).map(n => n.entity_id);
-    const adoptIds = list.filter(n => n.type === 'adoption' && n.entity_id).map(n => n.entity_id);
+    const list = notifications.slice(0, 60);
+    const ids = (xs: (string | null | undefined)[]) => xs.filter((x): x is string => !!x);
+    const actorIds = Array.from(new Set(ids(list.map(n => n.actor_id))));
+    const postIds = ids(list.filter(n => ['like', 'comment', 'mention', 'paw', 'theme'].includes(n.type)).map(n => n.entity_id));
+    const lostIds = ids(list.filter(n => n.type === 'lost' || n.type === 'lost_sighting').map(n => n.entity_id));
+    const adoptIds = ids(list.filter(n => n.type === 'adoption').map(n => n.entity_id));
     const uuid = (x: string) => /^[0-9a-f-]{36}$/i.test(x);
+    type Person = { id: string; full_name: string | null; username: string | null; avatar_url: string | null; role: string | null; business_name: string | null };
+    type Thumb = { id: string; url: string | null };
+    const none = <T,>(): Promise<{ data: T[] | null }> => Promise.resolve({ data: [] });
     (async () => {
       const [pc, posts, lost, adopt, fol] = await Promise.all([
-        actorIds.length ? supabase.from('profile_cards').select('id, full_name, username, avatar_url, role, business_name').in('id', actorIds) : { data: [] },
-        postIds.length ? supabase.from('posts').select('id, media_url').in('id', postIds.filter(uuid)) : { data: [] },
-        lostIds.length ? supabase.from('lost_pet_cards').select('id, img_url').in('id', lostIds.filter(uuid)) : { data: [] },
-        adoptIds.length ? supabase.from('adoption_cards').select('id, img_url').in('id', adoptIds.filter(uuid)) : { data: [] },
-        user && actorIds.length ? supabase.from('follows').select('following_id').eq('follower_id', user.id).in('following_id', actorIds) : { data: [] },
-      ]) as any[];
+        actorIds.length ? supabase.from('profile_cards').select('id, full_name, username, avatar_url, role, business_name').in('id', actorIds).then(r => ({ data: r.data as Person[] | null })) : none<Person>(),
+        postIds.length ? supabase.from('posts').select('id, url:media_url').in('id', postIds.filter(uuid)).then(r => ({ data: r.data as Thumb[] | null })) : none<Thumb>(),
+        lostIds.length ? supabase.from('lost_pet_cards').select('id, url:img_url').in('id', lostIds.filter(uuid)).then(r => ({ data: r.data as Thumb[] | null })) : none<Thumb>(),
+        adoptIds.length ? supabase.from('adoption_cards').select('id, url:img_url').in('id', adoptIds.filter(uuid)).then(r => ({ data: r.data as Thumb[] | null })) : none<Thumb>(),
+        user && actorIds.length ? supabase.from('follows').select('following_id').eq('follower_id', user.id).in('following_id', actorIds).then(r => ({ data: r.data as { following_id: string }[] | null })) : none<{ following_id: string }>(),
+      ]);
       const a: Record<string, { name: string; avatar: string | null }> = {};
-      (pc.data || []).forEach((p: any) => { a[p.id] = { name: (p.role === 'business' && p.business_name) || p.full_name || p.username || 'Moffi üyesi', avatar: p.avatar_url }; });
+      (pc.data || []).forEach(p => { a[p.id] = { name: (p.role === 'business' && p.business_name) || p.full_name || p.username || 'Moffi üyesi', avatar: p.avatar_url }; });
       const t: Record<string, string> = {};
-      [...(posts.data || []).map((p: any) => [p.id, p.media_url]), ...(lost.data || []).map((p: any) => [p.id, p.img_url]), ...(adopt.data || []).map((p: any) => [p.id, p.img_url])]
-        .forEach(([id, url]) => { if (url) t[id] = url; });
-      setActors(a); setThumbs(t); setFollowing(new Set((fol.data || []).map((f: any) => f.following_id)));
+      [...(posts.data || []), ...(lost.data || []), ...(adopt.data || [])].forEach(x => { if (x.url) t[x.id] = x.url; });
+      setActors(a); setThumbs(t); setFollowing(new Set((fol.data || []).map(f => f.following_id)));
     })().catch(() => {});
   }, [isOpen, notifications, user]);
 
-  const open = (n: any) => {
+  const open = (n: Notification) => {
     const target = targetOf(n);
     if (!n.is_read) markAsRead(n.id);
     if (!target) return;
@@ -146,7 +151,7 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                 </div>
               ) : (
                 <div className="divide-y divide-card-border">
-                  {shown.map((n: any) => {
+                  {shown.map(n => {
                     const actor = n.actor_id ? actors[n.actor_id] : null;
                     const thumb = n.entity_id ? thumbs[n.entity_id] : null;
                     return (

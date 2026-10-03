@@ -16,7 +16,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { usePet } from '@/context/PetContext';
 import { useActivity } from '@/context/ActivityContext';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useChat } from '@/context/ChatContext';
 import { useMyBusinesses, setLastPanel } from '@/hooks/useMyBusinesses';
@@ -106,7 +106,7 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
     const { user, updateSettings } = useAuth();
     const { pets, activePet } = usePet();
     const { walkData } = useActivity();
-    const { todayDistanceKm, dailyGoal } = useQuestEngine();
+    const { todayDistanceKm, dailyGoal } = useDailyProgress();
     const { unreadCount } = useNotifications();
     const { unreadCount: unreadMessages, setIsInboxOpen } = useChat();
     const myBusinesses = useMyBusinesses();

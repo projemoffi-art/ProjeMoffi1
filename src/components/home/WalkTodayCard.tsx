@@ -1,7 +1,7 @@
 'use client';
 
 // "Bugünkü Yürüyüş" — ana sayfanın amiral kartı (home-final referansı üzerine).
-// Rakamlar yürüyüş ekranlarıyla aynı kaynaktan: bugünkü mesafe/süre/hedef QuestEngineContext'ten, kalori lib/walkMetrics'ten,
+// Rakamlar yürüyüş ekranlarıyla aynı kaynaktan: bugünkü mesafe/süre/hedef DailyProgressContext'ten, kalori lib/walkMetrics'ten,
 // canlı yürüyüş ve geçmiş ActivityContext'ten (useWalk), seri walkStats'ten, hava WeatherContext'ten.
 // Durumlar: canlı yürüyüş > bugün hedef tamam > 3+ gündür yürünmedi > ilk yürüyüş > normal.
 
@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Cloud, CloudLightning, CloudRain, CloudSun, Flame, Footprints, Navigation, Play, Snowflake, Sun, ThermometerSun } from 'lucide-react';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useDailyProgress } from '@/context/DailyProgressContext';
 import { useActivity } from '@/context/ActivityContext';
 import { useWalk } from '@/hooks/useWalk';
 import { useWeather, isHotForPaws } from '@/context/WeatherContext';
@@ -67,7 +67,7 @@ function ProgressRing({ percent, live }: { percent: number; live: boolean }) {
 
 export function WalkTodayCard({ pets, activePet }: { pets: Pet[]; activePet: Pet | null }) {
     const router = useRouter();
-    const { todayDistanceKm, todayDurationMin, todaySteps, dailyGoal } = useQuestEngine();
+    const { todayDistanceKm, todayDurationMin, todaySteps, dailyGoal } = useDailyProgress();
     const { stepsSupported } = useActivity();
     const { activeSession, history, stats } = useWalk();
     const { weather } = useWeather();

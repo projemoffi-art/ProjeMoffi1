@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Share2 } from "lucide-react";
 import { usePet } from "@/context/PetContext";
-import { useQuestEngine } from "@/context/QuestEngineContext";
+import { useDailyProgress } from "@/context/DailyProgressContext";
+import { useQuestCenter } from "@/hooks/useQuestCenter";
 import { useActivity } from "@/context/ActivityContext";
 import { apiService } from "@/services/apiService";
 import { haptics, share } from "@/native";
@@ -15,7 +16,8 @@ import { formatKm, formatClock, formatSteps } from "@/lib/walkMetrics";
 import { WalkCard, StatRow, PrimaryButton, ProgressBar } from "@/components/walk/WalkUI";
 
 // Ekran 7 (Yürüyüş Sonucu). Rakamlar sunucuya kaydedilmiş yürüyüşten (finish_walk) okunur; ekranda görülen
-// ile geçmişte görülen aynıdır.
+// ile geçmişte görülen aynıdır. Kazanımlar Görev Merkezi'nden (quest_center): ekran açılınca sunucu yürüyüşü
+// görev ilerlemesine sayar ve ödülü verir; burada gösterilen PawCoin gerçekten verilmiş olandır.
 /** Kayıtlı yürüyüş (getWalkById: walk_sessions satırı). */
 type SavedWalk = NonNullable<Awaited<ReturnType<typeof apiService.getWalkById>>>;
 
@@ -29,7 +31,7 @@ function SummaryContent() {
     const bestSplitSeconds = bestSplitRaw ? parseInt(bestSplitRaw, 10) : null;
 
     const { pets, activePet } = usePet();
-    const { walkPpEarned, dailyGoal, todayDistanceKm, closestBadgeProgress, weeklyStamps, maxWeeklyStamps, lastEarnedBadge } = useQuestEngine();
+    const { dailyGoal, todayDistanceKm } = useDailyProgress();
     const { walkStats } = useActivity();
     const [walk, setWalk] = useState<SavedWalk | null>(null);
     const [loading, setLoading] = useState(!!id && status === 'completed');
@@ -46,6 +48,7 @@ function SummaryContent() {
     }, [id, status]);
 
     const pet = pets.find(p => String(p.id) === String(walk?.pet_id)) || activePet;
+    const { data: quests } = useQuestCenter(walk ? (pet?.id ?? null) : null);
     const petName = pet?.name || 'Dostun';
     const heroImage = pet?.avatar || pet?.image || '/images/walk-normal.jpg';
     const distanceKm = Number(walk?.distance_meters || 0) / 1000;
@@ -53,7 +56,6 @@ function SummaryContent() {
     const calories = walk?.calories_kcal ?? 0;
     const hasSteps = (walk?.steps || 0) > 0;
     const goalPercent = Math.round(Math.min(100, (todayDistanceKm / Math.max(0.1, dailyGoal.distance)) * 100));
-    const weeklyPercent = Math.round(Math.min(100, (weeklyStamps / Math.max(1, maxWeeklyStamps)) * 100));
     const streak = walkStats?.currentStreak || 0;
 
     const isLongest = !!walk && (walkStats?.totalWalks || 0) > 1 && distanceKm > 0 && distanceKm + 0.05 >= (walkStats?.longestWalkKm || 0);
@@ -61,7 +63,7 @@ function SummaryContent() {
 
     useEffect(() => {
         if (!walk) return;
-        if (lastEarnedBadge || isLongest) {
+        if (isLongest) {
             haptics.celebrate();
             confetti({ particleCount: 110, spread: 80, startVelocity: 42, origin: { y: 0.3 }, colors: ['#EE5B3D', '#F5B544', '#10B981', '#FFFFFF'] });
         } else {
@@ -90,11 +92,18 @@ function SummaryContent() {
     }
 
     const earnings: { key: string; icon: string; value: string; label: string; tint: string }[] = [];
-    if (walkPpEarned > 0) earnings.push({ key: 'pp', icon: '🐾', value: `+${walkPpEarned}`, label: 'Moffi Puanı', tint: 'bg-accent/10' });
+    if (quests && quests.today_pawcoin > 0) earnings.push({ key: 'pp', icon: '🪙', value: `+${quests.today_pawcoin}`, label: 'Bugün PawCoin', tint: 'bg-accent/10' });
     if (streak > 0) earnings.push({ key: 'streak', icon: '🔥', value: `${streak} günlük`, label: 'seri', tint: 'bg-amber-100/70' });
-    if (lastEarnedBadge) earnings.push({ key: 'badge', icon: lastEarnedBadge.icon, value: lastEarnedBadge.name, label: 'Yeni rozet', tint: 'bg-violet-100/70' });
-    else if (closestBadgeProgress) earnings.push({ key: 'badge', icon: closestBadgeProgress.badge.icon, value: `%${closestBadgeProgress.percent}`, label: 'Rozet ilerlemesi', tint: 'bg-violet-100/70' });
-    earnings.push({ key: 'weekly', icon: '🎯', value: `%${weeklyPercent}`, label: 'Haftalık hedef', tint: 'bg-accent/10' });
+    const newBadge = quests?.new_badges[0];
+    if (newBadge) earnings.push({ key: 'badge', icon: newBadge.icon, value: newBadge.title, label: 'Yeni rozet', tint: 'bg-amber-100/70' });
+    else if (quests?.next_badge) {
+        const nb = quests.next_badge;
+        earnings.push({ key: 'badge', icon: nb.icon, value: `%${Math.round((nb.current / Math.max(1, nb.target)) * 100)}`, label: nb.title, tint: 'bg-amber-100/70' });
+    }
+    if (quests) {
+        const g = quests.week.chest.goals;
+        earnings.push({ key: 'weekly', icon: '🎁', value: `${g.filter(x => x.progress >= x.target).length}/${g.length}`, label: 'Haftalık sandık', tint: 'bg-accent/10' });
+    }
 
     return (
         <div className="min-h-[100dvh] pb-10">
@@ -169,6 +178,7 @@ function SummaryContent() {
                 </div>
 
                 <PrimaryButton className="mt-7" onClick={() => goTo('/home')}>Tamam</PrimaryButton>
+                <button type="button" onClick={() => goTo('/quests')} className="w-full h-11 mt-2 text-[14px] font-bold text-accent">Görev Merkezi&apos;ne git</button>
             </div>
         </div>
     );
