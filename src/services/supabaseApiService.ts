@@ -30,6 +30,13 @@ function mapChatMessage(msg: any, myId: string, time: string) {
     };
 }
 
+// Duraklamalar hariç süre (finish_walk'ın sakladığı); çok eski kayıtlarda yoksa başlangıç-bitiş farkı.
+function walkActiveSeconds(w: { active_seconds?: number | null; start_time?: string; end_time?: string }): number {
+    if (typeof w.active_seconds === 'number') return w.active_seconds;
+    if (!w.start_time || !w.end_time) return 0;
+    return Math.max(0, Math.floor((new Date(w.end_time).getTime() - new Date(w.start_time).getTime()) / 1000));
+}
+
 export class SupabaseApiService implements IApiService {
     // Session is managed internally by Supabase client very efficiently.
     // Custom aggressive caching causes cross-account validation bugs.
@@ -1785,10 +1792,19 @@ export class SupabaseApiService implements IApiService {
     // --- YÜRÜYÜŞ TAKİBİ ---
     // walk_sessions'a istemci doğrudan yazamaz; başlat/nokta ekle/bitir sunucu fonksiyonlarıyla.
     // Mesafe sunucuda gelen noktalardan hesaplanır (25 km/sa üstü sıçramalar sayılmaz).
-    async startWalk(petId?: string): Promise<{ id: string }> {
-        const { data, error } = await supabase.rpc('start_walk', { p_pet_id: petId ?? null });
+    // startedAt: çevrimdışı başlayıp sonradan bağlanan yürüyüşün gerçek başlangıcı.
+    async startWalk(petId?: string, startedAt?: number): Promise<{ id: string }> {
+        const { data, error } = await supabase.rpc('start_walk_session', {
+            p_pet_id: petId ?? null,
+            p_started_at: startedAt ? new Date(startedAt).toISOString() : null,
+        });
         if (error) throw error;
         return data;
+    }
+
+    async discardWalk(sessionId: string): Promise<void> {
+        const { error } = await supabase.rpc('discard_walk', { p_session_id: sessionId });
+        if (error) throw error;
     }
 
     async appendWalkPoints(sessionId: string, points: WalkPoint[]): Promise<void> {
@@ -1872,13 +1888,11 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) return [];
 
-        // Faz 10 kontrolü: `pet:pets(...)` embed'i kaldırıldı — walk_sessions.pet_id
-        // text tipinde, pets tablosuna FK constraint'i hiç yok. Bu embed olduğu sürece
-        // PostgREST TÜM sorguyu PGRST200 ile reddediyordu, yani bu fonksiyon her zaman
-        // boş dizi döndürüyordu — yürüyüş geçmişi hiçbir zaman gerçek veri göstermemişti.
+        // pet:pets(...) embed'i kullanılmaz (walk_sessions.pet_id text, FK yok). Liste tam rotayı değil
+        // 60 noktalık önizlemeyi çeker; süre/adım/kalori finish_walk'ın sakladığı gerçek değerlerdir.
         const { data, error } = await supabase
             .from('walk_sessions')
-            .select('*')
+            .select('id, pet_id, start_time, end_time, distance_meters, active_seconds, steps, calories_kcal, route_preview, start_lat, start_lng, photo_urls')
             .eq('user_id', user.id)
             .eq('status', 'completed')
             .order('end_time', { ascending: false })
@@ -1888,20 +1902,13 @@ export class SupabaseApiService implements IApiService {
             console.error("getWalkHistory error:", error);
             return [];
         }
-        return (data || []).map((w: any) => {
-            const distanceMeters = w.distance_meters || 0;
-            const durationSeconds = (w.start_time && w.end_time)
-                ? Math.max(0, Math.floor((new Date(w.end_time).getTime() - new Date(w.start_time).getTime()) / 1000))
-                : 0;
-            return {
-                ...w,
-                ended_at: w.end_time,
-                started_at: w.start_time,
-                duration_minutes: Math.round(durationSeconds / 60),
-                calories_burned: Math.round(distanceMeters * 0.06),
-                steps: Math.round(distanceMeters * 1.3),
-            };
-        });
+        return (data || []).map((w: any) => ({
+            ...w,
+            ended_at: w.end_time,
+            started_at: w.start_time,
+            duration_minutes: Math.round(walkActiveSeconds(w) / 60),
+            path_coordinates: w.route_preview || [],
+        }));
     }
 
     async getWalkStats(userId: string): Promise<any> {
@@ -1910,7 +1917,7 @@ export class SupabaseApiService implements IApiService {
 
         const { data, error } = await supabase
             .from('walk_sessions')
-            .select('distance_meters, start_time, end_time')
+            .select('distance_meters, start_time, end_time, active_seconds, steps, calories_kcal')
             .eq('user_id', user.id)
             .eq('status', 'completed');
 
@@ -1923,13 +1930,10 @@ export class SupabaseApiService implements IApiService {
             .eq('user_id', user.id);
         const shieldedDates = new Set((shieldRows || []).map(r => r.covered_date));
 
-        const totalDistance = data.reduce((s, w) => s + (w.distance_meters || 0), 0);
-        const totalDuration = data.reduce((s, w) => {
-            if (!w.start_time || !w.end_time) return s;
-            return s + Math.max(0, Math.floor((new Date(w.end_time).getTime() - new Date(w.start_time).getTime()) / 1000));
-        }, 0);
-        const totalCalories = Math.round(totalDistance * 0.06);
-        const totalSteps = Math.round(totalDistance * 1.3);
+        const totalDistance = data.reduce((s, w) => s + Number(w.distance_meters || 0), 0);
+        const totalDuration = data.reduce((s, w) => s + walkActiveSeconds(w), 0);
+        const totalCalories = data.reduce((s, w) => s + (w.calories_kcal || 0), 0);
+        const totalSteps = data.reduce((s, w) => s + (w.steps || 0), 0);
 
         // Faz 8 düzeltmesi: tarih karşılaştırması artık kullanıcının YEREL takvim
         // gününe göre yapılıyor (öncesinde end_time'ın UTC ISO string'i doğrudan
@@ -1983,7 +1987,7 @@ export class SupabaseApiService implements IApiService {
             totalDurationMinutes: Math.round(totalDuration / 60),
             totalCalories,
             totalSteps,
-            avgDistanceKm: data.length ? Math.round(totalDistance / data.length / 100) / 10 : 0,
+            averageDistanceKm: data.length ? Math.round(totalDistance / data.length / 100) / 10 : 0,
             longestWalkKm: Math.round(longestWalkKm * 10) / 10,
             currentStreak,
             bestStreak

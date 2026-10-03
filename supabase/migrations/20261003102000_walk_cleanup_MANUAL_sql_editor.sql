@@ -14,3 +14,6 @@ drop policy if exists "Anyone can view unexpired beacons" on public.walk_beacons
 
 -- İlk denemede 'reward' kaynağı için açılan index kullanılmıyor (ödüller 'quest' kaynağıyla yazılıyor).
 drop index if exists public.point_transactions_reward_once;
+
+-- start_walk_session (20261003110000) yerini aldı; B aşaması yayına çıktıktan sonra eski imza gereksiz.
+drop function if exists public.start_walk(text);

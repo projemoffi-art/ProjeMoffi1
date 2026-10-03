@@ -2,12 +2,9 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-    Pause, Play, ChevronLeft, Settings, MapPin, Clock,
-    AlertTriangle, Zap, Camera, Share2, Footprints
-} from "lucide-react";
-import { motion, AnimatePresence, useMotionValue, animate as animateMotionValue } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { Pause, Play, Settings, Camera, X, Zap } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn, showToast } from "@/lib/utils";
 import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
@@ -17,182 +14,159 @@ import { WALK_ISSUE_LABELS } from "@/lib/walkIssueLabels";
 import { haptics, share, device } from "@/native";
 import { audioCues } from "@/lib/audioCues";
 import { apiService } from "@/services/apiService";
+import { walkCalories, petWeightKg, formatKm, formatClock } from "@/lib/walkMetrics";
+import { WalkHeader, StatRow, PrimaryButton, SoftButton, ProgressBar } from "@/components/walk/WalkUI";
 
-// Piyasa araştırması #11: pati güvenliği uyarısı — WeatherContext'in zaten
-// bildiği gerçek sıcaklıktan türetilen, dürüst bir uyarı (uydurma bir "pati
-// sıcaklığı sensörü" değil, gerçek hava sıcaklığından mantıklı bir çıkarım).
+const WalkMap = dynamic(() => import("@/components/walk/WalkMap"), {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-[#EDE7DA]" />,
+});
+
+// Pati güvenliği: gerçek hava sıcaklığından basit, dürüst bir çıkarım.
 function pawSafetyWarning(temp: number | undefined): string | null {
     if (temp === undefined) return null;
-    if (temp >= 28) return 'Asfalt patiler için sıcak olabilir — gölgeli veya çimenli rotaları tercih et 🐾';
-    if (temp <= 0) return 'Tuzlu/karlı zemin pati tahrişi yapabilir — yürüyüş sonrası patilerini kontrol et 🐾';
+    if (temp >= 28) return 'Asfalt patiler için sıcak olabilir; gölgeli veya çimenli yolları tercih et.';
+    if (temp <= 0) return 'Tuzlu/karlı zemin patileri tahriş edebilir; dönüşte patilerini kontrol et.';
     return null;
 }
 
-const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="bg-card dark:bg-[#1A1A1A] w-full h-full flex items-center justify-center text-white font-bold">Harita Yükleniyor...</div> });
-
-// Faz 2/4: GPS durumunu referans tasarımdaki "GPS İyi" tarzı kısa bir rozete çevirir
-function gpsStatusFromIssue(issue: string) {
+function gpsPill(issue: string) {
     switch (issue) {
-        case 'none': return { label: 'GPS İyi', tone: 'emerald' as const };
-        case 'gps_searching': return { label: 'GPS Aranıyor', tone: 'amber' as const };
-        case 'gps_weak': return { label: 'GPS Zayıf', tone: 'amber' as const };
-        case 'location_lost': return { label: 'GPS Kayıp', tone: 'red' as const };
-        case 'location_permission_required': return { label: 'Konum İzni Gerekli', tone: 'red' as const };
-        case 'network_unavailable': return { label: 'Bağlantı Yok', tone: 'amber' as const };
-        case 'background_permission_required': return { label: 'Arka Planda', tone: 'amber' as const };
-        default: return { label: 'GPS Hatası', tone: 'red' as const };
+        case 'none': return { label: 'GPS İyi', tone: 'good' as const };
+        case 'gps_searching': return { label: 'GPS Aranıyor', tone: 'warn' as const };
+        case 'gps_weak': return { label: 'GPS Zayıf', tone: 'warn' as const };
+        case 'location_lost': return { label: 'GPS Kayıp', tone: 'bad' as const };
+        case 'location_permission_required': return { label: 'Konum İzni Yok', tone: 'bad' as const };
+        case 'network_unavailable': return { label: 'Çevrimdışı', tone: 'warn' as const };
+        case 'background_permission_required': return { label: 'Arka Planda', tone: 'warn' as const };
+        default: return { label: 'GPS Hatası', tone: 'bad' as const };
     }
 }
 
-const TONE_CLASS: Record<string, string> = {
-    emerald: 'text-emerald-600 bg-emerald-50',
-    amber: 'text-amber-600 bg-amber-50',
-    red: 'text-red-600 bg-red-50',
+const PILL_TONE = {
+    good: 'bg-emerald-50 text-emerald-700',
+    warn: 'bg-amber-50 text-amber-700',
+    bad: 'bg-red-50 text-red-700',
 };
+
+function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+    return (
+        <button type="button" onClick={onChange} className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0", on ? "bg-accent" : "bg-black/10 dark:bg-white/15")}>
+            <span className={cn("absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform", on ? "translate-x-5" : "translate-x-0")} />
+        </button>
+    );
+}
 
 function TrackingContent() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const mode = searchParams?.get('mode');
-    const { walkData, startWalk, pauseWalk, resumeWalk, walkIssue, autoPauseEnabled, setAutoPauseEnabled } = useActivity();
-    const { activePet } = usePet();
+    const { walkData, pauseWalk, resumeWalk, walkIssue, walkPhase, autoPauseEnabled, setAutoPauseEnabled, stepsSupported } = useActivity();
+    const { activePet, pets } = usePet();
     const { weather } = useWeather();
-    const { dailyGoal, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm } = useQuestEngine();
+    const { dailyGoal, todayDistanceKm, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm } = useQuestEngine();
 
-    const [userPos, setUserPos] = useState<[number, number]>([40.9850, 29.0300]);
-    const [path, setPath] = useState<[number, number][]>([]);
+    const walkingPet = pets.find(p => String(p.id) === String(walkData.petId)) || activePet;
+    const petName = walkData.petName || walkingPet?.name || 'Dostun';
+    const petImage = walkingPet?.avatar || walkingPet?.image || null;
+
     const [showStopConfirm, setShowStopConfirm] = useState(false);
-    const [screenAwake, setScreenAwake] = useState(false);
-    const [audioEnabled, setAudioEnabled] = useState(true);
-    // Baran'ın gerçek bulgusu: dişli ikonu sadece Wake Lock'u açıp kapatıyordu ama
-    // "Ayarlar" gibi görünüyordu — gerçek bir ayarlar sistemi yoktu. Artık gerçek bir
-    // panel: Ekranı Açık Tut + Sesli Geri Bildirim + Otomatik Duraklatma (üçü de
-    // gerçek, çalışan state'lere bağlı — hiçbiri sahte/işlevsiz değil).
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const prevWasAutoPausedRef = useRef(false);
-    const announcedStartRef = useRef(false);
-    const lastAnnouncedSplitRef = useRef(0);
-    // Piyasa araştırması #6: bu yürüyüşte çekilen fotoğraflar (gerçek Storage
-    // upload'ı — bkz. apiService.uploadWalkPhoto)
+    const [screenAwake, setScreenAwake] = useState(false);
+    const [audioEnabled, setAudioEnabled] = useState(audioCues.enabled);
     const [walkPhotos, setWalkPhotos] = useState<string[]>([]);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
-
-    // Piyasa araştırması #4: Strava Beacon tarzı canlı konum paylaşımı
     const [beaconId, setBeaconId] = useState<string | null>(null);
     const [beaconLoading, setBeaconLoading] = useState(false);
+    const prevWasAutoPausedRef = useRef(false);
+    const announcedStartRef = useRef(false);
+    const lastAnnouncedSplitRef = useRef(0);
 
-    // Baran'ın bulgusu: günlük hedef tamamen sistem tarafından belirleniyordu,
-    // kullanıcının hiç müdahale şansı yoktu. İlk denemede sabit 6 preset arasında
-    // döngü kurulmuştu ama Baran bunu hâlâ "kısıtlı" buldu — profesyonel
-    // uygulamalar (Apple Fitness, Google Fit) gerçek bir +/- stepper sunuyor,
-    // 0.5km'lik ADIMLARLA istenen HERHANGİ bir değere gidilebiliyor. "Otomatik"
-    // ayrı bir düğme olarak duruyor, sistemin hesapladığı değere tek dokunuşla
-    // dönülüyor.
-    const adjustDailyGoal = (delta: number) => {
-        haptics.tap();
-        const base = manualDailyGoalKm === null ? autoDailyGoalKm : manualDailyGoalKm;
-        const next = Math.max(0.5, Math.min(20, Math.round((base + delta) * 2) / 2));
-        setManualDailyGoalKm(next);
-    };
+    // Harita sadece alttaki kartın üstündeki görünür alanı kaplar: konum işaretçisi kartın altında kalmasın.
+    const bottomPanelRef = useRef<HTMLDivElement>(null);
+    const [bottomPanelHeight, setBottomPanelHeight] = useState(420);
+    useEffect(() => {
+        const el = bottomPanelRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(() => setBottomPanelHeight(el.offsetHeight));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [walkData.isActive]);
 
-    // Baran'ın gerçek bulgusu: gösterge paneli sabitti, kullanıcı haritayı ya da
-    // paneli tam ekran yapamıyordu. Gerçek bir sürüklenebilir bottom-sheet:
-    // 3 durak (Kısaltılmış/Varsayılan/Tam Ekran). Yanlış dokunmalara karşı
-    // hassasiyet: SADECE üstteki tutamaç sürüklemeyi başlatabiliyor — panel
-    // içeriği (istatistikler/Duraklat/Bitir) kendi alanında sürüklemeyi
-    // `stopPropagation` ile durduruyor (bkz. JSX'teki asıl uygulama ve
-    // gerekçe notu; ilk denenen `dragControls.start` deseni canlı testte
-    // ikinci jestte tamamen tepkisiz kaldığı için terk edildi).
-    type SheetState = 'collapsed' | 'default' | 'full';
-    const [sheetState, setSheetState] = useState<SheetState>('default');
-    const [viewportHeight, setViewportHeight] = useState(700);
+    const position = walkData.path.length ? walkData.path[walkData.path.length - 1] : null;
+    const distKm = walkData.distance / 1000;
+    const calories = walkCalories(distKm, petWeightKg(walkingPet));
+    const remainingKm = Math.max(0, dailyGoal.distance - todayDistanceKm);
+    const goalPercent = Math.round(Math.min(100, (todayDistanceKm / Math.max(0.1, dailyGoal.distance)) * 100));
+    const fastestSplit = walkData.splits.length ? Math.min(...walkData.splits.map(s => s.splitSeconds)) : null;
+    const pill = gpsPill(walkIssue);
+    const pawWarning = pawSafetyWarning(weather?.temp);
+
+    // Ekranı açık tut
     useEffect(() => {
-        const update = () => setViewportHeight(window.innerHeight);
-        update();
-        window.addEventListener('resize', update);
-        return () => window.removeEventListener('resize', update);
-    }, []);
-    const SHEET_HEIGHT = Math.round(viewportHeight * 0.9);
-    const COLLAPSED_VISIBLE = 128;
-    const DEFAULT_VISIBLE = Math.min(430, Math.round(viewportHeight * 0.52));
-    const snapY: Record<SheetState, number> = {
-        collapsed: SHEET_HEIGHT - COLLAPSED_VISIBLE,
-        default: SHEET_HEIGHT - DEFAULT_VISIBLE,
-        full: 0,
-    };
-    // Framer Motion gerçek tuzağı: JSX `animate` prop'u ile aynı eksende aktif
-    // `drag` birleştirilince, ikinci sürükleme jesti "layout" ölçümünü mevcut
-    // (transform uygulanmış) konuma göre yanlış referans alıp neredeyse hiç
-    // hareket etmiyordu (canlı testte doğrulandı: ilk sürükleme tam çalışıyor,
-    // ikincisi 400px hareketi ~4px'e sıkıştırıyordu). Resmi/önerilen çözüm:
-    // konumu bir `useMotionValue` ile tutup `style`e vermek, `animate` prop'u
-    // yerine imperatif `animate()` çağırmak — `drag` ve programatik animasyon
-    // AYNI motion value'yu paylaşıyor, çakışma ortadan kalkıyor.
-    const sheetY = useMotionValue(snapY.default);
-    const targetY = snapY[sheetState];
+        if (!screenAwake) return;
+        let release: (() => void) | null = null;
+        let cancelled = false;
+        device.keepScreenAwake().then(r => { if (cancelled) r(); else release = r; });
+        return () => { cancelled = true; release?.(); };
+    }, [screenAwake]);
+
+    // Sesli anonslar: başlangıç, her km, otomatik duraklama/devam
     useEffect(() => {
-        const controls = animateMotionValue(sheetY, targetY, { type: "spring", damping: 32, stiffness: 320 });
-        return () => controls.stop();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [targetY]);
-    const handleSheetDragEnd = (_e: any, info: { offset: { y: number }; velocity: { y: number } }) => {
-        const projectedY = sheetY.get();
-        let next: SheetState;
-        if (info.velocity.y > 600) {
-            next = sheetState === 'full' ? 'default' : 'collapsed';
-        } else if (info.velocity.y < -600) {
-            next = sheetState === 'collapsed' ? 'default' : 'full';
-        } else {
-            next = (Object.entries(snapY) as [SheetState, number][])
-                .sort((a, b) => Math.abs(a[1] - projectedY) - Math.abs(b[1] - projectedY))[0][0];
+        if (walkData.isActive && !announcedStartRef.current && walkData.time <= 2) {
+            announcedStartRef.current = true;
+            audioCues.walkStarted();
         }
-        if (next !== sheetState) haptics.tap();
-        setSheetState(next);
-    };
+    }, [walkData.isActive, walkData.time]);
+
+    useEffect(() => {
+        if (walkData.splits.length > lastAnnouncedSplitRef.current) {
+            const latest = walkData.splits[walkData.splits.length - 1];
+            audioCues.split(latest.km, latest.splitSeconds);
+            lastAnnouncedSplitRef.current = walkData.splits.length;
+        }
+    }, [walkData.splits]);
+
+    useEffect(() => {
+        if (walkData.isAutoPaused && !prevWasAutoPausedRef.current) { audioCues.autoPaused(); haptics.warn(); }
+        else if (!walkData.isAutoPaused && prevWasAutoPausedRef.current) { audioCues.autoResumed(); haptics.tap(); }
+        prevWasAutoPausedRef.current = walkData.isAutoPaused;
+    }, [walkData.isAutoPaused]);
+
+    // Canlı konum paylaşımı: takip ekranı açıkken her yeni konumda güncellenir, ekrandan çıkınca kapanır.
+    useEffect(() => {
+        if (beaconId && position) apiService.updateBeaconLocation(beaconId, position[0], position[1]).catch(() => {});
+    }, [beaconId, position?.[0], position?.[1]]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => () => { if (beaconId) apiService.stopBeacon(beaconId).catch(() => {}); }, [beaconId]);
 
     const toggleBeacon = async () => {
         if (beaconLoading) return;
         haptics.tap();
         if (beaconId) {
             setBeaconLoading(true);
-            try { await apiService.stopBeacon(beaconId); } catch {}
+            await apiService.stopBeacon(beaconId).catch(() => {});
             setBeaconId(null);
             setBeaconLoading(false);
             showToast('Canlı konum paylaşımı durduruldu.', 'ShieldAlert');
             return;
         }
-        if (!walkData.sessionId) {
-            showToast('Konumunu paylaşmak için önce yürüyüşün sunucuya kaydedilmesini bekle.', 'AlertCircle');
+        if (!walkData.sessionId || !position) {
+            showToast('Konumun bulunup yürüyüş kaydedilince paylaşabilirsin.', 'AlertCircle');
             return;
         }
         setBeaconLoading(true);
         try {
-            const id = await apiService.startBeacon(walkData.sessionId, activePet?.name || 'Dostum', userPos[0], userPos[1]);
+            const id = await apiService.startBeacon(walkData.sessionId, petName, position[0], position[1]);
             setBeaconId(id);
             const url = `${window.location.origin}/beacon/${id}`;
-            const r = await share.shareOrCopy({ title: 'Canlı Konumum', text: `${activePet?.name || 'Dostum'} ile yürüyorum, canlı konumumu takip edebilirsin:`, url, copyText: url });
-            if (r === 'copied') showToast('Canlı konum bağlantısı kopyalandı! Güvendiğin biriyle paylaşabilirsin.', 'Share2');
+            const r = await share.shareOrCopy({ title: 'Canlı Konumum', text: `${petName} ile yürüyorum, canlı konumumu buradan görebilirsin:`, url, copyText: url });
+            if (r === 'copied') showToast('Bağlantı kopyalandı. Sadece güvendiğin biriyle paylaş.', 'Share2');
         } catch (err) {
-            console.error('Beacon başlatılamadı:', err);
+            console.error('Canlı konum başlatılamadı:', err);
             showToast('Canlı konum paylaşımı başlatılamadı.', 'AlertCircle');
         } finally {
             setBeaconLoading(false);
         }
     };
-
-    // Beacon açıkken her gerçek konum güncellemesinde (drift kalkanını zaten
-    // geçmiş noktalar) sunucudaki tek-nokta konumu tazele.
-    useEffect(() => {
-        if (beaconId) apiService.updateBeaconLocation(beaconId, userPos[0], userPos[1]).catch(() => {});
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userPos, beaconId]);
-
-    // Yürüyüş bitince veya sayfadan ayrılınca beacon'ı otomatik kapat
-    useEffect(() => {
-        return () => { if (beaconId) apiService.stopBeacon(beaconId).catch(() => {}); };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [beaconId]);
 
     const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -203,609 +177,240 @@ function TrackingContent() {
         try {
             const url = await apiService.uploadWalkPhoto(walkData.sessionId, file);
             setWalkPhotos(prev => [...prev, url]);
-            showToast('Fotoğraf yürüyüşüne eklendi! 📸', 'Upload');
+            showToast('Fotoğraf yürüyüşüne eklendi.', 'Upload');
         } catch (err) {
             console.error('Yürüyüş fotoğrafı yüklenemedi:', err);
-            showToast('Fotoğraf yüklenemedi, tekrar deneyebilirsin.', 'AlertCircle');
+            showToast('Fotoğraf yüklenemedi, tekrar dene.', 'AlertCircle');
         } finally {
             setUploadingPhoto(false);
         }
     };
 
-    const formatTime = (sec: number) => {
-        const m = Math.floor(sec / 60).toString().padStart(2, '0');
-        const s = (sec % 60).toString().padStart(2, '0');
-        return `${m}:${s}`;
+    const adjustDailyGoal = (delta: number) => {
+        haptics.tap();
+        const base = manualDailyGoalKm ?? autoDailyGoalKm;
+        setManualDailyGoalKm(Math.max(0.5, Math.min(20, Math.round((base + delta) * 2) / 2)));
     };
 
-    // Kilodan hesaplanan kalori — ana sayfa kartı ve WalkQuickSheet ile aynı gerçek formül
-    const distKm = walkData.distance / 1000;
-    const parsedWeight = parseFloat(String(activePet?.weight ?? ''));
-    const weightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 15;
-    const calories = Math.max(0, Math.round(distKm * weightKg));
-    // Baran'ın telefonda bulduğu kritik hata: adım sayısı km*1.3 tahminine
-    // dayanıyordu — GPS'in konum farkı algılayamadığı yerlerde (ev içi, zayıf
-    // sinyal) bu asla artamıyordu. Artık `ActivityContext`'teki gerçek
-    // ivmeölçer tabanlı sayaç (`realSteps`) kullanılıyor — GPS'ten tamamen
-    // bağımsız, gerçek bir pedometre. Sensör hiç izin verilmediyse (çok nadir,
-    // ör. eski bir tarayıcı) dürüst bir mesafe tahminine düşülüyor.
-    const steps = walkData.realSteps > 0 ? walkData.realSteps : Math.round(walkData.distance * 1.3);
-    const remainingKm = Math.max(0, dailyGoal.distance - distKm);
-    const goalPercent = Math.round(Math.min(100, (distKm / Math.max(0.1, dailyGoal.distance)) * 100));
-    const gpsStatus = gpsStatusFromIssue(walkIssue);
-
-    // --- SYNC MAP WITH GLOBAL GPS ---
-    useEffect(() => {
-        if (walkData && Array.isArray(walkData.path) && walkData.path.length > 0) {
-            const lastPos = walkData.path[walkData.path.length - 1];
-            setUserPos(lastPos);
-            setPath(walkData.path);
-        }
-    }, [walkData?.path]);
-
-    // Faz 4 (referans revizyonu): Ekranı Açık Tut — gerçek Wake Lock API, GPS takibi
-    // sırasında ekranın kararıp kilitlenmesi çok yaygın bir şikayet olduğu için eklendi.
-    useEffect(() => {
-        if (!screenAwake) return;
-        let release: (() => void) | null = null;
-        let cancelled = false;
-        device.keepScreenAwake().then(r => { if (cancelled) r(); else release = r; });
-        return () => { cancelled = true; release?.(); };
-    }, [screenAwake]);
-
-    // Piyasa araştırması #3: sesli geri bildirim tetikleyicileri — sadece
-    // gerçek durum değişikliklerinde konuşuyor (yürüyüş başlangıcı bir kez,
-    // her yeni split bir kez, otomatik duraklatma/devam geçişleri).
-    useEffect(() => {
-        if (walkData.isActive && !announcedStartRef.current && walkData.time <= 2) {
-            announcedStartRef.current = true;
-            audioCues.walkStarted();
-        }
-    }, [walkData.isActive, walkData.time]);
-
-    useEffect(() => {
-        const splits = walkData.splits || [];
-        if (splits.length > lastAnnouncedSplitRef.current) {
-            const latest = splits[splits.length - 1];
-            audioCues.split(latest.km, latest.splitSeconds);
-            lastAnnouncedSplitRef.current = splits.length;
-        }
-    }, [walkData.splits]);
-
-    useEffect(() => {
-        if (walkData.isAutoPaused && !prevWasAutoPausedRef.current) {
-            audioCues.autoPaused();
-            haptics.warn();
-        } else if (!walkData.isAutoPaused && prevWasAutoPausedRef.current) {
-            audioCues.autoResumed();
-            haptics.tap();
-        }
-        prevWasAutoPausedRef.current = walkData.isAutoPaused;
-    }, [walkData.isAutoPaused]);
-
-    // Handle Finish — Faz 6: stopWalk walkData'yı sıfırlamadan önce anlık görüntüyü al,
-    // sonra Ekran 6'daki (design-reference/walk-final/) gerçek "İşleme Ekranı"na
-    // yönlendir — stopWalk() ÇAĞRISI ARTIK ORADA yapılıyor, burada değil.
-    const handleFinish = async () => {
+    const handleFinish = () => {
         haptics.success();
         audioCues.walkFinished(distKm);
         if (beaconId) { apiService.stopBeacon(beaconId).catch(() => {}); setBeaconId(null); }
-        const summaryDistanceKm = distKm;
-        const summaryDurationSec = walkData.time;
-        const summaryCalories = calories;
-        const summarySteps = steps;
-        // Piyasa araştırması #5/#13: bu yürüyüşün en hızlı kilometresi ve kısa
-        // duraklama sayısı özet ekranına taşınıyor (kişisel rekor karşılaştırması
-        // ve eğlenceli "durma sayacı" için).
-        const bestSplitSeconds = (walkData.splits && walkData.splits.length > 0)
-            ? Math.min(...walkData.splits.map(s => s.splitSeconds))
-            : undefined;
-        const params = new URLSearchParams({
-            distanceKm: String(summaryDistanceKm),
-            durationSec: String(summaryDurationSec),
-            calories: String(summaryCalories),
-            steps: String(summarySteps),
-            sniffStops: String(walkData.sniffStops || 0),
-        });
-        if (bestSplitSeconds !== undefined) params.set('bestSplitSeconds', String(bestSplitSeconds));
+        const params = new URLSearchParams({ sniffStops: String(walkData.sniffStops || 0) });
+        if (fastestSplit !== null) params.set('bestSplitSeconds', String(fastestSplit));
         router.replace(`/walk/processing?${params.toString()}`);
     };
 
-    return (
-        <div className="h-screen w-full bg-white dark:bg-black relative overflow-hidden flex flex-col font-sans">
-
-            {/* HEADER — gösterge paneli tam ekran ('full') olduğunda haritanın üzerindeki
-                bu yüzen katman, panelin tutamacının TAM ÜSTÜNE binip tıklama/sürükleme
-                olaylarını yutuyordu (canlı Playwright testiyle kanıtlanan gerçek bir hata:
-                paneli tam ekrana çektikten sonra kullanıcı BİR DAHA ASLA geri
-                çekemiyordu, çünkü tutamaç bu z-[60] katmanın altında kalıyordu). Panel tam
-                ekranken zaten gösterecek bir harita yok, bu yüzden bu katman görünmez VE
-                tıklanamaz hale getiriliyor — kök neden çözümü, geçici bir z-index yaması
-                değil. */}
-            <div className={cn(
-                "absolute top-0 left-0 right-0 z-[60] px-4 pt-4 flex items-center justify-between transition-opacity duration-200",
-                sheetState === 'full' ? "opacity-0 pointer-events-none" : "opacity-100"
-            )}>
-                <button
-                    onClick={() => { haptics.tap(); router.back(); }}
-                    className="w-10 h-10 bg-white/90 dark:bg-black/60 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all"
-                >
-                    <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-white" />
-                </button>
-                <span className="font-black text-[13px] text-slate-800 dark:text-white bg-white/90 dark:bg-black/60 backdrop-blur-md px-4 py-2 rounded-full shadow-lg">
-                    {activePet?.name || 'Moffi'} ile Yürüyüş
-                </span>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => { haptics.tap(); setAudioEnabled(v => { const next = !v; audioCues.setEnabled(next); return next; }); }}
-                        className={cn(
-                            "w-10 h-10 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all",
-                            audioEnabled ? "bg-white/90 dark:bg-black/60 text-slate-700 dark:text-white" : "bg-slate-800 text-white"
-                        )}
-                        title="Sesli Geri Bildirim"
-                    >
-                        {audioEnabled ? <span className="text-base leading-none">🔊</span> : <span className="text-base leading-none">🔇</span>}
-                    </button>
-                    <button
-                        onClick={() => { haptics.tap(); setIsSettingsOpen(true); }}
-                        className="w-10 h-10 bg-white/90 dark:bg-black/60 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all text-slate-700 dark:text-white"
-                        title="Ayarlar"
-                    >
-                        <Settings className="w-5 h-5" />
-                    </button>
+    if (!walkData.isActive && walkPhase !== 'completing') {
+        return (
+            <div className="min-h-[100dvh] flex flex-col">
+                <WalkHeader title="Yürüyüş" onBack={() => router.replace('/home')} />
+                <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+                    <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center text-4xl mb-5">🐾</div>
+                    <h2 className="text-lg font-extrabold mb-1.5">Şu an aktif bir yürüyüş yok</h2>
+                    <p className="text-[13px] text-secondary mb-8">Yeni bir yürüyüşü hazırlık ekranından başlatabilirsin.</p>
+                    <PrimaryButton onClick={() => router.replace('/home?openWalk=true')}>Yürüyüşe Hazırlan</PrimaryButton>
                 </div>
             </div>
+        );
+    }
 
-            {/* STATUS PILLS — aynı sebeple ('full' durumunda tutamacı engelliyordu) */}
-            <div className={cn(
-                "absolute top-16 left-4 right-4 z-[55] flex flex-wrap gap-2 transition-opacity duration-200",
-                sheetState === 'full' ? "opacity-0 pointer-events-none" : "opacity-100"
-            )}>
-                <span className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg backdrop-blur-md", TONE_CLASS[gpsStatus.tone])}>
-                    <MapPin className="w-3 h-3" /> {gpsStatus.label}
-                </span>
-                {weather && (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg bg-white/90 dark:bg-black/60 backdrop-blur-md text-slate-700 dark:text-white">
-                        <span>{weather.icon}</span> Hava {weather.temp}°C
-                    </span>
-                )}
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg bg-white/90 dark:bg-black/60 backdrop-blur-md text-slate-700 dark:text-white">
-                    <Clock className="w-3 h-3" /> {Math.floor(walkData.time / 60)} dk
-                </span>
-                {/* Ekran 4 (Duraklatılmış) yeniden inşası — referansta harita KARARMIYOR,
-                    sadece küçük bir rozet duraklatıldığını gösteriyor (bkz. design-reference/walk-final/). */}
-                {walkData.isActive && walkData.isPaused && (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg bg-black/70 backdrop-blur-md text-white">
-                        <Pause className="w-3 h-3 fill-current" /> {walkData.isAutoPaused ? 'Otomatik Duraklatıldı' : 'Duraklatıldı'}
-                    </span>
-                )}
-                {walkData.splits && walkData.splits.length > 0 && (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg bg-white/90 dark:bg-black/60 backdrop-blur-md text-slate-700 dark:text-white">
-                        <Zap className="w-3 h-3 text-amber-500" /> En hızlı km: {formatTime(Math.min(...walkData.splits.map(s => s.splitSeconds)))}
-                    </span>
-                )}
-                {/* Piyasa araştırması #4: Strava Beacon tarzı canlı konum paylaşımı — tek
-                    dokunuşla bir bağlantı üretip güvenilen birine gönderme */}
-                <button
-                    onClick={toggleBeacon}
-                    disabled={beaconLoading}
-                    className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg backdrop-blur-md border-0 cursor-pointer disabled:opacity-60",
-                        beaconId ? "bg-emerald-500 text-white" : "bg-white/90 dark:bg-black/60 text-slate-700 dark:text-white"
-                    )}
-                >
-                    <Share2 className="w-3 h-3" /> {beaconId ? 'Konum Paylaşılıyor' : 'Konumu Paylaş'}
-                </button>
+    const isPaused = walkData.isPaused;
+
+    return (
+        <div className="h-[100dvh] w-full relative overflow-hidden">
+            <div className="absolute inset-x-0 top-0 z-0" style={{ bottom: Math.max(0, bottomPanelHeight - 28), ['--walkmap-controls-top' as string]: '128px' }}>
+                <WalkMap mode="live" path={walkData.path} current={position} petImage={petImage} topInset={140} />
             </div>
-
-            {/* Uyarı bandı yığını: GPS/izin/bağlantı sorunu VE pati güvenliği uyarısı
-                aynı anda görünebileceği için tek bir dikey yığın olarak konumlandırıldı
-                (ikisi de "top-28"e bağımsız oturursa üst üste biner). */}
-            <div className={cn(
-                "absolute top-28 left-4 right-4 z-[55] space-y-2 transition-opacity duration-200",
-                sheetState === 'full' ? "opacity-0 pointer-events-none" : "opacity-100"
-            )}>
-                {walkIssue !== 'none' && (
-                    <div className="bg-amber-500 text-white rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-lg">
-                        <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span className="text-[10.5px] font-bold leading-snug">{WALK_ISSUE_LABELS[walkIssue] || WALK_ISSUE_LABELS.error}</span>
-                    </div>
+            <AnimatePresence>
+                {isPaused && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[5] bg-[#1E1A15]/45 pointer-events-none" />
                 )}
-                {/* Piyasa araştırması #11: pati güvenliği uyarısı — gerçek hava sıcaklığından */}
-                {pawSafetyWarning(weather?.temp) && (
-                    <div className="bg-orange-500 text-white rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-lg">
-                        <span className="text-base shrink-0">🐾</span>
-                        <span className="text-[10.5px] font-bold leading-snug">{pawSafetyWarning(weather?.temp)}</span>
-                    </div>
-                )}
-            </div>
+            </AnimatePresence>
 
-            {/* LIVE MAP — artık tam ekran arka plan; alttaki gösterge paneli üzerine
-                sürüklenebilir bir katman olarak biniyor (bkz. aşağısı) */}
-            <div className="absolute inset-0 z-[0]">
-                <LiveMap
-                    userPos={userPos}
-                    path={path}
-                    isTracking={walkData.isActive}
-                    visitedPlaceIds={[]}
-                    guardianMode={mode === 'guardian'}
-                    hideInternalUI
+            <div className="absolute top-0 inset-x-0 z-20 bg-gradient-to-b from-background via-background/85 to-transparent pb-6">
+                <WalkHeader
+                    title={`${petName} ile Yürüyüş`}
+                    transparent
+                    right={
+                        <button type="button" onClick={() => { haptics.tap(); setIsSettingsOpen(true); }} aria-label="Ayarlar" className="w-11 h-11 rounded-full flex items-center justify-center active:scale-95">
+                            <Settings className="w-[22px] h-[22px] text-foreground" />
+                        </button>
+                    }
                 />
+                <div className="px-4 flex flex-wrap gap-2">
+                    <span className={cn("h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5", PILL_TONE[pill.tone])}>
+                        <span className="w-2 h-2 rounded-full bg-current" /> {pill.label}
+                    </span>
+                    {weather && (
+                        <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5 bg-card text-foreground border border-card-border">
+                            {weather.emoji} {Math.round(weather.temp)}°C
+                        </span>
+                    )}
+                    <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5 bg-card text-foreground border border-card-border">
+                        ⏱ {Math.floor(walkData.time / 60)} dk
+                    </span>
+                    {beaconId && (
+                        <span className="h-9 px-3.5 rounded-full text-[12px] font-bold flex items-center bg-foreground text-background">Konum paylaşılıyor</span>
+                    )}
+                </div>
+                {(walkIssue !== 'none' || pawWarning) && (
+                    <div className="px-4 mt-2 space-y-2">
+                        {walkIssue !== 'none' && (
+                            <div className="rounded-2xl bg-amber-50 text-amber-800 text-[12px] font-semibold px-3.5 py-2.5 border border-amber-100">
+                                {WALK_ISSUE_LABELS[walkIssue] || WALK_ISSUE_LABELS.error}
+                            </div>
+                        )}
+                        {pawWarning && (
+                            <div className="rounded-2xl bg-card text-foreground text-[12px] font-semibold px-3.5 py-2.5 border border-card-border">🐾 {pawWarning}</div>
+                        )}
+                    </div>
+                )}
+            </div>
 
-                {/* Piyasa araştırması #6: yürüyüş sırasında fotoğraf çekme — gerçek
-                    Supabase Storage upload'ı, dummy görsel değil (bkz. apiService.uploadWalkPhoto).
-                    Panel tam ekranken (sheetState 'full') haritanın üzerinde anlamsız
-                    kaldığı için gizleniyor. */}
-                {sheetState !== 'full' && (
-                    <>
-                        <input
-                            ref={photoInputRef}
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            className="hidden"
-                            onChange={handlePhotoSelected}
-                        />
+            <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoSelected} />
+
+            <div className="absolute inset-x-0 bottom-0 z-20">
+                {!isPaused && (
+                    <div className="flex justify-end px-4 mb-3">
                         <button
+                            type="button"
                             onClick={() => { if (!uploadingPhoto) photoInputRef.current?.click(); }}
                             disabled={uploadingPhoto || !walkData.sessionId}
-                            className="absolute z-[40] w-14 h-14 rounded-full bg-white/95 dark:bg-black/70 backdrop-blur-md shadow-lg border border-card-border flex items-center justify-center active:scale-95 transition-all disabled:opacity-50"
-                            style={{ bottom: (SHEET_HEIGHT - snapY[sheetState]) + 16, right: 16 }}
-                            title="Fotoğraf Çek"
+                            className="relative w-12 h-12 rounded-2xl bg-white shadow-lg flex items-center justify-center active:scale-95 disabled:opacity-50"
+                            aria-label="Fotoğraf çek"
                         >
-                            {uploadingPhoto ? (
-                                <span className="w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                            ) : (
-                                <Camera className="w-6 h-6 text-slate-700 dark:text-white" />
+                            {uploadingPhoto
+                                ? <span className="w-5 h-5 border-2 border-black/15 border-t-[#201B16] rounded-full animate-spin" />
+                                : <Camera className="w-5 h-5 text-[#201B16]" />}
+                            {walkPhotos.length > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">{walkPhotos.length}</span>
                             )}
                         </button>
-                        {walkPhotos.length > 0 && (
-                            <span
-                                className="absolute z-[40] bg-white/95 dark:bg-black/70 backdrop-blur-md shadow-lg rounded-full px-2.5 py-1 text-[10px] font-black text-slate-700 dark:text-white"
-                                style={{ bottom: (SHEET_HEIGHT - snapY[sheetState]) + 28, right: 80 }}
-                            >
-                                📸 {walkPhotos.length}
-                            </span>
-                        )}
-                    </>
+                    </div>
                 )}
-            </div>
 
-            {/* GERÇEK SÜRÜKLENEBİLİR GÖSTERGE PANELİ (bkz. yukarıdaki snapY açıklaması) —
-                Baran'ın bulduğu gerçek eksiklik: panel sabitti, kullanıcı haritayı ya da
-                paneli tam ekran yapamıyordu.
-                NOT: `useDragControls()` + `dragListener={false}` + handle'ın
-                `onPointerDown`'ında `dragControls.start(e)` — Framer'ın KENDİ önerdiği
-                "sadece tutamaçtan sürükle" deseni — canlı testte gerçek bir Framer Motion
-                hatası çıkardı: İLK sürükleme jesti çalışıyor, ama ikinci ve sonraki HER
-                jest tamamen tepkisiz kalıyordu (yön farketmeksizin, 20+ adımlı yavaş/
-                gerçekçi sürükleme dahil, playwright ile kanıtlandı) — framer/motion
-                GitHub'ında da (#712, #525) bilinen, versiyondan bağımsız bir dragControls
-                tekrar-jest sorunu. Bunun yerine sürükleme DOĞRUDAN bu panelin kendi
-                üzerinde dinleniyor (varsayılan dragListener), ve içerik alanı (istatistik/
-                buton bölümü) kendi `onPointerDown`'ında `stopPropagation()` çağırarak
-                sürüklemeyi bu paneldeki dokunuşlardan İZOLE ediyor — SADECE üstteki
-                tutamaç bu izolasyonun DIŞINDA olduğu için sürüklemeyi başlatabiliyor. Aynı
-                güvenlik hedefine (yanlış dokunmalara karşı hassasiyet) ulaşan, ama
-                gerçekte çalışan bir yöntem. */}
-            <motion.div
-                className="absolute left-0 right-0 bottom-0 z-[50] bg-card rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] flex flex-col touch-none"
-                style={{ height: SHEET_HEIGHT, y: sheetY }}
-                drag="y"
-                dragConstraints={{ top: 0, bottom: SHEET_HEIGHT - COLLAPSED_VISIBLE }}
-                dragElastic={0.04}
-                dragMomentum={false}
-                onDragEnd={handleSheetDragEnd}
-            >
-                {/* Tutamaç — bu SADECE görsel bir ipucu değil, panelin geri kalanı
-                    sürüklemeyi kendi içinde durdurduğu için (aşağıya bkz.) sürüklemeyi
-                    başlatabilen TEK alan burası. */}
-                <div className="pt-3 pb-2 flex flex-col items-center cursor-grab active:cursor-grabbing shrink-0">
-                    <div className="w-10 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full" />
-                </div>
-
-                <div
-                    className="flex-1 overflow-y-auto px-6 pb-8 no-scrollbar"
-                    onPointerDown={(e) => e.stopPropagation()}
-                >
-                    {/* Ekran 4 (Duraklatılmış): referansa göre büyük sayı/ilerleme yerine tek
-                        satırlık kompakt bir özet gösteriliyor — bkz. design-reference/walk-final/. */}
-                    {walkData.isActive && walkData.isPaused ? (
-                        <div className="flex items-center gap-2.5 mb-5 bg-slate-50 dark:bg-white/5 rounded-2xl px-4 py-3.5">
-                            <Pause className="w-4 h-4 text-slate-500 dark:text-slate-300 fill-current shrink-0" />
-                            <span className="text-[12px] font-black text-slate-700 dark:text-slate-200 leading-snug">
-                                Yürüyüş Duraklatıldı · {steps.toLocaleString('tr-TR')} adım · {distKm.toFixed(2).replace('.', ',')} km · {formatTime(walkData.time)}
-                            </span>
+                <div ref={bottomPanelRef} className="bg-card rounded-t-[28px] shadow-[0_-10px_30px_rgba(0,0,0,0.10)] px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
+                    {isPaused ? (
+                        <div className="flex flex-col items-center text-center mb-5">
+                            <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mb-3">
+                                <Pause className="w-6 h-6 text-accent fill-current" />
+                            </div>
+                            <h2 className="text-[19px] font-extrabold">{walkData.isAutoPaused ? 'Otomatik Duraklatıldı' : 'Yürüyüş Duraklatıldı'}</h2>
+                            <p className="text-[14px] text-secondary font-semibold mt-1">
+                                {formatKm(distKm)} km · {formatClock(walkData.time)} · {calories} kcal
+                            </p>
+                            {walkData.isAutoPaused && <p className="text-[12px] text-secondary mt-1">Yürümeye başlayınca kendiliğinden devam eder.</p>}
                         </div>
                     ) : (
                         <>
-                            {/* Piyasa araştırması bulgusu: ADIM artık birincil, büyük gösterge —
-                                km ikincil/küçük bir satıra indi (önceden tam tersiydi, adım hiç
-                                yoktu). Aynı dürüst tahmin formülü (mesafe*1.3), sadece görünürlüğü
-                                değişti. */}
-                            <div className="flex items-baseline gap-2 mb-0.5">
-                                <span className="text-4xl font-black tracking-tighter text-slate-800 dark:text-white font-mono">{steps.toLocaleString('tr-TR')}</span>
-                                <span className="text-sm font-black text-slate-400 uppercase">adım</span>
+                            <StatRow
+                                size="lg"
+                                items={[
+                                    { value: formatKm(distKm), unit: 'km', label: 'Mesafe' },
+                                    { value: formatClock(walkData.time), label: 'Süre' },
+                                    { value: calories, unit: 'kcal', label: 'Kalori' },
+                                ]}
+                            />
+                            <div className="mt-5 mb-2 flex items-center justify-between text-[12px] font-bold">
+                                <span className="text-foreground">{remainingKm > 0 ? `Hedefe kalan ${formatKm(remainingKm)} km` : 'Günlük hedef tamam 🎉'}</span>
+                                <span className="text-emerald-600 text-[14px]">%{goalPercent}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-500 dark:text-slate-300 mb-4">
-                                <Footprints className="w-3.5 h-3.5 text-slate-400" /> {distKm.toFixed(2).replace('.', ',')} km
-                            </div>
-
-                            <div className="flex items-center gap-5 mb-4">
-                                <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-500 dark:text-slate-300">
-                                    <Clock className="w-3.5 h-3.5 text-slate-400" /> {formatTime(walkData.time)}
-                                </div>
-                                <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-500 dark:text-slate-300">
-                                    🔥 {calories} kcal
-                                </div>
-                            </div>
-
-                            <div className="mb-5">
-                                <div className="flex justify-between items-center mb-1.5">
-                                    <span className="text-[10px] font-bold text-slate-400">Hedefe kalan: {remainingKm.toFixed(1)} km</span>
-                                    <span className="text-[11px] font-black text-orange-500">%{goalPercent}</span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full rounded-full bg-orange-500 transition-all" style={{ width: `${Math.max(3, goalPercent)}%` }} />
-                                </div>
+                            <ProgressBar percent={goalPercent} />
+                            <div className="mt-3 flex items-center gap-3 text-[11.5px] font-semibold text-secondary">
+                                <span>👣 {stepsSupported ? `${walkData.realSteps.toLocaleString('tr-TR')} adım` : 'Adım sayar yok'}</span>
+                                {fastestSplit !== null && <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-accent" /> En hızlı km {formatClock(fastestSplit)}</span>}
+                                {!!walkData.sniffStops && <span>👃 {walkData.sniffStops} mola</span>}
                             </div>
                         </>
                     )}
 
-                    {/* Baran'ın isteği: tutamacı tam ekrana çekmenin gerçek bir amacı olmalı —
-                        sadece aynı içeriği büyütmek değil. Panel tam ekrandayken buraya gerçek,
-                        canlı veriden gelen EK bilgiler ekleniyor: kilometre-arası split analizi
-                        (zaten Faz 7'den beri `walkData.splits`'te tutuluyordu ama sadece tek bir
-                        "en hızlı km" rozeti olarak yüzeye çıkıyordu) ve durma/koklama sayacı. */}
-                    {sheetState === 'full' && (
-                        <div className="mb-5 pt-1 border-t border-slate-100 dark:border-white/5">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mt-4 mb-2.5">Kilometre Analizi</span>
-                            {walkData.splits && walkData.splits.length > 0 ? (
-                                <div className="space-y-1.5 mb-4">
-                                    {walkData.splits.map((s) => {
-                                        const fastest = Math.min(...walkData.splits.map(x => x.splitSeconds));
-                                        return (
-                                            <div key={s.km} className="flex items-center justify-between bg-slate-50 dark:bg-white/5 rounded-xl px-3.5 py-2.5">
-                                                <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300">{s.km}. km</span>
-                                                <div className="flex items-center gap-1.5">
-                                                    {s.splitSeconds === fastest && <Zap className="w-3 h-3 text-amber-500" />}
-                                                    <span className="text-[12px] font-black text-slate-800 dark:text-white font-mono">{formatTime(s.splitSeconds)}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <p className="text-[11px] font-bold text-slate-400 mb-4">Henüz tam bir kilometre tamamlanmadı — ilk km'yi bitirince buradaki split analizi dolmaya başlar.</p>
-                            )}
-
-                            {!!walkData.sniffStops && walkData.sniffStops > 0 && (
-                                <div className="flex items-center justify-between bg-slate-50 dark:bg-white/5 rounded-xl px-3.5 py-2.5 mb-4">
-                                    <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300">🐽 Durma / Koklama Molası</span>
-                                    <span className="text-[12px] font-black text-slate-800 dark:text-white">{walkData.sniffStops} kez</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Ekran 5 (Bitirme Onayı) artık burada inline bir buton takası değil, aşağıdaki
-                        gerçek dimmed-backdrop modal'a (showStopConfirm) devrediliyor. */}
-                    <div className="space-y-2.5">
-                        <motion.button
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => {
-                                haptics.tap();
-                                if (!walkData.isActive) startWalk();
-                                else if (walkData.isPaused) resumeWalk();
-                                else pauseWalk();
-                            }}
-                            className={cn(
-                                "w-full h-14 text-white rounded-full flex items-center justify-center gap-2 font-black text-[13px] uppercase tracking-widest border-0",
-                                (!walkData.isActive || walkData.isPaused)
-                                    ? "bg-orange-500 shadow-[0_8px_20px_rgba(249,115,22,0.3)]"
-                                    : "bg-slate-900 shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
-                            )}
-                        >
-                            {(!walkData.isActive || walkData.isPaused) ? (
-                                <><Play className="w-4 h-4 fill-current" /> Devam Et</>
-                            ) : (
-                                <><Pause className="w-4 h-4 fill-current" /> Duraklat</>
-                            )}
-                        </motion.button>
-                        <motion.button
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => { haptics.tap(); setShowStopConfirm(true); }}
-                            className="w-full h-12 bg-red-50 text-red-500 rounded-full font-black text-[12px] uppercase tracking-widest border-0"
-                        >
-                            Yürüyüşü Bitir
-                        </motion.button>
+                    <div className="space-y-2.5 mt-5">
+                        <PrimaryButton onClick={() => { haptics.tap(); if (isPaused) resumeWalk(); else pauseWalk(); }}>
+                            {isPaused ? <><Play className="w-4 h-4 fill-current" /> Devam Et</> : <><Pause className="w-4 h-4 fill-current" /> Duraklat</>}
+                        </PrimaryButton>
+                        <SoftButton onClick={() => { haptics.tap(); setShowStopConfirm(true); }}>Yürüyüşü Bitir</SoftButton>
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
-            {/* Ekran 5 (Bitirme Onayı) — design-reference/walk-final/'e göre gerçek bir
-                dimmed-backdrop modal: harita arka planda kararıyor, X ile kapanıyor. */}
+            {/* Bitirme onayı (Ekran 5) */}
             <AnimatePresence>
                 {showStopConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-center justify-center px-6"
-                        onClick={() => { haptics.tap(); setShowStopConfirm(false); }}
-                    >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] bg-black/45 flex items-end" onClick={() => setShowStopConfirm(false)}>
                         <motion.div
-                            initial={{ scale: 0.92, opacity: 0, y: 10 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.95, opacity: 0, y: 6 }}
+                            initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}
                             transition={{ type: "spring", damping: 28, stiffness: 320 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-xs bg-card rounded-3xl p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10"
+                            onClick={e => e.stopPropagation()}
+                            className="w-full bg-card rounded-t-[28px] px-6 pt-5 pb-[max(24px,env(safe-area-inset-bottom))]"
                         >
-                            <button
-                                onClick={() => { haptics.tap(); setShowStopConfirm(false); }}
-                                className="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center border-0 cursor-pointer"
-                            >
-                                <span className="sr-only">Kapat</span>
-                                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                            </button>
-                            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
-                                <Pause className="w-6 h-6 text-red-500 fill-current" />
+                            <div className="flex justify-end">
+                                <button type="button" onClick={() => setShowStopConfirm(false)} aria-label="Kapat" className="w-9 h-9 rounded-full flex items-center justify-center">
+                                    <X className="w-5 h-5 text-foreground" />
+                                </button>
                             </div>
-                            <h3 className="text-base font-black text-slate-800 dark:text-slate-100 mb-4 leading-snug pr-6">Yürüyüşü bitirmek istediğinize emin misiniz?</h3>
-                            <div className="grid grid-cols-3 gap-2 mb-5">
-                                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl py-3 flex flex-col items-center">
-                                    <span className="text-sm font-black text-slate-800 dark:text-white">{steps.toLocaleString('tr-TR')}</span>
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Adım</span>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl py-3 flex flex-col items-center">
-                                    <span className="text-sm font-black text-slate-800 dark:text-white">{distKm.toFixed(2).replace('.', ',')} km</span>
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Mesafe</span>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl py-3 flex flex-col items-center">
-                                    <span className="text-sm font-black text-slate-800 dark:text-white">{formatTime(walkData.time)}</span>
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Süre</span>
-                                </div>
+                            <h3 className="text-[21px] font-extrabold text-center leading-snug px-6 mb-6">Yürüyüşü bitirmek istediğine emin misin?</h3>
+                            <div className="mb-7">
+                                <StatRow items={[
+                                    { value: formatKm(distKm), unit: 'km', label: 'Mesafe' },
+                                    { value: formatClock(walkData.time), label: 'Süre' },
+                                ]} />
                             </div>
                             <div className="space-y-2.5">
-                                <motion.button whileTap={{ scale: 0.96 }} onClick={handleFinish} className="w-full h-13 py-3.5 bg-red-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest border-0">
-                                    Yürüyüşü Bitir
-                                </motion.button>
-                                <motion.button whileTap={{ scale: 0.96 }} onClick={() => { haptics.tap(); setShowStopConfirm(false); }} className="w-full py-3 text-slate-500 dark:text-slate-400 rounded-2xl font-black text-[11px] uppercase tracking-widest border-0 bg-transparent">
-                                    Devam Et
-                                </motion.button>
+                                <PrimaryButton onClick={handleFinish}>Yürüyüşü Bitir</PrimaryButton>
+                                <SoftButton onClick={() => setShowStopConfirm(false)}>Devam Et</SoftButton>
                             </div>
                         </motion.div>
                     </motion.div>
                 )}
 
-                {/* GERÇEK AYARLAR PANELİ — dişli ikonu önceden sadece Wake Lock'u açıp
-                    kapatıyordu (görünüşte "Ayarlar" ama arkasında tek, gizli bir işlev).
-                    Artık üç gerçek, çalışan tercih burada: Ekranı Açık Tut, Sesli Geri
-                    Bildirim, Otomatik Duraklatma (üçü de gerçek state'lere bağlı). */}
                 {isSettingsOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[80] bg-black/55 backdrop-blur-sm flex items-end justify-center"
-                        onClick={() => { haptics.tap(); setIsSettingsOpen(false); }}
-                    >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] bg-black/45 flex items-end" onClick={() => setIsSettingsOpen(false)}>
                         <motion.div
-                            initial={{ y: 40, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 20, opacity: 0 }}
+                            initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}
                             transition={{ type: "spring", damping: 30, stiffness: 320 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-md bg-card rounded-t-[2rem] p-6 pb-8 shadow-2xl border-t border-card-border"
+                            onClick={e => e.stopPropagation()}
+                            className="w-full bg-card rounded-t-[28px] px-6 pt-5 pb-[max(24px,env(safe-area-inset-bottom))]"
                         >
-                            <div className="w-10 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-5" />
-                            <h3 className="text-base font-black text-slate-800 dark:text-slate-100 mb-5">Yürüyüş Ayarları</h3>
+                            <div className="w-10 h-1.5 rounded-full bg-black/10 mx-auto mb-5" />
+                            <h3 className="text-[17px] font-extrabold mb-3">Yürüyüş Ayarları</h3>
 
-                            <div className="space-y-1">
-                                {/* Baran'ın bulgusu: hedef tamamen sistem tarafından belirleniyordu,
-                                    kullanıcının hiç söz hakkı yoktu. İlk sürümde 6 sabit preset arasında
-                                    döngü vardı ama bu da "kısıtlı" hissettiriyordu — artık gerçek bir
-                                    +/- stepper: 0.5km'lik adımlarla HERHANGİ bir değere gidilebiliyor,
-                                    "Otomatik" ayrı bir düğme (sistemin kendi hesapladığı değere döner). */}
-                                <div className="py-3">
-                                    <div className="flex items-center justify-between mb-2.5">
-                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Günlük Hedef</div>
-                                        <button
-                                            onClick={() => { haptics.tap(); setManualDailyGoalKm(null); }}
-                                            className={cn(
-                                                "text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border-0",
-                                                manualDailyGoalKm === null ? "bg-orange-500 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400"
-                                            )}
-                                        >
-                                            Otomatik
-                                        </button>
+                            <div className="divide-y divide-card-border">
+                                <div className="py-3.5">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-[14px] font-bold">Günlük hedef</span>
+                                        <button type="button" onClick={() => { haptics.tap(); setManualDailyGoalKm(null); }} className={cn("text-[11px] font-bold px-3 py-1 rounded-full", manualDailyGoalKm === null ? "bg-accent text-white" : "bg-black/5 text-secondary")}>Otomatik</button>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => adjustDailyGoal(-0.5)}
-                                            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-black text-lg flex items-center justify-center shrink-0 border-0 active:scale-90 transition-transform"
-                                        >
-                                            −
-                                        </button>
-                                        <div className="flex-1 text-center">
-                                            <span className="text-lg font-black text-slate-800 dark:text-white">{dailyGoal.distance.toFixed(1)} km</span>
-                                            {manualDailyGoalKm === null && (
-                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Otomatik hesaplanıyor</div>
-                                            )}
+                                        <button type="button" onClick={() => adjustDailyGoal(-0.5)} className="w-10 h-10 rounded-full bg-black/5 text-[20px] font-bold">−</button>
+                                        <span className="flex-1 text-center text-[18px] font-extrabold">{formatKm(dailyGoal.distance, 1)} km</span>
+                                        <button type="button" onClick={() => adjustDailyGoal(0.5)} className="w-10 h-10 rounded-full bg-accent text-white text-[20px] font-bold">+</button>
+                                    </div>
+                                </div>
+                                {[
+                                    { title: 'Ekranı açık tut', desc: 'Yürüyüş sırasında ekran kararmaz', on: screenAwake, toggle: () => setScreenAwake(v => !v) },
+                                    { title: 'Sesli geri bildirim', desc: 'Kilometre ve durum anonsları', on: audioEnabled, toggle: () => setAudioEnabled(v => { audioCues.setEnabled(!v); return !v; }) },
+                                    { title: 'Otomatik duraklatma', desc: 'Durunca yürüyüş kendiliğinden duraklar', on: autoPauseEnabled, toggle: () => setAutoPauseEnabled(!autoPauseEnabled) },
+                                    { title: 'Canlı konumu paylaş', desc: 'Bağlantıyı alan kişi konumunu görür (bu ekran açıkken)', on: !!beaconId, toggle: toggleBeacon },
+                                ].map(row => (
+                                    <div key={row.title} className="py-3.5 flex items-center justify-between gap-4">
+                                        <div>
+                                            <div className="text-[14px] font-bold">{row.title}</div>
+                                            <div className="text-[12px] text-secondary mt-0.5">{row.desc}</div>
                                         </div>
-                                        <button
-                                            onClick={() => adjustDailyGoal(0.5)}
-                                            className="w-9 h-9 rounded-full bg-orange-500 text-white font-black text-lg flex items-center justify-center shrink-0 border-0 active:scale-90 transition-transform"
-                                        >
-                                            +
-                                        </button>
+                                        <Toggle on={row.on} onChange={() => { haptics.tap(); row.toggle(); }} />
                                     </div>
-                                </div>
-
-                                <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
-                                    <div className="pr-4">
-                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Ekranı Açık Tut</div>
-                                        <div className="text-[11px] text-slate-400 mt-0.5">Yürüyüş sırasında ekran kararmaz</div>
+                                ))}
+                                <button type="button" onClick={() => { haptics.tap(); device.openExternal('https://open.spotify.com'); }} className="w-full py-3.5 flex items-center justify-between text-left">
+                                    <div>
+                                        <div className="text-[14px] font-bold">Müzik</div>
+                                        <div className="text-[12px] text-secondary mt-0.5">Spotify'ı aç, yürürken dinle</div>
                                     </div>
-                                    <button
-                                        onClick={() => { haptics.tap(); setScreenAwake(v => !v); }}
-                                        className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", screenAwake ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
-                                    >
-                                        <span className={cn("absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", screenAwake ? "translate-x-5" : "translate-x-0")} />
-                                    </button>
-                                </div>
-
-                                <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
-                                    <div className="pr-4">
-                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Sesli Geri Bildirim</div>
-                                        <div className="text-[11px] text-slate-400 mt-0.5">Kilometre ve durum anonsları</div>
-                                    </div>
-                                    <button
-                                        onClick={() => { haptics.tap(); setAudioEnabled(v => { const next = !v; audioCues.setEnabled(next); return next; }); }}
-                                        className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", audioEnabled ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
-                                    >
-                                        <span className={cn("absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", audioEnabled ? "translate-x-5" : "translate-x-0")} />
-                                    </button>
-                                </div>
-
-                                <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
-                                    <div className="pr-4">
-                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Otomatik Duraklatma</div>
-                                        <div className="text-[11px] text-slate-400 mt-0.5">Durunca yürüyüş kendiliğinden duraklar</div>
-                                    </div>
-                                    <button
-                                        onClick={() => { haptics.tap(); setAutoPauseEnabled(!autoPauseEnabled); }}
-                                        className={cn("w-12 h-7 rounded-full relative transition-colors shrink-0 border-0", autoPauseEnabled ? "bg-orange-500" : "bg-slate-200 dark:bg-white/10")}
-                                    >
-                                        <span className={cn("absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform", autoPauseEnabled ? "translate-x-5" : "translate-x-0")} />
-                                    </button>
-                                </div>
-
-                                {/* Piyasa araştırması: yürüyüş sırasında müzik. Gerçek bir uygulama-içi
-                                    çalar (Spotify/Apple Music parçalarını gerçekten çalmak) telif
-                                    anlaşması + resmi API entegrasyonu gerektirir — bilinçli olarak
-                                    kapsam dışı bırakıldı. Bunun yerine dürüst, sıfır maliyetli bir
-                                    kısayol: kullanıcının kendi Spotify'ını açıyor, uygulama içinde
-                                    "çalıyormuş gibi" sahte bir oynatıcı GÖSTERMİYORUZ. */}
-                                <button
-                                    onClick={() => { haptics.tap(); device.openExternal('https://open.spotify.com'); }}
-                                    className="w-full flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5"
-                                >
-                                    <div className="pr-4 text-left">
-                                        <div className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Müzik</div>
-                                        <div className="text-[11px] text-slate-400 mt-0.5">Spotify'ı aç, yürürken dinle</div>
-                                    </div>
-                                    <span className="text-[11px] font-black text-orange-500 shrink-0">Aç →</span>
+                                    <span className="text-[12px] font-bold text-accent">Aç →</span>
                                 </button>
                             </div>
 
-                            <button
-                                onClick={() => { haptics.tap(); setIsSettingsOpen(false); }}
-                                className="w-full h-12 mt-5 bg-slate-900 dark:bg-white/10 text-white rounded-full font-black text-[12px] uppercase tracking-widest border-0"
-                            >
-                                Tamam
-                            </button>
+                            <PrimaryButton className="mt-4" onClick={() => setIsSettingsOpen(false)}>Tamam</PrimaryButton>
                         </motion.div>
                     </motion.div>
                 )}
@@ -816,7 +421,7 @@ function TrackingContent() {
 
 export default function TrackingPage() {
     return (
-        <Suspense fallback={<div className="h-screen w-full bg-white dark:bg-black flex items-center justify-center text-white text-sm font-bold">Hazırlanıyor... 🐾</div>}>
+        <Suspense fallback={<div className="h-[100dvh] w-full bg-background" />}>
             <TrackingContent />
         </Suspense>
     );

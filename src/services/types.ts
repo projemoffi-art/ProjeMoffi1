@@ -393,7 +393,8 @@ export interface IApiService {
     savePetDailyStats(petId: string, date: string, stats: any): Promise<void>;
 
     // Walk & Tracking
-    startWalk(petId?: string): Promise<{ id: string }>;
+    startWalk(petId?: string, startedAt?: number): Promise<{ id: string }>;
+    discardWalk(sessionId: string): Promise<void>;
     appendWalkPoints(sessionId: string, points: WalkPoint[]): Promise<void>;
     uploadWalkPhoto(sessionId: string, file: File): Promise<string>;
     startBeacon(sessionId: string, petName: string, lat: number, lng: number): Promise<string>;

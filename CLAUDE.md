@@ -303,10 +303,15 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
 - **8.4/8.5/8.14 Hub ve bağlam.** "Bugün" değerleri tek kaynaktan: `QuestEngineContext.todayDistanceKm/todaySteps/walkPpEarned`
   (iki paralel hesap yapma). Rozet takibi `QuestEngineContext`'te (panel unmount olunca yerel state kaybolur). "Tüm Zamanlar" ile
   "Son 7 Gün" aynı kartta etiketsiz karıştırılmaz.
-- **8.6a Yürüyüş kaydı (2026-10-03).** 🔴 `walk_sessions`'a istemci yazamaz (sadece SELECT): `start_walk`, `append_walk_points`
-  (noktalar ActivityContext'te tamponda birikir, 10 sn'de bir toplu; çevrimdışı kuyruk aynı tampon), `finish_walk` (aktif süre
-  `active_seconds`, gerçek adım ya da boş, kurtarmada bitiş son nokta), `add_walk_photo`. Mesafe sunucuda (25 km/sa üstü sıçrama sayılmaz).
-  Yolu ve adımı olmayan yürüyüş `status='discarded'` (geçmişe/sıralamaya girmez). Canlı konum: tablo herkese kapalı, `get_walk_beacon(id)`.
+- **8.6a Yürüyüş kaydı (2026-10-03, A+B).** 🔴 `walk_sessions`'a istemci yazamaz (sadece SELECT): `start_walk_session(pet, started_at)`
+  (çevrimdışı başlangıç sonradan gerçek saatle açılır), `append_walk_points` (ActivityContext tamponu, 10 sn'de bir toplu; çevrimdışı kuyruk
+  aynı tampon, anlık görüntüyle cihazda saklanır), `finish_walk` (aktif süre `active_seconds`, gerçek adım ya da boş, `calories_kcal`
+  = km × kilo, `route_preview` ≤60 nokta, `start_lat/lng`; kurtarmada bitiş son nokta), `add_walk_photo`, `discard_walk` (kullanıcı
+  geçmişten kaldırır). Mesafe sunucuda (25 km/sa üstü sıçrama sayılmaz). Yolu ve adımı olmayan yürüyüş `discarded`. Liste ekranları tam
+  rota değil `route_preview` çeker; ölçüm/biçim tek yerde `lib/walkMetrics.ts` (ekran kendi kalori formülünü yazmaz). Süre saniye
+  sayacı değil zaman damgasından; `stopWalk` başarısızsa yürüyüşü silmez (işleme ekranı "Tekrar Dene"). Canlı konum: `get_walk_beacon(id)`.
+  Arayüz: yürüyüş sayfaları `.theme-vet` (home-final paleti) içinde, ortak parçalar `components/walk/WalkUI.tsx`, harita
+  `components/walk/WalkMap.tsx` (takipte yakınlaştırmayı bozmadan takip eder; `LiveMap` yürüyüşte kullanılmaz).
 - **8.6 Geçmiş.** `walk_sessions` RLS sadece sahibi. `walk_sessions.pet_id` text, FK yok → PostgREST `pet:pets(...)` embed'i KULLANMA
   (yürüyüş geçmişi bu yüzden hiç çalışmamıştı). `path_coordinates` DB'de `{lat,lng,timestamp}[]`; ekranlar tuple bekler →
   `normalizePathToTuples()` (`lib/utils.ts`). Adım katsayısı 1.3.
@@ -554,6 +559,10 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       bildirimi çıkıyordu; sıfırlandı, rozet anahtarı `moffi_earned_badges_v3`. Çerez bandı kompakt yazıldı, giriş/kurulumda gizli. `/onboarding` açık
       temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
       köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
+- [ ] Yürüyüş denetimi C/D/E aşamaları (2026-10-03 raporu): C = görev/rozet/XP sunucuya, görev tiplerinin düzeltilmesi (günlük
+      toplam, imkânsız "Çift Yürüyüş"), otomatik günlük hedefin gün içinde sabit kalması (ilk yürüyüşten sonra 1,7→2,3 sıçrıyor),
+      meydan okuma/rozet/sıralama/ödül ekranlarının referans tasarıma çekilmesi. D = anahtarlı harita sağlayıcısı (OSM karo kullanım
+      politikası). E = ölü dosyalar (`components/walk` içinde 8 dosya, `MapboxLiveMap`, `mockMarks`), `/api/deals` 500.
 - [ ] "Moffi Puanı / PP" yazan arayüz metinleri yeni para birimi adına çevrilecek (isim belli olunca topluca).
 - [ ] `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinecek (içerik 8.45'te taşındı; kolon silme Baran'ın SQL Editor'ından).
 - [ ] Silinen gönderi/hikâyelerin depoda kalan eski dosyaları (8.50).

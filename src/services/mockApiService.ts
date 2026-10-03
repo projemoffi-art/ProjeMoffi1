@@ -435,7 +435,8 @@ export class MockApiService implements IApiService {
     }
 
     // Walk & Tracking
-    async startWalk(petId?: string): Promise<{ id: string }> { return { id: `mock-walk-${Date.now()}` }; }
+    async startWalk(petId?: string, startedAt?: number): Promise<{ id: string }> { return { id: `mock-walk-${Date.now()}` }; }
+    async discardWalk(sessionId: string): Promise<void> { }
     async appendWalkPoints(sessionId: string, points: WalkPoint[]): Promise<void> { }
     async uploadWalkPhoto(sessionId: string, file: File): Promise<string> { return URL.createObjectURL(file); }
     async startBeacon(sessionId: string, petName: string, lat: number, lng: number): Promise<string> { return 'mock-beacon'; }

@@ -2,86 +2,62 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    X, ArrowRight, Play, AlertTriangle,
-    Target, Clock, ChevronRight, Route, PawPrint
-} from "lucide-react";
+import { X, Target, Clock, ChevronRight, Route, PawPrint, MapPin, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useActivity } from "@/context/ActivityContext";
 import { usePet } from "@/context/PetContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
 import { haptics, sensors, geolocation } from "@/native";
+import { formatKm, formatClock } from "@/lib/walkMetrics";
+import { PrimaryButton, SoftButton } from "@/components/walk/WalkUI";
 
 interface WalkQuickSheetProps {
     isOpen: boolean;
     onClose: () => void;
-    // KÖK NEDEN DÜZELTMESİ ("Yürüyüşe Başla"ya basınca panel kapanıp bir an
-    // altındaki sayfa görünen, sert iki-adımlı geçiş hatası): navigasyon
-    // tetikleyen aksiyonlar (Başla/Devam Et/Bitir) artık `onClose()` YERİNE
-    // bunu çağırıyor — SADECE history temizliğini senkron yapıyor, paneli
-    // HEMEN kapatmıyor. Panel görsel olarak DynamicNavigation'daki bir
-    // pathname-izleme efekti tarafından, yeni sayfa GERÇEKTEN boyandıktan
-    // sonra kapatılıyor — böylece kapanış animasyonu eski sayfayı değil
-    // zaten hazır olan yeni sayfayı açığa çıkarıyor.
+    // Navigasyon yapan aksiyonlar paneli hemen kapatmaz; yeni sayfa boyanınca DynamicNavigation kapatır
+    // (eski sayfanın bir an görünmesini önler).
     onNavigateAway?: () => void;
     petId?: string;
 }
 
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
+// Ekran 2 (Yürüyüşe Hazırlık). Hedef satırı uygulamanın tek günlük hedefini (QuestEngine) değiştirir:
+// takip ekranı ve ana sayfa kartı aynı değeri gösterir.
 export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickSheetProps) {
     const router = useRouter();
-    const {
-        walkData, walkStats, startWalk,
-        walkPhase, recoverableWalk,
-        continueRecoveredWalk, discardRecoveredWalk,
-        enterReadyPhase, exitToIdlePhase
-    } = useActivity();
+    const { walkHistory, startWalk, recoverableWalk, continueRecoveredWalk, discardRecoveredWalk, enterReadyPhase, exitToIdlePhase } = useActivity();
     const { activePet, pets, switchPet } = usePet();
-    const { dailyGoal, todayEarned } = useQuestEngine();
+    const { dailyGoal, autoDailyGoalKm, manualDailyGoalKm, setManualDailyGoalKm } = useQuestEngine();
+    const [goalOpen, setGoalOpen] = React.useState(false);
+    const [starting, setStarting] = React.useState(false);
+    const [resolving, setResolving] = React.useState(false);
+    const [geoPermission, setGeoPermission] = React.useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
 
-    // Hibrit Hedef Sistemi (Akıllı Özel Hedef)
-    const initialCustomTarget = React.useMemo(() => {
-        if (walkStats && walkStats.totalWalks > 0 && walkStats.totalDistanceKm) {
-            // Gerçek verilere dayalı akıllı öneri (Geçmiş ortalamaya göre + 0.5km teşvik)
-            return parseFloat((Math.max(1.0, (walkStats.totalDistanceKm / walkStats.totalWalks) + 0.5)).toFixed(1));
-        }
-        return 3.0; // Fallback
-    }, [walkStats]);
-
-    const [customTargetKm, setCustomTargetKm] = React.useState(3.0);
-    const [isCustomTargetEnabled, setIsCustomTargetEnabled] = React.useState(false);
-
-    // Initial load logic only once when walkStats arrive
     React.useEffect(() => {
-        if (walkStats && customTargetKm === 3.0) {
-            setCustomTargetKm(initialCustomTarget);
-        }
-    }, [initialCustomTarget]);
+        if (!isOpen) return;
+        return geolocation.watchPermission(setGeoPermission);
+    }, [isOpen]);
 
-    // Faz "Yürüyüşe Hazırlık" yeniden inşası (bkz. design-reference/walk-final/,
-    // ekran 2): poşet/su/tasma kontrol listesi (işlevsiz bir hatırlatmaydı)
-    // KALDIRILDI, yerine referanstaki gerçek "Yürüyüş Ayarları" (Hedef/Pet/Rota
-    // türü) geldi. "Hedef" satırı, daha önce hiçbir UI'dan hiç tetiklenmeyen
-    // (tamamen ölü) `customTargetKm`/`isCustomTargetEnabled` state'ini artık
-    // gerçekten kullanıyor - dokununca gerçek bir hedef listesinde döngüye giriyor.
-    const TARGET_PRESETS_KM = [1, 2, 3, 5, 8, 10];
-    const cycleTarget = () => {
+    React.useEffect(() => {
+        if (isOpen) enterReadyPhase();
+        else { exitToIdlePhase(); setGoalOpen(false); setStarting(false); }
+    }, [isOpen, enterReadyPhase, exitToIdlePhase]);
+
+    // Tahmini süre: kullanıcının gerçek ortalama temposu (dk/km); geçmiş yoksa ortalama köpek yürüyüşü (14 dk/km).
+    const estimate = React.useMemo(() => {
+        const km = walkHistory.reduce((s, w) => s + w.distanceKm, 0);
+        const min = walkHistory.reduce((s, w) => s + w.activeSeconds / 60, 0);
+        const pace = km > 0.5 && min > 0 ? Math.min(30, Math.max(8, min / km)) : 14;
+        const mid = pace * dailyGoal.distance;
+        const low = Math.max(5, Math.round((mid * 0.85) / 5) * 5);
+        const high = Math.max(low + 5, Math.round((mid * 1.15) / 5) * 5);
+        return `${low}-${high} dk`;
+    }, [walkHistory, dailyGoal.distance]);
+
+    const adjustGoal = (delta: number) => {
         haptics.tap();
-        // Döngü, gizli/senkronize olmayan `customTargetKm` taban değerinden değil,
-        // O AN EKRANDA GÖSTERİLEN değerden (targetDistance — henüz özel hedef
-        // açılmadıysa adaptif günlük hedef) başlamalı; aksi halde ilk dokunuş
-        // ekrandaki sayıyla alakasız bir sıçrama yapabiliyordu (örn. 2,0 km
-        // gösterilirken dokununca birden 5,0 km'ye atlamak gibi).
-        const current = targetDistance;
-        let idx = TARGET_PRESETS_KM.findIndex(v => Math.abs(v - current) < 0.05);
-        if (idx === -1) {
-            idx = TARGET_PRESETS_KM.reduce((closest, v, i) =>
-                Math.abs(v - current) < Math.abs(TARGET_PRESETS_KM[closest] - current) ? i : closest, 0);
-        }
-        const next = TARGET_PRESETS_KM[(idx + 1) % TARGET_PRESETS_KM.length];
-        setCustomTargetKm(next);
-        setIsCustomTargetEnabled(true);
+        const base = manualDailyGoalKm ?? autoDailyGoalKm;
+        setManualDailyGoalKm(Math.max(0.5, Math.min(20, Math.round((base + delta) * 2) / 2)));
     };
 
     const cyclePet = () => {
@@ -92,307 +68,159 @@ export function WalkQuickSheet({ isOpen, onClose, onNavigateAway }: WalkQuickShe
         if (next) switchPet(next.id);
     };
 
-    const handleRouteTypeTap = () => {
-        haptics.tap();
-        window.dispatchEvent(new CustomEvent('moffi-toast', {
-            detail: { message: 'Şu an sadece "Serbest Yürüyüş" var — farklı rota türleri yakında geliyor! 🗺️', icon: 'Route' as any, color: 'text-orange-400' }
-        }));
-    };
-
-    // Tahmini süre - gerçek geçmiş ortalama temposundan (varsa) hesaplanan bir
-    // aralık; hiç geçmiş yoksa dürüst, belgelenmiş bir varsayılan tempo (14 dk/km,
-    // ortalama bir köpek yürüyüşü) kullanılıyor. Uydurma sabit bir sayı değil.
-    const estimatedDurationLabel = React.useMemo(() => {
-        const target = isCustomTargetEnabled ? customTargetKm : dailyGoal.distance;
-        const hasHistory = walkStats && walkStats.totalWalks > 0 && walkStats.totalDistanceKm > 0 && walkStats.totalDurationMinutes > 0;
-        const avgPaceMinPerKm = hasHistory
-            ? walkStats.totalDurationMinutes / walkStats.totalDistanceKm
-            : 14; // dakika/km - gerçek veri yokken kullanılan belgelenmiş varsayım
-        const mid = avgPaceMinPerKm * target;
-        const low = Math.max(5, Math.round((mid * 0.8) / 5) * 5);
-        const high = Math.max(low + 5, Math.round((mid * 1.2) / 5) * 5);
-        return `${low}-${high} dk`;
-    }, [customTargetKm, isCustomTargetEnabled, dailyGoal.distance, walkStats]);
-
-
-    // Yürüyüşü başlat
-    const handleStartWalk = async () => {
-        // Adım sayar (ivmeölçer) izni: iOS 13+ bunu kullanıcının dokunuşuyla AYNI çağrı yığınında
-        // istemeyi şart koşuyor (useEffect içinden istemek sessizce başarısız olur), bu yüzden burada.
+    const handleStart = async () => {
+        if (starting) return;
+        setStarting(true);
+        // iOS: hareket sensörü izni dokunuşla aynı çağrı zincirinde istenmeli.
         await sensors.requestPermission();
         haptics.success();
         startWalk();
-        // KÖK NEDEN DÜZELTMESİ (bkz. WalkQuickSheetProps.onNavigateAway açıklaması):
-        // history temizliği YENİ route'a geçmeden ÖNCE senkron çağrılmalı (aksi
-        // halde router.push zaten yeni bir history girdisi eklemiş oluyor ve
-        // hayalet {modal:'walk'} girdisi temizlenemez) — AMA panel GÖRSEL olarak
-        // hemen kapatılmıyor, yeni sayfa gerçekten boyanana kadar açık kalıp
-        // sonra DynamicNavigation tarafından kapatılıyor (sert "kapan-aç" yerine
-        // tek, yumuşak bir geçiş).
         onNavigateAway?.();
         router.push('/walk/tracking');
     };
 
-    // Helper to format time (MM:SS)
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const distKm = walkData.distance / 1000;
-    const durationMin = walkData.time / 60;
-
-    // Faz 2/3: başlık rozetini gerçek state machine fazına göre göster (duraklatıldı dahil)
-    const phaseLabel = walkPhase === 'completed' ? 'Tamamlandı 🎉'
-        : walkPhase === 'paused' ? 'Duraklatıldı'
-        : walkPhase === 'active' ? 'Aktif Yürüyüş'
-        : 'Hazırlık Paneli';
-    const phaseBadgeClass = walkPhase === 'completed' ? 'text-amber-700 bg-amber-100'
-        : walkPhase === 'paused' ? 'text-slate-700 bg-slate-200'
-        : walkPhase === 'active' ? 'text-emerald-700 bg-emerald-100'
-        : 'text-orange-700 bg-orange-100';
-
-    // Hedef mesafe: özel hedef açıksa onu, değilse gerçek/adaptif günlük hedefi (dailyGoal, streak'e göre hesaplanıyor) kullan
-    const targetDistance = isCustomTargetEnabled ? customTargetKm : dailyGoal.distance;
-
-    // Ekran 2 (Yürüyüşe Hazırlık) GPS izin bildirimi — gerçek `navigator.permissions`
-    // durumunu okuyor, uydurma/sabit bir metin değil. Panel her açıldığında tazeleniyor
-    // (kullanıcı ayarlardan izni değiştirip geri dönebilir).
-    const [geoPermission, setGeoPermission] = React.useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
-    React.useEffect(() => {
-        if (!isOpen) return;
-        return geolocation.watchPermission(setGeoPermission);
-    }, [isOpen]);
-
-    // Faz 3: panel açılıp kapanırken state machine'i idle <-> ready arasında geçir
-    // (yürüyüş zaten aktif/tamamlanmışsa bu çağrılar no-op kalır, bkz. ActivityContext)
-    React.useEffect(() => {
-        if (isOpen) {
-            enterReadyPhase();
-        } else {
-            exitToIdlePhase();
-        }
-    }, [isOpen, enterReadyPhase, exitToIdlePhase]);
-
     const handleContinueRecovered = async () => {
         haptics.tap();
-        // Bkz. handleStartWalk: iOS 13+'ta izin dokunuşla aynı çağrı yığınında istenmeli
         await sensors.requestPermission();
         continueRecoveredWalk();
         onNavigateAway?.();
         router.push('/walk/tracking');
     };
 
-    const handleDiscardRecovered = async () => {
+    const handleFinishRecovered = async () => {
         haptics.tap();
+        setResolving(true);
         await discardRecoveredWalk();
+        setResolving(false);
     };
 
+    const petImage = activePet?.avatar || activePet?.image;
+
     return (
-        <>
-            <AnimatePresence>
-                {isOpen && (
-                    <>
-                        {/* Full-Screen Container */}
-                        <motion.div
-                            initial={{ y: "100%", opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: "100%", opacity: 0 }}
-                            transition={{ type: "spring", damping: 30, stiffness: 250 }}
-                            className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden"
-                        >
-                            {/* Header Area */}
-                            <div className="px-4 sm:px-6 pt-4 sm:pt-6 flex items-center justify-between pb-2 z-20 relative shrink-0">
-                                <div>
-                                    <h2 className="text-lg sm:text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none mb-1">Moffi ile Yürüyüş</h2>
-                                    <span className={cn(
-                                        "text-[8px] sm:text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest",
-                                        phaseBadgeClass
-                                    )}>
-                                        {phaseLabel}
-                                    </span>
-                                    {todayEarned.pp > 0 && (
-                                        <span className="text-[7.5px] sm:text-[8px] font-black text-orange-600 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full leading-none ml-1.5 sm:ml-2">
-                                            +{todayEarned.pp} PP Bugün
-                                        </span>
-                                    )}
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", damping: 32, stiffness: 260 }}
+                    className="theme-vet fixed inset-0 z-50 bg-background text-foreground flex flex-col overflow-hidden"
+                >
+                    <header className="px-4 pt-4 pb-2 grid grid-cols-[44px_1fr_44px] items-center shrink-0">
+                        <span />
+                        <h2 className="text-center text-[17px] font-extrabold">Yürüyüşe Hazırlık</h2>
+                        <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 rounded-full flex items-center justify-center">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </header>
+
+                    <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
+                        {recoverableWalk ? (
+                            <div className="px-6 pt-10 flex flex-col items-center text-center">
+                                <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center text-4xl mb-5">🐾</div>
+                                <h3 className="text-[21px] font-extrabold mb-1.5">Yarım kalmış bir yürüyüş var</h3>
+                                <p className="text-[13px] text-secondary mb-7">Uygulama kapanmadan önce başlamış bir yürüyüşün kaldı. Devam edelim mi, yoksa burada mı bitirelim?</p>
+                                <div className="w-full bg-card border border-card-border rounded-3xl py-4 grid grid-cols-2 divide-x divide-card-border mb-7">
+                                    <div><div className="text-[22px] font-extrabold">{formatKm(recoverableWalk.distance / 1000)}<span className="text-[13px] ml-1">km</span></div><div className="text-[11px] text-secondary font-semibold">Mesafe</div></div>
+                                    <div><div className="text-[22px] font-extrabold">{formatClock(recoverableWalk.time)}</div><div className="text-[11px] text-secondary font-semibold">Süre</div></div>
                                 </div>
-                                <button
-                                    onClick={onClose}
-                                    className="w-8 h-8 sm:w-9 sm:h-9 bg-card rounded-full flex items-center justify-center shadow-moffi-card hover:bg-slate-50 dark:bg-white/5 transition-all cursor-pointer border-0"
-                                >
-                                    <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-450" />
-                                </button>
+                                <div className="w-full space-y-2.5">
+                                    <PrimaryButton onClick={handleContinueRecovered}><Play className="w-4 h-4 fill-current" /> Devam Et</PrimaryButton>
+                                    <SoftButton onClick={handleFinishRecovered} disabled={resolving}>{resolving ? 'Kaydediliyor...' : 'Burada Bitir'}</SoftButton>
+                                </div>
                             </div>
-
-                            {/* ── SCROLLABLE CONTENT ── */}
-                            <div className="px-4 sm:px-6 pb-8 pt-4 space-y-4 sm:space-y-5.5 overflow-y-auto no-scrollbar flex-1 z-20">
-                            {recoverableWalk ? (
-                                /* Faz 2/3: kapanış/çökme sonrası yarım kalmış yürüyüş bulundu — sessizce
-                                   devam etmek yerine kullanıcıya soruyoruz (brief madde 52) */
-                                <div className="flex flex-col items-center justify-center py-10 text-center animate-in fade-in zoom-in-95 duration-500">
-                                    <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center text-4xl mb-5">🐾</div>
-                                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 mb-1">Devam eden bir yürüyüş bulduk</h3>
-                                    <p className="text-[11px] font-bold text-slate-400 mb-8 px-4">Uygulama kapanmadan önce yarım kalmış bir yürüyüşün var. Devam mı edelim, yoksa burada mı bitirelim?</p>
-
-                                    <div className="grid grid-cols-2 w-full gap-3 mb-8">
-                                        <div className="bg-card rounded-2xl py-4 flex flex-col items-center shadow-moffi-card border border-slate-200/50 dark:border-white/5">
-                                            <span className="text-lg font-black text-slate-800 dark:text-white">{(recoverableWalk.distance / 1000).toFixed(2)}</span>
-                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">KM</span>
-                                        </div>
-                                        <div className="bg-card rounded-2xl py-4 flex flex-col items-center shadow-moffi-card border border-slate-200/50 dark:border-white/5">
-                                            <span className="text-lg font-black text-slate-800 dark:text-white">{formatTime(recoverableWalk.time)}</span>
-                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">Süre</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="w-full space-y-3">
-                                        <button
-                                            onClick={handleContinueRecovered}
-                                            className="w-full h-14 bg-slate-900 text-white rounded-3xl flex items-center justify-center gap-2 font-black text-[12px] uppercase tracking-[0.15em] cursor-pointer border-0 active:scale-95 transition-all"
-                                        >
-                                            <Play className="w-4 h-4 fill-current" /> Devam Et
-                                        </button>
-                                        <button
-                                            onClick={handleDiscardRecovered}
-                                            className="w-full h-14 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-3xl flex items-center justify-center font-black text-[12px] uppercase tracking-[0.15em] cursor-pointer border-0 active:scale-95 transition-all"
-                                        >
-                                            Burada Bitir
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
+                        ) : (
                             <>
-                                {/* Baran'ın bulduğu gerçek hata: bu panelin KENDİ, ayrı bir "aktif
-                                    yürüyüş" görünümü (büyük km rakamı, Duraklat/Bitir) vardı — ama
-                                    oradan gerçek harita ekranına (`/walk/tracking`) dönecek hiçbir yol
-                                    yoktu. Kullanıcı bir kez haritadan ayrılıp bu panel tekrar açılınca
-                                    (`open-walk-panel`) bir daha asla haritaya dönemiyordu. Kök neden
-                                    çözümü `DynamicNavigation.tsx`'te: yürüyüş zaten aktifse bu panel
-                                    hiç açılmıyor, doğrudan `/walk/tracking`'e yönlendiriliyor — bu
-                                    yüzden bu panel artık SADECE "henüz başlamamış" hazırlık akışını
-                                    gösteriyor, aktif/duraklatılmış görünüm tamamen kaldırıldı (zaten
-                                    tam teşekküllü hâli `/walk/tracking`'de var, iki paralel sistem
-                                    tutmanın anlamı yoktu). */}
-                                {/* 10. ACTIONS / SWIPE-TO-START */}
-                            <div className="space-y-4 pt-2">
-                                    <div className="space-y-4">
-                                        {/* Ekran 2 (Yürüyüşe Hazırlık) yeniden inşası — design-reference/walk-final/
-                                            ekran 2 ile birebir: pet fotoğrafı + başlık, iki-istatistik satırı, gerçek
-                                            GPS izin bildirimi, gerçek/düzenlenebilir "Yürüyüş Ayarları" satırları.
-                                            Eskiden burada işlevsiz poşet/su/tasma kontrol listesi vardı — kaldırıldı. */}
-                                        <div className="rounded-3xl overflow-hidden shadow-moffi-card border border-slate-200/50 dark:border-white/5 bg-card">
-                                            <div className="h-40 sm:h-44 w-full relative bg-slate-100 dark:bg-white/5">
-                                                {activePet?.image ? (
-                                                    <img src={activePet.image} alt={activePet.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-5xl">🐾</div>
-                                                )}
-                                            </div>
-                                            <div className="p-4">
-                                                <h3 className="text-base font-black text-slate-800 dark:text-slate-100 leading-tight">
-                                                    {activePet?.name || 'Dostun'} ile Yürüyüş
-                                                </h3>
-                                                <div className="grid grid-cols-2 gap-3 mt-3">
-                                                    <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-white/5 rounded-2xl px-3 py-2.5">
-                                                        <Target className="w-4 h-4 text-orange-500 shrink-0" />
-                                                        <div className="min-w-0">
-                                                            <span className="text-[12.5px] font-black text-slate-800 dark:text-slate-100 block leading-none mb-0.5">{targetDistance.toFixed(1)} km</span>
-                                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Bugünkü hedef</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-white/5 rounded-2xl px-3 py-2.5">
-                                                        <Clock className="w-4 h-4 text-orange-500 shrink-0" />
-                                                        <div className="min-w-0">
-                                                            <span className="text-[12.5px] font-black text-slate-800 dark:text-slate-100 block leading-none mb-0.5">{estimatedDurationLabel}</span>
-                                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Tahmini süre</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                <div className="relative h-60 mx-4 rounded-[28px] overflow-hidden bg-accent/10">
+                                    {petImage
+                                        ? <img src={petImage} alt={activePet?.name} className="w-full h-full object-cover" />
+                                        : <img src="/images/walk-normal.jpg" alt="" className="w-full h-full object-cover" />}
+                                </div>
+
+                                <div className="mx-4 -mt-10 relative bg-card rounded-[28px] border border-card-border shadow-moffi-card px-5 pt-5 pb-4">
+                                    <h3 className="text-[22px] font-extrabold text-center">{activePet?.name || 'Dostun'} ile Yürüyüş</h3>
+                                    <div className="grid grid-cols-2 gap-3 mt-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-11 h-11 rounded-full bg-emerald-50 flex items-center justify-center shrink-0"><Target className="w-5 h-5 text-emerald-600" /></span>
+                                            <div><div className="text-[17px] font-extrabold leading-tight">{formatKm(dailyGoal.distance, 1)} km</div><div className="text-[11.5px] text-secondary font-semibold">Bugünkü hedef</div></div>
                                         </div>
-
-                                        {/* GPS izin bildirimi — gerçek `navigator.permissions` durumuna göre */}
-                                        {geoPermission === 'denied' ? (
-                                            <div className="w-full bg-red-50 border border-red-100 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-                                                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                                                <span className="text-[10.5px] font-bold text-red-800 leading-snug">Konum izni kapalı. Yürüyüşü başlatmadan önce tarayıcı/telefon ayarlarından Moffi için konum iznini açman gerekiyor.</span>
-                                            </div>
-                                        ) : (
-                                            <div className="w-full bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-                                                <Target className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                                <span className="text-[10.5px] font-bold text-amber-800 leading-snug">GPS konumunuz yürüyüş sırasında kullanılacaktır. Mesafe, rota ve aktivite verilerini hesaplamak için gereklidir.</span>
-                                            </div>
-                                        )}
-
-                                        {/* YÜRÜYÜŞ AYARLARI — gerçek, düzenlenebilir 3 satır */}
-                                        <div className="bg-card rounded-3xl p-1.5 shadow-moffi-card border border-slate-200/50 dark:border-white/5 divide-y divide-slate-100 dark:divide-white/5">
-                                            <div className="px-3 py-1.5">
-                                                <span className="text-[9px] font-black text-slate-450 uppercase tracking-[0.2em]">Yürüyüş Ayarları</span>
-                                            </div>
-                                            <button
-                                                onClick={cycleTarget}
-                                                className="w-full flex items-center gap-3 px-3 py-3 cursor-pointer border-0 bg-transparent hover:bg-slate-50 dark:hover:bg-white/5 transition-all rounded-2xl"
-                                            >
-                                                <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-                                                    <Target className="w-4 h-4 text-orange-600" />
-                                                </div>
-                                                <span className="text-[11.5px] font-bold text-slate-600 dark:text-slate-300 flex-1 text-left">Hedef</span>
-                                                <span className="text-[11.5px] font-black text-slate-800 dark:text-slate-100">{targetDistance.toFixed(1)} km</span>
-                                                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-                                            </button>
-                                            <button
-                                                onClick={cyclePet}
-                                                disabled={pets.length <= 1}
-                                                className="w-full flex items-center gap-3 px-3 py-3 cursor-pointer border-0 bg-transparent hover:bg-slate-50 dark:hover:bg-white/5 transition-all rounded-2xl disabled:cursor-default disabled:hover:bg-transparent"
-                                            >
-                                                <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-                                                    <PawPrint className="w-4 h-4 text-orange-600" />
-                                                </div>
-                                                <span className="text-[11.5px] font-bold text-slate-600 dark:text-slate-300 flex-1 text-left">Pet</span>
-                                                <span className="text-[11.5px] font-black text-slate-800 dark:text-slate-100">{activePet?.name || '—'}</span>
-                                                {pets.length > 1 && <ChevronRight className="w-3.5 h-3.5 text-slate-300" />}
-                                            </button>
-                                            <button
-                                                onClick={handleRouteTypeTap}
-                                                className="w-full flex items-center gap-3 px-3 py-3 cursor-pointer border-0 bg-transparent hover:bg-slate-50 dark:hover:bg-white/5 transition-all rounded-2xl"
-                                            >
-                                                <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-                                                    <Route className="w-4 h-4 text-orange-600" />
-                                                </div>
-                                                <span className="text-[11.5px] font-bold text-slate-600 dark:text-slate-300 flex-1 text-left">Rota türü</span>
-                                                <span className="text-[11.5px] font-black text-slate-800 dark:text-slate-100">Serbest Yürüyüş</span>
-                                                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-                                            </button>
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-11 h-11 rounded-full bg-accent/10 flex items-center justify-center shrink-0"><Clock className="w-5 h-5 text-accent" /></span>
+                                            <div><div className="text-[17px] font-extrabold leading-tight">{estimate}</div><div className="text-[11.5px] text-secondary font-semibold">Tahmini süre</div></div>
                                         </div>
-
-                                        {/* TEK DOKUNUŞLA BAŞLA */}
-                                        <motion.button
-                                            whileTap={{ scale: 0.96 }}
-                                            onClick={handleStartWalk}
-                                            className="w-full h-16 mt-4 bg-slate-900 text-white rounded-3xl flex items-center justify-center gap-2.5 shadow-[0_8px_30px_rgb(0,0,0,0.15)] border-0 cursor-pointer font-black text-[12px] uppercase tracking-[0.15em]"
-                                        >
-                                            <Play className="w-4 h-4 fill-current" /> Yürüyüşe Başla
-                                        </motion.button>
                                     </div>
+                                </div>
 
-                                <motion.button
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={() => { haptics.tap(); onNavigateAway?.(); router.push('/walk'); }}
-                                    className="w-full bg-card py-3.5 rounded-3xl flex items-center justify-center gap-1.5 group hover:bg-slate-50 dark:bg-white/5 transition-all cursor-pointer shadow-moffi-card border-0"
-                                >
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] group-hover:text-slate-700 dark:text-slate-200 transition-colors">Yürüyüş İstatistikleri</span>
-                                    <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-slate-650 transition-all" />
-                                </motion.button>
-                            </div>
+                                <div className={cn("mx-4 mt-4 rounded-3xl px-4 py-3.5 flex items-start gap-3", geoPermission === 'denied' ? "bg-red-50" : "bg-accent/10")}>
+                                    <span className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0"><MapPin className="w-4 h-4 text-white" /></span>
+                                    <div className="flex-1">
+                                        {geoPermission === 'denied' ? (
+                                            <>
+                                                <div className="text-[13.5px] font-bold text-red-700">Konum izni kapalı</div>
+                                                <div className="text-[12px] text-red-700/80 mt-0.5">Mesafe ve rota için Moffi'ye konum izni vermen gerekiyor.</div>
+                                                <button type="button" onClick={() => geolocation.openSettings()} className="mt-2 text-[12px] font-extrabold text-red-700 underline">Ayarları aç</button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="text-[13.5px] font-bold">GPS konumun yürüyüş sırasında kullanılacak.</div>
+                                                <div className="text-[12px] text-secondary mt-0.5">Mesafe, rota ve aktivite verilerini hesaplamak için gerekli.</div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <h4 className="mx-5 mt-6 mb-2.5 text-[16px] font-extrabold">Yürüyüş Ayarları</h4>
+                                <div className="mx-4 bg-card rounded-3xl border border-card-border divide-y divide-card-border overflow-hidden">
+                                    <div>
+                                        <button type="button" onClick={() => { haptics.tap(); setGoalOpen(v => !v); }} className="w-full px-4 py-4 flex items-center gap-3 text-left">
+                                            <Target className="w-5 h-5 text-foreground shrink-0" />
+                                            <span className="flex-1 text-[14px] font-bold">Hedef</span>
+                                            <span className="text-[14px] font-bold text-secondary">{formatKm(dailyGoal.distance, 1)} km</span>
+                                            <ChevronRight className={cn("w-4 h-4 text-secondary transition-transform", goalOpen && "rotate-90")} />
+                                        </button>
+                                        <AnimatePresence initial={false}>
+                                            {goalOpen && (
+                                                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                                                    <div className="px-4 pb-4 flex items-center gap-3">
+                                                        <button type="button" onClick={() => adjustGoal(-0.5)} className="w-10 h-10 rounded-full bg-black/5 text-[20px] font-bold">−</button>
+                                                        <span className="flex-1 text-center text-[18px] font-extrabold">{formatKm(dailyGoal.distance, 1)} km</span>
+                                                        <button type="button" onClick={() => adjustGoal(0.5)} className="w-10 h-10 rounded-full bg-accent text-white text-[20px] font-bold">+</button>
+                                                        <button type="button" onClick={() => { haptics.tap(); setManualDailyGoalKm(null); }} className={cn("h-10 px-3 rounded-full text-[12px] font-bold", manualDailyGoalKm === null ? "bg-foreground text-background" : "bg-black/5 text-secondary")}>Otomatik</button>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                    <button type="button" onClick={cyclePet} disabled={pets.length <= 1} className="w-full px-4 py-4 flex items-center gap-3 text-left disabled:cursor-default">
+                                        <PawPrint className="w-5 h-5 text-foreground shrink-0" />
+                                        <span className="flex-1 text-[14px] font-bold">Pet</span>
+                                        <span className="text-[14px] font-bold text-secondary">{activePet?.name || '—'}</span>
+                                        {pets.length > 1 && <ChevronRight className="w-4 h-4 text-secondary" />}
+                                    </button>
+                                    <div className="w-full px-4 py-4 flex items-center gap-3">
+                                        <Route className="w-5 h-5 text-foreground shrink-0" />
+                                        <span className="flex-1 text-[14px] font-bold">Rota türü</span>
+                                        <span className="text-[14px] font-bold text-secondary">Serbest yürüyüş</span>
+                                    </div>
+                                </div>
+
+                                <div className="mx-4 mt-6 space-y-2.5">
+                                    <PrimaryButton onClick={handleStart} disabled={starting || geoPermission === 'denied'}>
+                                        {starting ? 'Başlatılıyor...' : 'Yürüyüşe Başla'}
+                                    </PrimaryButton>
+                                    <button
+                                        type="button"
+                                        onClick={() => { haptics.tap(); onNavigateAway?.(); router.push('/walk'); }}
+                                        className="w-full py-3 text-[13px] font-bold text-secondary"
+                                    >
+                                        Yürüyüş istatistiklerim
+                                    </button>
+                                </div>
                             </>
-                            )}
-                        </div>
-                    </motion.div>
-                </>
+                        )}
+                    </div>
+                </motion.div>
             )}
         </AnimatePresence>
-        </>
     );
 }
