@@ -20,6 +20,7 @@ import turkeyCities from "@/data/turkey_cities.json";
 import {
     businessApplicationService, formatIban, isValidTrIban, type BusinessApplicationInput,
 } from "@/services/businessApplicationService";
+import { formatTrPhone, isValidTaxId, normalizeTrPhone } from "@/lib/trIdentity";
 
 const LocationPicker = dynamic(() => import("@/components/business/LocationPicker"), {
     ssr: false,
@@ -164,15 +165,18 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
     }, [resubmitId]);
 
     const districts = useMemo(() => (turkeyCities as Cities).find(c => c.name === form.province)?.districts || [], [form.province]);
-    const phoneDigits = form.phone.replace(/\D/g, "");
+    const phoneOk = normalizeTrPhone(form.phone) !== null;
+    const phoneTyped = form.phone.replace(/\D/g, "").length >= 10;
     const taxDigits = form.taxId.replace(/\D/g, "");
+    const taxTyped = taxDigits.length === 10 || taxDigits.length === 11;
+    const taxOk = taxTyped && isValidTaxId(taxDigits);
     const ibanOk = isValidTrIban(form.iban);
     const hasPin = Number.isFinite(form.lat) && Number.isFinite(form.lng);
 
     const stepValid = [
         typeChosen,
-        form.name.trim().length >= 2 && form.ownerName.trim().length >= 2 && phoneDigits.length >= 10,
-        /^\d{10,11}$/.test(taxDigits) && ibanOk && !!form.province && !!form.district && form.address.trim().length >= 5 && hasPin,
+        form.name.trim().length >= 2 && form.ownerName.trim().length >= 2 && phoneOk,
+        taxOk && ibanOk && !!form.province && !!form.district && form.address.trim().length >= 5 && hasPin,
         agree,
     ][step];
 
@@ -293,7 +297,12 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                                 </div>
                                 <div>
                                     <label className={label} htmlFor="b-phone">İşletme telefonu</label>
-                                    <input id="b-phone" className={input} type="tel" inputMode="tel" value={form.phone} maxLength={20} onChange={e => set("phone", e.target.value)} placeholder="0532 000 00 00" />
+                                    <input id="b-phone" className={cn(input, phoneTyped && !phoneOk && "border-rose-400")} type="tel" inputMode="tel" autoComplete="tel"
+                                        value={form.phone} maxLength={19} onChange={e => set("phone", e.target.value.replace(/[^0-9+()\s-]/g, ""))}
+                                        onBlur={() => { if (phoneOk) set("phone", formatTrPhone(form.phone)); }} placeholder="0532 000 00 00" />
+                                    {phoneTyped && !phoneOk && (
+                                        <p className="text-[12px] font-semibold mt-1.5 text-rose-600">Türkiye numarası olmalı: cep 05xx, sabit hat 0212 / 0216 gibi ya da 444 xx xx.</p>
+                                    )}
                                 </div>
                             </div>
                         </>
@@ -306,7 +315,10 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                             <div className="mt-5 space-y-4">
                                 <div>
                                     <label className={label} htmlFor="b-tax">Vergi numarası (şahıs işletmesiyse T.C. kimlik no)</label>
-                                    <input id="b-tax" className={input} inputMode="numeric" value={form.taxId} maxLength={11} onChange={e => set("taxId", e.target.value.replace(/\D/g, ""))} placeholder="10 ya da 11 hane" />
+                                    <input id="b-tax" className={cn(input, taxTyped && !taxOk && "border-rose-400")} inputMode="numeric" value={form.taxId} maxLength={11} onChange={e => set("taxId", e.target.value.replace(/\D/g, ""))} placeholder="10 ya da 11 hane" />
+                                    {taxTyped && !taxOk && (
+                                        <p className="text-[12px] font-semibold mt-1.5 text-rose-600">{taxDigits.length === 11 ? "T.C. kimlik numarası" : "Vergi numarası"} geçerli değil; hanelerini kontrol et.</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className={label} htmlFor="b-iban">IBAN</label>
@@ -320,7 +332,7 @@ function ApplicationForm({ defaultOwner, resubmitId }: { defaultOwner: string; r
                                         autoCapitalize="characters"
                                     />
                                     <p className={cn("text-[12px] font-semibold mt-1.5", ibanOk ? "text-emerald-600" : "text-zinc-500")}>
-                                        {ibanOk ? "IBAN doğrulandı." : "Ödemelerin (satış, komisyon sonrası tutar) bu hesaba yapılır."}
+                                        {ibanOk ? "IBAN biçimi doğru. Hesap işletmenin ya da yetkilinin adına olmalı." : "Ödemelerin (satış, komisyon sonrası tutar) bu hesaba yapılır."}
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">

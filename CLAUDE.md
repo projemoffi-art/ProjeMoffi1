@@ -400,7 +400,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   `can_manage_business`, `current_business_id`. Başka işletmeyi `business_cards`'tan oku. İşletme bildirimi `notify_business` (`biz_*` türleri).
   **Kayıt ve onay (2026-10-03, yeniden yapıldı — önceden hiç çalışmıyordu):** işletme açmanın TEK yolu `submit_business_application`
   (`services/businessApplicationService.ts`): giriş yapmış + e-postası doğrulanmış kişi, `/business-register` (girişsizse tanıtım → `/?next=`);
-  doğrulama sunucuda (tür, IBAN mod-97 `iban_is_valid`, VKN/TCKN, konum TR sınırı), aynı anda 1 bekleyen başvuru, kişi başı ≤5 işletme;
+  doğrulama sunucuda (tür, IBAN mod-97 `iban_is_valid`, VKN/TCKN kontrol basamağı `vkn_is_valid`/`tckn_is_valid`, telefon `tr_phone_e164`
+  → `+90XXXXXXXXXX` ya da `444XXXX`; istemcide aynı kurallar `lib/trIdentity.ts`, 2026-10-04; konum TR sınırı), aynı anda 1 bekleyen başvuru, kişi başı ≤5 işletme;
   reddedilen başvuru `?resubmit=<id>` ile düzeltilip aynı fonksiyonla yeniden gönderilir. Yöneticilere `admin_business` bildirim + e-posta.
   Karar TEK ekranda `/admin/businesses` → `admin_review_business` (yönetici + **aal2 JWT'den**, ret nedeni ≥5 karakter) → `biz_kyb` bildirim +
   e-posta. 🔴 Servis rolünün `businesses`'a yazma yetkisi YOK (eski `reviewBusiness` bu yüzden hiç çalışmıyordu; silindi). Kişisel tarafta giriş:
@@ -677,6 +678,17 @@ ilgili maddeyi tek satırla hatırlat.
       hesabının e-postası Baran'a ait olmadığı için ertelendi. Kurulunca Claude `20261002180000_admin_requires_mfa.sql`'i uygular
       (ters sıra yönetici verisine erişimi kapatır). İlk gerçek işletme başvurusundan önce yapılmalı.
 
+**Hukuki uyum (2026-10-04 raporu; yayından ÖNCE, avukatla)** — Claude teknik tarafı ve metin taslağını hazırlar, son metni avukat onaylar.
+- [ ] 🔴 Gerçek veri sorumlusu bilgisi: şirket unvanı, adres, MERSİS (`tr.json` → `company`: unvan doğrulanmalı, adres boş, `privacy@moffi.net` alan adı
+      devredilecek). `/privacy` yer tutucu (amaç, hukuki sebep, aktarılan taraflar, yurt dışı, saklama süresi, m.11 hakları yok; "Cipher Engine" sahte).
+- [ ] 🔴 Ayrı metinler: kullanıcı aydınlatma metni, işletme (satıcı) aydınlatma metni, açık rıza metinleri (rıza hizmet şartına bağlanmaz; kayıttaki
+      "Koşulları ve Gizlilik Politikasını kabul ediyorum" kutusu aydınlatma ile kabulü karıştırıyor), çerez politikası, mesafeli satış/ön bilgilendirme,
+      pazar yeri satıcı sözleşmesi.
+- [ ] 🔴 Yurt dışına aktarım (KVKK m.9, 2024): Supabase (AB), Vercel, Resend, Google Gemini, (ileride) RevenueCat/Firebase → standart sözleşme
+      imzası + 5 iş günü içinde Kurum'a bildirim.
+- [ ] ETBİS kaydı (aracı hizmet sağlayıcı, faaliyetten önce) ve satıcı kimliğini kamu sisteminden ya da belgeyle doğrulama yükümlülüğü (onay ekranına
+      vergi levhası/belge adımı). Pazarlama e-postası için İYS kaydı. VERBİS: 50 çalışan / 100 milyon TL bilanço altı muaf (değişirse yeniden bak).
+
 **Hesaplar ve ortam** (telefon uygulaması için; kod hazır, 8.59–8.61)
 - [ ] Apple ve Google geliştirici hesapları (8.52: şirket adına, D-U-N-S). RevenueCat hesabı (ücretsiz başlangıç; App Store Connect + Play Console bağla).
 - [ ] Firebase projesi (sadece FCM dağıtım kanalı; veri Supabase'de) + Apple APNs anahtarı. Gelince Claude sunucuda gönderimi ve
@@ -732,7 +744,7 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
       köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
 - [ ] 🔴 **Kod borcu (2026-10-04 ölçümü, yalnızca azalır):** tip kontrolü (src) **0** hata (68'den; artık her değişiklikte 0 kalmalı).
-      Lint **399** hata (1.150'den): `no-explicit-any` 293, `no-unescaped-entities` 48, `set-state-in-effect` 36, `purity` 13, diğer 9.
+      Lint **395** hata (1.150'den): `no-explicit-any` 293, `no-unescaped-entities` 47, `set-state-in-effect` 35, `purity` 11, diğer 9.
       Sıra: React kuralları önce (gerçek davranış hatası saklayabilir), sonra `any`/kaçış karakterleri dosya dosya. Ölü dosya: 0
       (`scratchpad/orphans.cjs`), kullanılmayan servis metodu: 0 (`scratchpad/used.cjs`).
 - [ ] İşletme kurulum sihirbazı (`OnboardingWizard`) ve işletme panelinin bazı ekranları indigo/mavi tonlarda (Bölüm 5'e aykırı).

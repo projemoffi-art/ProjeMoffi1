@@ -1,10 +1,11 @@
 'use client';
 
-// Kayıp & Bulunan / Sahiplendirme panelinin ortak üst kısmı: başlık, bildirim zili, profil ve iki sekme.
+// Kayıp & Bulunan / Sahiplendirme panelinin ortak üst kısmı: geri, başlık, bildirim zili, profil ve iki sekme.
 
 import React from 'react';
 import Link from 'next/link';
-import { Bell } from 'lucide-react';
+import { Bell, ChevronLeft } from 'lucide-react';
+import { useSmartBack } from '@/components/health/HealthUI';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { cn } from '@/lib/utils';
@@ -12,10 +13,15 @@ import { cn } from '@/lib/utils';
 export function PanelHeader({ active, subtitle }: { active: 'lost' | 'adopt'; subtitle: string }) {
     const { user } = useAuth();
     const { unreadCount } = useNotifications();
+    const goBack = useSmartBack('/home');
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <div>
+            <div className="flex items-center gap-3">
+                <button onClick={goBack} aria-label="Geri"
+                    className="w-10 h-10 shrink-0 rounded-full bg-card border border-card-border flex items-center justify-center">
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="flex-1 min-w-0">
                     <div className="text-2xl font-black leading-none">Moffi <span className="text-accent">🐾</span></div>
                     <p className="text-xs font-semibold text-secondary mt-1">{subtitle}</p>
                 </div>

@@ -50,6 +50,8 @@ function AdoptionHome() {
     const { user } = useAuth();
     const { area, choose, detectDevice } = useSearchArea();
     const [listings, setListings] = useState<AdoptionListing[] | null>(null);
+    // Zaman süzgecinin ölçüsü: ilanların yüklendiği an (render saf kalsın diye Date.now() burada değil).
+    const [loadedAt, setLoadedAt] = useState(0);
     const [mine, setMine] = useState<AdoptionListing[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [q, setQ] = useState('');
@@ -63,7 +65,7 @@ function AdoptionHome() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     useEffect(() => {
-        adoptionService.list().then(setListings).catch(e => setError(e?.message || 'İlanlar yüklenemedi.'));
+        adoptionService.list().then(l => { setListings(l); setLoadedAt(Date.now()); }).catch(e => setError(e?.message || 'İlanlar yüklenemedi.'));
     }, []);
     useEffect(() => {
         if (user) adoptionService.mine().then(m => setMine(m.filter(l => l.status === 'active' || l.status === 'paused'))).catch(() => {});
@@ -72,7 +74,7 @@ function AdoptionHome() {
     const shown = useMemo(() => {
         if (!listings || !area) return [];
         const hours = TIMES.find(t => t.id === time)?.hours ?? null;
-        const minTs = hours ? Date.now() - hours * 3600000 : 0;
+        const minTs = hours ? loadedAt - hours * 3600000 : 0;
         const term = q.trim().toLocaleLowerCase('tr-TR');
         return listings
             .map(l => ({ l, km: l.lat != null && l.lng != null ? distanceKm(area, { lat: l.lat, lng: l.lng }) : null }))
@@ -87,7 +89,7 @@ function AdoptionHome() {
                 && (!extra.neutered || l.neutered) && (!extra.shelter || l.isShelter)
                 && (!term || [l.petName, l.breed, l.locationText, l.description].filter(Boolean).join(' ').toLocaleLowerCase('tr-TR').includes(term)))
             .sort((a, b) => (a.km ?? 999) - (b.km ?? 999) || new Date(b.l.createdAt).getTime() - new Date(a.l.createdAt).getTime());
-    }, [listings, area, species, radius, time, vaccinated, extra, q]);
+    }, [listings, loadedAt, area, species, radius, time, vaccinated, extra, q]);
 
     const extraCount = extra.ages.length + (extra.gender ? 1 : 0) + [extra.kids, extra.cats, extra.dogs, extra.neutered, extra.shelter].filter(Boolean).length;
     const selected = shown.find(s => s.l.id === selectedId) || null;
@@ -166,7 +168,7 @@ function AdoptionHome() {
                             {shown.map(({ l, km }) => <GridCard key={l.id} listing={l} distanceKm={km} />)}
                         </div>
                     )}
-                    <p className="text-[11px] font-semibold text-secondary text-center">Moffi'de sahiplendirme ücretsizdir. İlan konumları yaklaşık gösterilir.</p>
+                    <p className="text-[11px] font-semibold text-secondary text-center">Moffi&apos;de sahiplendirme ücretsizdir. İlan konumları yaklaşık gösterilir.</p>
                 </main>
             ) : (
                 <>
@@ -210,7 +212,7 @@ function AdoptionHome() {
                 </>
             )}
 
-            <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom,0px))] z-40 px-4 pointer-events-none">
+            <div className="fixed inset-x-0 bottom-[calc(108px+env(safe-area-inset-bottom,0px))] z-40 px-4 pointer-events-none">
                 <div className="max-w-2xl mx-auto pointer-events-auto">
                     <Link href={user ? '/sahiplendirme/ilan-ver' : '/'} className="h-12 rounded-2xl bg-accent text-white font-black text-sm flex items-center justify-center shadow-lg">Sahiplendirme ilanı ver</Link>
                 </div>
@@ -224,7 +226,9 @@ function AdoptionHome() {
 
 function FilterSheet({ open, onClose, value, onApply }: { open: boolean; onClose: () => void; value: Extra; onApply: (v: Extra) => void }) {
     const [v, setV] = useState<Extra>(value);
-    useEffect(() => { if (open) setV(value); }, [open, value]);
+    // Her açılışta taslak güncel süzgeçlerden başlar (render sırasında, efektte setState yok).
+    const [wasOpen, setWasOpen] = useState(open);
+    if (open !== wasOpen) { setWasOpen(open); if (open) setV(value); }
     return (
         <Sheet open={open} onClose={onClose} title="Filtreler">
             <div>

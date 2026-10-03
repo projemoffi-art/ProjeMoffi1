@@ -38,6 +38,8 @@ export default function LostHomePage() {
     const { user } = useAuth();
     const { area, choose, detectDevice } = useSearchArea();
     const [listings, setListings] = useState<LostListing[] | null>(null);
+    // Zaman süzgecinin ölçüsü: ilanların yüklendiği an (render saf kalsın diye Date.now() burada değil).
+    const [loadedAt, setLoadedAt] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [q, setQ] = useState('');
     const [species, setSpecies] = useState<'all' | Species>('all');
@@ -49,13 +51,13 @@ export default function LostHomePage() {
     const [areaOpen, setAreaOpen] = useState(false);
 
     useEffect(() => {
-        lostService.list().then(setListings).catch(e => setError(e?.message || 'İlanlar yüklenemedi.'));
+        lostService.list().then(l => { setListings(l); setLoadedAt(Date.now()); }).catch(e => setError(e?.message || 'İlanlar yüklenemedi.'));
     }, []);
 
     const shown = useMemo(() => {
         if (!listings || !area) return [];
         const hours = TIMES.find(t => t.id === time)?.hours ?? null;
-        const minTs = hours ? Date.now() - hours * 3600000 : 0;
+        const minTs = hours ? loadedAt - hours * 3600000 : 0;
         const term = q.trim().toLocaleLowerCase('tr-TR');
         return listings
             .map(l => ({ l, km: l.lat != null && l.lng != null ? distanceKm(area, { lat: l.lat, lng: l.lng }) : null }))
@@ -66,7 +68,7 @@ export default function LostHomePage() {
                 && new Date(l.eventAt).getTime() >= minTs
                 && (!term || [l.petName, l.breed, l.color, l.locationText, ...l.features].filter(Boolean).join(' ').toLocaleLowerCase('tr-TR').includes(term)))
             .sort((a, b) => (a.l.status === 'active' ? 0 : 1) - (b.l.status === 'active' ? 0 : 1) || (a.km ?? 999) - (b.km ?? 999));
-    }, [listings, area, species, kind, radius, time, q]);
+    }, [listings, loadedAt, area, species, kind, radius, time, q]);
 
     const mine = (listings || []).filter(l => l.isMine && l.status === 'active');
     const selected = shown.find(s => s.l.id === selectedId) || null;
@@ -144,7 +146,7 @@ export default function LostHomePage() {
                 <p className="text-[11px] font-semibold text-secondary text-center">İlanların konumu yaklaşık gösterilir; tam konumu sadece ilan sahibi görür.</p>
             </main>
 
-            <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom,0px))] z-40 px-4 pointer-events-none">
+            <div className="fixed inset-x-0 bottom-[calc(108px+env(safe-area-inset-bottom,0px))] z-40 px-4 pointer-events-none">
                 <div className="max-w-2xl mx-auto grid grid-cols-2 gap-2.5 pointer-events-auto">
                     <Link href={user ? '/kayip/ilan-ver' : '/'} className="h-12 rounded-2xl bg-accent text-white font-black text-sm flex items-center justify-center shadow-lg">Kayıp ilanı ver</Link>
                     <Link href={user ? '/kayip/buldum' : '/'} className="h-12 rounded-2xl bg-card border border-accent/40 text-accent font-black text-sm flex items-center justify-center shadow-lg">Bir hayvan buldum</Link>
