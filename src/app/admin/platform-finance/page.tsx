@@ -1,190 +1,131 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { cn } from "@/lib/utils";
-import {
-    Wallet, TrendingUp, TrendingDown, DollarSign, Building2,
-    BarChart3, ArrowUpRight, PiggyBank, Receipt, Users, Banknote
-} from "lucide-react";
-import { motion } from "framer-motion";
+// Platform Finans: yalnızca gerçek kayıtlar. Ödenmiş sipariş = orders.status 'paid' | 'confirmed' (finalize_paid_order).
+// Komisyon siparişte saklanan commission_rate/commission_amount'tan (ödeme anındaki oran); varsayım yok.
+// İşletme dağılımı order_items.business_id'den. Satıcıya ödeme (payout) kaydı henüz yok: "satıcı payı" hesaplanan tutardır.
 
-export default function AdminPlatformFinancePage() {
-    const [orders, setOrders] = useState<any[]>([]);
-    const [activeBusinesses, setActiveBusinesses] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+
+const PAID = new Set(["paid", "confirmed"]);
+const tl = (n: number) => `₺${n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+interface OrderRow { id: string; status: string; total_amount: number | string | null; commission_rate: number | string | null; commission_amount: number | string | null; expires_at: string | null }
+interface ItemRow { order_id: string; business_id: string | null; quantity: number | null; price_at_purchase: number | string | null; status: string | null }
+
+export default function PlatformFinancePage() {
+    const [orders, setOrders] = useState<OrderRow[] | null>(null);
+    const [items, setItems] = useState<ItemRow[]>([]);
+    const [names, setNames] = useState<Map<string, string>>(new Map());
+    const [error, setError] = useState("");
+    const [loadedAt, setLoadedAt] = useState(0);
 
     useEffect(() => {
-        const fetchFinanceData = async () => {
-            try {
-                // Fetch orders
-                const { data: ordersData } = await supabase
-                    .from('orders')
-                    .select('*, order_items(*)')
-                    .order('created_at', { ascending: false });
-                
-                // Fetch approved businesses
-                const { data: profilesData } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('kybStatus', 'approved');
-
-                setOrders(ordersData || []);
-                setActiveBusinesses(profilesData || []);
-            } catch (err) {
-                console.error("Error fetching finance data:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchFinanceData();
+        let alive = true;
+        (async () => {
+            const [o, i, b] = await Promise.all([
+                supabase.from("orders").select("id, status, total_amount, commission_rate, commission_amount, expires_at").limit(5000),
+                supabase.from("order_items").select("order_id, business_id, quantity, price_at_purchase, status").limit(20000),
+                supabase.from("businesses").select("id, name"),
+            ]);
+            if (!alive) return;
+            if (o.error || i.error) setError("Finans verisi okunamadı.");
+            setOrders((o.data || []) as OrderRow[]);
+            setItems((i.data || []) as ItemRow[]);
+            setNames(new Map((b.data || []).map(x => [x.id as string, x.name as string])));
+            setLoadedAt(Date.now());
+        })();
+        return () => { alive = false; };
     }, []);
 
-    const summary = useMemo(() => {
-        const totalGMV = orders.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
-        // Varsayılan hesaplamalar (gerçek transaction tablosu gelene kadar)
-        const totalCommission = totalGMV * 0.10; // %10 komisyon varsayımı
-        const totalRefunds = orders.filter(o => o.status === 'cancelled').reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
-        const platformRevenue = totalCommission; 
-        const totalPayouts = totalGMV - totalCommission; 
-        const pendingPayouts = orders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) * 0.9;
-        
-        return { 
-            totalGMV, 
-            totalCommission, 
-            totalPayouts, 
-            totalRefunds, 
-            platformRevenue, 
-            pendingPayouts, 
-            activeBiz: activeBusinesses.length 
+    const s = useMemo(() => {
+        const list = orders || [];
+        const paid = list.filter(o => PAID.has(o.status));
+        const rateOf = new Map(paid.map(o => [o.id, Number(o.commission_rate) || 0]));
+        const gmv = paid.reduce((t, o) => t + (Number(o.total_amount) || 0), 0);
+        const commission = paid.reduce((t, o) => t + (Number(o.commission_amount) || 0), 0);
+        const awaiting = list.filter(o => o.status === "pending" && (!o.expires_at || new Date(o.expires_at).getTime() > loadedAt));
+        const cancelledItems = items.filter(it => rateOf.has(it.order_id) && (it.status === "cancelled" || it.status === "refunded"));
+        const refunds = cancelledItems.reduce((t, it) => t + (Number(it.price_at_purchase) || 0) * (it.quantity || 0), 0);
+
+        const per = new Map<string, { orders: Set<string>; gmv: number; commission: number }>();
+        for (const it of items) {
+            if (!it.business_id || !rateOf.has(it.order_id) || it.status === "cancelled" || it.status === "refunded") continue;
+            const line = (Number(it.price_at_purchase) || 0) * (it.quantity || 0);
+            const row = per.get(it.business_id) || { orders: new Set<string>(), gmv: 0, commission: 0 };
+            row.orders.add(it.order_id);
+            row.gmv += line;
+            row.commission += line * (rateOf.get(it.order_id)! / 100);
+            per.set(it.business_id, row);
+        }
+        const breakdown = Array.from(per, ([id, r]) => ({ id, name: names.get(id) || "Silinmiş işletme", orders: r.orders.size, gmv: r.gmv, commission: r.commission, net: r.gmv - r.commission }))
+            .sort((a, b) => b.gmv - a.gmv);
+
+        return {
+            paidCount: paid.length, gmv, commission, sellerShare: gmv - commission, refunds,
+            awaitingCount: awaiting.length, awaitingAmount: awaiting.reduce((t, o) => t + (Number(o.total_amount) || 0), 0),
+            breakdown,
         };
-    }, [orders, activeBusinesses]);
+    }, [orders, items, names, loadedAt]);
 
-    // Per-business breakdown (orders tablosunda işletme id yoksa genel gösteriyoruz, varsa eşleştirilebilir)
-    const businessBreakdown = useMemo(() => {
-        const map = new Map<string, { name: string; orders: number; gmv: number; commission: number; payouts: number }>();
-        activeBusinesses.forEach(biz => {
-            map.set(biz.id, { name: biz.username || biz.email || 'İşletme', orders: 0, gmv: 0, commission: 0, payouts: 0 });
-        });
-        
-        // Şimdilik işletme bağlantısı olmadığı için siparişleri genel gösteriyoruz veya rastgele atayabiliriz.
-        // Gerçek implementasyonda order_items içindeki product'ın satıcısına göre dağıtılmalı.
-        return Array.from(map.values()).sort((a, b) => b.gmv - a.gmv);
-    }, [activeBusinesses, orders]);
+    if (orders === null) return <div className="flex justify-center py-24"><Loader2 className="w-6 h-6 animate-spin text-zinc-400" /></div>;
 
     return (
-        <div>
-            <div className="mb-8">
-                <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Platform Finans</h1>
-                <p className="text-sm text-gray-500 mt-1">Platform genelinde gelir, komisyon ve ödeme durumu</p>
+        <div className="max-w-5xl mx-auto px-4 lg:px-0 pt-10 pb-32 space-y-6">
+            <header className="space-y-1">
+                <h1 className="text-2xl font-black text-zinc-900 dark:text-white">Platform Finans</h1>
+                <p className="text-sm font-semibold text-zinc-500 max-w-2xl">
+                    Mağaza siparişlerinin gerçek tutarları. Komisyon, her siparişte ödeme anındaki orandan hesaplanır (Sistem Ayarları → komisyon oranı yeni siparişleri etkiler).
+                </p>
+                {error && <p className="text-sm font-bold text-rose-500">{error}</p>}
+            </header>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Stat label="Ödenen sipariş tutarı (GMV)" value={tl(s.gmv)} sub={`${s.paidCount} sipariş`} />
+                <Stat label="Platform komisyonu" value={tl(s.commission)} sub={s.gmv ? `ortalama %${((s.commission / s.gmv) * 100).toFixed(1)}` : "—"} />
+                <Stat label="Satıcı payı (hesaplanan)" value={tl(s.sellerShare)} sub="ödeme kaydı henüz yok" />
+                <Stat label="İptal / iade edilen ürünler" value={tl(s.refunds)} sub="ödenmiş siparişlerde" />
+            </div>
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-sm font-semibold text-amber-700 dark:text-amber-400">
+                Ödeme bekleyen: {s.awaitingCount} sipariş · {tl(s.awaitingAmount)} (15 dakika içinde ödenmezse düşer)
             </div>
 
-            {/* Top Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <BigStat icon={DollarSign} label="Toplam GMV" value={summary.totalGMV} color="indigo" />
-                <BigStat icon={Receipt} label="Platform Komisyon" value={summary.totalCommission} color="green" trend="+18%" />
-                <BigStat icon={Banknote} label="Ödenen" value={summary.totalPayouts} color="blue" />
-                <BigStat icon={TrendingDown} label="İadeler" value={summary.totalRefunds} color="red" />
-            </div>
-
-            {/* Revenue + Active Businesses */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <div className="lg:col-span-2 bg-card rounded-2xl border border-card-border shadow-moffi-card p-6">
-                    <h3 className="font-bold text-foreground mb-1">Platform Gelir Özeti</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">Komisyon bazlı net gelir</p>
-                    <div className="space-y-4">
-                        <ProgressRow label="Toplam Komisyon Geliri" value={summary.totalCommission} max={summary.totalGMV} color="bg-green-500" />
-                        <ProgressRow label="İade Kayıpları" value={summary.totalRefunds * 0.1} max={summary.totalGMV} color="bg-red-400" />
-                        <ProgressRow label="Net Platform Geliri" value={summary.platformRevenue} max={summary.totalGMV} color="bg-indigo-600" />
+            <section className="rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                <h2 className="px-4 py-3 text-sm font-black text-zinc-900 dark:text-white border-b border-zinc-100 dark:border-zinc-800">İşletme bazlı dağılım</h2>
+                {s.breakdown.length === 0 ? (
+                    <p className="px-4 py-10 text-center text-sm font-semibold text-zinc-500">Henüz ödenmiş mağaza siparişi yok.</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="text-xs font-bold text-zinc-500 text-left">
+                                <tr><th className="px-4 py-2.5">İşletme</th><th className="px-4 py-2.5 text-right">Sipariş</th><th className="px-4 py-2.5 text-right">Satış</th><th className="px-4 py-2.5 text-right">Komisyon</th><th className="px-4 py-2.5 text-right">Satıcı payı</th></tr>
+                            </thead>
+                            <tbody>
+                                {s.breakdown.map(b => (
+                                    <tr key={b.id} className="border-t border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-white">
+                                        <td className="px-4 py-2.5">{b.name}</td>
+                                        <td className="px-4 py-2.5 text-right">{b.orders}</td>
+                                        <td className="px-4 py-2.5 text-right">{tl(b.gmv)}</td>
+                                        <td className="px-4 py-2.5 text-right text-emerald-600">{tl(b.commission)}</td>
+                                        <td className="px-4 py-2.5 text-right">{tl(b.net)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                    <div className="mt-6 pt-4 border-t border-card-border flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Bekleyen İşletme Ödemeleri</span>
-                        <span className="text-lg font-black text-amber-600">₺{summary.pendingPayouts.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                </div>
-
-                <div className="space-y-4">
-                    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl">
-                        <PiggyBank className="w-8 h-8 text-black/60 dark:text-white/60 mb-3" />
-                        <div className="text-3xl font-black">₺{summary.platformRevenue.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
-                        <div className="text-xs text-black/70 dark:text-white/70 font-medium mt-1">Net Platform Geliri</div>
-                        <div className="mt-4 flex items-center gap-1 text-[10px] text-black/80 dark:text-white/80 bg-black/10 dark:bg-white/10 rounded-lg px-2 py-1 w-fit">
-                            <ArrowUpRight className="w-3 h-3" /> Geçen aya göre +18%
-                        </div>
-                    </div>
-                    <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Users className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Aktif İşletmeler</span>
-                        </div>
-                        <div className="text-3xl font-black text-foreground">{summary.activeBiz}</div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Gelir üreten işletme sayısı</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Per-Business Table */}
-            <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card overflow-hidden">
-                <div className="p-5 border-b border-card-border">
-                    <h3 className="font-bold text-foreground">İşletme Bazlı Dağılım</h3>
-                </div>
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="border-b border-card-border bg-gray-50/50">
-                            <th className="text-left p-4 font-bold text-gray-500 text-xs uppercase">İşletme</th>
-                            <th className="text-right p-4 font-bold text-gray-500 text-xs uppercase hidden sm:table-cell">Sipariş</th>
-                            <th className="text-right p-4 font-bold text-gray-500 text-xs uppercase">GMV</th>
-                            <th className="text-right p-4 font-bold text-gray-500 text-xs uppercase hidden md:table-cell">Komisyon</th>
-                            <th className="text-right p-4 font-bold text-gray-500 text-xs uppercase hidden lg:table-cell">Ödenen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {businessBreakdown.map((biz, i) => (
-                            <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition">
-                                <td className="p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">{biz.name.charAt(0)}</div>
-                                        <span className="font-medium text-foreground">{biz.name}</span>
-                                    </div>
-                                </td>
-                                <td className="p-4 text-right hidden sm:table-cell font-bold text-foreground">{biz.orders}</td>
-                                <td className="p-4 text-right font-black text-foreground">₺{biz.gmv.toLocaleString('tr-TR')}</td>
-                                <td className="p-4 text-right hidden md:table-cell font-bold text-green-600">₺{biz.commission.toFixed(2)}</td>
-                                <td className="p-4 text-right hidden lg:table-cell font-bold text-blue-600">₺{biz.payouts.toLocaleString('tr-TR')}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                )}
+            </section>
         </div>
     );
 }
 
-function BigStat({ icon: Icon, label, value, color, trend }: { icon: typeof DollarSign; label: string; value: number; color: string; trend?: string }) {
-    const colors: Record<string, string> = { indigo: 'bg-indigo-50 text-indigo-600', green: 'bg-green-50 text-green-600', blue: 'bg-blue-50 text-blue-600', red: 'bg-red-50 text-red-600' };
+function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
     return (
-        <div className="bg-card rounded-2xl border border-card-border p-5 shadow-moffi-card">
-            <div className="flex items-center justify-between mb-3">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", colors[color])}><Icon className="w-4 h-4" /></div>
-                {trend && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-0.5"><ArrowUpRight className="w-3 h-3" />{trend}</span>}
-            </div>
-            <div className="text-xl font-black text-foreground">₺{value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
-            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">{label}</div>
-        </div>
-    );
-}
-
-function ProgressRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-    const pct = max > 0 ? (value / max) * 100 : 0;
-    return (
-        <div>
-            <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600 font-medium">{label}</span>
-                <span className="font-bold text-foreground">₺{value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(pct, 100)}%` }} transition={{ duration: 0.8 }} className={cn("h-full rounded-full", color)} />
-            </div>
+        <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-zinc-800">
+            <p className="text-xs font-bold text-zinc-500">{label}</p>
+            <p className="text-xl font-black text-zinc-900 dark:text-white mt-1">{value}</p>
+            <p className="text-[11px] font-semibold text-zinc-400 mt-0.5">{sub}</p>
         </div>
     );
 }

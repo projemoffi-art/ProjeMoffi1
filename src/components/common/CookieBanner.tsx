@@ -1,24 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Giriş ve ilk kurulum ekranlarında gösterilmez (düğmelerin üstüne biniyordu; karşılama ekranında kabul bilgisi zaten var),
-// ana sayfaya geçince bir kez çıkar.
-const QUIET_ROUTES = ["/", "/onboarding", "/demo"];
+// Giriş, ilk kurulum, işletme başvurusu ve yönetici panelinde gösterilmez (alttaki ana düğmelerin üstüne biniyordu;
+// karşılama ekranında kabul bilgisi zaten var); ana sayfaya geçince bir kez çıkar.
+const QUIET_ROUTES = ["/", "/onboarding", "/business-register", "/admin", "/demo"];
+
+const KEY = "moffi_cookie_consent";
+const listeners = new Set<() => void>();
+function subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }
+function readConsent() {
+    try { return !!localStorage.getItem(KEY); } catch { return true; }
+}
 
 export default function CookieBanner() {
     const pathname = usePathname() ?? "";
-    const [consented, setConsented] = useState(true);
-
-    useEffect(() => {
-        setConsented(!!localStorage.getItem("moffi_cookie_consent"));
-    }, []);
+    // Sunucuda ve ilk çizimde "kabul edilmiş" sayılır (bant yanıp sönmesin); tarayıcıda cihaz kaydı okunur.
+    const consented = useSyncExternalStore(subscribe, readConsent, () => true);
 
     const accept = () => {
-        localStorage.setItem("moffi_cookie_consent", "true");
-        setConsented(true);
+        try { localStorage.setItem(KEY, "true"); } catch { /* depolama kapalı */ }
+        listeners.forEach(fn => fn());
     };
 
     const quiet = QUIET_ROUTES.some(r => (r === "/" ? pathname === "/" : pathname.startsWith(r)));

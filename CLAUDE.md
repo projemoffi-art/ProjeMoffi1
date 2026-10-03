@@ -93,6 +93,10 @@ Bundan çıkan pratik kurallar:
   diye varsayıyorum" değil.
 - Güvenlik adımlarını atlama: RLS politikalarını, publication ayarlarını,
   yetkilendirme kontrollerini değişiklik öncesi ve sonrası kontrol et.
+- 🔴 **Dokunduğun dosyayı temiz bırak (Baran, 2026-10-03):** "işlevsel sorun yaratmıyor" diye hata bırakılmaz. Değiştirdiğin her dosya
+  tip kontrolünden (tsc) ve lint'ten (`npx eslint <dosya>`) HATASIZ çıkar — dosyada senden önce kalan hatalar dahil. Tüm kod tabanının borcu
+  Bölüm 12.3'te sayıyla tutulur ve yalnızca azalır. Tip kontrolünü kaynak üzerinde çalıştır: `.next/dev/types` geliştirme sunucusu
+  yeniden derlerken yarım kalabiliyor ve sözdizimi hatası verip asıl kontrolü durduruyor (`include` yalnız `src/**` olan geçici bir tsconfig).
 
 ## 5. Tasarım prensipleri
 
@@ -412,8 +416,16 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   İşletme geliri TL (komisyon), coin değil. 🔴 Yetkiyi asla istemcinin taşıdığı çereze/değere dayandırma (taklit edilebilen rol çerezi kaldırıldı).
 - **8.54 İşletme modeli (KRİTİK).** `businesses` + `business_members` (owner/manager/staff). Panelde kişinin `user.id`'si ASLA işletme kimliği yerine
   kullanılmaz: `useActiveBusiness()` (`BusinessTypeContext`), servis `getActiveBusinessId()`/`updateActiveBusiness()`. Yetki: `is_business_member`,
-  `can_manage_business`, `current_business_id`. Başka işletmeyi `business_cards`'tan oku. Onay/KYB sadece yönetici (service_role,
-  `lib/server/reviewBusiness.ts`, artık aal2 ister). İşletme bildirimi `notify_business` (`biz_*` türleri).
+  `can_manage_business`, `current_business_id`. Başka işletmeyi `business_cards`'tan oku. İşletme bildirimi `notify_business` (`biz_*` türleri).
+  **Kayıt ve onay (2026-10-03, yeniden yapıldı — önceden hiç çalışmıyordu):** işletme açmanın TEK yolu `submit_business_application`
+  (`services/businessApplicationService.ts`): giriş yapmış + e-postası doğrulanmış kişi, `/business-register` (girişsizse tanıtım → `/?next=`);
+  doğrulama sunucuda (tür, IBAN mod-97 `iban_is_valid`, VKN/TCKN, konum TR sınırı), aynı anda 1 bekleyen başvuru, kişi başı ≤5 işletme;
+  reddedilen başvuru `?resubmit=<id>` ile düzeltilip aynı fonksiyonla yeniden gönderilir. Yöneticilere `admin_business` bildirim + e-posta.
+  Karar TEK ekranda `/admin/businesses` → `admin_review_business` (yönetici + **aal2 JWT'den**, ret nedeni ≥5 karakter) → `biz_kyb` bildirim +
+  e-posta. 🔴 Servis rolünün `businesses`'a yazma yetkisi YOK (eski `reviewBusiness` bu yüzden hiç çalışmıyordu; silindi). Kişisel tarafta giriş:
+  Ayarlar → İşletme Portalı ("İşletmeni Moffi'ye ekle"/"Yeni işletme aç"). Ara katman yalnız `/business` ve `/business/*`'ı korur
+  (`/business-register` dahil değil). `useMyBusinesses` önbelleği `invalidateMyBusinesses()` ile yenilenir. Barınak etiketi üyelikten
+  (`is_approved_shelter`). 🔴 `profiles`'ta e-posta sütunu YOK; yönetici e-postayı `admin_user_emails(ids)` ile okur.
 - **8.55 Personel daveti.** `business_invitations` (token kolon yetkisiyle kapalı), `invite_staff`, `respond_staff_invitation`,
   `cancel_staff_invitation`, `remove_business_member`, `get_business_team`, `/invitation/[token]` (hesapsız açılır, giriş `/?next=`).
   Hesabı olmayana e-posta `enqueue_email_address`. Davet kabulü doğrulanmış e-posta ister.
@@ -423,6 +435,9 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   `AccountDeletionBanner`; kalıcı silme cron `account-purge-daily` → `/api/cron/account-purge` (`prepare_account_purge` randevuları
   "Silinmiş kullanıcı" yapar). Bağlantı kuralları uygulandı (sipariş/randevu/yorum isimsiz kalır). Şifre değiştirme mevcut şifreyi doğrular;
   "Oturumlar" diğer cihazlardan çıkış yapar. Yönetici 2FA: `AdminMfaGate` + `20261002180000_admin_requires_mfa.sql` (BEKLİYOR, Bölüm 12).
+  Yönetici bir hesabı aynı 30 günlük sürece alır/geri alır: `admin_schedule_account_deletion` / `admin_cancel_account_deletion` (aal2;
+  yönetici hesabı ve ekibi olan işletme sahibi hariç). Profil satırı istemciden ASLA doğrudan silinmez (eski "Sil" bunu yapıyordu).
+  Yönetici yazma işlemleri (`admin_*`) aal2'yi kendileri denetler; yönetici 2FA migration'ını beklemez.
 - **8.58 Native ara katman.** 🔴 Telefon özelliklerine (konum, sensör, paylaşım, pano, titreşim, ekran açık tutma, dış bağlantı, ön plan/ağ,
   push, satın alma) SADECE `@/native` üzerinden erişilir. Modüller: `geolocation`, `sensors` (iOS izni dokunuşla aynı çağrı yığınında),
   `share`, `device`, `push`, `purchases`, `haptics`, `isNative()/platform()`. Adlar `location`/`motion` değil (tarayıcı/framer çakışması).
@@ -565,6 +580,8 @@ ilgili maddeyi tek satırla hatırlat.
 ### 12.1 Baran'ın yapacakları ve kararları
 
 **Hemen**
+- [ ] SQL Editor'da `20261004100900_profiles_no_direct_delete_MANUAL_sql_editor.sql` (profil satırını doğrudan silme izni, `studio_assets`,
+      testten kalan "[TEST]" işletmeler — şu an onaysız, görünmüyorlar).
 - [ ] SQL Editor'da `supabase/migrations/20261003102000_walk_cleanup_MANUAL_sql_editor.sql` çalıştır (acil değil, tekrar eden
       politika/index temizliği; DROP içerdiği için bağlayıcıdan uygulanamıyor).
 - [ ] 🔴 **`GEMINI_API_KEY`** (Google AI Studio) → Vercel Production + yeniden yayın. Yok: yapay zekâ canlıda çalışmıyor. Yereldeki `.env.local` anahtarı da Google tarafından reddediliyor (401, 2026-10-03): AI Studio’dan yeni anahtar her ikisine.
@@ -621,16 +638,19 @@ eski adresten yönlendirme, sonra devir. Basılı QR künyeler (`/id/...`) eski 
       bildirimi çıkıyordu; sıfırlandı, rozet anahtarı `moffi_earned_badges_v3`. Çerez bandı kompakt yazıldı, giriş/kurulumda gizli. `/onboarding` açık
       temaya zorlanır (`ThemeContext` authPaths). **Baran'a bırakılan:** isteğe bağlı Supabase e-posta kodu uzunluğunu 6 yapmak (kutular 8'e kadar uyar),
       köpek/kedi kartları için gerçek fotoğraf, Apple girişi (hesap gelince), kamera eklentisi (native aşamasında).
-- [ ] 🔴 **Yeni işletme kaydı çalışmıyor (2026-10-03 genel kontrolde bulundu).** 8.54'te işletmeler ayrı kayda taşındı ama
-      `/business-register` hâlâ yalnızca `profiles`'a yazıyor; `protect_profile_*` tetikleyicileri rol/türü geri alıyor ve `businesses` +
-      `business_members` satırı oluşturan HİÇBİR yol yok → yeni işletme panele giremez, yönetici onay listesinde görünmez. Yönetici
-      onay ekranları (`/admin/businesses`, `/admin/users`, `/admin/health` vets sekmesi) hâlâ `profiles`'tan listeliyor (mevcut 3 işletmenin
-      kimliği sahibiyle aynı olduğu için şimdilik çalışıyor); `/admin/health` reddetmede neden göndermiyor. Çözüm planı Baran onayında.
-- [ ] `/admin/studio` ("Moffi Studio", `studio_assets`) hiçbir yerde kullanılmıyor; silme Baran onayında.
-- [ ] Yürüyüş denetimi C/D/E aşamaları (2026-10-03 raporu): C = görev/rozet/XP sunucuya, görev tiplerinin düzeltilmesi (günlük
+- [ ] 🔴 **Kod borcu (2026-10-03 ölçümü, yalnızca azalır):** tip kontrolü (src) **68** hata; lint **~1.150** hata (çoğu `no-explicit-any` ~970,
+      `no-unescaped-entities` ~98, React kuralları ~120). Sıra: (1) tip hataları — gerçek kusurlar önce: `MoffiRunGame` tanımsız değişkenler
+      (oyun bitişinde çöker), `ShopProduct`'ın iki ayrı tanımı (`services/types` ↔ `types/domain`, mağaza), `IApiService`'te eksik metotlar
+      (`getClinicProducts`, `updateOrderTracking`, `getClinicQuests` — çalışıyor ama tipsiz), `PetContext.Pet` ↔ `services/types.Pet`, `AuthContext`
+      `UserProfile`; (2) React kuralları (`set-state-in-effect`, `purity`, `refs`); (3) `any` ve kaçış karakterleri en sonda, dosya dosya.
+      Ölü dosya avı (E aşaması) 2026-10-03'te yapıldı: 48 kullanılmayan dosya silindi (`scratchpad/orphans.cjs` mantığı: hiçbir yerden import edilmeyen modül).
+- [ ] Sahibi silinen (hesabı kalıcı silinen) tek kişilik işletme sahipsiz kalıyor: `request_account_deletion` yalnız ekibi olanı engelliyor; `prepare_account_purge`
+      işletmeyi kapatmalı (onayı kaldır + gizle) ya da kişiye "önce işletmeni kapat" demeli. Karar gerekiyor.
+- [ ] İşletme kurulum sihirbazı (`OnboardingWizard`) ve işletme panelinin bazı ekranları indigo/mavi tonlarda (Bölüm 5'e aykırı).
+- [ ] Yürüyüş denetimi C/D aşamaları (2026-10-03 raporu): C = görev/rozet/XP sunucuya, görev tiplerinin düzeltilmesi (günlük
       toplam, imkânsız "Çift Yürüyüş"), otomatik günlük hedefin gün içinde sabit kalması (ilk yürüyüşten sonra 1,7→2,3 sıçrıyor),
       meydan okuma/rozet/sıralama/ödül ekranlarının referans tasarıma çekilmesi. D = anahtarlı harita sağlayıcısı (OSM karo kullanım
-      politikası). E = ölü dosyalar (`components/walk` içinde 8 dosya, `MapboxLiveMap`, `mockMarks`), `/api/deals` 500.
+      politikası). (E = ölü dosyalar tamamlandı.)
 - [ ] "Moffi Puanı / PP" yazan arayüz metinleri yeni para birimi adına çevrilecek (isim belli olunca topluca).
 - [ ] `pets.health_notes` ve `sos_settings.critical_health_note` kolonları silinecek (içerik 8.45'te taşındı; kolon silme Baran'ın SQL Editor'ından).
 - [ ] Silinen gönderi/hikâyelerin depoda kalan eski dosyaları (8.50).

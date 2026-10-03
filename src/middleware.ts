@@ -120,7 +120,7 @@ export async function middleware(request: NextRequest) {
 
     // 2. İşletme paneli: kişi en az bir işletmenin üyesi (sahip/yönetici/personel) olmalı (8.54). Rol değil üyelik
     // belirler; hangi işletmede neyi yapabileceğini veritabanı kuralları ayrıca denetler.
-    if (pathname.startsWith("/business")) {
+    if (pathname === "/business" || pathname.startsWith("/business/")) {
         if (!userId) {
             return NextResponse.redirect(new URL("/", request.url));
         }

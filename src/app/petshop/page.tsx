@@ -922,16 +922,6 @@ export default function PetShopPage() {
                                     )}
                                 </div>
 
-                                {checkoutMode === 'stripe' && paymentClientSecret ? (
-                                    <Elements stripe={stripePromise} options={{ clientSecret: paymentClientSecret, appearance: { theme: 'night' } }}>
-                                        <CheckoutForm 
-                                            amount={cartTotal} 
-                                            onSuccess={handlePaymentSuccess} 
-                                            onCancel={() => setShowCheckout(false)} 
-                                        />
-                                    </Elements>
-                                ) : (
-                                    /* CUSTOM SIMULATED CHECKOUT FORM */
                                     <div className="space-y-6">
                                         {/* Errors */}
                                         {checkoutErrors.length > 0 && (
@@ -1101,7 +1091,6 @@ export default function PetShopPage() {
                                             </>
                                         )}
                                     </div>
-                                )}
                             </div>
                         </motion.div>
                     </>

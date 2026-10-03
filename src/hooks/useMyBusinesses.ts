@@ -9,21 +9,38 @@ import type { MyBusiness } from "@/services/types";
 // (rol değil üyelik). Aynı oturumda birden fazla bileşen istese de tek istek atılır.
 let cache: { userId: string; promise: Promise<MyBusiness[]> } | null = null;
 
+const listeners = new Set<() => void>();
+
+/** Yeni işletme açıldığında / üyelik değiştiğinde çağrılır: tüm ekranlar listeyi yeniden çeker. */
+export function invalidateMyBusinesses() {
+    cache = null;
+    listeners.forEach(fn => fn());
+}
+
 export function useMyBusinesses(): MyBusiness[] {
     const { user } = useAuth();
-    const [list, setList] = useState<MyBusiness[]>([]);
+    const [state, setState] = useState<{ userId: string; list: MyBusiness[] } | null>(null);
+    const [version, setVersion] = useState(0);
 
     useEffect(() => {
-        if (!user?.id) { setList([]); return; }
-        if (!cache || cache.userId !== user.id) {
-            cache = { userId: user.id, promise: apiService.getMyBusinesses().catch(() => []) };
+        const bump = () => setVersion(v => v + 1);
+        listeners.add(bump);
+        return () => { listeners.delete(bump); };
+    }, []);
+
+    useEffect(() => {
+        const userId = user?.id;
+        if (!userId) return;
+        if (!cache || cache.userId !== userId) {
+            cache = { userId, promise: apiService.getMyBusinesses().catch(() => []) };
         }
         let alive = true;
-        cache.promise.then(r => { if (alive) setList(r); });
+        cache.promise.then(list => { if (alive) setState({ userId, list }); });
         return () => { alive = false; };
-    }, [user?.id]);
+    }, [user?.id, version]);
 
-    return list;
+    // Oturum kapandıysa ya da başka kullanıcıya geçildiyse eski liste gösterilmez.
+    return state && state.userId === user?.id ? state.list : [];
 }
 
 // Cihazda en son kullanılan panel (kişisel / işletme): sadece açılışta nereye gidileceği için bir kolaylık,

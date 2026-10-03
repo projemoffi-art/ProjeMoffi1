@@ -14,7 +14,7 @@ import {
     Users, Eye, MessageSquare, Tag, Plus,
     ArrowRight, Monitor, Layout,
     EyeOff, BellRing, Mail, AlertTriangle,
-    Clock, Moon, Sun, Timer, Coffee, Type, Glasses, Layers, Briefcase, Crown, QrCode, Building2
+    Clock, Moon, Sun, Timer, Coffee, Type, Glasses, Layers, Briefcase, Crown, QrCode, Building2, Store
 } from 'lucide-react';
 import { cn, showToast } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -358,12 +358,20 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
 };
 
 // Kişi bir işletmenin üyesiyse (sahip/yönetici/personel) panele geçiş — rol değil üyelik (8.54).
+// Herkes kendi hesabıyla işletme başvurusu yapabilir (hesap = kişi, işletme = ayrı kayıt).
 const BusinessPortalSection = () => {
     const businesses = useMyBusinesses();
-    if (businesses.length === 0) return null;
     return (
         <Section title="İşletme Portalı">
-            <ActionRow icon={Building2} label="İşletme Paneline Geç" desc={businesses.length === 1 ? businesses[0].name : `${businesses.length} işletme`} onClick={() => { setLastPanel('business'); window.location.href = '/business/dashboard'; }} />
+            {businesses.length > 0 && (
+                <ActionRow icon={Building2} label="İşletme Paneline Geç" desc={businesses.length === 1 ? businesses[0].name : `${businesses.length} işletme`} onClick={() => { setLastPanel('business'); window.location.href = '/business/dashboard'; }} />
+            )}
+            <ActionRow
+                icon={Store}
+                label={businesses.length > 0 ? 'Yeni işletme aç' : 'İşletmeni Moffi\'ye ekle'}
+                desc="Veteriner, pet shop, kuaför, eğitmen ya da barınak"
+                onClick={() => { window.location.href = '/business-register'; }}
+            />
         </Section>
     );
 };

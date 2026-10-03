@@ -70,6 +70,7 @@ export function BusinessHeader({ onMenuClick }: HeaderProps) {
         else if (type === 'biz_order' || type === 'order') router.push('/business/orders');
         else if (type === 'biz_staff') router.push('/business/doctors');
         else if (type === 'biz_content_review') router.push('/business/campaigns');
+        else if (type === 'biz_kyb') router.push('/business/dashboard');
     };
 
     const selectBusiness = async (id: string) => {

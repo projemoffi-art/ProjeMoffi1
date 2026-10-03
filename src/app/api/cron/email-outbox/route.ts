@@ -55,19 +55,24 @@ export async function POST(request: Request) {
                 email = userData?.user?.email;
             }
             if (!email) throw new Error("E-posta adresi bulunamadı");
+            // Ayrılmış test alan adları (RFC 2606/6761) hiçbir zaman gönderilmez: geri dönen e-posta gönderici itibarını düşürür.
+            if (/\.(invalid|test|example|localhost)$/i.test(email) || /@example\.(com|net|org)$/i.test(email)) {
+                throw new Error("Ayrılmış test alan adı; gönderilmedi");
+            }
 
             const result = await sendEmail({
                 to: email,
                 subject: job.subject,
                 html: getNotificationEmailHtml(job.heading, job.body, job.cta_url)
             });
-            if (!result.success || (result as any).simulated) {
-                throw new Error(String((result as any).error?.message || (result as any).error || "Gönderim başarısız"));
+            if (!result.success || ('simulated' in result && result.simulated)) {
+                const e = 'error' in result ? (result.error as { message?: string } | string | undefined) : undefined;
+                throw new Error(typeof e === 'string' ? e : e?.message || "Gönderim başarısız");
             }
             await finish(admin, job.id, true);
             sent++;
-        } catch (err: any) {
-            await finish(admin, job.id, false, String(err?.message || err));
+        } catch (err) {
+            await finish(admin, job.id, false, err instanceof Error ? err.message : String(err));
             failed++;
         }
     }

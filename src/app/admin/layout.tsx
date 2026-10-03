@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
     LayoutDashboard, Megaphone, Map, BarChart3, Store, Settings, LogOut,
     Shield, Menu, X, ChevronRight, ChevronLeft, Building2, Wallet,
-    AlertTriangle, Sliders, MessageSquare, Gamepad2, HeartPulse, Palette,
+    AlertTriangle, Sliders, MessageSquare, Gamepad2, HeartPulse,
     PawPrint, Search, Users, Trophy
 } from "lucide-react";
 import Image from "next/image";
@@ -30,7 +30,7 @@ const MENU_GROUPS = [
         items: [
             { title: "Topluluk & Keşfet", icon: Search, path: "/admin/moderation" },
             { title: "Haftanın Teması", icon: PawPrint, path: "/admin/themes" },
-            { title: "Sağlık & SOS", icon: HeartPulse, path: "/admin/health" },
+            { title: "Kayıp & SOS", icon: HeartPulse, path: "/admin/health" },
             { title: "Yürüyüş & Oyun", icon: Gamepad2, path: "/admin/activity" },
         ]
     },
@@ -38,7 +38,6 @@ const MENU_GROUPS = [
         group: "TİCARET",
         items: [
             { title: "Market & Mağaza", icon: Store, path: "/admin/market" },
-            { title: "Moffi Studio", icon: Palette, path: "/admin/studio" },
         ]
     },
     {
@@ -205,7 +204,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             {user?.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : <span className="font-bold text-white">A</span>}
                         </div>
                         <div className={cn("flex-1 overflow-hidden", collapsed && "lg:hidden")}>
-                            <div className="text-sm font-black text-white truncate">{user?.user_metadata?.full_name || user?.email || user?.username || 'Admin'}</div>
+                            <div className="text-sm font-black text-white truncate">{user?.name || user?.email || user?.username || 'Admin'}</div>
                             <div className="flex items-center gap-1.5">
                                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Secured</span>

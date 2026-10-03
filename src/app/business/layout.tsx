@@ -33,7 +33,7 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
 // değilse inceleme/ret ekranı. Onay bilgisi kişinin profilinden değil işletme kaydından okunur.
 function BusinessShell({ children }: { children: React.ReactNode }) {
     const { logout } = useAuth();
-    const { business, loading } = useActiveBusiness();
+    const { business, loading, role } = useActiveBusiness();
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -68,16 +68,16 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
 
     if (!isApproved) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center p-6 font-sans">
+            <div className="min-h-screen bg-[#F7F5FB] dark:bg-[#0E0D12] flex items-center justify-center p-6 font-sans">
                 <div className="bg-card dark:bg-[#121212] rounded-[2.5rem] p-10 border border-card-border dark:border-[#27272a] shadow-xl text-center max-w-lg w-full space-y-6">
                     {kybStatus === 'rejected' ? (
                         <>
                             <div className="w-20 h-20 bg-rose-100 dark:bg-rose-950/30 rounded-full flex items-center justify-center mx-auto">
                                 <XCircle className="w-10 h-10 text-rose-600 dark:text-rose-400" />
                             </div>
-                            <h2 className="text-2xl font-black text-foreground dark:text-white">Başvurunuz Reddedildi ❌</h2>
+                            <h2 className="text-2xl font-black text-foreground dark:text-white">Başvurun onaylanmadı</h2>
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Yasal inceleme sonucunda başvurunuz ne yazık ki onaylanmadı.
+                                Moffi ekibi başvurunu inceledi; aşağıdaki nedeni düzeltip yeniden gönderebilirsin.
                             </p>
                             {rejectionReason && (
                                 <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-2xl text-left">
@@ -85,19 +85,28 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
                                     <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{rejectionReason}</p>
                                 </div>
                             )}
-                            <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">Lütfen bilgilerinizi kontrol edip yönetici ile iletişime geçin.</p>
+                            {role === 'owner' ? (
+                                <button
+                                    onClick={() => router.push(`/business-register?resubmit=${business.id}`)}
+                                    className="w-full py-3.5 rounded-2xl bg-[#5B4D9D] text-white font-extrabold text-sm"
+                                >
+                                    Bilgileri düzelt ve yeniden gönder
+                                </button>
+                            ) : (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Başvuruyu yalnızca işletmenin sahibi düzeltip yeniden gönderebilir.</p>
+                            )}
                         </>
                     ) : (
                         <>
                             <div className="w-20 h-20 bg-amber-100 dark:bg-amber-950/30 rounded-full flex items-center justify-center mx-auto animate-pulse">
                                 <Clock className="w-10 h-10 text-amber-600 dark:text-amber-400" />
                             </div>
-                            <h2 className="text-2xl font-black text-foreground dark:text-white">Başvurunuz İnceleniyor 🔍</h2>
+                            <h2 className="text-2xl font-black text-foreground dark:text-white">Başvurun inceleniyor</h2>
                             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                                MoffiBusiness kaydınız başarıyla alındı. Platform yöneticisi yasal vergi numarası ve fatura/IBAN bilgilerinizi inceledikten sonra paneliniz aktif edilecektir.
+                                Başvurun alındı. Moffi ekibi vergi numarası, IBAN ve konum bilgilerini inceledikten sonra panelin açılır; sonuç bildirim ve e-postayla gelir.
                             </p>
-                            <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl text-left space-y-2">
-                                <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300">İNCELEMEDEKİ BİLGİLERİNİZ:</div>
+                            <div className="p-4 bg-[#5B4D9D]/[0.06] border border-[#5B4D9D]/15 rounded-2xl text-left space-y-2">
+                                <div className="text-xs font-bold text-[#5B4D9D] dark:text-[#B4A9E8]">İNCELEMEDEKİ BİLGİLER</div>
                                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
                                     <div><strong>İşletme:</strong> {business.name}</div>
                                     <div><strong>Sahip:</strong> {business.owner_name}</div>
@@ -105,13 +114,13 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
                                     <div><strong>Vergi No:</strong> {business.tax_id}</div>
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">Ortalama onaylanma süresi 1-2 iş günüdür.</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">İnceleme genellikle 1–2 iş günü sürer.</p>
                         </>
                     )}
 
                     <div className="pt-4 flex gap-4">
                         <button
-                            onClick={() => router.push('/')}
+                            onClick={() => router.push('/home')}
                             className="flex-1 py-3.5 rounded-2xl bg-gray-100 dark:bg-white/5 border border-card-border dark:border-[#27272a] text-gray-700 dark:text-gray-300 font-bold text-xs uppercase tracking-wider hover:bg-gray-200 transition-colors"
                         >
                             Ana Sayfa

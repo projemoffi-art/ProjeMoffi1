@@ -5,7 +5,7 @@
 // ve kullanıcının seçtiği kısayollar (edgeCatalog) var. Tutamak yukarı-aşağı sürüklenerek taşınır.
 // Ayarlar profiles.settings.edge'de; konum (y) bu cihazda.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -33,6 +33,15 @@ import {
 } from './edgeCatalog';
 
 const HANDLE_Y_KEY = 'moffi_edge_y';
+const handleYListeners = new Set<() => void>();
+function subscribeHandleY(cb: () => void) { handleYListeners.add(cb); return () => { handleYListeners.delete(cb); }; }
+function readHandleY() {
+    try { const y = parseFloat(localStorage.getItem(HANDLE_Y_KEY) || '0'); return Number.isFinite(y) ? y : 0; } catch { return 0; }
+}
+function writeHandleY(y: number) {
+    try { localStorage.setItem(HANDLE_Y_KEY, String(y)); } catch { /* yoksay */ }
+    handleYListeners.forEach(cb => cb());
+}
 const WEATHER_ICON: Record<string, typeof Sun> = { Sun, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning };
 
 function Tile({ s, badge, onClick }: { s: EdgeShortcut; badge?: number; onClick: () => void }) {
@@ -103,22 +112,24 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
     const myBusinesses = useMyBusinesses();
 
     const settings = useMemo(() => readEdgeSettings(user?.settings?.edge), [user?.settings?.edge]);
-    const [open, setOpen] = useState(false);
     const [view, setView] = useState<'main' | 'tag' | 'edit'>('main');
-    const [handleY, setHandleY] = useState(0);
+    // Panel açıldığı sayfaya bağlıdır: sayfa değişince kendiliğinden kapalı sayılır (efektle kapatmaya gerek yok).
+    const [openOn, setOpenOn] = useState<string | null>(null);
+    const open = openOn !== null && openOn === (pathname ?? '');
+    const setOpen = useCallback((v: boolean) => {
+        if (v) { setView('main'); setOpenOn(pathname ?? ''); } else setOpenOn(null);
+    }, [pathname]);
+    // Tutamağın yüksekliği cihazda saklanır; sürüklerken geçici değer, bırakınca kaydedilir.
+    const storedY = useSyncExternalStore(subscribeHandleY, readHandleY, () => 0);
+    const [dragY, setHandleY] = useState<number | null>(null);
+    const handleY = dragY ?? storedY;
     const [query, setQuery] = useState('');
     const pet = activePet || pets[0] || null;
     const { items: care, loaded: careLoaded } = useUpcomingCare(pets, user?.id, open);
 
     const buzz = useCallback(() => { if (settings.hapticsEnabled) haptics.tap(); }, [settings.hapticsEnabled]);
 
-    useEffect(() => {
-        try { const y = parseFloat(localStorage.getItem(HANDLE_Y_KEY) || '0'); if (Number.isFinite(y)) setHandleY(y); } catch { /* yoksay */ }
-    }, []);
 
-    // Sayfa değişince panel kapanır.
-    useEffect(() => { setOpen(false); }, [pathname]);
-    useEffect(() => { if (!open) setView('main'); }, [open]);
 
     // --- Hava durumu (izin zaten verilmişse kendiliğinden; değilse kullanıcı dokununca sorulur) ---
     const { weather, isLoading: weatherLoading, needsPermission, permissionDenied, requestPrecise } = useWeather();
@@ -143,7 +154,7 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
         const d = drag.current;
         drag.current = null;
         if (!d) return;
-        if (d.vertical) { try { localStorage.setItem(HANDLE_Y_KEY, String(handleY)); } catch { /* yoksay */ } return; }
+        if (d.vertical) { writeHandleY(handleY); setHandleY(null); return; }
         if (!d.moved && !d.opened) { buzz(); setOpen(true); }
     };
 

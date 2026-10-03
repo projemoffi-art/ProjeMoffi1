@@ -13,6 +13,7 @@ import { CheckRow } from '@/components/adoption/AdoptionUI';
 import { usePetHealthBundle } from '@/components/health/usePetHealthBundle';
 import { usePet } from '@/context/PetContext';
 import { useAuth } from '@/context/AuthContext';
+import { useMyBusinesses } from '@/hooks/useMyBusinesses';
 import { adoptionService, AGE_GROUPS, type AdoptionInput, type AgeGroup } from '@/services/adoptionService';
 import type { Species } from '@/services/lostService';
 import { currentPosition } from '@/lib/geo';
@@ -80,7 +81,9 @@ function Wizard() {
 
     const pet = useMemo(() => pets.find(p => p.id === petId) || null, [pets, petId]);
     const bundle = usePetHealthBundle(pet);
-    const canShelter = user?.role === 'business' && user.businessType === 'shelter' && !!user.businessApproved;
+    // Barınak etiketi: kişi onaylı bir barınak işletmesinin sahibi/yöneticisi olmalı (sunucu is_approved_shelter ile aynı kuralı uygular).
+    const myBusinesses = useMyBusinesses();
+    const canShelter = myBusinesses.some(b => b.businessType === 'shelter' && b.approved && (b.role === 'owner' || b.role === 'manager'));
 
     useEffect(() => { currentPosition(8000).then(p => { if (p) setFallback([p.lat, p.lng]); }); }, []);
     useEffect(() => { if (!editId) setPhone((user as any)?.phone || ''); }, [user, editId]);
