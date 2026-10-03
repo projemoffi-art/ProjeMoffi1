@@ -454,10 +454,6 @@ export interface IApiService {
     setDailyStar(dateString: string, rank: number, petId: string, details: any): Promise<void>;
     removeDailyStar(dateString: string, rank: number): Promise<void>;
 
-    // Vet Advices (Vet Tavsiyeleri)
-    addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any>;
-    deleteAdvice(id: string): Promise<void>;
-
     // Global Arena (Leaderboard) & Games
     getLeaderboard(role: 'user' | 'business', limit?: number): Promise<any[]>;
     getUserRank(userId: string): Promise<number>;

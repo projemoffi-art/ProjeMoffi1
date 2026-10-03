@@ -768,28 +768,6 @@ export class MockApiService implements IApiService {
         await this.saveData('daily_stars', updatedList);
     }
 
-
-
-    async addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any> {
-        const list = await this.loadData<any[]>('vet_advices') || [];
-        const newAdvice = {
-            id: `advice-${Date.now()}`,
-            clinic_id: null,
-            content,
-            badge,
-            media_url: mediaUrl || '/images/moffi_pet_trio.png',
-            created_at: new Date().toISOString()
-        };
-
-        await this.saveData('vet_advices', [newAdvice, ...list]);
-        return newAdvice;
-    }
-
-    async deleteAdvice(id: string): Promise<void> {
-        const list = await this.loadData<any[]>('vet_advices') || [];
-        const filtered = list.filter(item => item.id !== id);
-        await this.saveData('vet_advices', filtered);
-    }
     // --- LEADERBOARD & GAMES ---
     async addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean> {
         return true;

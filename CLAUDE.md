@@ -454,6 +454,8 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   aynı listeyi, aynı `settings.edge`'i kullanır; eski `settings.sidebar` hiç okunmuyordu). Widget'lar gerçek: yürüyüş, hava (Open-Meteo,
   izin varsa kendiliğinden, yoksa dokununca), sıradaki sağlık işi, gerçek künye QR (`/id/<petId>`). Eski `MoffiSidebar` (sahte hava/adım/
   su/ruh hali/QR/kapsül) ve `ActivityContext.activeMode/recTime/orderStep` silindi. `getWeather` hata hâlinde `null` döner.
+  Düzenle ekranı taslak tutmaz: her dokunuş anında kaydedilir (eskiden "Kaydet"e basmadan geri dönen kullanıcının eklediği widget
+  kayboluyordu). En üstte arama (kelime başından, Türkçe karakter duyarsız, katalogdaki `keywords` ile; adı eşleşen önce).
 - **8.63e Bildirim izni** Ayarlar → Bildirimler'de gerçek aboneliğe bağlı (`PushSubscriptionRow`, `push_subscriptions`).
 - **8.63f 🔴 Ayarlar kayboluyordu (kök neden, düzeltildi):** `AuthContext` profili yüklerken `settings`'ten yalnızca
   `appearance`/`privacy`'yi alıyordu; sonraki her `updateSettings` bu eksik kopyayı yazıp kenar paneli, yapay zekâ, bildirim,
@@ -491,9 +493,10 @@ dosyasında, aynı "8.N" numarasıyla durur. Burada sadece bugün geçerli kural
   (yönetici 2FA kuralı uygulanınca otomatik ona tabi). Onay/red işletmeye `notify_business('biz_content_review')`.
 - **Ekranlar:** yönetici `/admin/icerik` (eski `/admin/alerts` silindi), işletme `/business/campaigns` (öne çıkar + Veteriner Önerisi; randevu
   sayfasındaki eski tavsiye editörü silindi). Servis `services/contentService.ts`. Emekli: `system_announcements`, `vet_advices`, `business_deals`,
-  `/api/deals*` (kod silindi; tablolar elle silinecek, aşağıda). Özel ad ekleri için `lib/turkish.ts` (`genitive`, `locative`).
-- 🔴 **8.64a Depo güvenlik açığı (bulundu, düzeltme dosyası hazır):** avatars/posts/stories/sounds depolarında güncelleme ve silme kuralları
-  sahiplik denetlemiyordu (herkes başkasının dosyasını silebilir/üzerine yazabilirdi). Düzeltme `20261004100200_storage_owner_only_MANUAL_sql_editor.sql`.
+  `deal_analytics`, `/api/deals*` (kod ve tablolar silindi, 2026-10-03 Baran SQL Editor'dan; FK'lar ve test temizliği de uygulandı).
+  Özel ad ekleri için `lib/turkish.ts` (`genitive`, `locative`).
+- 🔴 **8.64a Depo güvenlik açığı (düzeltildi, 2026-10-03):** avatars/posts/stories/sounds depolarında güncelleme ve silme kuralları
+  sahiplik denetlemiyordu. Artık yalnızca sahibi (`owner` ya da `<kullanıcı-id>/` klasörü). Yeni depo açarken aynı kuralı yaz.
 - Servis rolünün `businesses` gibi tablolara doğrudan yazma yetkisi yok (bilinçli); test kurulumunda işletme `execute_sql` ile açılır.
 
 ### Supabase bağlayıcısı (claude.ai) notu
@@ -559,9 +562,6 @@ ilgili maddeyi tek satırla hatırlat.
 ### 12.1 Baran'ın yapacakları ve kararları
 
 **Hemen**
-- [ ] 🔴 SQL Editor'da `20261004100200_storage_owner_only_MANUAL_sql_editor.sql` (GÜVENLİK: başkasının dosyasını silme/üzerine yazma açığı).
-- [ ] SQL Editor'da (acil değil, sırayla): `20261004100100_content_studio_fk_MANUAL…`, `20261004100300_retire_old_story_tables_MANUAL…`,
-      `20261004100500_test_data_cleanup_MANUAL…` (test verisi, şu an arşivde/onaysız, görünmüyor).
 - [ ] SQL Editor'da `supabase/migrations/20261003102000_walk_cleanup_MANUAL_sql_editor.sql` çalıştır (acil değil, tekrar eden
       politika/index temizliği; DROP içerdiği için bağlayıcıdan uygulanamıyor).
 - [ ] 🔴 **`GEMINI_API_KEY`** (Google AI Studio) → Vercel Production + yeniden yayın. Yok: yapay zekâ canlıda çalışmıyor. Yereldeki `.env.local` anahtarı da Google tarafından reddediliyor (401, 2026-10-03): AI Studio’dan yeni anahtar her ikisine.

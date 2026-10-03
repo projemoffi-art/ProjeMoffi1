@@ -22,38 +22,40 @@ export interface EdgeShortcut {
     /** Uygulama içi yol ya da açılacak pencere olayı; 'tag' ve 'messages' panelin kendisinde ele alınır. */
     path?: string;
     event?: string;
+    /** Panel aramasında eşleşen ek kelimeler. */
+    keywords?: string;
     group: 'Hızlı' | 'Sağlık' | 'Alışveriş' | 'Topluluk' | 'Aktivite' | 'Uygulama';
 }
 
 export const EDGE_SHORTCUTS: EdgeShortcut[] = [
-    { id: 'ai', label: 'Moffi AI', desc: 'Dostun hakkında soru sor', Icon: Sparkles, color: '#EE5B3D', event: 'open-ai-assistant', group: 'Hızlı' },
-    { id: 'post', label: 'Paylaş', desc: 'Yeni gönderi oluştur', Icon: PlusSquare, color: '#E8A33D', path: '/community/yeni', group: 'Hızlı' },
-    { id: 'tag', label: 'Künye QR', desc: 'Okutulunca künye sayfası açılır', Icon: QrCode, color: '#564B40', group: 'Hızlı' },
-    { id: 'sos', label: 'Acil SOS', desc: 'Kayıp ve acil durum merkezi', Icon: ShieldAlert, color: '#D9432F', event: 'open-sos-center', group: 'Hızlı' },
-    { id: 'notifications', label: 'Bildirimler', desc: 'Son bildirimlerin', Icon: Bell, color: '#7A6E60', event: 'open-notification-drawer', group: 'Hızlı' },
-    { id: 'search', label: 'Ara', desc: 'Kişi, gönderi, hayvan ara', Icon: Search, color: '#8A7E6F', event: 'open-moffi-spotlight', group: 'Hızlı' },
+    { id: 'ai', label: 'Moffi AI', desc: 'Dostun hakkında soru sor', Icon: Sparkles, color: '#EE5B3D', event: 'open-ai-assistant', keywords: 'yapay zeka asistan sohbet soru', group: 'Hızlı' },
+    { id: 'post', label: 'Paylaş', desc: 'Yeni gönderi oluştur', Icon: PlusSquare, color: '#E8A33D', path: '/community/yeni', keywords: 'gönderi fotoğraf video paylaşım', group: 'Hızlı' },
+    { id: 'tag', label: 'Künye QR', desc: 'Okutulunca künye sayfası açılır', Icon: QrCode, color: '#564B40', keywords: 'qr kod künye kimlik pasaport', group: 'Hızlı' },
+    { id: 'sos', label: 'Acil SOS', desc: 'Kayıp ve acil durum merkezi', Icon: ShieldAlert, color: '#D9432F', event: 'open-sos-center', keywords: 'acil kayıp alarm kaybol', group: 'Hızlı' },
+    { id: 'notifications', label: 'Bildirimler', desc: 'Son bildirimlerin', Icon: Bell, color: '#7A6E60', event: 'open-notification-drawer', keywords: 'bildirim uyarı', group: 'Hızlı' },
+    { id: 'search', label: 'Ara', desc: 'Kişi, gönderi, hayvan ara', Icon: Search, color: '#8A7E6F', event: 'open-moffi-spotlight', keywords: 'arama bul kişi', group: 'Hızlı' },
 
-    { id: 'health', label: 'Sağlık', desc: 'Sağlık Merkezi', Icon: HeartPulse, color: '#8B7FD9', path: '/health', group: 'Sağlık' },
-    { id: 'vaccine', label: 'Aşılar', desc: 'Aşı takvimi', Icon: Syringe, color: '#9C6FD0', path: '/health/asilar', group: 'Sağlık' },
-    { id: 'meds', label: 'İlaçlar', desc: 'Tedavi ve dozlar', Icon: Pill, color: '#6BAF3A', path: '/health/ilaclar', group: 'Sağlık' },
-    { id: 'vet', label: 'Veteriner', desc: 'Klinik bul', Icon: Stethoscope, color: '#2F9E8F', path: '/vet', group: 'Sağlık' },
-    { id: 'appointments', label: 'Randevular', desc: 'Randevularım', Icon: CalendarCheck, color: '#2B8577', path: '/vet?view=appointments', group: 'Sağlık' },
+    { id: 'health', label: 'Sağlık', desc: 'Sağlık Merkezi', Icon: HeartPulse, color: '#8B7FD9', path: '/health', keywords: 'sağlık karne muayene kilo', group: 'Sağlık' },
+    { id: 'vaccine', label: 'Aşılar', desc: 'Aşı takvimi', Icon: Syringe, color: '#9C6FD0', path: '/health/asilar', keywords: 'aşı takvim parazit', group: 'Sağlık' },
+    { id: 'meds', label: 'İlaçlar', desc: 'Tedavi ve dozlar', Icon: Pill, color: '#6BAF3A', path: '/health/ilaclar', keywords: 'ilaç tedavi doz hap', group: 'Sağlık' },
+    { id: 'vet', label: 'Veteriner', desc: 'Klinik bul', Icon: Stethoscope, color: '#2F9E8F', path: '/vet', keywords: 'veteriner klinik doktor hastane', group: 'Sağlık' },
+    { id: 'appointments', label: 'Randevular', desc: 'Randevularım', Icon: CalendarCheck, color: '#2B8577', path: '/vet?view=appointments', keywords: 'randevu takvim', group: 'Sağlık' },
 
-    { id: 'market', label: 'Market', desc: 'Mama ve aksesuar', Icon: ShoppingBag, color: '#E07A2E', path: '/petshop', group: 'Alışveriş' },
-    { id: 'cart', label: 'Sepet', desc: 'Sepetim', Icon: ShoppingCart, color: '#C9663A', path: '/cart', group: 'Alışveriş' },
+    { id: 'market', label: 'Market', desc: 'Mama ve aksesuar', Icon: ShoppingBag, color: '#E07A2E', path: '/petshop', keywords: 'mama oyuncak aksesuar mağaza alışveriş petshop', group: 'Alışveriş' },
+    { id: 'cart', label: 'Sepet', desc: 'Sepetim', Icon: ShoppingCart, color: '#C9663A', path: '/cart', keywords: 'sepet sipariş ödeme', group: 'Alışveriş' },
 
-    { id: 'feed', label: 'Keşfet', desc: 'Topluluk akışı', Icon: Compass, color: '#D9567A', path: '/community', group: 'Topluluk' },
-    { id: 'messages', label: 'Mesajlar', desc: 'Sohbetlerin', Icon: MessageCircle, color: '#C2557F', group: 'Topluluk' },
-    { id: 'lost', label: 'Kayıp', desc: 'Kayıp ilanları', Icon: Megaphone, color: '#E0623F', path: '/kayip', group: 'Topluluk' },
-    { id: 'adoption', label: 'Sahiplen', desc: 'Yuva arayanlar', Icon: HeartHandshake, color: '#E0719A', path: '/sahiplendirme', group: 'Topluluk' },
+    { id: 'feed', label: 'Keşfet', desc: 'Topluluk akışı', Icon: Compass, color: '#D9567A', path: '/community', keywords: 'keşfet akış topluluk', group: 'Topluluk' },
+    { id: 'messages', label: 'Mesajlar', desc: 'Sohbetlerin', Icon: MessageCircle, color: '#C2557F', keywords: 'mesaj sohbet dm', group: 'Topluluk' },
+    { id: 'lost', label: 'Kayıp', desc: 'Kayıp ilanları', Icon: Megaphone, color: '#E0623F', path: '/kayip', keywords: 'kayıp ilan bulundu', group: 'Topluluk' },
+    { id: 'adoption', label: 'Sahiplen', desc: 'Yuva arayanlar', Icon: HeartHandshake, color: '#E0719A', path: '/sahiplendirme', keywords: 'sahiplen sahiplendirme yuva', group: 'Topluluk' },
 
-    { id: 'walks', label: 'Yürüyüşler', desc: 'Yürüyüş geçmişi', Icon: History, color: '#7A8F3A', path: '/walk/history', group: 'Aktivite' },
-    { id: 'quests', label: 'Görevler', desc: 'Günlük görevler', Icon: Target, color: '#5E9E3A', path: '/quests', group: 'Aktivite' },
-    { id: 'badges', label: 'Rozetler', desc: 'Kazandıkların', Icon: Award, color: '#C9A227', path: '/walk/badges', group: 'Aktivite' },
-    { id: 'games', label: 'Oyunlar', desc: 'Mini oyunlar', Icon: Gamepad2, color: '#4F9D69', path: '/game', group: 'Aktivite' },
+    { id: 'walks', label: 'Yürüyüşler', desc: 'Yürüyüş geçmişi', Icon: History, color: '#7A8F3A', path: '/walk/history', keywords: 'yürüyüş geçmiş rota adım', group: 'Aktivite' },
+    { id: 'quests', label: 'Görevler', desc: 'Günlük görevler', Icon: Target, color: '#5E9E3A', path: '/quests', keywords: 'görev hedef puan', group: 'Aktivite' },
+    { id: 'badges', label: 'Rozetler', desc: 'Kazandıkların', Icon: Award, color: '#C9A227', path: '/walk/badges', keywords: 'rozet başarı ödül', group: 'Aktivite' },
+    { id: 'games', label: 'Oyunlar', desc: 'Mini oyunlar', Icon: Gamepad2, color: '#4F9D69', path: '/game', keywords: 'oyun eğlence', group: 'Aktivite' },
 
-    { id: 'settings', label: 'Ayarlar', desc: 'Uygulama ayarları', Icon: Settings, color: '#6F675B', event: 'open-moffi-settings', group: 'Uygulama' },
-    { id: 'business', label: 'İşletme', desc: 'İşletme paneli', Icon: Building2, color: '#201B16', path: '/business/dashboard', group: 'Uygulama' },
+    { id: 'settings', label: 'Ayarlar', desc: 'Uygulama ayarları', Icon: Settings, color: '#6F675B', event: 'open-moffi-settings', keywords: 'ayar tema bildirim gizlilik', group: 'Uygulama' },
+    { id: 'business', label: 'İşletme', desc: 'İşletme paneli', Icon: Building2, color: '#201B16', path: '/business/dashboard', keywords: 'işletme panel klinik', group: 'Uygulama' },
 ];
 
 export const DEFAULT_EDGE_SHORTCUTS: EdgeShortcutId[] = ['ai', 'post', 'tag', 'sos', 'vet', 'health', 'market', 'notifications'];

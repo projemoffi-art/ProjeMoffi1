@@ -2863,49 +2863,6 @@ export class SupabaseApiService implements IApiService {
         }
     }
 
-    // Vet Advices (Vet Tavsiyeleri) Supabase Implementations
-
-
-    async addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any> {
-        try {
-            const { data, error } = await supabase
-                .from('vet_advices')
-                .insert({
-                    clinic_id: null,
-                    content: content,
-                    badge: badge,
-                    media_url: mediaUrl || '/images/moffi_pet_trio.png'
-                })
-                .select()
-                .single();
-
-            if (error) throw error;
-            return data;
-        } catch (err) {
-            console.warn("Supabase addAdminAdvice failed, falling back to mockApi:", err);
-            return this.mockApi.addAdminAdvice(content, badge, mediaUrl);
-        }
-    }
-
-    async deleteAdvice(id: string): Promise<void> {
-        try {
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-            if (!isUuid) {
-                return this.mockApi.deleteAdvice(id);
-            }
-
-            const { error } = await supabase
-                .from('vet_advices')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
-        } catch (err) {
-            console.warn("Supabase deleteAdvice failed, falling back to mockApi:", err);
-            return this.mockApi.deleteAdvice(id);
-        }
-    }
-
     // --- LEADERBOARD & GAME INTEGRATION ---
     /** Herkese açık hayvan kartları (pet_cards) + sahiplerinin adı; pets tablosu sadece sahibine açık. */
     private async getPublicPetCards(opts: { orderByXp?: boolean; limit?: number; ids?: string[] } = {}): Promise<any[]> {

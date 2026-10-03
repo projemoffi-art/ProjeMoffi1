@@ -11,7 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
     ArrowLeft, Check, ChevronRight, Cloud, CloudLightning, CloudRain, CloudSun, Footprints, HeartPulse,
-    MapPin, Pencil, Snowflake, Sun, X,
+    MapPin, Pencil, Search, Snowflake, Sun, X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePet } from '@/context/PetContext';
@@ -57,6 +57,30 @@ function Tile({ s, badge, onClick }: { s: EdgeShortcut; badge?: number; onClick:
     );
 }
 
+/** Arama anahtarı: büyük/küçük harf ve Türkçe karakter farkı gözetmez ("asi" → "Aşılar"). */
+function searchKey(text: string) {
+    return text.toLocaleLowerCase('tr-TR').replace(/[çğıöşü]/g, ch => ({ ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u' }[ch] as string));
+}
+
+function EditRow({ s, selected, onToggle, showGroup }: { s: EdgeShortcut; selected: EdgeShortcutId[]; onToggle: (id: EdgeShortcutId) => void; showGroup?: boolean }) {
+    const on = selected.includes(s.id);
+    const disabled = (!on && selected.length >= MAX_EDGE_SHORTCUTS) || (on && selected.length <= MIN_EDGE_SHORTCUTS);
+    return (
+        <button type="button" disabled={disabled} onClick={() => onToggle(s.id)} aria-pressed={on} className="w-full flex items-center gap-3 px-3 py-2.5 text-left disabled:opacity-40">
+            <span className="w-9 h-9 rounded-[12px] flex items-center justify-center shrink-0" style={{ backgroundColor: s.color }}>
+                <s.Icon className="w-[18px] h-[18px] text-white" />
+            </span>
+            <span className="flex-1 min-w-0">
+                <span className="block text-[13.5px] font-bold">{s.label}</span>
+                <span className="block text-[11.5px] font-semibold text-secondary truncate">{showGroup ? `${s.group} · ${s.desc}` : s.desc}</span>
+            </span>
+            <span className={cn('w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0', on ? 'bg-accent border-accent' : 'border-card-border')}>
+                {on && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3.2} />}
+            </span>
+        </button>
+    );
+}
+
 function Card({ children, onClick, className }: { children: React.ReactNode; onClick?: () => void; className?: string }) {
     const Comp = onClick ? 'button' : 'div';
     return (
@@ -82,7 +106,7 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
     const [open, setOpen] = useState(false);
     const [view, setView] = useState<'main' | 'tag' | 'edit'>('main');
     const [handleY, setHandleY] = useState(0);
-    const [draft, setDraft] = useState<EdgeShortcutId[]>(settings.shortcuts);
+    const [query, setQuery] = useState('');
     const pet = activePet || pets[0] || null;
     const { items: care, loaded: careLoaded } = useUpcomingCare(pets, user?.id, open);
 
@@ -91,11 +115,11 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
     useEffect(() => {
         try { const y = parseFloat(localStorage.getItem(HANDLE_Y_KEY) || '0'); if (Number.isFinite(y)) setHandleY(y); } catch { /* yoksay */ }
     }, []);
-    useEffect(() => { setDraft(settings.shortcuts); }, [settings.shortcuts]);
 
     // Sayfa değişince panel kapanır.
     useEffect(() => { setOpen(false); }, [pathname]);
     useEffect(() => { if (!open) setView('main'); }, [open]);
+    useEffect(() => { if (view !== 'edit') setQuery(''); }, [view]);
 
     // --- Hava durumu (izin zaten verilmişse kendiliğinden; değilse kullanıcı dokununca sorulur) ---
     const { weather, isLoading: weatherLoading, needsPermission, permissionDenied, requestPrecise } = useWeather();
@@ -139,11 +163,28 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
         .filter(s => s && (s.id !== 'business' || myBusinesses.length > 0));
     const badgeOf = (id: EdgeShortcutId) => (id === 'notifications' ? unreadCount : id === 'messages' ? unreadMessages : 0);
 
-    const saveDraft = async () => {
+    // Seçim her dokunuşta anında kaydedilir (Ayarlar → Kenar Paneli ile aynı davranış); geri dönmek değişikliği kaybettirmez.
+    const toggleShortcut = (id: EdgeShortcutId) => {
         buzz();
-        await updateSettings('edge', { activeActions: draft });
-        setView('main');
+        const current = settings.shortcuts;
+        const next = current.includes(id) ? current.filter(x => x !== id) : [...current, id];
+        if (next.length < MIN_EDGE_SHORTCUTS || next.length > MAX_EDGE_SHORTCUTS) return;
+        updateSettings('edge', { activeActions: next });
     };
+    const available = EDGE_SHORTCUTS.filter(s => s.id !== 'business' || myBusinesses.length > 0);
+    const q = searchKey(query.trim());
+    // Kelime başından eşleşir ("asi" → Aşılar, ama "sayfası" değil); adı eşleşenler önce.
+    const matches = q
+        ? available
+            .map(s => {
+                const nameHit = searchKey(s.label).split(/\s+/).some(w => w.startsWith(q));
+                const anyHit = nameHit || searchKey(`${s.desc} ${s.group} ${s.keywords || ''}`).split(/\s+/).some(w => w.startsWith(q));
+                return { s, rank: nameHit ? 0 : anyHit ? 1 : -1 };
+            })
+            .filter(m => m.rank >= 0)
+            .sort((a, b) => a.rank - b.rank)
+            .map(m => m.s)
+        : available;
 
     const side = settings.position;
     const walkActive = walkData.isActive;
@@ -289,7 +330,7 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
                                         </div>
                                     </div>
                                     <div className="shrink-0 border-t border-card-border px-3 py-2 flex items-center justify-between">
-                                        <button type="button" onClick={() => { buzz(); setDraft(settings.shortcuts); setView('edit'); }} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-[13px] font-bold text-secondary active:bg-foreground/5">
+                                        <button type="button" onClick={() => { buzz(); setView('edit'); }} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-[13px] font-bold text-secondary active:bg-foreground/5">
                                             <Pencil className="w-4 h-4" /> Düzenle
                                         </button>
                                         <button type="button" onClick={() => setOpen(false)} aria-label="Kapat" className="w-10 h-10 rounded-full flex items-center justify-center text-secondary active:bg-foreground/5">
@@ -326,47 +367,53 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
                                     <div className="shrink-0 px-3 pt-3 pb-2 flex items-center justify-between">
                                         <button type="button" onClick={() => setView('main')} aria-label="Geri" className="w-10 h-10 rounded-full flex items-center justify-center active:bg-foreground/5"><ArrowLeft className="w-5 h-5" /></button>
                                         <span className="text-[15px] font-extrabold">Paneli düzenle</span>
-                                        <button type="button" onClick={saveDraft} className="h-9 px-3.5 rounded-full bg-accent text-white text-[13px] font-extrabold">Kaydet</button>
+                                        <button type="button" onClick={() => { buzz(); setView('main'); }} className="h-9 px-3.5 rounded-full bg-accent text-white text-[13px] font-extrabold">Bitti</button>
+                                    </div>
+                                    <div className="shrink-0 px-3 pb-2">
+                                        <label className="flex items-center gap-2 h-11 px-3.5 rounded-2xl card-premium">
+                                            <Search className="w-[18px] h-[18px] text-secondary shrink-0" />
+                                            <input
+                                                type="search"
+                                                value={query}
+                                                onChange={e => setQuery(e.target.value)}
+                                                placeholder="Kısayol ara (ör. aşı, sepet)"
+                                                aria-label="Kısayol ara"
+                                                enterKeyHint="search"
+                                                className="flex-1 min-w-0 bg-transparent outline-none text-[14px] font-semibold placeholder:text-secondary/70 [&::-webkit-search-cancel-button]:hidden"
+                                            />
+                                            {query && (
+                                                <button type="button" onClick={() => setQuery('')} aria-label="Aramayı temizle" className="w-6 h-6 -mr-1 rounded-full bg-foreground/10 flex items-center justify-center shrink-0">
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                        </label>
+                                        <p className="text-[11.5px] font-semibold text-secondary px-1 mt-1.5">{settings.shortcuts.length}/{MAX_EDGE_SHORTCUTS} seçili · dokununca anında kaydedilir</p>
                                     </div>
                                     <div className="overflow-y-auto no-scrollbar px-3 pb-4 space-y-4">
-                                        <p className="text-[12px] font-semibold text-secondary px-1">{draft.length}/{MAX_EDGE_SHORTCUTS} kısayol seçili. Dokunarak ekle ya da çıkar.</p>
-                                        {(['Hızlı', 'Sağlık', 'Alışveriş', 'Topluluk', 'Aktivite', 'Uygulama'] as const).map(group => {
-                                            const items = EDGE_SHORTCUTS.filter(s => s.group === group && (s.id !== 'business' || myBusinesses.length > 0));
-                                            if (items.length === 0) return null;
-                                            return (
-                                                <div key={group}>
-                                                    <p className="text-[11.5px] font-extrabold text-secondary uppercase tracking-wide px-1 mb-1.5">{group}</p>
-                                                    <div className="rounded-[18px] card-premium divide-y divide-card-border overflow-hidden">
-                                                        {items.map(s => {
-                                                            const on = draft.includes(s.id);
-                                                            const disabled = (!on && draft.length >= MAX_EDGE_SHORTCUTS) || (on && draft.length <= MIN_EDGE_SHORTCUTS);
-                                                            return (
-                                                                <button
-                                                                    key={s.id}
-                                                                    type="button"
-                                                                    disabled={disabled}
-                                                                    onClick={() => { buzz(); setDraft(d => (on ? d.filter(x => x !== s.id) : [...d, s.id])); }}
-                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left disabled:opacity-40"
-                                                                >
-                                                                    <span className="w-9 h-9 rounded-[12px] flex items-center justify-center shrink-0" style={{ backgroundColor: s.color }}>
-                                                                        <s.Icon className="w-[18px] h-[18px] text-white" />
-                                                                    </span>
-                                                                    <span className="flex-1 min-w-0">
-                                                                        <span className="block text-[13.5px] font-bold">{s.label}</span>
-                                                                        <span className="block text-[11.5px] font-semibold text-secondary truncate">{s.desc}</span>
-                                                                    </span>
-                                                                    <span className={cn('w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0', on ? 'bg-accent border-accent' : 'border-card-border')}>
-                                                                        {on && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3.2} />}
-                                                                    </span>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
+                                        {q ? (
+                                            matches.length > 0 ? (
+                                                <div className="rounded-[18px] card-premium divide-y divide-card-border overflow-hidden">
+                                                    {matches.map(s => <EditRow key={s.id} s={s} selected={settings.shortcuts} onToggle={toggleShortcut} showGroup />)}
                                                 </div>
-                                            );
-                                        })}
+                                            ) : (
+                                                <p className="text-[13px] font-semibold text-secondary text-center py-6">“{query.trim()}” için kısayol bulunamadı.</p>
+                                            )
+                                        ) : (
+                                            (['Hızlı', 'Sağlık', 'Alışveriş', 'Topluluk', 'Aktivite', 'Uygulama'] as const).map(group => {
+                                                const items = available.filter(s => s.group === group);
+                                                if (items.length === 0) return null;
+                                                return (
+                                                    <div key={group}>
+                                                        <p className="text-[11.5px] font-extrabold text-secondary uppercase tracking-wide px-1 mb-1.5">{group}</p>
+                                                        <div className="rounded-[18px] card-premium divide-y divide-card-border overflow-hidden">
+                                                            {items.map(s => <EditRow key={s.id} s={s} selected={settings.shortcuts} onToggle={toggleShortcut} />)}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
 
-                                        <div>
+                                        {!q && <div>
                                             <p className="text-[11.5px] font-extrabold text-secondary uppercase tracking-wide px-1 mb-1.5">Tutamak</p>
                                             <div className="rounded-[18px] card-premium p-3 space-y-3">
                                                 <div>
@@ -396,7 +443,7 @@ export function EdgePanel({ hidden = false }: { hidden?: boolean }) {
                                                     </span>
                                                 </button>
                                             </div>
-                                        </div>
+                                        </div>}
                                     </div>
                                 </>
                             )}
